@@ -194,14 +194,34 @@ const nextId = (prefix: string, list: { id: string }[]) => {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+const initialBookings: Booking[] = (seedBookings as unknown as (Omit<Booking, "selectionConfirmed" | "albumSelectionConfirmed"> & Partial<Pick<Booking, "selectionConfirmed" | "albumSelectionConfirmed">>)[]).map(
+  (b) => ({
+    ...b,
+    selectionConfirmed: b.status === "Editing" || b.status === "Delivered" || b.status === "Completed",
+    albumSelectionConfirmed: b.status === "Album/Frame Pending" || b.status === "Completed",
+  }),
+);
+
+const initialPrivacy: PrivacyRecord[] = (seedPrivacy as unknown as (Omit<PrivacyRecord, "bookingId"> & { booking: string })[]).map(
+  ({ booking, ...rest }) => ({ ...rest, bookingId: booking }),
+);
+
+const initialEditing: EditingJob[] = (seedEditing as unknown as (Omit<EditingJob, "bookingId"> & { booking: string })[]).map(
+  ({ booking, ...rest }) => ({ ...rest, bookingId: booking }),
+);
+
+const initialHeirloom: HeirloomJob[] = (seedHeirloom as unknown as (Omit<HeirloomJob, "bookingId" | "proofSent"> & { booking: string; proof: string })[]).map(
+  ({ booking, proof, ...rest }) => ({ ...rest, bookingId: booking, proofSent: proof !== "—" }),
+);
+
 export const useStore = create<Store>((set, get) => ({
   leads: seedLeads as Lead[],
   clients: seedClients as Client[],
-  bookings: seedBookings as Booking[],
-  privacy: seedPrivacy as PrivacyRecord[],
+  bookings: initialBookings,
+  privacy: initialPrivacy,
   safety: [],
-  editing: seedEditing as EditingJob[],
-  heirloom: seedHeirloom as HeirloomJob[],
+  editing: initialEditing,
+  heirloom: initialHeirloom,
 
   setLeadStatus: (leadId, status) => {
     set((s) => ({
