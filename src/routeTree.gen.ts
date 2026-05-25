@@ -9,8 +9,62 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SafetyRouteImport } from './routes/safety'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as PackagesRouteImport } from './routes/packages'
+import { Route as LeadsRouteImport } from './routes/leads'
+import { Route as KpiRouteImport } from './routes/kpi'
+import { Route as HeirloomRouteImport } from './routes/heirloom'
+import { Route as EditingRouteImport } from './routes/editing'
+import { Route as ClientsRouteImport } from './routes/clients'
+import { Route as BookingsRouteImport } from './routes/bookings'
 import { Route as IndexRouteImport } from './routes/index'
 
+const SafetyRoute = SafetyRouteImport.update({
+  id: '/safety',
+  path: '/safety',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PackagesRoute = PackagesRouteImport.update({
+  id: '/packages',
+  path: '/packages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeadsRoute = LeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KpiRoute = KpiRouteImport.update({
+  id: '/kpi',
+  path: '/kpi',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HeirloomRoute = HeirloomRouteImport.update({
+  id: '/heirloom',
+  path: '/heirloom',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditingRoute = EditingRouteImport.update({
+  id: '/editing',
+  path: '/editing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientsRoute = ClientsRouteImport.update({
+  id: '/clients',
+  path: '/clients',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BookingsRoute = BookingsRouteImport.update({
+  id: '/bookings',
+  path: '/bookings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +73,158 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/bookings': typeof BookingsRoute
+  '/clients': typeof ClientsRoute
+  '/editing': typeof EditingRoute
+  '/heirloom': typeof HeirloomRoute
+  '/kpi': typeof KpiRoute
+  '/leads': typeof LeadsRoute
+  '/packages': typeof PackagesRoute
+  '/privacy': typeof PrivacyRoute
+  '/safety': typeof SafetyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/bookings': typeof BookingsRoute
+  '/clients': typeof ClientsRoute
+  '/editing': typeof EditingRoute
+  '/heirloom': typeof HeirloomRoute
+  '/kpi': typeof KpiRoute
+  '/leads': typeof LeadsRoute
+  '/packages': typeof PackagesRoute
+  '/privacy': typeof PrivacyRoute
+  '/safety': typeof SafetyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/bookings': typeof BookingsRoute
+  '/clients': typeof ClientsRoute
+  '/editing': typeof EditingRoute
+  '/heirloom': typeof HeirloomRoute
+  '/kpi': typeof KpiRoute
+  '/leads': typeof LeadsRoute
+  '/packages': typeof PackagesRoute
+  '/privacy': typeof PrivacyRoute
+  '/safety': typeof SafetyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/bookings'
+    | '/clients'
+    | '/editing'
+    | '/heirloom'
+    | '/kpi'
+    | '/leads'
+    | '/packages'
+    | '/privacy'
+    | '/safety'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/bookings'
+    | '/clients'
+    | '/editing'
+    | '/heirloom'
+    | '/kpi'
+    | '/leads'
+    | '/packages'
+    | '/privacy'
+    | '/safety'
+  id:
+    | '__root__'
+    | '/'
+    | '/bookings'
+    | '/clients'
+    | '/editing'
+    | '/heirloom'
+    | '/kpi'
+    | '/leads'
+    | '/packages'
+    | '/privacy'
+    | '/safety'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BookingsRoute: typeof BookingsRoute
+  ClientsRoute: typeof ClientsRoute
+  EditingRoute: typeof EditingRoute
+  HeirloomRoute: typeof HeirloomRoute
+  KpiRoute: typeof KpiRoute
+  LeadsRoute: typeof LeadsRoute
+  PackagesRoute: typeof PackagesRoute
+  PrivacyRoute: typeof PrivacyRoute
+  SafetyRoute: typeof SafetyRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/safety': {
+      id: '/safety'
+      path: '/safety'
+      fullPath: '/safety'
+      preLoaderRoute: typeof SafetyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/packages': {
+      id: '/packages'
+      path: '/packages'
+      fullPath: '/packages'
+      preLoaderRoute: typeof PackagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leads': {
+      id: '/leads'
+      path: '/leads'
+      fullPath: '/leads'
+      preLoaderRoute: typeof LeadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kpi': {
+      id: '/kpi'
+      path: '/kpi'
+      fullPath: '/kpi'
+      preLoaderRoute: typeof KpiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/heirloom': {
+      id: '/heirloom'
+      path: '/heirloom'
+      fullPath: '/heirloom'
+      preLoaderRoute: typeof HeirloomRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/editing': {
+      id: '/editing'
+      path: '/editing'
+      fullPath: '/editing'
+      preLoaderRoute: typeof EditingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clients': {
+      id: '/clients'
+      path: '/clients'
+      fullPath: '/clients'
+      preLoaderRoute: typeof ClientsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bookings': {
+      id: '/bookings'
+      path: '/bookings'
+      fullPath: '/bookings'
+      preLoaderRoute: typeof BookingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,17 +237,16 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BookingsRoute: BookingsRoute,
+  ClientsRoute: ClientsRoute,
+  EditingRoute: EditingRoute,
+  HeirloomRoute: HeirloomRoute,
+  KpiRoute: KpiRoute,
+  LeadsRoute: LeadsRoute,
+  PackagesRoute: PackagesRoute,
+  PrivacyRoute: PrivacyRoute,
+  SafetyRoute: SafetyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
