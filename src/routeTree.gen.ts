@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WhatsappRouteImport } from './routes/whatsapp'
+import { Route as TeamRouteImport } from './routes/team'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as SopsRouteImport } from './routes/sops'
 import { Route as SafetyRouteImport } from './routes/safety'
@@ -35,6 +36,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const WhatsappRoute = WhatsappRouteImport.update({
   id: '/whatsapp',
   path: '/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamRoute = TeamRouteImport.update({
+  id: '/team',
+  path: '/team',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TasksRoute = TasksRouteImport.update({
@@ -165,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/safety': typeof SafetyRoute
   '/sops': typeof SopsRoute
   '/tasks': typeof TasksRoute
+  '/team': typeof TeamRoute
   '/whatsapp': typeof WhatsappRoute
 }
 export interface FileRoutesByTo {
@@ -189,6 +196,7 @@ export interface FileRoutesByTo {
   '/safety': typeof SafetyRoute
   '/sops': typeof SopsRoute
   '/tasks': typeof TasksRoute
+  '/team': typeof TeamRoute
   '/whatsapp': typeof WhatsappRoute
 }
 export interface FileRoutesById {
@@ -214,6 +222,7 @@ export interface FileRoutesById {
   '/safety': typeof SafetyRoute
   '/sops': typeof SopsRoute
   '/tasks': typeof TasksRoute
+  '/team': typeof TeamRoute
   '/whatsapp': typeof WhatsappRoute
 }
 export interface FileRouteTypes {
@@ -240,6 +249,7 @@ export interface FileRouteTypes {
     | '/safety'
     | '/sops'
     | '/tasks'
+    | '/team'
     | '/whatsapp'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -264,6 +274,7 @@ export interface FileRouteTypes {
     | '/safety'
     | '/sops'
     | '/tasks'
+    | '/team'
     | '/whatsapp'
   id:
     | '__root__'
@@ -288,6 +299,7 @@ export interface FileRouteTypes {
     | '/safety'
     | '/sops'
     | '/tasks'
+    | '/team'
     | '/whatsapp'
   fileRoutesById: FileRoutesById
 }
@@ -313,6 +325,7 @@ export interface RootRouteChildren {
   SafetyRoute: typeof SafetyRoute
   SopsRoute: typeof SopsRoute
   TasksRoute: typeof TasksRoute
+  TeamRoute: typeof TeamRoute
   WhatsappRoute: typeof WhatsappRoute
 }
 
@@ -323,6 +336,13 @@ declare module '@tanstack/react-router' {
       path: '/whatsapp'
       fullPath: '/whatsapp'
       preLoaderRoute: typeof WhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/team': {
+      id: '/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof TeamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tasks': {
@@ -497,6 +517,7 @@ const rootRouteChildren: RootRouteChildren = {
   SafetyRoute: SafetyRoute,
   SopsRoute: SopsRoute,
   TasksRoute: TasksRoute,
+  TeamRoute: TeamRoute,
   WhatsappRoute: WhatsappRoute,
 }
 export const routeTree = rootRouteImport
