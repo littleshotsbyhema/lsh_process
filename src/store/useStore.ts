@@ -431,6 +431,9 @@ export const useStore = create<Store>((set, get) => ({
   pixieset: [],
   followUps: [],
   tasks: [],
+  reviews: [],
+  alignment: [],
+  governance: [],
 
   setLeadStatus: (leadId, status) => {
     set((s) => ({
@@ -952,6 +955,99 @@ export const useStore = create<Store>((set, get) => ({
       tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)),
     }));
     return ok("Task updated.");
+  },
+
+  upsertReview: (bookingId, patch) => {
+    const b = get().bookings.find((x) => x.id === bookingId);
+    if (!b) return fail("Booking not found.");
+    const existing = get().reviews.find((r) => r.bookingId === bookingId);
+    const base: Review = existing ?? {
+      id: nextId("R", get().reviews),
+      bookingId,
+      client: b.client,
+      sessionType: b.category,
+      requestStatus: "Pending",
+      testimonial: "",
+      permissionToUse: false,
+      consentProof: "",
+      issueRaised: false,
+      resolutionNotes: "",
+      repeatOpportunity: false,
+      nextMilestoneDate: "",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const next: Review = { ...base, ...patch, updatedAt: new Date().toISOString() };
+    set((s) => ({
+      reviews: existing
+        ? s.reviews.map((r) => (r === existing ? next : r))
+        : [next, ...s.reviews],
+    }));
+    if (patch.requestStatus === "Requested" && (!existing || existing.requestStatus !== "Requested")) {
+      set((s) => ({
+        bookings: s.bookings.map((x) => (x.id === bookingId ? { ...x, reviewRequested: true } : x)),
+      }));
+      get().createTask({
+        title: `Follow up if review not received from ${b.client}`,
+        role: "Client Coordinator",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: b.client,
+        sop: "SOP-10",
+      });
+    }
+    if (patch.permissionToUse && (!existing || !existing.permissionToUse)) {
+      get().createTask({
+        title: `Ask permission to use testimonial — ${b.client}`,
+        role: "Marketing Team",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: b.client,
+      });
+    }
+    if (patch.repeatOpportunity && next.nextMilestoneDate) {
+      get().createTask({
+        title: `Milestone follow-up — ${b.client} (${next.nextMilestoneDate})`,
+        role: "Client Coordinator",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: b.client,
+        dueDate: next.nextMilestoneDate,
+      });
+    }
+    return ok("Review record saved.");
+  },
+
+  setAlignmentScore: (bookingId, dimension, score) => {
+    if (score < 1 || score > 5) return fail("Score must be between 1 and 5.");
+    const existing = get().alignment.find((a) => a.bookingId === bookingId);
+    const base: AlignmentScore = existing ?? { bookingId, scores: {}, notes: "", updatedAt: new Date().toISOString() };
+    const next: AlignmentScore = {
+      ...base,
+      scores: { ...base.scores, [dimension]: score },
+      updatedAt: new Date().toISOString(),
+    };
+    set((s) => ({
+      alignment: existing ? s.alignment.map((a) => (a === existing ? next : a)) : [next, ...s.alignment],
+    }));
+    return ok(`“${dimension}” scored ${score}/5.`);
+  },
+
+  setAlignmentNotes: (bookingId, notes) => {
+    const existing = get().alignment.find((a) => a.bookingId === bookingId);
+    const base: AlignmentScore = existing ?? { bookingId, scores: {}, notes: "", updatedAt: new Date().toISOString() };
+    const next: AlignmentScore = { ...base, notes, updatedAt: new Date().toISOString() };
+    set((s) => ({
+      alignment: existing ? s.alignment.map((a) => (a === existing ? next : a)) : [next, ...s.alignment],
+    }));
+    return ok("Alignment notes saved.");
+  },
+
+  saveGovernanceRun: (cadence, items, completedBy = "Hema") => {
+    const id = nextId("G", get().governance);
+    const run: GovernanceRun = { id, cadence, date: today(), items, completedBy };
+    set((s) => ({ governance: [run, ...s.governance] }));
+    return ok(`${cadence[0].toUpperCase() + cadence.slice(1)} governance run saved.`);
   },
 }));
 
