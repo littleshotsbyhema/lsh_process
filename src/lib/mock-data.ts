@@ -43,6 +43,47 @@ export const editingStatuses = [
 ] as const;
 export type EditingStatus = (typeof editingStatuses)[number];
 
+export const journeyStages = [
+  "New Inquiry",
+  "Details Collected",
+  "Memory Goal Captured",
+  "Package Recommended",
+  "Quote Sent",
+  "Follow-Up Pending",
+  "Booking Confirmed",
+  "Pre-Shoot Preparation",
+  "Shoot Scheduled",
+  "Shoot Completed",
+  "Selection Pending",
+  "Editing Pending",
+  "Editing in Progress",
+  "QC Pending",
+  "Pixieset Gallery Ready",
+  "Delivered",
+  "Album / Frame Production",
+  "Review Requested",
+  "Milestone Follow-Up",
+  "Completed / Relationship Active",
+] as const;
+export type JourneyStage = (typeof journeyStages)[number];
+
+export const legacyInterestOptions = [
+  "Album",
+  "Frame",
+  "Prints",
+  "Cinematic Reel",
+  "None",
+] as const;
+export type LegacyInterest = (typeof legacyInterestOptions)[number];
+
+export const emotionalPriorityOptions = [
+  "Simple Memory",
+  "Family Connection",
+  "Heirloom Story",
+  "Complete Legacy",
+] as const;
+export type EmotionalPriority = (typeof emotionalPriorityOptions)[number];
+
 export const leads = [
   {
     id: "L-001",
