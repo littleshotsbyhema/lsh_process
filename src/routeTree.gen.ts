@@ -13,6 +13,7 @@ import { Route as WhatsappRouteImport } from './routes/whatsapp'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as SopsRouteImport } from './routes/sops'
 import { Route as SafetyRouteImport } from './routes/safety'
+import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PixiesetRouteImport } from './routes/pixieset'
 import { Route as PackagesRouteImport } from './routes/packages'
@@ -43,6 +44,11 @@ const SopsRoute = SopsRouteImport.update({
 const SafetyRoute = SafetyRouteImport.update({
   id: '/safety',
   path: '/safety',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewsRoute = ReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/packages': typeof PackagesRoute
   '/pixieset': typeof PixiesetRoute
   '/privacy': typeof PrivacyRoute
+  '/reviews': typeof ReviewsRoute
   '/safety': typeof SafetyRoute
   '/sops': typeof SopsRoute
   '/tasks': typeof TasksRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/packages': typeof PackagesRoute
   '/pixieset': typeof PixiesetRoute
   '/privacy': typeof PrivacyRoute
+  '/reviews': typeof ReviewsRoute
   '/safety': typeof SafetyRoute
   '/sops': typeof SopsRoute
   '/tasks': typeof TasksRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/packages': typeof PackagesRoute
   '/pixieset': typeof PixiesetRoute
   '/privacy': typeof PrivacyRoute
+  '/reviews': typeof ReviewsRoute
   '/safety': typeof SafetyRoute
   '/sops': typeof SopsRoute
   '/tasks': typeof TasksRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/packages'
     | '/pixieset'
     | '/privacy'
+    | '/reviews'
     | '/safety'
     | '/sops'
     | '/tasks'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/packages'
     | '/pixieset'
     | '/privacy'
+    | '/reviews'
     | '/safety'
     | '/sops'
     | '/tasks'
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/packages'
     | '/pixieset'
     | '/privacy'
+    | '/reviews'
     | '/safety'
     | '/sops'
     | '/tasks'
@@ -219,6 +231,7 @@ export interface RootRouteChildren {
   PackagesRoute: typeof PackagesRoute
   PixiesetRoute: typeof PixiesetRoute
   PrivacyRoute: typeof PrivacyRoute
+  ReviewsRoute: typeof ReviewsRoute
   SafetyRoute: typeof SafetyRoute
   SopsRoute: typeof SopsRoute
   TasksRoute: typeof TasksRoute
@@ -253,6 +266,13 @@ declare module '@tanstack/react-router' {
       path: '/safety'
       fullPath: '/safety'
       preLoaderRoute: typeof SafetyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reviews': {
+      id: '/reviews'
+      path: '/reviews'
+      fullPath: '/reviews'
+      preLoaderRoute: typeof ReviewsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -347,6 +367,7 @@ const rootRouteChildren: RootRouteChildren = {
   PackagesRoute: PackagesRoute,
   PixiesetRoute: PixiesetRoute,
   PrivacyRoute: PrivacyRoute,
+  ReviewsRoute: ReviewsRoute,
   SafetyRoute: SafetyRoute,
   SopsRoute: SopsRoute,
   TasksRoute: TasksRoute,
@@ -355,3 +376,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
