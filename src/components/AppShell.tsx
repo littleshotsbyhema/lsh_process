@@ -10,6 +10,7 @@ import {
   Image as ImageIcon,
   Frame,
   LineChart,
+  BookHeart,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -18,7 +19,7 @@ const nav = [
   { to: "/leads", label: "Leads & Inquiries", icon: Heart },
   { to: "/clients", label: "Clients", icon: Users },
   { to: "/bookings", label: "Bookings", icon: CalendarHeart },
-  { to: "/memory", label: "Memory Profiles", icon: Heart },
+  { to: "/memory", label: "Memory Profiles", icon: BookHeart },
   { to: "/packages", label: "Package Recommender", icon: Sparkles },
   { to: "/privacy", label: "Privacy & Consent", icon: ShieldCheck },
   { to: "/safety", label: "Safety & Comfort", icon: ClipboardCheck },
