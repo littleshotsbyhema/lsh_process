@@ -10,16 +10,25 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WhatsappRouteImport } from './routes/whatsapp'
+import { Route as TeamRouteImport } from './routes/team'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as SopsRouteImport } from './routes/sops'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SafetyRouteImport } from './routes/safety'
+import { Route as ReviewsRouteImport } from './routes/reviews'
+import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as QuoteRouteImport } from './routes/quote'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as PrepRouteImport } from './routes/prep'
 import { Route as PixiesetRouteImport } from './routes/pixieset'
+import { Route as PipelineRouteImport } from './routes/pipeline'
 import { Route as PackagesRouteImport } from './routes/packages'
 import { Route as MemoryRouteImport } from './routes/memory'
+import { Route as MarketingRouteImport } from './routes/marketing'
 import { Route as LeadsRouteImport } from './routes/leads'
 import { Route as KpiRouteImport } from './routes/kpi'
 import { Route as HeirloomRouteImport } from './routes/heirloom'
+import { Route as GovernanceRouteImport } from './routes/governance'
 import { Route as EditingRouteImport } from './routes/editing'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as BookingsRouteImport } from './routes/bookings'
@@ -28,6 +37,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const WhatsappRoute = WhatsappRouteImport.update({
   id: '/whatsapp',
   path: '/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamRoute = TeamRouteImport.update({
+  id: '/team',
+  path: '/team',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TasksRoute = TasksRouteImport.update({
@@ -40,9 +54,29 @@ const SopsRoute = SopsRouteImport.update({
   path: '/sops',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SafetyRoute = SafetyRouteImport.update({
   id: '/safety',
   path: '/safety',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewsRoute = ReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuoteRoute = QuoteRouteImport.update({
+  id: '/quote',
+  path: '/quote',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -50,9 +84,19 @@ const PrivacyRoute = PrivacyRouteImport.update({
   path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrepRoute = PrepRouteImport.update({
+  id: '/prep',
+  path: '/prep',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PixiesetRoute = PixiesetRouteImport.update({
   id: '/pixieset',
   path: '/pixieset',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PipelineRoute = PipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PackagesRoute = PackagesRouteImport.update({
@@ -63,6 +107,11 @@ const PackagesRoute = PackagesRouteImport.update({
 const MemoryRoute = MemoryRouteImport.update({
   id: '/memory',
   path: '/memory',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketingRoute = MarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LeadsRoute = LeadsRouteImport.update({
@@ -78,6 +127,11 @@ const KpiRoute = KpiRouteImport.update({
 const HeirloomRoute = HeirloomRouteImport.update({
   id: '/heirloom',
   path: '/heirloom',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GovernanceRoute = GovernanceRouteImport.update({
+  id: '/governance',
+  path: '/governance',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EditingRoute = EditingRouteImport.update({
@@ -106,16 +160,25 @@ export interface FileRoutesByFullPath {
   '/bookings': typeof BookingsRoute
   '/clients': typeof ClientsRoute
   '/editing': typeof EditingRoute
+  '/governance': typeof GovernanceRoute
   '/heirloom': typeof HeirloomRoute
   '/kpi': typeof KpiRoute
   '/leads': typeof LeadsRoute
+  '/marketing': typeof MarketingRoute
   '/memory': typeof MemoryRoute
   '/packages': typeof PackagesRoute
+  '/pipeline': typeof PipelineRoute
   '/pixieset': typeof PixiesetRoute
+  '/prep': typeof PrepRoute
   '/privacy': typeof PrivacyRoute
+  '/quote': typeof QuoteRoute
+  '/reports': typeof ReportsRoute
+  '/reviews': typeof ReviewsRoute
   '/safety': typeof SafetyRoute
+  '/settings': typeof SettingsRoute
   '/sops': typeof SopsRoute
   '/tasks': typeof TasksRoute
+  '/team': typeof TeamRoute
   '/whatsapp': typeof WhatsappRoute
 }
 export interface FileRoutesByTo {
@@ -123,16 +186,25 @@ export interface FileRoutesByTo {
   '/bookings': typeof BookingsRoute
   '/clients': typeof ClientsRoute
   '/editing': typeof EditingRoute
+  '/governance': typeof GovernanceRoute
   '/heirloom': typeof HeirloomRoute
   '/kpi': typeof KpiRoute
   '/leads': typeof LeadsRoute
+  '/marketing': typeof MarketingRoute
   '/memory': typeof MemoryRoute
   '/packages': typeof PackagesRoute
+  '/pipeline': typeof PipelineRoute
   '/pixieset': typeof PixiesetRoute
+  '/prep': typeof PrepRoute
   '/privacy': typeof PrivacyRoute
+  '/quote': typeof QuoteRoute
+  '/reports': typeof ReportsRoute
+  '/reviews': typeof ReviewsRoute
   '/safety': typeof SafetyRoute
+  '/settings': typeof SettingsRoute
   '/sops': typeof SopsRoute
   '/tasks': typeof TasksRoute
+  '/team': typeof TeamRoute
   '/whatsapp': typeof WhatsappRoute
 }
 export interface FileRoutesById {
@@ -141,16 +213,25 @@ export interface FileRoutesById {
   '/bookings': typeof BookingsRoute
   '/clients': typeof ClientsRoute
   '/editing': typeof EditingRoute
+  '/governance': typeof GovernanceRoute
   '/heirloom': typeof HeirloomRoute
   '/kpi': typeof KpiRoute
   '/leads': typeof LeadsRoute
+  '/marketing': typeof MarketingRoute
   '/memory': typeof MemoryRoute
   '/packages': typeof PackagesRoute
+  '/pipeline': typeof PipelineRoute
   '/pixieset': typeof PixiesetRoute
+  '/prep': typeof PrepRoute
   '/privacy': typeof PrivacyRoute
+  '/quote': typeof QuoteRoute
+  '/reports': typeof ReportsRoute
+  '/reviews': typeof ReviewsRoute
   '/safety': typeof SafetyRoute
+  '/settings': typeof SettingsRoute
   '/sops': typeof SopsRoute
   '/tasks': typeof TasksRoute
+  '/team': typeof TeamRoute
   '/whatsapp': typeof WhatsappRoute
 }
 export interface FileRouteTypes {
@@ -160,16 +241,25 @@ export interface FileRouteTypes {
     | '/bookings'
     | '/clients'
     | '/editing'
+    | '/governance'
     | '/heirloom'
     | '/kpi'
     | '/leads'
+    | '/marketing'
     | '/memory'
     | '/packages'
+    | '/pipeline'
     | '/pixieset'
+    | '/prep'
     | '/privacy'
+    | '/quote'
+    | '/reports'
+    | '/reviews'
     | '/safety'
+    | '/settings'
     | '/sops'
     | '/tasks'
+    | '/team'
     | '/whatsapp'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -177,16 +267,25 @@ export interface FileRouteTypes {
     | '/bookings'
     | '/clients'
     | '/editing'
+    | '/governance'
     | '/heirloom'
     | '/kpi'
     | '/leads'
+    | '/marketing'
     | '/memory'
     | '/packages'
+    | '/pipeline'
     | '/pixieset'
+    | '/prep'
     | '/privacy'
+    | '/quote'
+    | '/reports'
+    | '/reviews'
     | '/safety'
+    | '/settings'
     | '/sops'
     | '/tasks'
+    | '/team'
     | '/whatsapp'
   id:
     | '__root__'
@@ -194,16 +293,25 @@ export interface FileRouteTypes {
     | '/bookings'
     | '/clients'
     | '/editing'
+    | '/governance'
     | '/heirloom'
     | '/kpi'
     | '/leads'
+    | '/marketing'
     | '/memory'
     | '/packages'
+    | '/pipeline'
     | '/pixieset'
+    | '/prep'
     | '/privacy'
+    | '/quote'
+    | '/reports'
+    | '/reviews'
     | '/safety'
+    | '/settings'
     | '/sops'
     | '/tasks'
+    | '/team'
     | '/whatsapp'
   fileRoutesById: FileRoutesById
 }
@@ -212,16 +320,25 @@ export interface RootRouteChildren {
   BookingsRoute: typeof BookingsRoute
   ClientsRoute: typeof ClientsRoute
   EditingRoute: typeof EditingRoute
+  GovernanceRoute: typeof GovernanceRoute
   HeirloomRoute: typeof HeirloomRoute
   KpiRoute: typeof KpiRoute
   LeadsRoute: typeof LeadsRoute
+  MarketingRoute: typeof MarketingRoute
   MemoryRoute: typeof MemoryRoute
   PackagesRoute: typeof PackagesRoute
+  PipelineRoute: typeof PipelineRoute
   PixiesetRoute: typeof PixiesetRoute
+  PrepRoute: typeof PrepRoute
   PrivacyRoute: typeof PrivacyRoute
+  QuoteRoute: typeof QuoteRoute
+  ReportsRoute: typeof ReportsRoute
+  ReviewsRoute: typeof ReviewsRoute
   SafetyRoute: typeof SafetyRoute
+  SettingsRoute: typeof SettingsRoute
   SopsRoute: typeof SopsRoute
   TasksRoute: typeof TasksRoute
+  TeamRoute: typeof TeamRoute
   WhatsappRoute: typeof WhatsappRoute
 }
 
@@ -232,6 +349,13 @@ declare module '@tanstack/react-router' {
       path: '/whatsapp'
       fullPath: '/whatsapp'
       preLoaderRoute: typeof WhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/team': {
+      id: '/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof TeamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tasks': {
@@ -248,11 +372,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SopsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/safety': {
       id: '/safety'
       path: '/safety'
       fullPath: '/safety'
       preLoaderRoute: typeof SafetyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reviews': {
+      id: '/reviews'
+      path: '/reviews'
+      fullPath: '/reviews'
+      preLoaderRoute: typeof ReviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quote': {
+      id: '/quote'
+      path: '/quote'
+      fullPath: '/quote'
+      preLoaderRoute: typeof QuoteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -262,11 +414,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/prep': {
+      id: '/prep'
+      path: '/prep'
+      fullPath: '/prep'
+      preLoaderRoute: typeof PrepRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pixieset': {
       id: '/pixieset'
       path: '/pixieset'
       fullPath: '/pixieset'
       preLoaderRoute: typeof PixiesetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pipeline': {
+      id: '/pipeline'
+      path: '/pipeline'
+      fullPath: '/pipeline'
+      preLoaderRoute: typeof PipelineRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/packages': {
@@ -281,6 +447,13 @@ declare module '@tanstack/react-router' {
       path: '/memory'
       fullPath: '/memory'
       preLoaderRoute: typeof MemoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketing': {
+      id: '/marketing'
+      path: '/marketing'
+      fullPath: '/marketing'
+      preLoaderRoute: typeof MarketingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/leads': {
@@ -302,6 +475,13 @@ declare module '@tanstack/react-router' {
       path: '/heirloom'
       fullPath: '/heirloom'
       preLoaderRoute: typeof HeirloomRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/governance': {
+      id: '/governance'
+      path: '/governance'
+      fullPath: '/governance'
+      preLoaderRoute: typeof GovernanceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/editing': {
@@ -340,16 +520,25 @@ const rootRouteChildren: RootRouteChildren = {
   BookingsRoute: BookingsRoute,
   ClientsRoute: ClientsRoute,
   EditingRoute: EditingRoute,
+  GovernanceRoute: GovernanceRoute,
   HeirloomRoute: HeirloomRoute,
   KpiRoute: KpiRoute,
   LeadsRoute: LeadsRoute,
+  MarketingRoute: MarketingRoute,
   MemoryRoute: MemoryRoute,
   PackagesRoute: PackagesRoute,
+  PipelineRoute: PipelineRoute,
   PixiesetRoute: PixiesetRoute,
+  PrepRoute: PrepRoute,
   PrivacyRoute: PrivacyRoute,
+  QuoteRoute: QuoteRoute,
+  ReportsRoute: ReportsRoute,
+  ReviewsRoute: ReviewsRoute,
   SafetyRoute: SafetyRoute,
+  SettingsRoute: SettingsRoute,
   SopsRoute: SopsRoute,
   TasksRoute: TasksRoute,
+  TeamRoute: TeamRoute,
   WhatsappRoute: WhatsappRoute,
 }
 export const routeTree = rootRouteImport

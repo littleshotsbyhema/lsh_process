@@ -15,6 +15,12 @@ import type {
   TeamRole,
   TaskPriority,
   TaskStatus,
+  ReviewPlatform,
+  ReviewRequestStatus,
+  IssueCategory,
+  IssueStatus,
+  AlignmentDimension,
+  GovernanceCadence,
 } from "@/lib/mock-data";
 import {
   leads as seedLeads,
@@ -24,6 +30,7 @@ import {
   editingJobs as seedEditing,
   heirloomJobs as seedHeirloom,
   whatsappTemplates,
+  alignmentDimensions,
 } from "@/lib/mock-data";
 
 /* ───────────── Types ───────────── */
@@ -222,6 +229,45 @@ export type Task = {
   createdAt: string;
 };
 
+/* Reviews */
+export type Review = {
+  id: string;
+  bookingId: string;
+  client: string;
+  sessionType: SessionType;
+  requestStatus: ReviewRequestStatus;
+  platform?: ReviewPlatform;
+  rating?: number;
+  testimonial: string;
+  permissionToUse: boolean;
+  consentProof: string;
+  issueRaised: boolean;
+  issueCategory?: IssueCategory;
+  issueStatus?: IssueStatus;
+  resolutionNotes: string;
+  repeatOpportunity: boolean;
+  nextMilestoneDate: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/* Philosophy Alignment Score */
+export type AlignmentScore = {
+  bookingId: string;
+  scores: Partial<Record<AlignmentDimension, number>>;
+  notes: string;
+  updatedAt: string;
+};
+
+/* Governance run-log */
+export type GovernanceRun = {
+  id: string;
+  cadence: GovernanceCadence;
+  date: string;
+  items: Record<string, boolean>;
+  completedBy: string;
+};
+
 const profileKey = (ownerType: MemoryProfileOwner, ownerId: string) => `${ownerType}:${ownerId}`;
 
 /* ───────────── Result helpers ───────────── */
@@ -251,6 +297,9 @@ type Store = {
   pixieset: PixiesetRecord[];
   followUps: FollowUp[];
   tasks: Task[];
+  reviews: Review[];
+  alignment: AlignmentScore[];
+  governance: GovernanceRun[];
 
   // lead flow
   setLeadStatus: (leadId: string, status: LeadStatus) => Result;
@@ -316,6 +365,14 @@ type Store = {
       Partial<Pick<Task, "status" | "priority" | "notes" | "assignee" | "dueDate">>,
   ) => Result & { taskId?: string };
   updateTask: (id: string, patch: Partial<Task>) => Result;
+
+  // reviews
+  upsertReview: (bookingId: string, patch: Partial<Omit<Review, "id" | "bookingId" | "createdAt" | "updatedAt">>) => Result;
+  // alignment
+  setAlignmentScore: (bookingId: string, dimension: AlignmentDimension, score: number) => Result;
+  setAlignmentNotes: (bookingId: string, notes: string) => Result;
+  // governance
+  saveGovernanceRun: (cadence: GovernanceCadence, items: Record<string, boolean>, completedBy?: string) => Result;
 };
 
 const nextId = (prefix: string, list: { id: string }[]) => {
@@ -374,6 +431,9 @@ export const useStore = create<Store>((set, get) => ({
   pixieset: [],
   followUps: [],
   tasks: [],
+  reviews: [],
+  alignment: [],
+  governance: [],
 
   setLeadStatus: (leadId, status) => {
     set((s) => ({
@@ -896,6 +956,99 @@ export const useStore = create<Store>((set, get) => ({
     }));
     return ok("Task updated.");
   },
+
+  upsertReview: (bookingId, patch) => {
+    const b = get().bookings.find((x) => x.id === bookingId);
+    if (!b) return fail("Booking not found.");
+    const existing = get().reviews.find((r) => r.bookingId === bookingId);
+    const base: Review = existing ?? {
+      id: nextId("R", get().reviews),
+      bookingId,
+      client: b.client,
+      sessionType: b.category,
+      requestStatus: "Pending",
+      testimonial: "",
+      permissionToUse: false,
+      consentProof: "",
+      issueRaised: false,
+      resolutionNotes: "",
+      repeatOpportunity: false,
+      nextMilestoneDate: "",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const next: Review = { ...base, ...patch, updatedAt: new Date().toISOString() };
+    set((s) => ({
+      reviews: existing
+        ? s.reviews.map((r) => (r === existing ? next : r))
+        : [next, ...s.reviews],
+    }));
+    if (patch.requestStatus === "Requested" && (!existing || existing.requestStatus !== "Requested")) {
+      set((s) => ({
+        bookings: s.bookings.map((x) => (x.id === bookingId ? { ...x, reviewRequested: true } : x)),
+      }));
+      get().createTask({
+        title: `Follow up if review not received from ${b.client}`,
+        role: "Client Coordinator",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: b.client,
+        sop: "SOP-10",
+      });
+    }
+    if (patch.permissionToUse && (!existing || !existing.permissionToUse)) {
+      get().createTask({
+        title: `Ask permission to use testimonial — ${b.client}`,
+        role: "Marketing Team",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: b.client,
+      });
+    }
+    if (patch.repeatOpportunity && next.nextMilestoneDate) {
+      get().createTask({
+        title: `Milestone follow-up — ${b.client} (${next.nextMilestoneDate})`,
+        role: "Client Coordinator",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: b.client,
+        dueDate: next.nextMilestoneDate,
+      });
+    }
+    return ok("Review record saved.");
+  },
+
+  setAlignmentScore: (bookingId, dimension, score) => {
+    if (score < 1 || score > 5) return fail("Score must be between 1 and 5.");
+    const existing = get().alignment.find((a) => a.bookingId === bookingId);
+    const base: AlignmentScore = existing ?? { bookingId, scores: {}, notes: "", updatedAt: new Date().toISOString() };
+    const next: AlignmentScore = {
+      ...base,
+      scores: { ...base.scores, [dimension]: score },
+      updatedAt: new Date().toISOString(),
+    };
+    set((s) => ({
+      alignment: existing ? s.alignment.map((a) => (a === existing ? next : a)) : [next, ...s.alignment],
+    }));
+    return ok(`“${dimension}” scored ${score}/5.`);
+  },
+
+  setAlignmentNotes: (bookingId, notes) => {
+    const existing = get().alignment.find((a) => a.bookingId === bookingId);
+    const base: AlignmentScore = existing ?? { bookingId, scores: {}, notes: "", updatedAt: new Date().toISOString() };
+    const next: AlignmentScore = { ...base, notes, updatedAt: new Date().toISOString() };
+    set((s) => ({
+      alignment: existing ? s.alignment.map((a) => (a === existing ? next : a)) : [next, ...s.alignment],
+    }));
+    return ok("Alignment notes saved.");
+  },
+
+  saveGovernanceRun: (cadence, items, completedBy = "Hema") => {
+    const id = nextId("G", get().governance);
+    const run: GovernanceRun = { id, cadence, date: today(), items, completedBy };
+    set((s) => ({ governance: [run, ...s.governance] }));
+    return ok(`${cadence[0].toUpperCase() + cadence.slice(1)} governance run saved.`);
+  },
 }));
 
 /* ───────────── Derived helpers ───────────── */
@@ -910,6 +1063,21 @@ export function bookingFlags(b: Booking) {
   const canStartHeirloom = b.albumSelectionConfirmed;
   return { marketingAllowed, consentRecorded, canCompleteShoot, canStartEditing, canStartHeirloom };
 }
+
+/* ───────────── Alignment helpers ───────────── */
+
+export function alignmentAverage(scores: AlignmentScore["scores"]): number {
+  const vals = Object.values(scores).filter((v): v is number => typeof v === "number");
+  if (!vals.length) return 0;
+  return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+}
+
+export function bookingAlignment(bookingId: string, alignment: AlignmentScore[]): number {
+  const rec = alignment.find((a) => a.bookingId === bookingId);
+  return rec ? alignmentAverage(rec.scores) : 0;
+}
+
+export { alignmentDimensions };
 
 /* ───────────── Template helpers ───────────── */
 

@@ -14,26 +14,41 @@ import {
   Camera,
   MessageSquareHeart,
   ListChecks,
-  BookOpen,
+  GitBranch,
+  FileText,
+  Clipboard,
+  Star,
+  Megaphone,
+  Gauge,
+  UsersRound,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
 const nav = [
-  { to: "/", label: "Philosophy Command Center", icon: Home },
-  { to: "/leads", label: "Leads & Inquiries", icon: Heart },
+  { to: "/", label: "Dashboard", icon: Home },
+  { to: "/leads", label: "Leads", icon: Heart },
   { to: "/clients", label: "Clients", icon: Users },
-  { to: "/bookings", label: "Bookings", icon: CalendarHeart },
   { to: "/memory", label: "Memory Profiles", icon: BookHeart },
-  { to: "/packages", label: "Package Recommender", icon: Sparkles },
-  { to: "/privacy", label: "Privacy & Consent", icon: ShieldCheck },
-  { to: "/safety", label: "Safety & Comfort", icon: ClipboardCheck },
-  { to: "/editing", label: "Editing & Delivery", icon: ImageIcon },
-  { to: "/heirloom", label: "Heirloom Production", icon: Frame },
-  { to: "/pixieset", label: "Pixieset Control", icon: Camera },
+  { to: "/bookings", label: "Bookings", icon: CalendarHeart },
+  { to: "/pipeline", label: "Pipeline", icon: GitBranch },
+  { to: "/packages", label: "Packages", icon: Sparkles },
+  { to: "/quote", label: "Quote Builder", icon: FileText },
   { to: "/whatsapp", label: "WhatsApp Follow-Ups", icon: MessageSquareHeart },
-  { to: "/tasks", label: "Team Tasks", icon: ListChecks },
-  { to: "/sops", label: "SOP Center", icon: BookOpen },
-  { to: "/kpi", label: "KPI Dashboard", icon: LineChart },
+  { to: "/prep", label: "Shoot Prep", icon: Clipboard },
+  { to: "/safety", label: "Safety & Comfort", icon: ClipboardCheck },
+  { to: "/privacy", label: "Privacy & Consent", icon: ShieldCheck },
+  { to: "/editing", label: "Editing & Delivery", icon: ImageIcon },
+  { to: "/pixieset", label: "Pixieset Control", icon: Camera },
+  { to: "/heirloom", label: "Heirloom Production", icon: Frame },
+  { to: "/tasks", label: "Team Tasks & SOPs", icon: ListChecks },
+  { to: "/marketing", label: "Marketing Approvals", icon: Megaphone },
+  { to: "/reviews", label: "Reviews & Aftercare", icon: Star },
+  { to: "/governance", label: "Governance", icon: Gauge },
+  { to: "/reports", label: "Reports / KPIs", icon: LineChart },
+  { to: "/kpi", label: "KPI Detail", icon: LineChart },
+  { to: "/team", label: "Team", icon: UsersRound },
+  { to: "/settings", label: "Settings", icon: SettingsIcon },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -89,6 +104,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="px-5 sm:px-8 lg:px-12 py-8 lg:py-10 max-w-[1400px] mx-auto">
           {children}
         </div>
+        <footer className="px-5 sm:px-8 lg:px-12 py-6 border-t border-border bg-sidebar/40">
+          <p className="text-center text-xs italic text-muted-foreground">
+            Little Moments OS — Built to protect the memories that become everything.
+          </p>
+        </footer>
       </main>
     </div>
   );
