@@ -19,6 +19,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PixiesetRouteImport } from './routes/pixieset'
 import { Route as PackagesRouteImport } from './routes/packages'
 import { Route as MemoryRouteImport } from './routes/memory'
+import { Route as MarketingRouteImport } from './routes/marketing'
 import { Route as LeadsRouteImport } from './routes/leads'
 import { Route as KpiRouteImport } from './routes/kpi'
 import { Route as HeirloomRouteImport } from './routes/heirloom'
@@ -78,6 +79,11 @@ const MemoryRoute = MemoryRouteImport.update({
   path: '/memory',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MarketingRoute = MarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LeadsRoute = LeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/heirloom': typeof HeirloomRoute
   '/kpi': typeof KpiRoute
   '/leads': typeof LeadsRoute
+  '/marketing': typeof MarketingRoute
   '/memory': typeof MemoryRoute
   '/packages': typeof PackagesRoute
   '/pixieset': typeof PixiesetRoute
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/heirloom': typeof HeirloomRoute
   '/kpi': typeof KpiRoute
   '/leads': typeof LeadsRoute
+  '/marketing': typeof MarketingRoute
   '/memory': typeof MemoryRoute
   '/packages': typeof PackagesRoute
   '/pixieset': typeof PixiesetRoute
@@ -169,6 +177,7 @@ export interface FileRoutesById {
   '/heirloom': typeof HeirloomRoute
   '/kpi': typeof KpiRoute
   '/leads': typeof LeadsRoute
+  '/marketing': typeof MarketingRoute
   '/memory': typeof MemoryRoute
   '/packages': typeof PackagesRoute
   '/pixieset': typeof PixiesetRoute
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/heirloom'
     | '/kpi'
     | '/leads'
+    | '/marketing'
     | '/memory'
     | '/packages'
     | '/pixieset'
@@ -211,6 +221,7 @@ export interface FileRouteTypes {
     | '/heirloom'
     | '/kpi'
     | '/leads'
+    | '/marketing'
     | '/memory'
     | '/packages'
     | '/pixieset'
@@ -231,6 +242,7 @@ export interface FileRouteTypes {
     | '/heirloom'
     | '/kpi'
     | '/leads'
+    | '/marketing'
     | '/memory'
     | '/packages'
     | '/pixieset'
@@ -252,6 +264,7 @@ export interface RootRouteChildren {
   HeirloomRoute: typeof HeirloomRoute
   KpiRoute: typeof KpiRoute
   LeadsRoute: typeof LeadsRoute
+  MarketingRoute: typeof MarketingRoute
   MemoryRoute: typeof MemoryRoute
   PackagesRoute: typeof PackagesRoute
   PixiesetRoute: typeof PixiesetRoute
@@ -336,6 +349,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MemoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/marketing': {
+      id: '/marketing'
+      path: '/marketing'
+      fullPath: '/marketing'
+      preLoaderRoute: typeof MarketingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/leads': {
       id: '/leads'
       path: '/leads'
@@ -404,6 +424,7 @@ const rootRouteChildren: RootRouteChildren = {
   HeirloomRoute: HeirloomRoute,
   KpiRoute: KpiRoute,
   LeadsRoute: LeadsRoute,
+  MarketingRoute: MarketingRoute,
   MemoryRoute: MemoryRoute,
   PackagesRoute: PackagesRoute,
   PixiesetRoute: PixiesetRoute,
