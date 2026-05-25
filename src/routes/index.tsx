@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
 import { useStore, bookingFlags } from "@/store/useStore";
-import { CalendarHeart, Heart, ShieldCheck, ClipboardCheck, Image as ImageIcon, Frame, MessageCircle, Clock, AlertCircle, Star } from "lucide-react";
+import { CalendarHeart, Heart, ShieldCheck, ClipboardCheck, Image as ImageIcon, Frame, MessageCircle, Clock, AlertCircle, Star, BookHeart, GitBranch } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -14,7 +14,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { leads, bookings, privacy, editing, heirloom } = useStore();
+  const { leads, bookings, privacy, editing, heirloom, memoryProfiles } = useStore();
   const todayDate = new Date().toISOString().slice(0, 10);
   const todayShoots = bookings.filter((b) => b.date.startsWith(todayDate)).slice(0, 5);
   const display = todayShoots.length > 0 ? todayShoots : bookings.slice(0, 3);
@@ -28,6 +28,10 @@ function Index() {
   const heirloomPending = heirloom.filter((h) => !h.delivered).length;
   const delayed = editing.filter((e) => e.deadline !== "—" && e.deadline < todayDate && e.status !== "Delivered").length;
   const reviewRequests = editing.filter((e) => e.status === "Delivered").length;
+  const memoryCaptured = memoryProfiles.length;
+  const memoryTotal = leads.length + bookings.length;
+  const memoryPending = Math.max(0, memoryTotal - memoryCaptured);
+  const journeysActive = bookings.filter((b) => b.journeyStage !== "Completed / Relationship Active").length;
 
   // Philosophy alignment = blend of safety completion, privacy recording, on-time editing
   const safetyPct = bookings.length ? (bookings.filter((b) => b.safety === "Completed").length / bookings.length) * 100 : 100;
@@ -38,6 +42,8 @@ function Index() {
   const tiles = [
     { label: "Today's shoots", value: todayShoots.length, icon: CalendarHeart, to: "/bookings", tone: "gold" as const },
     { label: "New inquiries", value: newInquiries, icon: Heart, to: "/leads", tone: "good" as const },
+    { label: "Memory profiles pending", value: memoryPending, icon: BookHeart, to: "/memory", tone: "warn" as const },
+    { label: "Active journeys", value: journeysActive, icon: GitBranch, to: "/bookings", tone: "gold" as const },
     { label: "Pending follow-ups", value: followUps, icon: MessageCircle, to: "/leads", tone: "warn" as const },
     { label: "Pending bookings", value: pendingBookings, icon: Clock, to: "/bookings", tone: "warn" as const },
     { label: "Pending privacy consents", value: pendingPrivacy, icon: ShieldCheck, to: "/privacy", tone: "bad" as const },
@@ -51,9 +57,9 @@ function Index() {
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Today · Monday, 25 May 2026"
+        eyebrow="Little Shots Studio OS — Philosophy-Driven Internal Control Room"
         title="Philosophy Command Center"
-        subtitle="A calm overview of every moment we are protecting today."
+        subtitle="Today · Monday, 25 May 2026 — a calm overview of every moment we are protecting across leads, memory goals, bookings, payments, safety, privacy, editing, Pixieset galleries, heirloom production, team tasks, reviews, and KPIs."
         quote="Every task today protects a memory that will matter forever."
       />
 
