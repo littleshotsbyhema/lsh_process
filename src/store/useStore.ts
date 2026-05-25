@@ -694,8 +694,11 @@ export const useStore = create<Store>((set, get) => ({
       return fail("Safety checklist must be submitted before marking the shoot complete.");
     if (stage === "Delivered") {
       const job = get().editing.find((e) => e.bookingId === bookingId);
-      if (!job || job.status !== "Delivered")
-        return fail("Editing must reach Delivered before the journey can move to Delivered.");
+      const pix = get().pixieset.find((p) => p.bookingId === bookingId);
+      const editingDone = job?.status === "Delivered";
+      const galleryDelivered = pix?.galleryStatus === "Delivered";
+      if (!editingDone && !galleryDelivered)
+        return fail("Editing or the Pixieset gallery must reach Delivered first.");
     }
     if (stage === "Completed / Relationship Active") {
       const job = get().editing.find((e) => e.bookingId === bookingId);
@@ -730,6 +733,99 @@ export const useStore = create<Store>((set, get) => ({
     }));
     return ok("Aftercare intentionally skipped with reason recorded.");
   },
+
+  upsertPixieset: (bookingId, patch) => {
+    const b = get().bookings.find((x) => x.id === bookingId);
+    if (!b) return fail("Booking not found.");
+    const existing = get().pixieset.find((p) => p.bookingId === bookingId);
+    const base: PixiesetRecord = existing ?? {
+      id: nextId("PX", get().pixieset),
+      bookingId,
+      clientId: b.clientId,
+      client: b.client,
+      pixiesetClientName: b.client,
+      collectionName: `${b.client} — ${b.category}`,
+      galleryLink: "",
+      password: "",
+      galleryStatus: "Not Created",
+      watermark: "Not Needed",
+      favoritesEnabled: true,
+      favoritesStatus: "Pending",
+      downloadEnabled: false,
+      downloadExpiry: "",
+      storeEnabled: false,
+      priceSheet: "None",
+      invoiceLink: "",
+      contractLink: "",
+      orderStatus: "No Order",
+      syncNotes: "",
+      updatedAt: new Date().toISOString(),
+    };
+    const next: PixiesetRecord = { ...base, ...patch, updatedAt: new Date().toISOString() };
+    set((s) => ({
+      pixieset: existing
+        ? s.pixieset.map((p) => (p === existing ? next : p))
+        : [next, ...s.pixieset],
+    }));
+    return ok("Pixieset record saved.");
+  },
+
+  createFollowUp: (data) => {
+    const id = nextId("FU", get().followUps);
+    const message =
+      data.message ??
+      renderTemplate(whatsappTemplates[data.messageType], buildPlaceholders(get(), data));
+    const item: FollowUp = {
+      id,
+      client: data.client,
+      bookingId: data.bookingId,
+      leadId: data.leadId,
+      messageType: data.messageType,
+      message,
+      scheduledDate: data.scheduledDate,
+      status: data.status,
+      sentBy: data.sentBy,
+      notes: data.notes ?? "",
+      createdAt: new Date().toISOString(),
+    };
+    set((s) => ({ followUps: [item, ...s.followUps] }));
+    return { ...ok(`“${data.messageType}” follow-up saved.`), followUpId: id };
+  },
+
+  updateFollowUp: (id, patch) => {
+    set((s) => ({
+      followUps: s.followUps.map((f) => (f.id === id ? { ...f, ...patch } : f)),
+    }));
+    return ok("Follow-up updated.");
+  },
+
+  createTask: (data) => {
+    const id = nextId("T", get().tasks);
+    const item: Task = {
+      id,
+      title: data.title,
+      relatedType: data.relatedType,
+      relatedId: data.relatedId,
+      relatedLabel: data.relatedLabel,
+      role: data.role,
+      assignee: data.assignee ?? "Unassigned",
+      dueDate: data.dueDate ?? today(),
+      priority: data.priority ?? "Medium",
+      status: data.status ?? "Pending",
+      sop: data.sop,
+      notes: data.notes ?? "",
+      createdAt: new Date().toISOString(),
+    };
+    set((s) => ({ tasks: [item, ...s.tasks] }));
+    return { ...ok(`Task created: ${data.title}`), taskId: id };
+  },
+
+  updateTask: (id, patch) => {
+    set((s) => ({
+      tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+    }));
+    return ok("Task updated.");
+  },
 }));
 
 /* ───────────── Derived helpers ───────────── */
@@ -743,4 +839,44 @@ export function bookingFlags(b: Booking) {
   const canStartEditing = b.selectionConfirmed && b.payment === "Paid";
   const canStartHeirloom = b.albumSelectionConfirmed;
   return { marketingAllowed, consentRecorded, canCompleteShoot, canStartEditing, canStartHeirloom };
+}
+
+/* ───────────── Template helpers ───────────── */
+
+export function renderTemplate(template: string, vars: Record<string, string>) {
+  return Object.entries(vars).reduce(
+    (acc, [k, v]) => acc.split(k).join(v || k),
+    template,
+  );
+}
+
+type StoreSnapshot = {
+  bookings: Booking[];
+  leads: Lead[];
+  pixieset: PixiesetRecord[];
+  memoryProfiles: MemoryProfile[];
+};
+
+export function buildPlaceholders(
+  s: StoreSnapshot,
+  ctx: { client: string; bookingId?: string; leadId?: string },
+): Record<string, string> {
+  const b = ctx.bookingId ? s.bookings.find((x) => x.id === ctx.bookingId) : undefined;
+  const l = ctx.leadId ? s.leads.find((x) => x.id === ctx.leadId) : undefined;
+  const pix = ctx.bookingId ? s.pixieset.find((p) => p.bookingId === ctx.bookingId) : undefined;
+  const mp = b
+    ? s.memoryProfiles.find((p) => p.ownerType === "booking" && p.ownerId === b.id)
+    : undefined;
+  return {
+    "[Client Name]": ctx.client || b?.client || l?.parent || "",
+    "[Session Type]": (b?.category as string) || (l?.sessionType as string) || "",
+    "[Package Name]": b?.package || l?.package || "",
+    "[Shoot Date]": b?.date || l?.preferredDate || "",
+    "[Balance Amount]": b ? `₹${b.balance.toLocaleString("en-IN")}` : "",
+    "[Gallery Link]": pix?.galleryLink || "—",
+    "[Privacy Choice]": b?.privacy || "your privacy preferences",
+    "[Delivery Timeline]": b?.deadline || "10–14 days",
+    "[Review Link]": "https://g.page/littleshots/review",
+    "[Memory Goal]": mp?.memoryGoal || l?.memoryGoal || "",
+  };
 }
