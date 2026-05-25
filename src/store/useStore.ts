@@ -1,5 +1,13 @@
 import { create } from "zustand";
-import type { BookingStatus, EditingStatus, LeadStatus, SessionType } from "@/lib/mock-data";
+import type {
+  BookingStatus,
+  EditingStatus,
+  JourneyStage,
+  LeadStatus,
+  LegacyInterest,
+  EmotionalPriority,
+  SessionType,
+} from "@/lib/mock-data";
 import {
   leads as seedLeads,
   clients as seedClients,
@@ -71,6 +79,9 @@ export type Booking = {
   status: BookingStatus;
   selectionConfirmed: boolean;
   albumSelectionConfirmed: boolean;
+  journeyStage: JourneyStage;
+  reviewRequested?: boolean;
+  aftercareSkipReason?: string;
 };
 
 export type PrivacyRecord = {
@@ -126,6 +137,27 @@ export type HeirloomJob = {
   delivered: boolean;
 };
 
+/* Memory Profile — one per owner (lead/client/booking) */
+export type MemoryProfileOwner = "lead" | "client" | "booking";
+export type MemoryProfile = {
+  ownerType: MemoryProfileOwner;
+  ownerId: string;
+  memoryGoal: string;
+  familyStory: string;
+  importantPeople: string;
+  mustCaptureMoments: string;
+  comfortNeeds: string;
+  sensitivities: string;
+  legacyInterest: LegacyInterest;
+  emotionalPriority: EmotionalPriority;
+  notesPhotographer: string;
+  notesEditor: string;
+  notesAlbumDesigner: string;
+  updatedAt: string;
+};
+
+const profileKey = (ownerType: MemoryProfileOwner, ownerId: string) => `${ownerType}:${ownerId}`;
+
 /* ───────────── Result helpers ───────────── */
 
 type Result =
@@ -149,6 +181,7 @@ type Store = {
   safety: SafetySubmission[];
   editing: EditingJob[];
   heirloom: HeirloomJob[];
+  memoryProfiles: MemoryProfile[];
 
   // lead flow
   setLeadStatus: (leadId: string, status: LeadStatus) => Result;
@@ -182,6 +215,19 @@ type Store = {
   ) => Result & { jobId?: string };
   advanceHeirloom: (jobId: string, step: keyof Pick<HeirloomJob, "proofSent" | "approved" | "sentToProduction" | "produced" | "packed" | "ready" | "delivered">) => Result;
   passHeirloomQC: (jobId: string) => Result;
+
+  // memory profiles
+  upsertMemoryProfile: (
+    ownerType: MemoryProfileOwner,
+    ownerId: string,
+    patch: Partial<Omit<MemoryProfile, "ownerType" | "ownerId" | "updatedAt">>,
+  ) => Result;
+  getMemoryProfile: (ownerType: MemoryProfileOwner, ownerId: string) => MemoryProfile | undefined;
+
+  // journey
+  setJourneyStage: (bookingId: string, stage: JourneyStage) => Result;
+  requestReview: (bookingId: string) => Result;
+  skipAftercare: (bookingId: string, reason: string) => Result;
 };
 
 const nextId = (prefix: string, list: { id: string }[]) => {
@@ -194,11 +240,25 @@ const nextId = (prefix: string, list: { id: string }[]) => {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-const initialBookings: Booking[] = (seedBookings as unknown as (Omit<Booking, "selectionConfirmed" | "albumSelectionConfirmed"> & Partial<Pick<Booking, "selectionConfirmed" | "albumSelectionConfirmed">>)[]).map(
+const statusToJourney: Record<BookingStatus, JourneyStage> = {
+  Tentative: "Quote Sent",
+  "Advance Pending": "Follow-Up Pending",
+  Confirmed: "Booking Confirmed",
+  "Pre-Shoot Prep": "Pre-Shoot Preparation",
+  "Shoot Completed": "Shoot Completed",
+  "Selection Pending": "Selection Pending",
+  Editing: "Editing in Progress",
+  Delivered: "Delivered",
+  "Album/Frame Pending": "Album / Frame Production",
+  Completed: "Completed / Relationship Active",
+};
+
+const initialBookings: Booking[] = (seedBookings as unknown as (Omit<Booking, "selectionConfirmed" | "albumSelectionConfirmed" | "journeyStage"> & Partial<Pick<Booking, "selectionConfirmed" | "albumSelectionConfirmed" | "journeyStage">>)[]).map(
   (b) => ({
     ...b,
     selectionConfirmed: b.status === "Editing" || b.status === "Delivered" || b.status === "Completed",
     albumSelectionConfirmed: b.status === "Album/Frame Pending" || b.status === "Completed",
+    journeyStage: b.journeyStage ?? statusToJourney[b.status] ?? "Booking Confirmed",
   }),
 );
 
@@ -222,6 +282,7 @@ export const useStore = create<Store>((set, get) => ({
   safety: [],
   editing: initialEditing,
   heirloom: initialHeirloom,
+  memoryProfiles: [],
 
   setLeadStatus: (leadId, status) => {
     set((s) => ({
@@ -290,6 +351,7 @@ export const useStore = create<Store>((set, get) => ({
       status: "Tentative",
       selectionConfirmed: false,
       albumSelectionConfirmed: false,
+      journeyStage: "Quote Sent",
     };
     set((s) => ({ bookings: [newBooking, ...s.bookings] }));
     return { ...ok(`Tentative booking created for ${client.name}.`), bookingId };
@@ -486,6 +548,96 @@ export const useStore = create<Store>((set, get) => ({
       heirloom: s.heirloom.map((x) => (x.id === jobId ? { ...x, qc: "Passed" } : x)),
     }));
     return ok("QC passed. Ready for packing.");
+  },
+
+  getMemoryProfile: (ownerType, ownerId) =>
+    get().memoryProfiles.find((p) => p.ownerType === ownerType && p.ownerId === ownerId),
+
+  upsertMemoryProfile: (ownerType, ownerId, patch) => {
+    const existing = get().memoryProfiles.find(
+      (p) => p.ownerType === ownerType && p.ownerId === ownerId,
+    );
+    const base: MemoryProfile = existing ?? {
+      ownerType,
+      ownerId,
+      memoryGoal: "",
+      familyStory: "",
+      importantPeople: "",
+      mustCaptureMoments: "",
+      comfortNeeds: "",
+      sensitivities: "",
+      legacyInterest: "None",
+      emotionalPriority: "Simple Memory",
+      notesPhotographer: "",
+      notesEditor: "",
+      notesAlbumDesigner: "",
+      updatedAt: new Date().toISOString(),
+    };
+    const next: MemoryProfile = { ...base, ...patch, updatedAt: new Date().toISOString() };
+    set((s) => ({
+      memoryProfiles: existing
+        ? s.memoryProfiles.map((p) => (p === existing ? next : p))
+        : [next, ...s.memoryProfiles],
+    }));
+    return ok("Memory Profile saved. The story is on record.");
+  },
+
+  setJourneyStage: (bookingId, stage) => {
+    const b = get().bookings.find((x) => x.id === bookingId);
+    if (!b) return fail("Booking not found.");
+    // Guards
+    if (stage === "Package Recommended") {
+      const mp =
+        get().memoryProfiles.find((p) => p.ownerType === "booking" && p.ownerId === bookingId) ||
+        (b.clientId && get().memoryProfiles.find((p) => p.ownerType === "client" && p.ownerId === b.clientId!));
+      if (!mp || !mp.memoryGoal.trim())
+        return fail("Capture the family's Memory Goal before recommending a package.");
+    }
+    if (stage === "Booking Confirmed") {
+      if (!b.package || b.package === "—")
+        return fail("Record the chosen package before confirming the booking.");
+      if (b.advance <= 0)
+        return fail("Advance payment must be recorded before confirming the booking.");
+    }
+    if (stage === "Shoot Completed" && b.safety !== "Completed")
+      return fail("Safety checklist must be submitted before marking the shoot complete.");
+    if (stage === "Delivered") {
+      const job = get().editing.find((e) => e.bookingId === bookingId);
+      if (!job || job.status !== "Delivered")
+        return fail("Editing must reach Delivered before the journey can move to Delivered.");
+    }
+    if (stage === "Completed / Relationship Active") {
+      const job = get().editing.find((e) => e.bookingId === bookingId);
+      const delivered = job?.status === "Delivered";
+      const reviewed = !!b.reviewRequested;
+      const aftercareDone = reviewed || !!b.aftercareSkipReason;
+      if (!delivered) return fail("Delivery must be completed before closing the journey.");
+      if (!aftercareDone)
+        return fail("Request a review or record an aftercare skip reason before closing.");
+    }
+    set((s) => ({
+      bookings: s.bookings.map((x) => (x.id === bookingId ? { ...x, journeyStage: stage } : x)),
+    }));
+    return ok(`Journey advanced to “${stage}”.`);
+  },
+
+  requestReview: (bookingId) => {
+    set((s) => ({
+      bookings: s.bookings.map((b) =>
+        b.id === bookingId ? { ...b, reviewRequested: true } : b,
+      ),
+    }));
+    return ok("Review request logged.");
+  },
+
+  skipAftercare: (bookingId, reason) => {
+    if (!reason.trim()) return fail("A reason is needed to intentionally skip aftercare.");
+    set((s) => ({
+      bookings: s.bookings.map((b) =>
+        b.id === bookingId ? { ...b, aftercareSkipReason: reason.trim() } : b,
+      ),
+    }));
+    return ok("Aftercare intentionally skipped with reason recorded.");
   },
 }));
 
