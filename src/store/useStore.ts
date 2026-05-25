@@ -1064,6 +1064,21 @@ export function bookingFlags(b: Booking) {
   return { marketingAllowed, consentRecorded, canCompleteShoot, canStartEditing, canStartHeirloom };
 }
 
+/* ───────────── Alignment helpers ───────────── */
+
+export function alignmentAverage(scores: AlignmentScore["scores"]): number {
+  const vals = Object.values(scores).filter((v): v is number => typeof v === "number");
+  if (!vals.length) return 0;
+  return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+}
+
+export function bookingAlignment(bookingId: string, alignment: AlignmentScore[]): number {
+  const rec = alignment.find((a) => a.bookingId === bookingId);
+  return rec ? alignmentAverage(rec.scores) : 0;
+}
+
+export { alignmentDimensions };
+
 /* ───────────── Template helpers ───────────── */
 
 export function renderTemplate(template: string, vars: Record<string, string>) {
