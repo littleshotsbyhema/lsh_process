@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SafetyRouteImport } from './routes/safety'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PackagesRouteImport } from './routes/packages'
+import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as LeadsRouteImport } from './routes/leads'
 import { Route as KpiRouteImport } from './routes/kpi'
 import { Route as HeirloomRouteImport } from './routes/heirloom'
@@ -33,6 +34,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PackagesRoute = PackagesRouteImport.update({
   id: '/packages',
   path: '/packages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MemoryRoute = MemoryRouteImport.update({
+  id: '/memory',
+  path: '/memory',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LeadsRoute = LeadsRouteImport.update({
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/heirloom': typeof HeirloomRoute
   '/kpi': typeof KpiRoute
   '/leads': typeof LeadsRoute
+  '/memory': typeof MemoryRoute
   '/packages': typeof PackagesRoute
   '/privacy': typeof PrivacyRoute
   '/safety': typeof SafetyRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/heirloom': typeof HeirloomRoute
   '/kpi': typeof KpiRoute
   '/leads': typeof LeadsRoute
+  '/memory': typeof MemoryRoute
   '/packages': typeof PackagesRoute
   '/privacy': typeof PrivacyRoute
   '/safety': typeof SafetyRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/heirloom': typeof HeirloomRoute
   '/kpi': typeof KpiRoute
   '/leads': typeof LeadsRoute
+  '/memory': typeof MemoryRoute
   '/packages': typeof PackagesRoute
   '/privacy': typeof PrivacyRoute
   '/safety': typeof SafetyRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/heirloom'
     | '/kpi'
     | '/leads'
+    | '/memory'
     | '/packages'
     | '/privacy'
     | '/safety'
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/heirloom'
     | '/kpi'
     | '/leads'
+    | '/memory'
     | '/packages'
     | '/privacy'
     | '/safety'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/heirloom'
     | '/kpi'
     | '/leads'
+    | '/memory'
     | '/packages'
     | '/privacy'
     | '/safety'
@@ -155,6 +167,7 @@ export interface RootRouteChildren {
   HeirloomRoute: typeof HeirloomRoute
   KpiRoute: typeof KpiRoute
   LeadsRoute: typeof LeadsRoute
+  MemoryRoute: typeof MemoryRoute
   PackagesRoute: typeof PackagesRoute
   PrivacyRoute: typeof PrivacyRoute
   SafetyRoute: typeof SafetyRoute
@@ -181,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/packages'
       fullPath: '/packages'
       preLoaderRoute: typeof PackagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/memory': {
+      id: '/memory'
+      path: '/memory'
+      fullPath: '/memory'
+      preLoaderRoute: typeof MemoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/leads': {
@@ -243,6 +263,7 @@ const rootRouteChildren: RootRouteChildren = {
   HeirloomRoute: HeirloomRoute,
   KpiRoute: KpiRoute,
   LeadsRoute: LeadsRoute,
+  MemoryRoute: MemoryRoute,
   PackagesRoute: PackagesRoute,
   PrivacyRoute: PrivacyRoute,
   SafetyRoute: SafetyRoute,
