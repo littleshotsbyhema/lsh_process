@@ -85,8 +85,33 @@ function Index() {
             </h2>
             <Link to="/bookings" className="text-xs text-muted-foreground hover:text-primary">View all →</Link>
           </div>
+          {todayShoots.length === 0 && display.length > 0 && (
+            <div className="mb-4 flex items-start gap-3 rounded-xl bg-[var(--gradient-warm)] border border-border px-4 py-3">
+              <div className="w-8 h-8 rounded-full bg-card flex items-center justify-center shrink-0">
+                <CalendarHeart className="h-3.5 w-3.5 text-gold" />
+              </div>
+              <div>
+                <p className="font-serif text-base text-primary leading-snug">No shoots today.</p>
+                <p className="text-xs italic text-primary/70 mt-0.5">A quiet day to prepare future memories beautifully.</p>
+              </div>
+            </div>
+          )}
           {display.length === 0 ? (
-            <p className="text-sm text-muted-foreground">A quiet day. Use it to protect tomorrow's memories.</p>
+            <div className="py-10 px-4 text-center rounded-xl bg-[var(--gradient-warm)] border border-border">
+              <div className="mx-auto w-10 h-10 rounded-full bg-card flex items-center justify-center shadow-[var(--shadow-soft)]">
+                <CalendarHeart className="h-4 w-4 text-gold" />
+              </div>
+              <p className="mt-4 font-serif text-xl text-primary">No shoots today.</p>
+              <p className="mt-2 text-sm italic text-primary/70 max-w-sm mx-auto leading-relaxed">
+                A quiet day to prepare future memories beautifully.
+              </p>
+              <Link
+                to="/bookings"
+                className="mt-5 inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-gold bg-card text-primary hover:bg-accent"
+              >
+                View upcoming bookings →
+              </Link>
+            </div>
           ) : (
             <ul className="divide-y divide-border">
               {display.map((b) => (
