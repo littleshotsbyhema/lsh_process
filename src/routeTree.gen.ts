@@ -21,6 +21,7 @@ import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as LeadsRouteImport } from './routes/leads'
 import { Route as KpiRouteImport } from './routes/kpi'
 import { Route as HeirloomRouteImport } from './routes/heirloom'
+import { Route as GovernanceRouteImport } from './routes/governance'
 import { Route as EditingRouteImport } from './routes/editing'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as BookingsRouteImport } from './routes/bookings'
@@ -86,6 +87,11 @@ const HeirloomRoute = HeirloomRouteImport.update({
   path: '/heirloom',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GovernanceRoute = GovernanceRouteImport.update({
+  id: '/governance',
+  path: '/governance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EditingRoute = EditingRouteImport.update({
   id: '/editing',
   path: '/editing',
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/bookings': typeof BookingsRoute
   '/clients': typeof ClientsRoute
   '/editing': typeof EditingRoute
+  '/governance': typeof GovernanceRoute
   '/heirloom': typeof HeirloomRoute
   '/kpi': typeof KpiRoute
   '/leads': typeof LeadsRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/bookings': typeof BookingsRoute
   '/clients': typeof ClientsRoute
   '/editing': typeof EditingRoute
+  '/governance': typeof GovernanceRoute
   '/heirloom': typeof HeirloomRoute
   '/kpi': typeof KpiRoute
   '/leads': typeof LeadsRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/bookings': typeof BookingsRoute
   '/clients': typeof ClientsRoute
   '/editing': typeof EditingRoute
+  '/governance': typeof GovernanceRoute
   '/heirloom': typeof HeirloomRoute
   '/kpi': typeof KpiRoute
   '/leads': typeof LeadsRoute
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/bookings'
     | '/clients'
     | '/editing'
+    | '/governance'
     | '/heirloom'
     | '/kpi'
     | '/leads'
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/bookings'
     | '/clients'
     | '/editing'
+    | '/governance'
     | '/heirloom'
     | '/kpi'
     | '/leads'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/bookings'
     | '/clients'
     | '/editing'
+    | '/governance'
     | '/heirloom'
     | '/kpi'
     | '/leads'
@@ -224,6 +236,7 @@ export interface RootRouteChildren {
   BookingsRoute: typeof BookingsRoute
   ClientsRoute: typeof ClientsRoute
   EditingRoute: typeof EditingRoute
+  GovernanceRoute: typeof GovernanceRoute
   HeirloomRoute: typeof HeirloomRoute
   KpiRoute: typeof KpiRoute
   LeadsRoute: typeof LeadsRoute
@@ -324,6 +337,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeirloomRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/governance': {
+      id: '/governance'
+      path: '/governance'
+      fullPath: '/governance'
+      preLoaderRoute: typeof GovernanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/editing': {
       id: '/editing'
       path: '/editing'
@@ -360,6 +380,7 @@ const rootRouteChildren: RootRouteChildren = {
   BookingsRoute: BookingsRoute,
   ClientsRoute: ClientsRoute,
   EditingRoute: EditingRoute,
+  GovernanceRoute: GovernanceRoute,
   HeirloomRoute: HeirloomRoute,
   KpiRoute: KpiRoute,
   LeadsRoute: LeadsRoute,
