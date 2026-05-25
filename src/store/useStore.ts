@@ -7,6 +7,14 @@ import type {
   LegacyInterest,
   EmotionalPriority,
   SessionType,
+  PixiesetGalleryStatus,
+  PixiesetOrderStatus,
+  PixiesetPriceSheet,
+  WhatsappMessageType,
+  FollowUpStatus,
+  TeamRole,
+  TaskPriority,
+  TaskStatus,
 } from "@/lib/mock-data";
 import {
   leads as seedLeads,
@@ -15,6 +23,7 @@ import {
   privacyRecords as seedPrivacy,
   editingJobs as seedEditing,
   heirloomJobs as seedHeirloom,
+  whatsappTemplates,
 } from "@/lib/mock-data";
 
 /* ───────────── Types ───────────── */
@@ -156,6 +165,63 @@ export type MemoryProfile = {
   updatedAt: string;
 };
 
+/* Pixieset */
+export type PixiesetRecord = {
+  id: string;
+  bookingId: string;
+  clientId?: string;
+  client: string;
+  pixiesetClientName: string;
+  collectionName: string;
+  galleryLink: string;
+  password: string;
+  galleryStatus: PixiesetGalleryStatus;
+  watermark: "Applied" | "Not Needed";
+  favoritesEnabled: boolean;
+  favoritesStatus: "Pending" | "Received";
+  downloadEnabled: boolean;
+  downloadExpiry: string;
+  storeEnabled: boolean;
+  priceSheet: PixiesetPriceSheet;
+  invoiceLink: string;
+  contractLink: string;
+  orderStatus: PixiesetOrderStatus;
+  syncNotes: string;
+  updatedAt: string;
+};
+
+/* WhatsApp follow-up */
+export type FollowUp = {
+  id: string;
+  client: string;
+  bookingId?: string;
+  leadId?: string;
+  messageType: WhatsappMessageType;
+  message: string;
+  scheduledDate: string;
+  status: FollowUpStatus;
+  sentBy: string;
+  notes: string;
+  createdAt: string;
+};
+
+/* Tasks */
+export type Task = {
+  id: string;
+  title: string;
+  relatedType?: "lead" | "client" | "booking";
+  relatedId?: string;
+  relatedLabel?: string;
+  role: TeamRole;
+  assignee: string;
+  dueDate: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  sop?: string;
+  notes: string;
+  createdAt: string;
+};
+
 const profileKey = (ownerType: MemoryProfileOwner, ownerId: string) => `${ownerType}:${ownerId}`;
 
 /* ───────────── Result helpers ───────────── */
@@ -182,6 +248,9 @@ type Store = {
   editing: EditingJob[];
   heirloom: HeirloomJob[];
   memoryProfiles: MemoryProfile[];
+  pixieset: PixiesetRecord[];
+  followUps: FollowUp[];
+  tasks: Task[];
 
   // lead flow
   setLeadStatus: (leadId: string, status: LeadStatus) => Result;
@@ -228,6 +297,25 @@ type Store = {
   setJourneyStage: (bookingId: string, stage: JourneyStage) => Result;
   requestReview: (bookingId: string) => Result;
   skipAftercare: (bookingId: string, reason: string) => Result;
+
+  // pixieset
+  upsertPixieset: (
+    bookingId: string,
+    patch: Partial<Omit<PixiesetRecord, "id" | "bookingId" | "client" | "updatedAt">>,
+  ) => Result;
+
+  // followups
+  createFollowUp: (
+    data: Omit<FollowUp, "id" | "createdAt" | "message"> & { message?: string },
+  ) => Result & { followUpId?: string };
+  updateFollowUp: (id: string, patch: Partial<FollowUp>) => Result;
+
+  // tasks
+  createTask: (
+    data: Omit<Task, "id" | "createdAt" | "status" | "priority" | "notes" | "assignee" | "dueDate"> &
+      Partial<Pick<Task, "status" | "priority" | "notes" | "assignee" | "dueDate">>,
+  ) => Result & { taskId?: string };
+  updateTask: (id: string, patch: Partial<Task>) => Result;
 };
 
 const nextId = (prefix: string, list: { id: string }[]) => {
@@ -283,6 +371,9 @@ export const useStore = create<Store>((set, get) => ({
   editing: initialEditing,
   heirloom: initialHeirloom,
   memoryProfiles: [],
+  pixieset: [],
+  followUps: [],
+  tasks: [],
 
   setLeadStatus: (leadId, status) => {
     set((s) => ({
