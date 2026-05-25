@@ -1,15 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
-import {
-  bookings,
-  leads,
-  philosophyScore,
-  todayShoots,
-  privacyRecords,
-  editingJobs,
-  heirloomJobs,
-} from "@/lib/mock-data";
+import { useStore, bookingFlags } from "@/store/useStore";
 import { CalendarHeart, Heart, ShieldCheck, ClipboardCheck, Image as ImageIcon, Frame, MessageCircle, Clock, AlertCircle, Star } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -23,15 +14,26 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const { leads, bookings, privacy, editing, heirloom } = useStore();
+  const todayDate = new Date().toISOString().slice(0, 10);
+  const todayShoots = bookings.filter((b) => b.date.startsWith(todayDate)).slice(0, 5);
+  const display = todayShoots.length > 0 ? todayShoots : bookings.slice(0, 3);
+
   const newInquiries = leads.filter((l) => l.status === "New Inquiry").length;
   const followUps = leads.filter((l) => l.status === "Follow-Up Needed" || l.status === "Contacted").length;
   const pendingBookings = bookings.filter((b) => b.status === "Tentative" || b.status === "Advance Pending").length;
-  const pendingPrivacy = bookings.filter((b) => !privacyRecords.find((p) => p.booking === b.id)).length;
+  const pendingPrivacy = bookings.filter((b) => !privacy.find((p) => p.bookingId === b.id)).length;
   const pendingSafety = bookings.filter((b) => b.safety === "Pending").length;
-  const editingDue = editingJobs.filter((e) => e.status !== "Delivered").length;
-  const heirloomPending = heirloomJobs.filter((h) => !h.delivered).length;
-  const delayed = 1;
-  const reviewRequests = 3;
+  const editingDue = editing.filter((e) => e.status !== "Delivered").length;
+  const heirloomPending = heirloom.filter((h) => !h.delivered).length;
+  const delayed = editing.filter((e) => e.deadline !== "—" && e.deadline < todayDate && e.status !== "Delivered").length;
+  const reviewRequests = editing.filter((e) => e.status === "Delivered").length;
+
+  // Philosophy alignment = blend of safety completion, privacy recording, on-time editing
+  const safetyPct = bookings.length ? (bookings.filter((b) => b.safety === "Completed").length / bookings.length) * 100 : 100;
+  const privacyPct = bookings.length ? (bookings.filter((b) => bookingFlags(b).consentRecorded).length / bookings.length) * 100 : 100;
+  const ontimePct = editing.length ? (editing.filter((e) => e.status === "Delivered" && (e.deadline === "—" || e.deliveryDate <= e.deadline)).length / editing.length) * 100 : 100;
+  const philosophyScore = Math.round((safetyPct + privacyPct + ontimePct) / 3);
 
   const tiles = [
     { label: "Today's shoots", value: todayShoots.length, icon: CalendarHeart, to: "/bookings", tone: "gold" as const },
@@ -78,20 +80,22 @@ function Index() {
       <section className="grid lg:grid-cols-3 gap-6">
         <Card className="p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-serif text-xl text-primary">Today's shoots</h2>
+            <h2 className="font-serif text-xl text-primary">
+              {todayShoots.length ? "Today's shoots" : "Upcoming shoots"}
+            </h2>
             <Link to="/bookings" className="text-xs text-muted-foreground hover:text-primary">View all →</Link>
           </div>
-          {todayShoots.length === 0 ? (
+          {display.length === 0 ? (
             <p className="text-sm text-muted-foreground">A quiet day. Use it to protect tomorrow's memories.</p>
           ) : (
             <ul className="divide-y divide-border">
-              {todayShoots.map((b) => (
+              {display.map((b) => (
                 <li key={b.id} className="py-4 flex flex-col sm:flex-row sm:items-center gap-2">
                   <div className="flex-1">
                     <div className="font-medium text-primary">{b.client}</div>
                     <div className="text-xs text-muted-foreground">{b.category} · {b.locationType} · {b.locationDetails}</div>
                   </div>
-                  <div className="text-sm text-muted-foreground">{b.date.split(" ")[1]}</div>
+                  <div className="text-sm text-muted-foreground">{b.date}</div>
                   <div className="flex gap-1.5">
                     <StatusPill tone={b.safety === "Completed" ? "good" : "bad"}>Safety: {b.safety}</StatusPill>
                     <StatusPill tone="gold">{b.photographer}</StatusPill>
@@ -114,7 +118,7 @@ function Index() {
             <div className="h-full bg-[var(--gradient-gold)]" style={{ width: `${philosophyScore}%` }} />
           </div>
           <p className="mt-5 text-sm italic text-primary/80 leading-relaxed">
-            “We are protecting memories with care this month. Two safety checklists and one consent recording were missed — let's bring it to 100.”
+            “Safety {Math.round(safetyPct)}% · Consent {Math.round(privacyPct)}% · On-time {Math.round(ontimePct)}%. Every gap is a memory we owe better care.”
           </p>
         </Card>
       </section>

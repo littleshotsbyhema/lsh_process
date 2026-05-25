@@ -1,6 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
-import { leads, leadStatuses } from "@/lib/mock-data";
+import { leadStatuses, type LeadStatus } from "@/lib/mock-data";
+import { useStore } from "@/store/useStore";
+import { handle } from "@/lib/handle";
+import { UserPlus, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/leads")({
   head: () => ({ meta: [{ title: "Leads & Inquiries · Little Moments OS" }] }),
@@ -15,6 +18,11 @@ function toneFor(status: string) {
 }
 
 function LeadsPage() {
+  const leads = useStore((s) => s.leads);
+  const convertLeadToClient = useStore((s) => s.convertLeadToClient);
+  const createBookingForClient = useStore((s) => s.createBookingForClient);
+  const setLeadStatus = useStore((s) => s.setLeadStatus);
+  const navigate = useNavigate();
   return (
     <AppShell>
       <PageHeader
@@ -58,8 +66,64 @@ function LeadsPage() {
               <Field k="Budget comfort" v={l.budget} />
               <Field k="Follow-up date" v={l.followUp} />
             </dl>
+
+            <div className="mt-5 pt-4 border-t border-border flex flex-wrap items-center gap-2">
+              <select
+                value={l.status}
+                onChange={(e) => handle(setLeadStatus(l.id, e.target.value as LeadStatus))}
+                className="text-xs bg-muted text-primary border border-border rounded-lg px-2.5 py-1.5"
+              >
+                {leadStatuses.map((s) => <option key={s}>{s}</option>)}
+              </select>
+
+              {l.convertedClientId ? (
+                <button
+                  onClick={() => navigate({ to: "/clients" })}
+                  className="ml-auto inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-accent text-primary border border-gold"
+                >
+                  Linked → {l.convertedClientId} <ArrowRight className="h-3 w-3" />
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      const r = convertLeadToClient(l.id);
+                      handle(r);
+                    }}
+                    className="ml-auto inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+                  >
+                    <UserPlus className="h-3 w-3" /> Convert to client
+                  </button>
+                  <button
+                    onClick={() => {
+                      const r = convertLeadToClient(l.id);
+                      if (r.ok && r.clientId) {
+                        const b = createBookingForClient(r.clientId, {
+                          category: l.sessionType,
+                          city: l.city,
+                          locationType: l.location,
+                          date: `${l.preferredDate} 10:00`,
+                          package: l.package,
+                        });
+                        handle(b);
+                        if (b.ok) navigate({ to: "/bookings" });
+                      } else handle(r);
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[var(--gradient-gold)] text-primary"
+                  >
+                    Convert + book
+                  </button>
+                </>
+              )}
+            </div>
           </Card>
         ))}
+        {leads.length === 0 && (
+          <Card className="p-10 text-center col-span-full">
+            <p className="font-serif text-xl text-primary">No inquiries yet.</p>
+            <p className="text-sm text-muted-foreground mt-2">The next message could be a memory in waiting.</p>
+          </Card>
+        )}
       </div>
     </AppShell>
   );

@@ -12,6 +12,7 @@ export const leadStatuses = [
   "Lost",
   "Future Lead",
 ] as const;
+export type LeadStatus = (typeof leadStatuses)[number];
 
 export const bookingStatuses = [
   "Tentative",
@@ -25,6 +26,7 @@ export const bookingStatuses = [
   "Album/Frame Pending",
   "Completed",
 ] as const;
+export type BookingStatus = (typeof bookingStatuses)[number];
 
 export const editingStatuses = [
   "Shoot Uploaded",
@@ -39,6 +41,7 @@ export const editingStatuses = [
   "Final Export",
   "Delivered",
 ] as const;
+export type EditingStatus = (typeof editingStatuses)[number];
 
 export const leads = [
   {
