@@ -15,6 +15,12 @@ import type {
   TeamRole,
   TaskPriority,
   TaskStatus,
+  ReviewPlatform,
+  ReviewRequestStatus,
+  IssueCategory,
+  IssueStatus,
+  AlignmentDimension,
+  GovernanceCadence,
 } from "@/lib/mock-data";
 import {
   leads as seedLeads,
@@ -24,6 +30,7 @@ import {
   editingJobs as seedEditing,
   heirloomJobs as seedHeirloom,
   whatsappTemplates,
+  alignmentDimensions,
 } from "@/lib/mock-data";
 
 /* ───────────── Types ───────────── */
@@ -222,6 +229,45 @@ export type Task = {
   createdAt: string;
 };
 
+/* Reviews */
+export type Review = {
+  id: string;
+  bookingId: string;
+  client: string;
+  sessionType: SessionType;
+  requestStatus: ReviewRequestStatus;
+  platform?: ReviewPlatform;
+  rating?: number;
+  testimonial: string;
+  permissionToUse: boolean;
+  consentProof: string;
+  issueRaised: boolean;
+  issueCategory?: IssueCategory;
+  issueStatus?: IssueStatus;
+  resolutionNotes: string;
+  repeatOpportunity: boolean;
+  nextMilestoneDate: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/* Philosophy Alignment Score */
+export type AlignmentScore = {
+  bookingId: string;
+  scores: Partial<Record<AlignmentDimension, number>>;
+  notes: string;
+  updatedAt: string;
+};
+
+/* Governance run-log */
+export type GovernanceRun = {
+  id: string;
+  cadence: GovernanceCadence;
+  date: string;
+  items: Record<string, boolean>;
+  completedBy: string;
+};
+
 const profileKey = (ownerType: MemoryProfileOwner, ownerId: string) => `${ownerType}:${ownerId}`;
 
 /* ───────────── Result helpers ───────────── */
@@ -251,6 +297,9 @@ type Store = {
   pixieset: PixiesetRecord[];
   followUps: FollowUp[];
   tasks: Task[];
+  reviews: Review[];
+  alignment: AlignmentScore[];
+  governance: GovernanceRun[];
 
   // lead flow
   setLeadStatus: (leadId: string, status: LeadStatus) => Result;
@@ -316,6 +365,14 @@ type Store = {
       Partial<Pick<Task, "status" | "priority" | "notes" | "assignee" | "dueDate">>,
   ) => Result & { taskId?: string };
   updateTask: (id: string, patch: Partial<Task>) => Result;
+
+  // reviews
+  upsertReview: (bookingId: string, patch: Partial<Omit<Review, "id" | "bookingId" | "createdAt" | "updatedAt">>) => Result;
+  // alignment
+  setAlignmentScore: (bookingId: string, dimension: AlignmentDimension, score: number) => Result;
+  setAlignmentNotes: (bookingId: string, notes: string) => Result;
+  // governance
+  saveGovernanceRun: (cadence: GovernanceCadence, items: Record<string, boolean>, completedBy?: string) => Result;
 };
 
 const nextId = (prefix: string, list: { id: string }[]) => {
