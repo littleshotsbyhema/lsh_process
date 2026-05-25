@@ -17,6 +17,7 @@ import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as QuoteRouteImport } from './routes/quote'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as PrepRouteImport } from './routes/prep'
 import { Route as PixiesetRouteImport } from './routes/pixieset'
 import { Route as PipelineRouteImport } from './routes/pipeline'
 import { Route as PackagesRouteImport } from './routes/packages'
@@ -69,6 +70,11 @@ const QuoteRoute = QuoteRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrepRoute = PrepRouteImport.update({
+  id: '/prep',
+  path: '/prep',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PixiesetRoute = PixiesetRouteImport.update({
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/packages': typeof PackagesRoute
   '/pipeline': typeof PipelineRoute
   '/pixieset': typeof PixiesetRoute
+  '/prep': typeof PrepRoute
   '/privacy': typeof PrivacyRoute
   '/quote': typeof QuoteRoute
   '/reports': typeof ReportsRoute
@@ -174,6 +181,7 @@ export interface FileRoutesByTo {
   '/packages': typeof PackagesRoute
   '/pipeline': typeof PipelineRoute
   '/pixieset': typeof PixiesetRoute
+  '/prep': typeof PrepRoute
   '/privacy': typeof PrivacyRoute
   '/quote': typeof QuoteRoute
   '/reports': typeof ReportsRoute
@@ -198,6 +206,7 @@ export interface FileRoutesById {
   '/packages': typeof PackagesRoute
   '/pipeline': typeof PipelineRoute
   '/pixieset': typeof PixiesetRoute
+  '/prep': typeof PrepRoute
   '/privacy': typeof PrivacyRoute
   '/quote': typeof QuoteRoute
   '/reports': typeof ReportsRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
     | '/packages'
     | '/pipeline'
     | '/pixieset'
+    | '/prep'
     | '/privacy'
     | '/quote'
     | '/reports'
@@ -246,6 +256,7 @@ export interface FileRouteTypes {
     | '/packages'
     | '/pipeline'
     | '/pixieset'
+    | '/prep'
     | '/privacy'
     | '/quote'
     | '/reports'
@@ -269,6 +280,7 @@ export interface FileRouteTypes {
     | '/packages'
     | '/pipeline'
     | '/pixieset'
+    | '/prep'
     | '/privacy'
     | '/quote'
     | '/reports'
@@ -293,6 +305,7 @@ export interface RootRouteChildren {
   PackagesRoute: typeof PackagesRoute
   PipelineRoute: typeof PipelineRoute
   PixiesetRoute: typeof PixiesetRoute
+  PrepRoute: typeof PrepRoute
   PrivacyRoute: typeof PrivacyRoute
   QuoteRoute: typeof QuoteRoute
   ReportsRoute: typeof ReportsRoute
@@ -359,6 +372,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prep': {
+      id: '/prep'
+      path: '/prep'
+      fullPath: '/prep'
+      preLoaderRoute: typeof PrepRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pixieset': {
@@ -469,6 +489,7 @@ const rootRouteChildren: RootRouteChildren = {
   PackagesRoute: PackagesRoute,
   PipelineRoute: PipelineRoute,
   PixiesetRoute: PixiesetRoute,
+  PrepRoute: PrepRoute,
   PrivacyRoute: PrivacyRoute,
   QuoteRoute: QuoteRoute,
   ReportsRoute: ReportsRoute,
