@@ -14,6 +14,7 @@ import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as SopsRouteImport } from './routes/sops'
 import { Route as SafetyRouteImport } from './routes/safety'
 import { Route as ReviewsRouteImport } from './routes/reviews'
+import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PixiesetRouteImport } from './routes/pixieset'
 import { Route as PackagesRouteImport } from './routes/packages'
@@ -50,6 +51,11 @@ const SafetyRoute = SafetyRouteImport.update({
 const ReviewsRoute = ReviewsRouteImport.update({
   id: '/reviews',
   path: '/reviews',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -126,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/packages': typeof PackagesRoute
   '/pixieset': typeof PixiesetRoute
   '/privacy': typeof PrivacyRoute
+  '/reports': typeof ReportsRoute
   '/reviews': typeof ReviewsRoute
   '/safety': typeof SafetyRoute
   '/sops': typeof SopsRoute
@@ -145,6 +152,7 @@ export interface FileRoutesByTo {
   '/packages': typeof PackagesRoute
   '/pixieset': typeof PixiesetRoute
   '/privacy': typeof PrivacyRoute
+  '/reports': typeof ReportsRoute
   '/reviews': typeof ReviewsRoute
   '/safety': typeof SafetyRoute
   '/sops': typeof SopsRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/packages': typeof PackagesRoute
   '/pixieset': typeof PixiesetRoute
   '/privacy': typeof PrivacyRoute
+  '/reports': typeof ReportsRoute
   '/reviews': typeof ReviewsRoute
   '/safety': typeof SafetyRoute
   '/sops': typeof SopsRoute
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/packages'
     | '/pixieset'
     | '/privacy'
+    | '/reports'
     | '/reviews'
     | '/safety'
     | '/sops'
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/packages'
     | '/pixieset'
     | '/privacy'
+    | '/reports'
     | '/reviews'
     | '/safety'
     | '/sops'
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/packages'
     | '/pixieset'
     | '/privacy'
+    | '/reports'
     | '/reviews'
     | '/safety'
     | '/sops'
@@ -244,6 +256,7 @@ export interface RootRouteChildren {
   PackagesRoute: typeof PackagesRoute
   PixiesetRoute: typeof PixiesetRoute
   PrivacyRoute: typeof PrivacyRoute
+  ReportsRoute: typeof ReportsRoute
   ReviewsRoute: typeof ReviewsRoute
   SafetyRoute: typeof SafetyRoute
   SopsRoute: typeof SopsRoute
@@ -286,6 +299,13 @@ declare module '@tanstack/react-router' {
       path: '/reviews'
       fullPath: '/reviews'
       preLoaderRoute: typeof ReviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -388,6 +408,7 @@ const rootRouteChildren: RootRouteChildren = {
   PackagesRoute: PackagesRoute,
   PixiesetRoute: PixiesetRoute,
   PrivacyRoute: PrivacyRoute,
+  ReportsRoute: ReportsRoute,
   ReviewsRoute: ReviewsRoute,
   SafetyRoute: SafetyRoute,
   SopsRoute: SopsRoute,
