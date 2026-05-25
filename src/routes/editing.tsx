@@ -74,7 +74,7 @@ function EditingPage() {
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({ children }: { children?: React.ReactNode }) {
   return <th className="text-left font-medium px-4 py-3">{children}</th>;
 }
 function Td({ children }: { children: React.ReactNode }) {
