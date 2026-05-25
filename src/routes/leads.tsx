@@ -3,6 +3,7 @@ import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
 import { leadStatuses, type LeadStatus } from "@/lib/mock-data";
 import { useStore } from "@/store/useStore";
 import { handle } from "@/lib/handle";
+import { MemoryProfileCard } from "@/components/MemoryProfileCard";
 import { UserPlus, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/leads")({
@@ -66,6 +67,8 @@ function LeadsPage() {
               <Field k="Budget comfort" v={l.budget} />
               <Field k="Follow-up date" v={l.followUp} />
             </dl>
+
+            <MemoryProfileCard ownerType="lead" ownerId={l.id} defaultGoal={l.memoryGoal} />
 
             <div className="mt-5 pt-4 border-t border-border flex flex-wrap items-center gap-2">
               <select
