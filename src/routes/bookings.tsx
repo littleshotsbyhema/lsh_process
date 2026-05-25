@@ -3,6 +3,8 @@ import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
 import { bookingStatuses, type BookingStatus } from "@/lib/mock-data";
 import { useStore, bookingFlags } from "@/store/useStore";
 import { handle } from "@/lib/handle";
+import { MemoryProfileCard } from "@/components/MemoryProfileCard";
+import { JourneyPipeline } from "@/components/JourneyPipeline";
 import { ShieldCheck, ClipboardCheck, ImageIcon, Frame, CheckCircle2, AlertTriangle, Lock, Unlock } from "lucide-react";
 
 export const Route = createFileRoute("/bookings")({
@@ -184,6 +186,9 @@ function BookingsPage() {
                 </div>
               )}
             </div>
+
+            <MemoryProfileCard ownerType="booking" ownerId={b.id} />
+            <JourneyPipeline bookingId={b.id} />
           </Card>
           );
         })}
