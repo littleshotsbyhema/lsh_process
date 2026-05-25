@@ -351,6 +351,7 @@ export const useStore = create<Store>((set, get) => ({
       status: "Tentative",
       selectionConfirmed: false,
       albumSelectionConfirmed: false,
+      journeyStage: "Quote Sent",
     };
     set((s) => ({ bookings: [newBooking, ...s.bookings] }));
     return { ...ok(`Tentative booking created for ${client.name}.`), bookingId };
