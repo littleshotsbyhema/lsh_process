@@ -410,6 +410,15 @@ export const useStore = create<Store>((set, get) => ({
         l.id === leadId ? { ...l, status: "Booked", convertedClientId: clientId } : l,
       ),
     }));
+    get().createTask({
+      title: `Respond to new inquiry from ${lead.parent}`,
+      role: "Client Coordinator",
+      relatedType: "lead",
+      relatedId: leadId,
+      relatedLabel: lead.parent,
+      priority: "High",
+      sop: "SOP-01",
+    });
     return { ...ok(`${lead.parent} added as a client. Their memory is now in our care.`), clientId };
   },
 
@@ -445,6 +454,20 @@ export const useStore = create<Store>((set, get) => ({
       journeyStage: "Quote Sent",
     };
     set((s) => ({ bookings: [newBooking, ...s.bookings] }));
+    const session = newBooking.category;
+    const ct = get().createTask;
+    ct({ title: `Send booking confirmation to ${client.name}`, role: "Client Coordinator", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-03", priority: "High" });
+    ct({ title: `Send pre-shoot guide`, role: "Client Coordinator", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-04" });
+    ct({ title: `Review Memory Profile before shoot`, role: "Photographer", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-04" });
+    ct({ title: `Verify advance payment`, role: "Accounts", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, priority: "High" });
+    if (session === "Newborn") {
+      ct({ title: `Complete newborn safety checklist`, role: "Photographer", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-05", priority: "Urgent" });
+      ct({ title: `Prepare newborn props and wraps`, role: "Assistant / Baby Care Support", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-05" });
+    }
+    if (session === "Maternity") {
+      ct({ title: `Confirm outfits and makeup`, role: "Stylist / Makeup Artist", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-06" });
+      ct({ title: `Confirm maternity comfort notes`, role: "Photographer", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-06" });
+    }
     return { ...ok(`Tentative booking created for ${client.name}.`), bookingId };
   },
 
@@ -456,26 +479,43 @@ export const useStore = create<Store>((set, get) => ({
     set((s) => ({
       bookings: s.bookings.map((x) => (x.id === bookingId ? { ...x, status } : x)),
     }));
+    if (status === "Shoot Completed") {
+      const ct = get().createTask;
+      ct({ title: `Prepare preview gallery for ${b.client}`, role: "Editor / Retoucher", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, sop: "SOP-08", priority: "High" });
+      ct({ title: `Send selection reminder to ${b.client}`, role: "Client Coordinator", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, sop: "SOP-08" });
+    }
     return ok(`Booking updated to “${status}”.`);
   },
 
   markShootCompleted: (bookingId) => get().setBookingStatus(bookingId, "Shoot Completed"),
 
   confirmSelection: (bookingId) => {
+    const b = get().bookings.find((x) => x.id === bookingId);
     set((s) => ({
       bookings: s.bookings.map((b) =>
         b.id === bookingId ? { ...b, selectionConfirmed: true } : b,
       ),
     }));
+    if (b) {
+      const ct = get().createTask;
+      ct({ title: `Confirm full payment for ${b.client}`, role: "Accounts", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, priority: "High" });
+      ct({ title: `Begin editing for ${b.client}`, role: "Editor / Retoucher", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, sop: "SOP-08" });
+    }
     return ok("Image selection confirmed.");
   },
 
   confirmAlbumSelection: (bookingId) => {
+    const b = get().bookings.find((x) => x.id === bookingId);
     set((s) => ({
       bookings: s.bookings.map((b) =>
         b.id === bookingId ? { ...b, albumSelectionConfirmed: true } : b,
       ),
     }));
+    if (b) {
+      const ct = get().createTask;
+      ct({ title: `Prepare album proof for ${b.client}`, role: "Album / Print Coordinator", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, sop: "SOP-09", priority: "High" });
+      ct({ title: `Complete print QC for ${b.client}`, role: "Album / Print Coordinator", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, sop: "SOP-09" });
+    }
     return ok("Album / frame selections confirmed.");
   },
 
@@ -498,6 +538,15 @@ export const useStore = create<Store>((set, get) => ({
         b.id === rec.bookingId ? { ...b, privacy: rec.consent } : b,
       ),
     }));
+    if (["Portfolio Release", "Social Media Approved", "Ads Approved"].some((k) => rec.consent.includes(k))) {
+      get().createTask({
+        title: `Review marketing-approved content for ${rec.client}`,
+        role: "Marketing Team",
+        relatedType: "booking",
+        relatedId: rec.bookingId,
+        relatedLabel: rec.client,
+      });
+    }
     return ok("Consent recorded. Marketing rules are now enforceable for this booking.");
   },
 
@@ -583,6 +632,27 @@ export const useStore = create<Store>((set, get) => ({
           ? s.bookings.map((b) => (b.id === job.bookingId ? { ...b, status: "Delivered" } : b))
           : s.bookings,
     }));
+    if (next === "Editing Completed") {
+      get().createTask({
+        title: `Final QC for ${job.client}`,
+        role: "Founder / Studio Head",
+        relatedType: "booking",
+        relatedId: job.bookingId,
+        relatedLabel: job.client,
+        sop: "SOP-08",
+        priority: "High",
+      });
+    }
+    if (next === "Delivered") {
+      get().createTask({
+        title: `Send delivery message to ${job.client}`,
+        role: "Client Coordinator",
+        relatedType: "booking",
+        relatedId: job.bookingId,
+        relatedLabel: job.client,
+        sop: "SOP-10",
+      });
+    }
     return ok(`Editing progressed to “${next}”.`);
   },
 
