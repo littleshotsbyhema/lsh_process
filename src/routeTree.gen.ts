@@ -13,6 +13,7 @@ import { Route as WhatsappRouteImport } from './routes/whatsapp'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as SopsRouteImport } from './routes/sops'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SafetyRouteImport } from './routes/safety'
 import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as ReportsRouteImport } from './routes/reports'
@@ -51,6 +52,11 @@ const TasksRoute = TasksRouteImport.update({
 const SopsRoute = SopsRouteImport.update({
   id: '/sops',
   path: '/sops',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SafetyRoute = SafetyRouteImport.update({
@@ -169,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof ReportsRoute
   '/reviews': typeof ReviewsRoute
   '/safety': typeof SafetyRoute
+  '/settings': typeof SettingsRoute
   '/sops': typeof SopsRoute
   '/tasks': typeof TasksRoute
   '/team': typeof TeamRoute
@@ -194,6 +201,7 @@ export interface FileRoutesByTo {
   '/reports': typeof ReportsRoute
   '/reviews': typeof ReviewsRoute
   '/safety': typeof SafetyRoute
+  '/settings': typeof SettingsRoute
   '/sops': typeof SopsRoute
   '/tasks': typeof TasksRoute
   '/team': typeof TeamRoute
@@ -220,6 +228,7 @@ export interface FileRoutesById {
   '/reports': typeof ReportsRoute
   '/reviews': typeof ReviewsRoute
   '/safety': typeof SafetyRoute
+  '/settings': typeof SettingsRoute
   '/sops': typeof SopsRoute
   '/tasks': typeof TasksRoute
   '/team': typeof TeamRoute
@@ -247,6 +256,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/reviews'
     | '/safety'
+    | '/settings'
     | '/sops'
     | '/tasks'
     | '/team'
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/reviews'
     | '/safety'
+    | '/settings'
     | '/sops'
     | '/tasks'
     | '/team'
@@ -297,6 +308,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/reviews'
     | '/safety'
+    | '/settings'
     | '/sops'
     | '/tasks'
     | '/team'
@@ -323,6 +335,7 @@ export interface RootRouteChildren {
   ReportsRoute: typeof ReportsRoute
   ReviewsRoute: typeof ReviewsRoute
   SafetyRoute: typeof SafetyRoute
+  SettingsRoute: typeof SettingsRoute
   SopsRoute: typeof SopsRoute
   TasksRoute: typeof TasksRoute
   TeamRoute: typeof TeamRoute
@@ -357,6 +370,13 @@ declare module '@tanstack/react-router' {
       path: '/sops'
       fullPath: '/sops'
       preLoaderRoute: typeof SopsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/safety': {
@@ -515,6 +535,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReportsRoute: ReportsRoute,
   ReviewsRoute: ReviewsRoute,
   SafetyRoute: SafetyRoute,
+  SettingsRoute: SettingsRoute,
   SopsRoute: SopsRoute,
   TasksRoute: TasksRoute,
   TeamRoute: TeamRoute,
