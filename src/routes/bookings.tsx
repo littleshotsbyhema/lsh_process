@@ -5,7 +5,7 @@ import { useStore, bookingFlags } from "@/store/useStore";
 import { handle } from "@/lib/handle";
 import { MemoryProfileCard } from "@/components/MemoryProfileCard";
 import { JourneyPipeline } from "@/components/JourneyPipeline";
-import { ShieldCheck, ClipboardCheck, ImageIcon, Frame, CheckCircle2, AlertTriangle, Lock, Unlock } from "lucide-react";
+import { ShieldCheck, ClipboardCheck, ImageIcon, Frame, CheckCircle2, AlertTriangle, Lock, Unlock, Camera } from "lucide-react";
 
 export const Route = createFileRoute("/bookings")({
   head: () => ({ meta: [{ title: "Bookings · Little Moments OS" }] }),
@@ -14,6 +14,7 @@ export const Route = createFileRoute("/bookings")({
 
 function BookingsPage() {
   const bookings = useStore((s) => s.bookings);
+  const pixieset = useStore((s) => s.pixieset);
   const setBookingStatus = useStore((s) => s.setBookingStatus);
   const markShootCompleted = useStore((s) => s.markShootCompleted);
   const confirmSelection = useStore((s) => s.confirmSelection);
@@ -47,6 +48,7 @@ function BookingsPage() {
         )}
         {bookings.map((b) => {
           const flags = bookingFlags(b);
+          const pix = pixieset.find((p) => p.bookingId === b.id);
           return (
           <Card key={b.id} className="p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -188,6 +190,22 @@ function BookingsPage() {
             </div>
 
             <MemoryProfileCard ownerType="booking" ownerId={b.id} />
+            <div className="mt-4 rounded-xl border border-border bg-card px-4 py-3 flex items-center gap-3 flex-wrap">
+              <span className="rounded-full bg-[var(--gradient-warm)] p-1.5">
+                <Camera className="h-3.5 w-3.5 text-gold" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Pixieset</div>
+                <div className="text-sm text-primary">
+                  {pix
+                    ? `${pix.collectionName} · Gallery ${pix.galleryStatus} · Order ${pix.orderStatus}`
+                    : "Not set up yet"}
+                </div>
+              </div>
+              <Link to="/pixieset" className="text-[11px] px-3 py-1.5 rounded-lg border border-gold bg-card text-primary">
+                {pix ? "Manage" : "Set up"} →
+              </Link>
+            </div>
             <JourneyPipeline bookingId={b.id} />
           </Card>
           );

@@ -84,6 +84,225 @@ export const emotionalPriorityOptions = [
 ] as const;
 export type EmotionalPriority = (typeof emotionalPriorityOptions)[number];
 
+/* ───────── Pixieset ───────── */
+export const pixiesetGalleryStatuses = [
+  "Not Created",
+  "Draft",
+  "Sent",
+  "Viewed",
+  "Selection Done",
+  "Delivered",
+] as const;
+export type PixiesetGalleryStatus = (typeof pixiesetGalleryStatuses)[number];
+
+export const pixiesetOrderStatuses = ["No Order", "Ordered", "Paid", "Fulfilled"] as const;
+export type PixiesetOrderStatus = (typeof pixiesetOrderStatuses)[number];
+
+export const pixiesetPriceSheets = ["Album", "Frame", "Print", "Digital", "None"] as const;
+export type PixiesetPriceSheet = (typeof pixiesetPriceSheets)[number];
+
+/* ───────── WhatsApp templates ───────── */
+export const whatsappMessageTypes = [
+  "New Inquiry",
+  "Package Recommendation",
+  "Quote Sent",
+  "Follow-Up 1",
+  "Follow-Up 2",
+  "Booking Confirmation",
+  "Pre-Shoot Guide",
+  "Payment Reminder",
+  "Selection Reminder",
+  "Editing Update",
+  "Delivery Message",
+  "Album Proof Approval",
+  "Review Request",
+  "Milestone Follow-Up",
+] as const;
+export type WhatsappMessageType = (typeof whatsappMessageTypes)[number];
+
+export const whatsappTemplates: Record<WhatsappMessageType, string> = {
+  "New Inquiry":
+    "Hello [Client Name], this is Hema from Little Shots. Thank you for reaching out about your [Session Type] session. We'd love to hear the moment you most want to preserve — there is no rush. When you're ready, we'll gently guide you through how we work.",
+  "Package Recommendation":
+    "Hi [Client Name], based on what you shared, the [Package Name] feels like a beautiful fit for your [Session Type]. It's designed for families who want their story to truly live on. Would you like me to share the full inclusions and a few sample stories?",
+  "Quote Sent":
+    "Hi [Client Name], I've shared the gentle quote for your [Package Name] · [Session Type] session. Take your time looking through it. If anything feels unclear, I'm one message away — no pressure at all.",
+  "Follow-Up 1":
+    "Hi [Client Name], just a soft check-in on your [Session Type] session. We're holding the date warmly for you and would love to know if you'd like to move forward.",
+  "Follow-Up 2":
+    "Hi [Client Name], thinking of you and your family. If the timing isn't right, that's completely okay — we'll be here whenever you feel ready to preserve this chapter.",
+  "Booking Confirmation":
+    "Welcome to the Little Shots family, [Client Name]. Your [Session Type] session on [Shoot Date] is confirmed. We'll send you a gentle pre-shoot guide soon so the day feels calm and prepared.",
+  "Pre-Shoot Guide":
+    "Hi [Client Name], here is your warm pre-shoot guide for [Shoot Date]. It covers comfort, outfits, timings, and what to expect. Please read it slowly — and tell us anything that would help you feel at ease.",
+  "Payment Reminder":
+    "Hi [Client Name], a soft reminder that the balance of [Balance Amount] is due before we begin editing. Whenever it's convenient for you — we're here to help with any payment option.",
+  "Selection Reminder":
+    "Hi [Client Name], your preview gallery is ready. When you're ready, please mark your favourites at [Gallery Link]. Take all the time you need — these are your memories.",
+  "Editing Update":
+    "Hi [Client Name], editing for your [Session Type] story has begun. We're shaping it with care and will share the final gallery within [Delivery Timeline].",
+  "Delivery Message":
+    "[Client Name], your final gallery is here ❤ — [Gallery Link]. We've handled it with [Privacy Choice] in mind. We hope it feels like the moment you wanted to keep forever.",
+  "Album Proof Approval":
+    "Hi [Client Name], your album proof is ready for a gentle review. Please look through and let us know any small change you'd love — we won't send it to production until it feels exactly right.",
+  "Review Request":
+    "[Client Name], if your story felt meaningful, we'd be quietly grateful for a few words: [Review Link]. Your voice helps other families trust us with their little moments.",
+  "Milestone Follow-Up":
+    "Hi [Client Name], thinking of you and your family. The next little milestone is on the horizon — whenever you're ready, we'd be honoured to keep telling your story.",
+};
+
+export const whatsappPlaceholders = [
+  "[Client Name]",
+  "[Session Type]",
+  "[Package Name]",
+  "[Shoot Date]",
+  "[Balance Amount]",
+  "[Gallery Link]",
+  "[Privacy Choice]",
+  "[Delivery Timeline]",
+  "[Review Link]",
+] as const;
+
+export const followUpStatuses = ["Draft", "Scheduled", "Sent", "Skipped"] as const;
+export type FollowUpStatus = (typeof followUpStatuses)[number];
+
+/* ───────── Team & Tasks ───────── */
+export const teamRoles = [
+  "Founder / Studio Head",
+  "Client Coordinator",
+  "Sales Lead",
+  "Photographer",
+  "Assistant / Baby Care Support",
+  "Stylist / Makeup Artist",
+  "Editor / Retoucher",
+  "Album / Print Coordinator",
+  "Marketing Team",
+  "Accounts",
+] as const;
+export type TeamRole = (typeof teamRoles)[number];
+
+export const taskPriorities = ["Low", "Medium", "High", "Urgent"] as const;
+export type TaskPriority = (typeof taskPriorities)[number];
+
+export const taskStatuses = ["Pending", "In Progress", "Blocked", "Done", "Skipped"] as const;
+export type TaskStatus = (typeof taskStatuses)[number];
+
+/* ───────── SOPs (read-only) ───────── */
+export const sops = [
+  {
+    id: "SOP-01",
+    title: "Inquiry Handling",
+    summary: "Respond to every family with warmth, within 60 minutes.",
+    steps: [
+      "Acknowledge the inquiry within 60 minutes — never silent.",
+      "Listen first. Ask what moment they most want to preserve.",
+      "Capture details into the Memory Profile.",
+      "Mark lead status and follow-up date.",
+      "Hand over to Sales Lead for package recommendation.",
+    ],
+  },
+  {
+    id: "SOP-02",
+    title: "Consultation & Package Recommendation",
+    summary: "Recommend the package that protects the right memory, not the largest invoice.",
+    steps: [
+      "Review the Memory Profile and emotional priority.",
+      "Match to Bronze / Gold / Diamond / Emerald with reasoning.",
+      "Share inclusions warmly — never pressure.",
+      "Send quote via WhatsApp using the approved template.",
+    ],
+  },
+  {
+    id: "SOP-03",
+    title: "Booking Confirmation",
+    summary: "Confirm only after advance payment and written details are on file.",
+    steps: [
+      "Verify advance payment with Accounts.",
+      "Send Booking Confirmation message.",
+      "Schedule pre-shoot guide and reminders.",
+      "Share Memory Profile with photographer + editor.",
+    ],
+  },
+  {
+    id: "SOP-04",
+    title: "Pre-Shoot Preparation",
+    summary: "Every shoot begins calm. Comfort is the first frame.",
+    steps: [
+      "Confirm location, timings, props, stylist 48h before.",
+      "Confirm comfort needs and sensitivities with family.",
+      "Photographer reviews Memory Profile aloud with team.",
+      "Print safety checklist for the category.",
+    ],
+  },
+  {
+    id: "SOP-05",
+    title: "Newborn Safety",
+    summary: "Baby-led pacing. Spotter mandatory. Never compromise.",
+    steps: [
+      "Parent present at all times.",
+      "Spotter for any elevated or composite pose.",
+      "Sanitised wraps, stable props.",
+      "Stop immediately if baby shows discomfort.",
+      "Submit checklist before marking shoot complete.",
+    ],
+  },
+  {
+    id: "SOP-06",
+    title: "Maternity Comfort",
+    summary: "Comfort over composition, always.",
+    steps: [
+      "Comfortable poses only — no physically stressful posture.",
+      "Rest breaks every 15 minutes.",
+      "Private changing space provided.",
+      "Confirm makeup sensitivities in advance.",
+    ],
+  },
+  {
+    id: "SOP-07",
+    title: "Sitter / Baby / Child Safety",
+    summary: "Stable props, parent nearby, no forced posing.",
+    steps: [
+      "Allergy check completed.",
+      "Breaks offered freely.",
+      "Never force a pose or a smile.",
+      "Confirm child comfort before each frame.",
+    ],
+  },
+  {
+    id: "SOP-08",
+    title: "Image Selection & Editing",
+    summary: "Edit only after selection is confirmed and balance is paid.",
+    steps: [
+      "Send preview gallery via Pixieset.",
+      "Wait for client selection — do not chase.",
+      "Verify full payment with Accounts.",
+      "Editor begins; Founder QC before delivery.",
+    ],
+  },
+  {
+    id: "SOP-09",
+    title: "Album, Frame & Print Production",
+    summary: "An heirloom must be worth keeping for generations.",
+    steps: [
+      "Confirm album/frame selections in writing.",
+      "Share proof and wait for approval.",
+      "Send to production only after approval.",
+      "QC every piece before packing.",
+    ],
+  },
+  {
+    id: "SOP-10",
+    title: "Delivery & Aftercare",
+    summary: "Delivery is not the end. Relationship is.",
+    steps: [
+      "Deliver gallery with a warm, personal note.",
+      "Request a review only when the family feels ready.",
+      "Schedule the next milestone follow-up.",
+      "Mark journey as Completed / Relationship Active.",
+    ],
+  },
+] as const;
+
 export const leads = [
   {
     id: "L-001",

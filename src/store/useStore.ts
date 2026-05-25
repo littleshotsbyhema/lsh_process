@@ -7,6 +7,14 @@ import type {
   LegacyInterest,
   EmotionalPriority,
   SessionType,
+  PixiesetGalleryStatus,
+  PixiesetOrderStatus,
+  PixiesetPriceSheet,
+  WhatsappMessageType,
+  FollowUpStatus,
+  TeamRole,
+  TaskPriority,
+  TaskStatus,
 } from "@/lib/mock-data";
 import {
   leads as seedLeads,
@@ -15,6 +23,7 @@ import {
   privacyRecords as seedPrivacy,
   editingJobs as seedEditing,
   heirloomJobs as seedHeirloom,
+  whatsappTemplates,
 } from "@/lib/mock-data";
 
 /* ───────────── Types ───────────── */
@@ -156,6 +165,63 @@ export type MemoryProfile = {
   updatedAt: string;
 };
 
+/* Pixieset */
+export type PixiesetRecord = {
+  id: string;
+  bookingId: string;
+  clientId?: string;
+  client: string;
+  pixiesetClientName: string;
+  collectionName: string;
+  galleryLink: string;
+  password: string;
+  galleryStatus: PixiesetGalleryStatus;
+  watermark: "Applied" | "Not Needed";
+  favoritesEnabled: boolean;
+  favoritesStatus: "Pending" | "Received";
+  downloadEnabled: boolean;
+  downloadExpiry: string;
+  storeEnabled: boolean;
+  priceSheet: PixiesetPriceSheet;
+  invoiceLink: string;
+  contractLink: string;
+  orderStatus: PixiesetOrderStatus;
+  syncNotes: string;
+  updatedAt: string;
+};
+
+/* WhatsApp follow-up */
+export type FollowUp = {
+  id: string;
+  client: string;
+  bookingId?: string;
+  leadId?: string;
+  messageType: WhatsappMessageType;
+  message: string;
+  scheduledDate: string;
+  status: FollowUpStatus;
+  sentBy: string;
+  notes: string;
+  createdAt: string;
+};
+
+/* Tasks */
+export type Task = {
+  id: string;
+  title: string;
+  relatedType?: "lead" | "client" | "booking";
+  relatedId?: string;
+  relatedLabel?: string;
+  role: TeamRole;
+  assignee: string;
+  dueDate: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  sop?: string;
+  notes: string;
+  createdAt: string;
+};
+
 const profileKey = (ownerType: MemoryProfileOwner, ownerId: string) => `${ownerType}:${ownerId}`;
 
 /* ───────────── Result helpers ───────────── */
@@ -182,6 +248,9 @@ type Store = {
   editing: EditingJob[];
   heirloom: HeirloomJob[];
   memoryProfiles: MemoryProfile[];
+  pixieset: PixiesetRecord[];
+  followUps: FollowUp[];
+  tasks: Task[];
 
   // lead flow
   setLeadStatus: (leadId: string, status: LeadStatus) => Result;
@@ -228,6 +297,25 @@ type Store = {
   setJourneyStage: (bookingId: string, stage: JourneyStage) => Result;
   requestReview: (bookingId: string) => Result;
   skipAftercare: (bookingId: string, reason: string) => Result;
+
+  // pixieset
+  upsertPixieset: (
+    bookingId: string,
+    patch: Partial<Omit<PixiesetRecord, "id" | "bookingId" | "client" | "updatedAt">>,
+  ) => Result;
+
+  // followups
+  createFollowUp: (
+    data: Omit<FollowUp, "id" | "createdAt" | "message"> & { message?: string },
+  ) => Result & { followUpId?: string };
+  updateFollowUp: (id: string, patch: Partial<FollowUp>) => Result;
+
+  // tasks
+  createTask: (
+    data: Omit<Task, "id" | "createdAt" | "status" | "priority" | "notes" | "assignee" | "dueDate"> &
+      Partial<Pick<Task, "status" | "priority" | "notes" | "assignee" | "dueDate">>,
+  ) => Result & { taskId?: string };
+  updateTask: (id: string, patch: Partial<Task>) => Result;
 };
 
 const nextId = (prefix: string, list: { id: string }[]) => {
@@ -283,6 +371,9 @@ export const useStore = create<Store>((set, get) => ({
   editing: initialEditing,
   heirloom: initialHeirloom,
   memoryProfiles: [],
+  pixieset: [],
+  followUps: [],
+  tasks: [],
 
   setLeadStatus: (leadId, status) => {
     set((s) => ({
@@ -319,6 +410,15 @@ export const useStore = create<Store>((set, get) => ({
         l.id === leadId ? { ...l, status: "Booked", convertedClientId: clientId } : l,
       ),
     }));
+    get().createTask({
+      title: `Respond to new inquiry from ${lead.parent}`,
+      role: "Client Coordinator",
+      relatedType: "lead",
+      relatedId: leadId,
+      relatedLabel: lead.parent,
+      priority: "High",
+      sop: "SOP-01",
+    });
     return { ...ok(`${lead.parent} added as a client. Their memory is now in our care.`), clientId };
   },
 
@@ -354,6 +454,20 @@ export const useStore = create<Store>((set, get) => ({
       journeyStage: "Quote Sent",
     };
     set((s) => ({ bookings: [newBooking, ...s.bookings] }));
+    const session = newBooking.category;
+    const ct = get().createTask;
+    ct({ title: `Send booking confirmation to ${client.name}`, role: "Client Coordinator", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-03", priority: "High" });
+    ct({ title: `Send pre-shoot guide`, role: "Client Coordinator", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-04" });
+    ct({ title: `Review Memory Profile before shoot`, role: "Photographer", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-04" });
+    ct({ title: `Verify advance payment`, role: "Accounts", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, priority: "High" });
+    if (session === "Newborn") {
+      ct({ title: `Complete newborn safety checklist`, role: "Photographer", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-05", priority: "Urgent" });
+      ct({ title: `Prepare newborn props and wraps`, role: "Assistant / Baby Care Support", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-05" });
+    }
+    if (session === "Maternity") {
+      ct({ title: `Confirm outfits and makeup`, role: "Stylist / Makeup Artist", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-06" });
+      ct({ title: `Confirm maternity comfort notes`, role: "Photographer", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-06" });
+    }
     return { ...ok(`Tentative booking created for ${client.name}.`), bookingId };
   },
 
@@ -365,26 +479,43 @@ export const useStore = create<Store>((set, get) => ({
     set((s) => ({
       bookings: s.bookings.map((x) => (x.id === bookingId ? { ...x, status } : x)),
     }));
+    if (status === "Shoot Completed") {
+      const ct = get().createTask;
+      ct({ title: `Prepare preview gallery for ${b.client}`, role: "Editor / Retoucher", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, sop: "SOP-08", priority: "High" });
+      ct({ title: `Send selection reminder to ${b.client}`, role: "Client Coordinator", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, sop: "SOP-08" });
+    }
     return ok(`Booking updated to “${status}”.`);
   },
 
   markShootCompleted: (bookingId) => get().setBookingStatus(bookingId, "Shoot Completed"),
 
   confirmSelection: (bookingId) => {
+    const b = get().bookings.find((x) => x.id === bookingId);
     set((s) => ({
       bookings: s.bookings.map((b) =>
         b.id === bookingId ? { ...b, selectionConfirmed: true } : b,
       ),
     }));
+    if (b) {
+      const ct = get().createTask;
+      ct({ title: `Confirm full payment for ${b.client}`, role: "Accounts", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, priority: "High" });
+      ct({ title: `Begin editing for ${b.client}`, role: "Editor / Retoucher", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, sop: "SOP-08" });
+    }
     return ok("Image selection confirmed.");
   },
 
   confirmAlbumSelection: (bookingId) => {
+    const b = get().bookings.find((x) => x.id === bookingId);
     set((s) => ({
       bookings: s.bookings.map((b) =>
         b.id === bookingId ? { ...b, albumSelectionConfirmed: true } : b,
       ),
     }));
+    if (b) {
+      const ct = get().createTask;
+      ct({ title: `Prepare album proof for ${b.client}`, role: "Album / Print Coordinator", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, sop: "SOP-09", priority: "High" });
+      ct({ title: `Complete print QC for ${b.client}`, role: "Album / Print Coordinator", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, sop: "SOP-09" });
+    }
     return ok("Album / frame selections confirmed.");
   },
 
@@ -407,6 +538,15 @@ export const useStore = create<Store>((set, get) => ({
         b.id === rec.bookingId ? { ...b, privacy: rec.consent } : b,
       ),
     }));
+    if (["Portfolio Release", "Social Media Approved", "Ads Approved"].some((k) => rec.consent.includes(k))) {
+      get().createTask({
+        title: `Review marketing-approved content for ${rec.client}`,
+        role: "Marketing Team",
+        relatedType: "booking",
+        relatedId: rec.bookingId,
+        relatedLabel: rec.client,
+      });
+    }
     return ok("Consent recorded. Marketing rules are now enforceable for this booking.");
   },
 
@@ -492,6 +632,27 @@ export const useStore = create<Store>((set, get) => ({
           ? s.bookings.map((b) => (b.id === job.bookingId ? { ...b, status: "Delivered" } : b))
           : s.bookings,
     }));
+    if (next === "Editing Completed") {
+      get().createTask({
+        title: `Final QC for ${job.client}`,
+        role: "Founder / Studio Head",
+        relatedType: "booking",
+        relatedId: job.bookingId,
+        relatedLabel: job.client,
+        sop: "SOP-08",
+        priority: "High",
+      });
+    }
+    if (next === "Delivered") {
+      get().createTask({
+        title: `Send delivery message to ${job.client}`,
+        role: "Client Coordinator",
+        relatedType: "booking",
+        relatedId: job.bookingId,
+        relatedLabel: job.client,
+        sop: "SOP-10",
+      });
+    }
     return ok(`Editing progressed to “${next}”.`);
   },
 
@@ -603,8 +764,11 @@ export const useStore = create<Store>((set, get) => ({
       return fail("Safety checklist must be submitted before marking the shoot complete.");
     if (stage === "Delivered") {
       const job = get().editing.find((e) => e.bookingId === bookingId);
-      if (!job || job.status !== "Delivered")
-        return fail("Editing must reach Delivered before the journey can move to Delivered.");
+      const pix = get().pixieset.find((p) => p.bookingId === bookingId);
+      const editingDone = job?.status === "Delivered";
+      const galleryDelivered = pix?.galleryStatus === "Delivered";
+      if (!editingDone && !galleryDelivered)
+        return fail("Editing or the Pixieset gallery must reach Delivered first.");
     }
     if (stage === "Completed / Relationship Active") {
       const job = get().editing.find((e) => e.bookingId === bookingId);
@@ -639,6 +803,99 @@ export const useStore = create<Store>((set, get) => ({
     }));
     return ok("Aftercare intentionally skipped with reason recorded.");
   },
+
+  upsertPixieset: (bookingId, patch) => {
+    const b = get().bookings.find((x) => x.id === bookingId);
+    if (!b) return fail("Booking not found.");
+    const existing = get().pixieset.find((p) => p.bookingId === bookingId);
+    const base: PixiesetRecord = existing ?? {
+      id: nextId("PX", get().pixieset),
+      bookingId,
+      clientId: b.clientId,
+      client: b.client,
+      pixiesetClientName: b.client,
+      collectionName: `${b.client} — ${b.category}`,
+      galleryLink: "",
+      password: "",
+      galleryStatus: "Not Created",
+      watermark: "Not Needed",
+      favoritesEnabled: true,
+      favoritesStatus: "Pending",
+      downloadEnabled: false,
+      downloadExpiry: "",
+      storeEnabled: false,
+      priceSheet: "None",
+      invoiceLink: "",
+      contractLink: "",
+      orderStatus: "No Order",
+      syncNotes: "",
+      updatedAt: new Date().toISOString(),
+    };
+    const next: PixiesetRecord = { ...base, ...patch, updatedAt: new Date().toISOString() };
+    set((s) => ({
+      pixieset: existing
+        ? s.pixieset.map((p) => (p === existing ? next : p))
+        : [next, ...s.pixieset],
+    }));
+    return ok("Pixieset record saved.");
+  },
+
+  createFollowUp: (data) => {
+    const id = nextId("FU", get().followUps);
+    const message =
+      data.message ??
+      renderTemplate(whatsappTemplates[data.messageType], buildPlaceholders(get(), data));
+    const item: FollowUp = {
+      id,
+      client: data.client,
+      bookingId: data.bookingId,
+      leadId: data.leadId,
+      messageType: data.messageType,
+      message,
+      scheduledDate: data.scheduledDate,
+      status: data.status,
+      sentBy: data.sentBy,
+      notes: data.notes ?? "",
+      createdAt: new Date().toISOString(),
+    };
+    set((s) => ({ followUps: [item, ...s.followUps] }));
+    return { ...ok(`“${data.messageType}” follow-up saved.`), followUpId: id };
+  },
+
+  updateFollowUp: (id, patch) => {
+    set((s) => ({
+      followUps: s.followUps.map((f) => (f.id === id ? { ...f, ...patch } : f)),
+    }));
+    return ok("Follow-up updated.");
+  },
+
+  createTask: (data) => {
+    const id = nextId("T", get().tasks);
+    const item: Task = {
+      id,
+      title: data.title,
+      relatedType: data.relatedType,
+      relatedId: data.relatedId,
+      relatedLabel: data.relatedLabel,
+      role: data.role,
+      assignee: data.assignee ?? "Unassigned",
+      dueDate: data.dueDate ?? today(),
+      priority: data.priority ?? "Medium",
+      status: data.status ?? "Pending",
+      sop: data.sop,
+      notes: data.notes ?? "",
+      createdAt: new Date().toISOString(),
+    };
+    set((s) => ({ tasks: [item, ...s.tasks] }));
+    return { ...ok(`Task created: ${data.title}`), taskId: id };
+  },
+
+  updateTask: (id, patch) => {
+    set((s) => ({
+      tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+    }));
+    return ok("Task updated.");
+  },
 }));
 
 /* ───────────── Derived helpers ───────────── */
@@ -652,4 +909,44 @@ export function bookingFlags(b: Booking) {
   const canStartEditing = b.selectionConfirmed && b.payment === "Paid";
   const canStartHeirloom = b.albumSelectionConfirmed;
   return { marketingAllowed, consentRecorded, canCompleteShoot, canStartEditing, canStartHeirloom };
+}
+
+/* ───────────── Template helpers ───────────── */
+
+export function renderTemplate(template: string, vars: Record<string, string>) {
+  return Object.entries(vars).reduce(
+    (acc, [k, v]) => acc.split(k).join(v || k),
+    template,
+  );
+}
+
+type StoreSnapshot = {
+  bookings: Booking[];
+  leads: Lead[];
+  pixieset: PixiesetRecord[];
+  memoryProfiles: MemoryProfile[];
+};
+
+export function buildPlaceholders(
+  s: StoreSnapshot,
+  ctx: { client: string; bookingId?: string; leadId?: string },
+): Record<string, string> {
+  const b = ctx.bookingId ? s.bookings.find((x) => x.id === ctx.bookingId) : undefined;
+  const l = ctx.leadId ? s.leads.find((x) => x.id === ctx.leadId) : undefined;
+  const pix = ctx.bookingId ? s.pixieset.find((p) => p.bookingId === ctx.bookingId) : undefined;
+  const mp = b
+    ? s.memoryProfiles.find((p) => p.ownerType === "booking" && p.ownerId === b.id)
+    : undefined;
+  return {
+    "[Client Name]": ctx.client || b?.client || l?.parent || "",
+    "[Session Type]": (b?.category as string) || (l?.sessionType as string) || "",
+    "[Package Name]": b?.package || l?.package || "",
+    "[Shoot Date]": b?.date || l?.preferredDate || "",
+    "[Balance Amount]": b ? `₹${b.balance.toLocaleString("en-IN")}` : "",
+    "[Gallery Link]": pix?.galleryLink || "—",
+    "[Privacy Choice]": b?.privacy || "your privacy preferences",
+    "[Delivery Timeline]": b?.deadline || "10–14 days",
+    "[Review Link]": "https://g.page/littleshots/review",
+    "[Memory Goal]": mp?.memoryGoal || l?.memoryGoal || "",
+  };
 }

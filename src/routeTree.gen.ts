@@ -9,8 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WhatsappRouteImport } from './routes/whatsapp'
+import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as SopsRouteImport } from './routes/sops'
 import { Route as SafetyRouteImport } from './routes/safety'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as PixiesetRouteImport } from './routes/pixieset'
 import { Route as PackagesRouteImport } from './routes/packages'
 import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as LeadsRouteImport } from './routes/leads'
@@ -21,6 +25,21 @@ import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as BookingsRouteImport } from './routes/bookings'
 import { Route as IndexRouteImport } from './routes/index'
 
+const WhatsappRoute = WhatsappRouteImport.update({
+  id: '/whatsapp',
+  path: '/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksRoute = TasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SopsRoute = SopsRouteImport.update({
+  id: '/sops',
+  path: '/sops',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SafetyRoute = SafetyRouteImport.update({
   id: '/safety',
   path: '/safety',
@@ -29,6 +48,11 @@ const SafetyRoute = SafetyRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PixiesetRoute = PixiesetRouteImport.update({
+  id: '/pixieset',
+  path: '/pixieset',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PackagesRoute = PackagesRouteImport.update({
@@ -87,8 +111,12 @@ export interface FileRoutesByFullPath {
   '/leads': typeof LeadsRoute
   '/memory': typeof MemoryRoute
   '/packages': typeof PackagesRoute
+  '/pixieset': typeof PixiesetRoute
   '/privacy': typeof PrivacyRoute
   '/safety': typeof SafetyRoute
+  '/sops': typeof SopsRoute
+  '/tasks': typeof TasksRoute
+  '/whatsapp': typeof WhatsappRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -100,8 +128,12 @@ export interface FileRoutesByTo {
   '/leads': typeof LeadsRoute
   '/memory': typeof MemoryRoute
   '/packages': typeof PackagesRoute
+  '/pixieset': typeof PixiesetRoute
   '/privacy': typeof PrivacyRoute
   '/safety': typeof SafetyRoute
+  '/sops': typeof SopsRoute
+  '/tasks': typeof TasksRoute
+  '/whatsapp': typeof WhatsappRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -114,8 +146,12 @@ export interface FileRoutesById {
   '/leads': typeof LeadsRoute
   '/memory': typeof MemoryRoute
   '/packages': typeof PackagesRoute
+  '/pixieset': typeof PixiesetRoute
   '/privacy': typeof PrivacyRoute
   '/safety': typeof SafetyRoute
+  '/sops': typeof SopsRoute
+  '/tasks': typeof TasksRoute
+  '/whatsapp': typeof WhatsappRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -129,8 +165,12 @@ export interface FileRouteTypes {
     | '/leads'
     | '/memory'
     | '/packages'
+    | '/pixieset'
     | '/privacy'
     | '/safety'
+    | '/sops'
+    | '/tasks'
+    | '/whatsapp'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -142,8 +182,12 @@ export interface FileRouteTypes {
     | '/leads'
     | '/memory'
     | '/packages'
+    | '/pixieset'
     | '/privacy'
     | '/safety'
+    | '/sops'
+    | '/tasks'
+    | '/whatsapp'
   id:
     | '__root__'
     | '/'
@@ -155,8 +199,12 @@ export interface FileRouteTypes {
     | '/leads'
     | '/memory'
     | '/packages'
+    | '/pixieset'
     | '/privacy'
     | '/safety'
+    | '/sops'
+    | '/tasks'
+    | '/whatsapp'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -169,12 +217,37 @@ export interface RootRouteChildren {
   LeadsRoute: typeof LeadsRoute
   MemoryRoute: typeof MemoryRoute
   PackagesRoute: typeof PackagesRoute
+  PixiesetRoute: typeof PixiesetRoute
   PrivacyRoute: typeof PrivacyRoute
   SafetyRoute: typeof SafetyRoute
+  SopsRoute: typeof SopsRoute
+  TasksRoute: typeof TasksRoute
+  WhatsappRoute: typeof WhatsappRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/whatsapp': {
+      id: '/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/whatsapp'
+      preLoaderRoute: typeof WhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks': {
+      id: '/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sops': {
+      id: '/sops'
+      path: '/sops'
+      fullPath: '/sops'
+      preLoaderRoute: typeof SopsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/safety': {
       id: '/safety'
       path: '/safety'
@@ -187,6 +260,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pixieset': {
+      id: '/pixieset'
+      path: '/pixieset'
+      fullPath: '/pixieset'
+      preLoaderRoute: typeof PixiesetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/packages': {
@@ -265,8 +345,12 @@ const rootRouteChildren: RootRouteChildren = {
   LeadsRoute: LeadsRoute,
   MemoryRoute: MemoryRoute,
   PackagesRoute: PackagesRoute,
+  PixiesetRoute: PixiesetRoute,
   PrivacyRoute: PrivacyRoute,
   SafetyRoute: SafetyRoute,
+  SopsRoute: SopsRoute,
+  TasksRoute: TasksRoute,
+  WhatsappRoute: WhatsappRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

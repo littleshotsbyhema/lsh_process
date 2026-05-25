@@ -11,6 +11,10 @@ import {
   Frame,
   LineChart,
   BookHeart,
+  Camera,
+  MessageSquareHeart,
+  ListChecks,
+  BookOpen,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -25,6 +29,10 @@ const nav = [
   { to: "/safety", label: "Safety & Comfort", icon: ClipboardCheck },
   { to: "/editing", label: "Editing & Delivery", icon: ImageIcon },
   { to: "/heirloom", label: "Heirloom Production", icon: Frame },
+  { to: "/pixieset", label: "Pixieset Control", icon: Camera },
+  { to: "/whatsapp", label: "WhatsApp Follow-Ups", icon: MessageSquareHeart },
+  { to: "/tasks", label: "Team Tasks", icon: ListChecks },
+  { to: "/sops", label: "SOP Center", icon: BookOpen },
   { to: "/kpi", label: "KPI Dashboard", icon: LineChart },
 ] as const;
 
