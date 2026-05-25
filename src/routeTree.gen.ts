@@ -17,6 +17,7 @@ import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PixiesetRouteImport } from './routes/pixieset'
+import { Route as PipelineRouteImport } from './routes/pipeline'
 import { Route as PackagesRouteImport } from './routes/packages'
 import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as MarketingRouteImport } from './routes/marketing'
@@ -67,6 +68,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PixiesetRoute = PixiesetRouteImport.update({
   id: '/pixieset',
   path: '/pixieset',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PipelineRoute = PipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PackagesRoute = PackagesRouteImport.update({
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/marketing': typeof MarketingRoute
   '/memory': typeof MemoryRoute
   '/packages': typeof PackagesRoute
+  '/pipeline': typeof PipelineRoute
   '/pixieset': typeof PixiesetRoute
   '/privacy': typeof PrivacyRoute
   '/reports': typeof ReportsRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/marketing': typeof MarketingRoute
   '/memory': typeof MemoryRoute
   '/packages': typeof PackagesRoute
+  '/pipeline': typeof PipelineRoute
   '/pixieset': typeof PixiesetRoute
   '/privacy': typeof PrivacyRoute
   '/reports': typeof ReportsRoute
@@ -180,6 +188,7 @@ export interface FileRoutesById {
   '/marketing': typeof MarketingRoute
   '/memory': typeof MemoryRoute
   '/packages': typeof PackagesRoute
+  '/pipeline': typeof PipelineRoute
   '/pixieset': typeof PixiesetRoute
   '/privacy': typeof PrivacyRoute
   '/reports': typeof ReportsRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
     | '/marketing'
     | '/memory'
     | '/packages'
+    | '/pipeline'
     | '/pixieset'
     | '/privacy'
     | '/reports'
@@ -224,6 +234,7 @@ export interface FileRouteTypes {
     | '/marketing'
     | '/memory'
     | '/packages'
+    | '/pipeline'
     | '/pixieset'
     | '/privacy'
     | '/reports'
@@ -245,6 +256,7 @@ export interface FileRouteTypes {
     | '/marketing'
     | '/memory'
     | '/packages'
+    | '/pipeline'
     | '/pixieset'
     | '/privacy'
     | '/reports'
@@ -267,6 +279,7 @@ export interface RootRouteChildren {
   MarketingRoute: typeof MarketingRoute
   MemoryRoute: typeof MemoryRoute
   PackagesRoute: typeof PackagesRoute
+  PipelineRoute: typeof PipelineRoute
   PixiesetRoute: typeof PixiesetRoute
   PrivacyRoute: typeof PrivacyRoute
   ReportsRoute: typeof ReportsRoute
@@ -333,6 +346,13 @@ declare module '@tanstack/react-router' {
       path: '/pixieset'
       fullPath: '/pixieset'
       preLoaderRoute: typeof PixiesetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pipeline': {
+      id: '/pipeline'
+      path: '/pipeline'
+      fullPath: '/pipeline'
+      preLoaderRoute: typeof PipelineRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/packages': {
@@ -427,6 +447,7 @@ const rootRouteChildren: RootRouteChildren = {
   MarketingRoute: MarketingRoute,
   MemoryRoute: MemoryRoute,
   PackagesRoute: PackagesRoute,
+  PipelineRoute: PipelineRoute,
   PixiesetRoute: PixiesetRoute,
   PrivacyRoute: PrivacyRoute,
   ReportsRoute: ReportsRoute,
