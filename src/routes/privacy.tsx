@@ -1,11 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
-import { privacyOptions, privacyRecords } from "@/lib/mock-data";
+import { privacyOptions } from "@/lib/mock-data";
+import { useStore } from "@/store/useStore";
+import { handle } from "@/lib/handle";
 import { ShieldAlert } from "lucide-react";
+import { useState } from "react";
 
 export const Route = createFileRoute("/privacy")({
   head: () => ({ meta: [{ title: "Privacy & Consent · Little Moments OS" }] }),
-  component: () => (
+  component: PrivacyPage,
+});
+
+function PrivacyPage() {
+  const bookings = useStore((s) => s.bookings);
+  const privacy = useStore((s) => s.privacy);
+  const recordPrivacy = useStore((s) => s.recordPrivacy);
+  const pending = bookings.filter((b) => !privacy.find((p) => p.bookingId === b.id));
+
+  return (
     <AppShell>
       <PageHeader
         eyebrow="Trust"
@@ -37,12 +49,29 @@ export const Route = createFileRoute("/privacy")({
         </div>
       </Card>
 
+      {pending.length > 0 && (
+        <>
+          <h2 className="font-serif text-xl text-primary mb-3">Bookings awaiting consent</h2>
+          <div className="space-y-4 mb-8">
+            {pending.map((b) => (
+              <RecordForm key={b.id} bookingId={b.id} client={b.client} onSave={(rec) => handle(recordPrivacy(rec))} />
+            ))}
+          </div>
+        </>
+      )}
+
+      <h2 className="font-serif text-xl text-primary mb-3">Recorded consents</h2>
       <div className="space-y-4">
-        {privacyRecords.map((p) => (
+        {privacy.length === 0 && (
+          <Card className="p-8 text-center">
+            <p className="text-sm text-muted-foreground">No consents recorded yet.</p>
+          </Card>
+        )}
+        {privacy.map((p) => (
           <Card key={p.id} className="p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{p.id} · Booking {p.booking}</div>
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{p.id} · Booking {p.bookingId}</div>
                 <h3 className="font-serif text-lg text-primary mt-1">{p.client}</h3>
               </div>
               <StatusPill tone={p.confirmed ? "good" : "bad"}>{p.confirmed ? "Confirmed in writing" : "Not confirmed"}</StatusPill>
@@ -58,8 +87,86 @@ export const Route = createFileRoute("/privacy")({
         ))}
       </div>
     </AppShell>
-  ),
-});
+  );
+}
+
+function RecordForm({
+  bookingId,
+  client,
+  onSave,
+}: {
+  bookingId: string;
+  client: string;
+  onSave: (rec: {
+    bookingId: string;
+    client: string;
+    consent: string;
+    date: string;
+    platforms: string;
+    images: string;
+    confirmed: boolean;
+    recordedBy: string;
+  }) => void;
+}) {
+  const [consent, setConsent] = useState<string>(privacyOptions[0]);
+  const [platforms, setPlatforms] = useState("");
+  const [images, setImages] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const [recordedBy, setRecordedBy] = useState("Hema");
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Booking {bookingId}</div>
+          <h3 className="font-serif text-lg text-primary mt-1">{client}</h3>
+        </div>
+        <StatusPill tone="bad">Awaiting consent</StatusPill>
+      </div>
+      <div className="grid md:grid-cols-2 gap-3">
+        <label className="text-xs">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Consent type</div>
+          <select value={consent} onChange={(e) => setConsent(e.target.value)} className="w-full border border-border rounded-lg bg-card px-3 py-2 text-sm text-primary">
+            {privacyOptions.map((o) => <option key={o}>{o}</option>)}
+          </select>
+        </label>
+        <label className="text-xs">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Approved platforms</div>
+          <input value={platforms} onChange={(e) => setPlatforms(e.target.value)} placeholder="Instagram, Portfolio…" className="w-full border border-border rounded-lg bg-card px-3 py-2 text-sm text-primary" />
+        </label>
+        <label className="text-xs md:col-span-2">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Approved image IDs / notes</div>
+          <input value={images} onChange={(e) => setImages(e.target.value)} placeholder="e.g. frames 04, 11, 23 — or 'all images private'" className="w-full border border-border rounded-lg bg-card px-3 py-2 text-sm text-primary" />
+        </label>
+        <label className="text-xs">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Recorded by</div>
+          <input value={recordedBy} onChange={(e) => setRecordedBy(e.target.value)} className="w-full border border-border rounded-lg bg-card px-3 py-2 text-sm text-primary" />
+        </label>
+        <label className="text-xs flex items-center gap-2 mt-5">
+          <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="accent-[var(--gold)]" />
+          <span className="text-primary">Parent confirmed consent in writing</span>
+        </label>
+      </div>
+      <button
+        onClick={() =>
+          onSave({
+            bookingId,
+            client,
+            consent,
+            date: new Date().toISOString().slice(0, 10),
+            platforms: platforms || "—",
+            images: images || "—",
+            confirmed,
+            recordedBy,
+          })
+        }
+        className="mt-4 inline-flex text-sm px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+      >
+        Save consent
+      </button>
+    </Card>
+  );
+}
 
 function F({ k, v }: { k: string; v: string }) {
   return (
