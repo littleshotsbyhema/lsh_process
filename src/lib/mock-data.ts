@@ -166,6 +166,84 @@ export const whatsappPlaceholders = [
 export const followUpStatuses = ["Draft", "Scheduled", "Sent", "Skipped"] as const;
 export type FollowUpStatus = (typeof followUpStatuses)[number];
 
+/* ───────── Reviews & Reputation ───────── */
+export const reviewPlatforms = [
+  "Google",
+  "Justdial",
+  "Instagram",
+  "WhatsApp",
+  "Website",
+  "Other",
+] as const;
+export type ReviewPlatform = (typeof reviewPlatforms)[number];
+
+export const reviewRequestStatuses = ["Pending", "Requested", "Received", "Skipped"] as const;
+export type ReviewRequestStatus = (typeof reviewRequestStatuses)[number];
+
+export const issueCategories = [
+  "Delivery delay",
+  "Editing concern",
+  "Album / print quality",
+  "Communication gap",
+  "Privacy concern",
+  "Comfort / safety",
+  "Other",
+] as const;
+export type IssueCategory = (typeof issueCategories)[number];
+
+export const issueStatuses = ["Open", "In Review", "Resolved", "Closed"] as const;
+export type IssueStatus = (typeof issueStatuses)[number];
+
+export const reviewRequestMessage =
+  "Thank you for choosing Little Shots by Hema. It was a joy to preserve this chapter for your family. If the experience felt special to you, we would be grateful if you could share a review. Your words help other parents trust us with their little moments too.";
+
+/* ───────── Governance checklists ───────── */
+export const governanceChecklists = {
+  daily: [
+    "New inquiries checked",
+    "CRM updated",
+    "Shoot schedules confirmed",
+    "Pending payments checked",
+    "Pending selections checked",
+  ],
+  weekly: [
+    "Upcoming shoots reviewed",
+    "Delivery timelines reviewed",
+    "Album/frame production reviewed",
+    "Content calendar reviewed",
+    "Consent approvals reviewed",
+  ],
+  monthly: [
+    "KPI dashboard reviewed",
+    "Client feedback reviewed",
+    "Privacy compliance reviewed",
+    "Safety checklist completion reviewed",
+    "Delayed deliveries reviewed",
+    "Package conversion reviewed",
+    "Content alignment reviewed",
+  ],
+  quarterly: [
+    "Package clarity audited",
+    "Website/social messaging audited",
+    "Safety SOPs audited",
+    "Print quality audited",
+    "Client journey audited",
+    "Team training refreshed",
+  ],
+} as const;
+export type GovernanceCadence = keyof typeof governanceChecklists;
+
+/* ───────── Philosophy Alignment dimensions ───────── */
+export const alignmentDimensions = [
+  "Emotion understood",
+  "Comfort protected",
+  "Privacy recorded",
+  "Timeline clear",
+  "Delivery felt premium",
+  "Aftercare completed",
+] as const;
+export type AlignmentDimension = (typeof alignmentDimensions)[number];
+
 /* ───────── Team & Tasks ───────── */
 export const teamRoles = [
   "Founder / Studio Head",
