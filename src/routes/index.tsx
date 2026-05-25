@@ -85,6 +85,17 @@ function Index() {
             </h2>
             <Link to="/bookings" className="text-xs text-muted-foreground hover:text-primary">View all →</Link>
           </div>
+          {todayShoots.length === 0 && display.length > 0 && (
+            <div className="mb-4 flex items-start gap-3 rounded-xl bg-[var(--gradient-warm)] border border-border px-4 py-3">
+              <div className="w-8 h-8 rounded-full bg-card flex items-center justify-center shrink-0">
+                <CalendarHeart className="h-3.5 w-3.5 text-gold" />
+              </div>
+              <div>
+                <p className="font-serif text-base text-primary leading-snug">No shoots today.</p>
+                <p className="text-xs italic text-primary/70 mt-0.5">A quiet day to prepare future memories beautifully.</p>
+              </div>
+            </div>
+          )}
           {display.length === 0 ? (
             <div className="py-10 px-4 text-center rounded-xl bg-[var(--gradient-warm)] border border-border">
               <div className="mx-auto w-10 h-10 rounded-full bg-card flex items-center justify-center shadow-[var(--shadow-soft)]">
