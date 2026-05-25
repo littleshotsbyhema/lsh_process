@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
-import { heirloomJobs } from "@/lib/mock-data";
+import { useStore } from "@/store/useStore";
+import { handle } from "@/lib/handle";
 import { Check, Circle } from "lucide-react";
 
 const qcChecklist = [
@@ -15,7 +16,14 @@ const qcChecklist = [
 
 export const Route = createFileRoute("/heirloom")({
   head: () => ({ meta: [{ title: "Heirloom Production · Little Moments OS" }] }),
-  component: () => (
+  component: HeirloomPage,
+});
+
+function HeirloomPage() {
+  const heirloom = useStore((s) => s.heirloom);
+  const advance = useStore((s) => s.advanceHeirloom);
+  const passQC = useStore((s) => s.passHeirloomQC);
+  return (
     <AppShell>
       <PageHeader
         eyebrow="Heirloom"
@@ -24,23 +32,30 @@ export const Route = createFileRoute("/heirloom")({
         quote="If it isn't worthy of a shelf in their home, it isn't ready to leave ours."
       />
 
+      {heirloom.length === 0 && (
+        <Card className="p-10 text-center mb-8">
+          <p className="font-serif text-xl text-primary">No heirlooms in production.</p>
+          <p className="text-sm text-muted-foreground mt-2">Start one from a booking once album / frame selections are confirmed.</p>
+        </Card>
+      )}
+
       <div className="grid lg:grid-cols-3 gap-5 mb-8">
-        {heirloomJobs.map((h) => {
+        {heirloom.map((h) => {
           const steps = [
-            ["Album proof sent", h.proof !== "—"],
-            ["Client approved", h.approved],
-            ["Sent to production", h.sentToProduction],
-            ["Production completed", h.produced],
-            ["QC completed", h.qc === "Passed"],
-            ["Packed", h.packed],
-            ["Ready for collection", h.ready],
-            ["Delivered / collected", h.delivered],
+            ["proofSent", "Album proof sent", h.proofSent],
+            ["approved", "Client approved", h.approved],
+            ["sentToProduction", "Sent to production", h.sentToProduction],
+            ["produced", "Production completed", h.produced],
+            ["qc", "QC completed", h.qc === "Passed"],
+            ["packed", "Packed", h.packed],
+            ["ready", "Ready for collection", h.ready],
+            ["delivered", "Delivered / collected", h.delivered],
           ] as const;
           return (
             <Card key={h.id} className="p-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{h.id} · {h.booking}</div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{h.id} · {h.bookingId}</div>
                   <h3 className="font-serif text-lg text-primary mt-1">{h.client}</h3>
                 </div>
                 <StatusPill tone={h.delivered ? "good" : h.ready ? "gold" : "warn"}>
@@ -56,14 +71,18 @@ export const Route = createFileRoute("/heirloom")({
               </div>
 
               <ol className="mt-5 space-y-2">
-                {steps.map(([label, done]) => (
-                  <li key={label} className="flex items-center gap-2 text-sm">
-                    {done ? (
-                      <Check className="h-4 w-4 text-gold" />
-                    ) : (
-                      <Circle className="h-4 w-4 text-muted-foreground/40" />
-                    )}
+                {steps.map(([key, label, done]) => (
+                  <li key={key} className="flex items-center gap-2 text-sm">
+                    {done ? <Check className="h-4 w-4 text-gold" /> : <Circle className="h-4 w-4 text-muted-foreground/40" />}
                     <span className={done ? "text-primary" : "text-muted-foreground"}>{label}</span>
+                    {!done && (
+                      <button
+                        onClick={() => handle(key === "qc" ? passQC(h.id) : advance(h.id, key as never))}
+                        className="ml-auto text-[10px] px-2 py-0.5 rounded-full border border-border bg-muted text-primary hover:bg-accent"
+                      >
+                        Mark done
+                      </button>
+                    )}
                   </li>
                 ))}
               </ol>
@@ -84,8 +103,8 @@ export const Route = createFileRoute("/heirloom")({
         </ul>
       </Card>
     </AppShell>
-  ),
-});
+  );
+}
 
 function Mini({ k, v }: { k: string; v: string }) {
   return (
