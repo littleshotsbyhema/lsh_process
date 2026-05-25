@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WhatsappRouteImport } from './routes/whatsapp'
 import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as SopsRouteImport } from './routes/sops'
 import { Route as SafetyRouteImport } from './routes/safety'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PixiesetRouteImport } from './routes/pixieset'
@@ -32,6 +33,11 @@ const WhatsappRoute = WhatsappRouteImport.update({
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SopsRoute = SopsRouteImport.update({
+  id: '/sops',
+  path: '/sops',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SafetyRoute = SafetyRouteImport.update({
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/pixieset': typeof PixiesetRoute
   '/privacy': typeof PrivacyRoute
   '/safety': typeof SafetyRoute
+  '/sops': typeof SopsRoute
   '/tasks': typeof TasksRoute
   '/whatsapp': typeof WhatsappRoute
 }
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/pixieset': typeof PixiesetRoute
   '/privacy': typeof PrivacyRoute
   '/safety': typeof SafetyRoute
+  '/sops': typeof SopsRoute
   '/tasks': typeof TasksRoute
   '/whatsapp': typeof WhatsappRoute
 }
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/pixieset': typeof PixiesetRoute
   '/privacy': typeof PrivacyRoute
   '/safety': typeof SafetyRoute
+  '/sops': typeof SopsRoute
   '/tasks': typeof TasksRoute
   '/whatsapp': typeof WhatsappRoute
 }
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/pixieset'
     | '/privacy'
     | '/safety'
+    | '/sops'
     | '/tasks'
     | '/whatsapp'
   fileRoutesByTo: FileRoutesByTo
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
     | '/pixieset'
     | '/privacy'
     | '/safety'
+    | '/sops'
     | '/tasks'
     | '/whatsapp'
   id:
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/pixieset'
     | '/privacy'
     | '/safety'
+    | '/sops'
     | '/tasks'
     | '/whatsapp'
   fileRoutesById: FileRoutesById
@@ -208,6 +220,7 @@ export interface RootRouteChildren {
   PixiesetRoute: typeof PixiesetRoute
   PrivacyRoute: typeof PrivacyRoute
   SafetyRoute: typeof SafetyRoute
+  SopsRoute: typeof SopsRoute
   TasksRoute: typeof TasksRoute
   WhatsappRoute: typeof WhatsappRoute
 }
@@ -226,6 +239,13 @@ declare module '@tanstack/react-router' {
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sops': {
+      id: '/sops'
+      path: '/sops'
+      fullPath: '/sops'
+      preLoaderRoute: typeof SopsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/safety': {
@@ -328,6 +348,7 @@ const rootRouteChildren: RootRouteChildren = {
   PixiesetRoute: PixiesetRoute,
   PrivacyRoute: PrivacyRoute,
   SafetyRoute: SafetyRoute,
+  SopsRoute: SopsRoute,
   TasksRoute: TasksRoute,
   WhatsappRoute: WhatsappRoute,
 }
