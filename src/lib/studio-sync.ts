@@ -36,7 +36,7 @@ const db = supabase as unknown as {
 const collections = Object.keys(collectionTables) as (keyof StoreData)[];
 
 function snapshot(state: StoreData) {
-  const map: Record<string, Map<string, string>> = {};
+  const map = {} as Record<keyof StoreData, Map<string, string>>;
   for (const c of collections) {
     const m = new Map<string, string>();
     for (const row of state[c] as AnyRecord[]) m.set(recordKey(c, row), JSON.stringify(row));
