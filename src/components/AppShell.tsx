@@ -136,13 +136,19 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
             <div className="font-serif text-lg text-primary">Little Moments OS</div>
           </div>
-          <button
-            onClick={() => setOpen(true)}
-            aria-label="Open menu"
-            className="rounded-lg border border-border p-2 text-primary"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <SaveIndicator />
+            <button
+              onClick={() => setOpen(true)}
+              aria-label="Open menu"
+              className="rounded-lg border border-border p-2 text-primary"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+        <div className="hidden lg:flex justify-end px-12 pt-6">
+          <SaveIndicator />
         </div>
         <div className="px-5 sm:px-8 lg:px-12 py-8 lg:py-10 max-w-[1400px] mx-auto">
           {children}

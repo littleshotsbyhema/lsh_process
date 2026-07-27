@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Check, Minus } from "lucide-react";
-import { AppShell, Card, PageHeader, SaveIndicator } from "@/components/AppShell";
+import { AppShell, Card, PageHeader } from "@/components/AppShell";
 import { useSession, roleLabels } from "@/lib/session";
 import { can, permissions, visibleNav, type Action } from "@/lib/access";
 
@@ -30,9 +30,6 @@ function SettingsPage() {
         subtitle="Preferences, defaults, and the rules of this house."
         quote="The way we work, written down — so care stays consistent."
       />
-      <div className="mb-6 flex justify-end">
-        <SaveIndicator />
-      </div>
       <div className="grid lg:grid-cols-2 gap-6">
         <Card className="p-6 space-y-3">
           <h2 className="font-serif text-lg text-primary">Studio identity</h2>
