@@ -2,10 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
+
 export type ClientLinkView = {
   token: string;
   kind: "proposal" | "consent" | "delivery";
-  payload: Record<string, unknown>;
+  payload: Record<string, Json>;
   expired: boolean;
   responded: boolean;
 };
@@ -24,7 +26,7 @@ export const getClientLink = createServerFn({ method: "GET" })
     const row = link as unknown as {
       token: string;
       kind: ClientLinkView["kind"];
-      payload: Record<string, unknown>;
+      payload: Record<string, Json>;
       expires_at: string | null;
     };
     const { count } = await supabaseAdmin
