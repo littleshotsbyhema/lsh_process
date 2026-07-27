@@ -1,6 +1,8 @@
 import { useStore } from "@/store/useStore";
 import { journeyStages, type JourneyStage } from "@/lib/mock-data";
 import { handle } from "@/lib/handle";
+import { can } from "@/lib/access";
+import { useSession } from "@/lib/session";
 import { Check, Circle } from "lucide-react";
 
 export function JourneyPipeline({ bookingId }: { bookingId: string }) {
@@ -8,6 +10,8 @@ export function JourneyPipeline({ bookingId }: { bookingId: string }) {
   const setJourneyStage = useStore((s) => s.setJourneyStage);
   const requestReview = useStore((s) => s.requestReview);
   const skipAftercare = useStore((s) => s.skipAftercare);
+  const { roles } = useSession();
+  const mayAdvance = can("pipeline.advance", roles);
   if (!booking) return null;
 
   const currentIdx = journeyStages.indexOf(booking.journeyStage);
@@ -29,14 +33,15 @@ export function JourneyPipeline({ bookingId }: { bookingId: string }) {
         <div className="flex flex-wrap gap-2">
           <select
             value={booking.journeyStage}
+            disabled={!mayAdvance}
             onChange={(e) => handle(setJourneyStage(bookingId, e.target.value as JourneyStage))}
-            className="text-xs bg-card text-primary border border-gold rounded-lg px-2.5 py-1.5"
+            className="text-xs bg-card text-primary border border-gold rounded-lg px-2.5 py-1.5 disabled:opacity-50"
           >
             {journeyStages.map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
-          {currentIdx < journeyStages.length - 1 && (
+          {mayAdvance && currentIdx < journeyStages.length - 1 && (
             <button
               onClick={() =>
                 handle(setJourneyStage(bookingId, journeyStages[currentIdx + 1]))
@@ -48,6 +53,12 @@ export function JourneyPipeline({ bookingId }: { bookingId: string }) {
           )}
         </div>
       </div>
+
+      {!mayAdvance && (
+        <p className="mb-3 text-[11px] italic text-muted-foreground">
+          Only a Founder or Client Coordinator can move a family's journey stage.
+        </p>
+      )}
 
       <ol className="flex flex-wrap gap-1.5">
         {journeyStages.map((s, i) => {
@@ -79,7 +90,7 @@ export function JourneyPipeline({ bookingId }: { bookingId: string }) {
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           onClick={() => handle(requestReview(bookingId))}
-          disabled={booking.reviewRequested}
+          disabled={booking.reviewRequested || !can("reviews.write", roles)}
           className="text-[11px] px-3 py-1.5 rounded-lg border border-border bg-card text-primary disabled:opacity-40"
         >
           {booking.reviewRequested ? "Review requested ✓" : "Request review"}
@@ -91,7 +102,7 @@ export function JourneyPipeline({ bookingId }: { bookingId: string }) {
             );
             if (reason) handle(skipAftercare(bookingId, reason));
           }}
-          disabled={!!booking.aftercareSkipReason}
+          disabled={!!booking.aftercareSkipReason || !mayAdvance}
           className="text-[11px] px-3 py-1.5 rounded-lg border border-border bg-card text-primary disabled:opacity-40"
         >
           {booking.aftercareSkipReason

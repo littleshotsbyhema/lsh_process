@@ -6,6 +6,8 @@ import { handle } from "@/lib/handle";
 import { MemoryProfileCard } from "@/components/MemoryProfileCard";
 import { JourneyPipeline } from "@/components/JourneyPipeline";
 import { ClientShareLinks } from "@/components/ClientShareLinks";
+import { can } from "@/lib/access";
+import { useSession } from "@/lib/session";
 import { ShieldCheck, ClipboardCheck, ImageIcon, Frame, CheckCircle2, AlertTriangle, Lock, Unlock, Camera } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/bookings")({
@@ -33,6 +35,13 @@ function BookingsPage() {
   const startEditing = useStore((s) => s.startEditing);
   const startHeirloom = useStore((s) => s.startHeirloom);
   const navigate = useNavigate();
+  const { roles } = useSession();
+  const mayEdit = can("bookings.write", roles);
+  const mayMoney = can("bookings.finance", roles);
+  const maySafety = can("safety.write", roles);
+  const mayEditing = can("editing.write", roles);
+  const mayHeirloom = can("heirloom.write", roles);
+  const mayShare = can("links.share", roles);
 
   return (
     <AppShell>
@@ -70,8 +79,9 @@ function BookingsPage() {
               <div className="flex flex-wrap gap-1.5">
                 <select
                   value={b.status}
+                  disabled={!mayEdit}
                   onChange={(e) => handle(setBookingStatus(b.id, e.target.value as BookingStatus))}
-                  className="text-[11px] bg-[var(--gradient-warm)] text-primary border border-gold rounded-full px-2.5 py-1 font-medium"
+                  className="text-[11px] bg-[var(--gradient-warm)] text-primary border border-gold rounded-full px-2.5 py-1 font-medium disabled:opacity-60"
                 >
                   {bookingStatuses.map((s) => <option key={s}>{s}</option>)}
                 </select>
@@ -129,22 +139,23 @@ function BookingsPage() {
                 </Link>
                 <button
                   onClick={() => handle(markShootCompleted(b.id))}
-                  disabled={!flags.canCompleteShoot || b.status === "Shoot Completed"}
+                  disabled={!flags.canCompleteShoot || b.status === "Shoot Completed" || !(mayEdit || maySafety)}
                   className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed"
-                  title={!flags.canCompleteShoot ? "Safety checklist required" : ""}
+                  title={!flags.canCompleteShoot ? "Safety checklist must be completed first" : ""}
                 >
                   <CheckCircle2 className="h-3 w-3" /> Mark shoot completed
                 </button>
                 <button
                   onClick={() => handle(confirmSelection(b.id))}
-                  disabled={b.selectionConfirmed}
+                  disabled={b.selectionConfirmed || !(mayEdit || mayEditing)}
                   className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-primary disabled:opacity-40"
                 >
                   {b.selectionConfirmed ? "Selection confirmed ✓" : "Confirm image selection"}
                 </button>
                 <button
                   onClick={() => handle(markPaymentPaid(b.id))}
-                  disabled={b.payment === "Paid"}
+                  disabled={b.payment === "Paid" || !mayMoney}
+                  title={!mayMoney ? "Only Founder, Sales or Accounts can change money fields" : ""}
                   className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-primary disabled:opacity-40"
                 >
                   {b.payment === "Paid" ? "Payment received ✓" : "Mark full payment received"}
@@ -155,15 +166,19 @@ function BookingsPage() {
                     handle(r);
                     if (r.ok) navigate({ to: "/editing" });
                   }}
-                  disabled={!flags.canStartEditing}
+                  disabled={!flags.canStartEditing || !mayEditing}
                   className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[var(--gradient-gold)] text-primary disabled:opacity-40 disabled:cursor-not-allowed"
-                  title={!flags.canStartEditing ? "Needs confirmed selection + full payment" : ""}
+                  title={
+                    !flags.canStartEditing
+                      ? "Confirm image selection and record full payment before editing can begin"
+                      : ""
+                  }
                 >
                   <ImageIcon className="h-3 w-3" /> Start editing
                 </button>
                 <button
                   onClick={() => handle(confirmAlbumSelection(b.id))}
-                  disabled={b.albumSelectionConfirmed}
+                  disabled={b.albumSelectionConfirmed || !(mayEdit || mayHeirloom)}
                   className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-primary disabled:opacity-40"
                 >
                   {b.albumSelectionConfirmed ? "Album choices ✓" : "Confirm album / frame choices"}
@@ -180,9 +195,9 @@ function BookingsPage() {
                     handle(r);
                     if (r.ok) navigate({ to: "/heirloom" });
                   }}
-                  disabled={!flags.canStartHeirloom}
+                  disabled={!flags.canStartHeirloom || !mayHeirloom}
                   className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[var(--gradient-gold)] text-primary disabled:opacity-40 disabled:cursor-not-allowed"
-                  title={!flags.canStartHeirloom ? "Confirm album/frame selections first" : ""}
+                  title={!flags.canStartHeirloom ? "Confirm the album / frame selections first" : ""}
                 >
                   <Frame className="h-3 w-3" /> Start heirloom production
                 </button>
@@ -217,18 +232,20 @@ function BookingsPage() {
               </Link>
             </div>
             <JourneyPipeline bookingId={b.id} />
-            <ClientShareLinks
-              bookingId={b.id}
-              payload={{
-                client: b.client,
-                category: b.category,
-                package: b.package,
-                price: `₹${b.offer.toLocaleString("en-IN")}`,
-                galleryLink: pix?.galleryLink ?? "",
-                galleryPassword: pix?.password ?? "",
-                heirloomStatus: b.status,
-              }}
-            />
+            {mayShare && (
+              <ClientShareLinks
+                bookingId={b.id}
+                payload={{
+                  client: b.client,
+                  category: b.category,
+                  package: b.package,
+                  price: `₹${b.offer.toLocaleString("en-IN")}`,
+                  galleryLink: pix?.galleryLink ?? "",
+                  galleryPassword: pix?.password ?? "",
+                  heirloomStatus: b.status,
+                }}
+              />
+            )}
           </Card>
           );
         })}
