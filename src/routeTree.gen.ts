@@ -9,235 +9,260 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WhatsappRouteImport } from './routes/whatsapp'
-import { Route as TeamRouteImport } from './routes/team'
-import { Route as TasksRouteImport } from './routes/tasks'
-import { Route as SopsRouteImport } from './routes/sops'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as SafetyRouteImport } from './routes/safety'
-import { Route as ReviewsRouteImport } from './routes/reviews'
-import { Route as ReportsRouteImport } from './routes/reports'
-import { Route as QuoteRouteImport } from './routes/quote'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as PrepRouteImport } from './routes/prep'
-import { Route as PixiesetRouteImport } from './routes/pixieset'
-import { Route as PipelineRouteImport } from './routes/pipeline'
-import { Route as PackagesRouteImport } from './routes/packages'
-import { Route as MemoryRouteImport } from './routes/memory'
-import { Route as MarketingRouteImport } from './routes/marketing'
-import { Route as LeadsRouteImport } from './routes/leads'
-import { Route as KpiRouteImport } from './routes/kpi'
-import { Route as HeirloomRouteImport } from './routes/heirloom'
-import { Route as GovernanceRouteImport } from './routes/governance'
-import { Route as EditingRouteImport } from './routes/editing'
-import { Route as ClientsRouteImport } from './routes/clients'
-import { Route as BookingsRouteImport } from './routes/bookings'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as FTokenRouteImport } from './routes/f/$token'
+import { Route as AuthenticatedWhatsappRouteImport } from './routes/_authenticated/whatsapp'
+import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
+import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
+import { Route as AuthenticatedSopsRouteImport } from './routes/_authenticated/sops'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedSafetyRouteImport } from './routes/_authenticated/safety'
+import { Route as AuthenticatedReviewsRouteImport } from './routes/_authenticated/reviews'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
+import { Route as AuthenticatedQuoteRouteImport } from './routes/_authenticated/quote'
+import { Route as AuthenticatedPrivacyRouteImport } from './routes/_authenticated/privacy'
+import { Route as AuthenticatedPrepRouteImport } from './routes/_authenticated/prep'
+import { Route as AuthenticatedPixiesetRouteImport } from './routes/_authenticated/pixieset'
+import { Route as AuthenticatedPipelineRouteImport } from './routes/_authenticated/pipeline'
+import { Route as AuthenticatedPackagesRouteImport } from './routes/_authenticated/packages'
+import { Route as AuthenticatedMemoryRouteImport } from './routes/_authenticated/memory'
+import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
+import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/leads'
+import { Route as AuthenticatedKpiRouteImport } from './routes/_authenticated/kpi'
+import { Route as AuthenticatedHeirloomRouteImport } from './routes/_authenticated/heirloom'
+import { Route as AuthenticatedGovernanceRouteImport } from './routes/_authenticated/governance'
+import { Route as AuthenticatedEditingRouteImport } from './routes/_authenticated/editing'
+import { Route as AuthenticatedClientsRouteImport } from './routes/_authenticated/clients'
+import { Route as AuthenticatedBookingsRouteImport } from './routes/_authenticated/bookings'
 
-const WhatsappRoute = WhatsappRouteImport.update({
-  id: '/whatsapp',
-  path: '/whatsapp',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TeamRoute = TeamRouteImport.update({
-  id: '/team',
-  path: '/team',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TasksRoute = TasksRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SopsRoute = SopsRouteImport.update({
-  id: '/sops',
-  path: '/sops',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SafetyRoute = SafetyRouteImport.update({
-  id: '/safety',
-  path: '/safety',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReviewsRoute = ReviewsRouteImport.update({
-  id: '/reviews',
-  path: '/reviews',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReportsRoute = ReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const QuoteRoute = QuoteRouteImport.update({
-  id: '/quote',
-  path: '/quote',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrepRoute = PrepRouteImport.update({
-  id: '/prep',
-  path: '/prep',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PixiesetRoute = PixiesetRouteImport.update({
-  id: '/pixieset',
-  path: '/pixieset',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PipelineRoute = PipelineRouteImport.update({
-  id: '/pipeline',
-  path: '/pipeline',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PackagesRoute = PackagesRouteImport.update({
-  id: '/packages',
-  path: '/packages',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MemoryRoute = MemoryRouteImport.update({
-  id: '/memory',
-  path: '/memory',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MarketingRoute = MarketingRouteImport.update({
-  id: '/marketing',
-  path: '/marketing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LeadsRoute = LeadsRouteImport.update({
-  id: '/leads',
-  path: '/leads',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const KpiRoute = KpiRouteImport.update({
-  id: '/kpi',
-  path: '/kpi',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HeirloomRoute = HeirloomRouteImport.update({
-  id: '/heirloom',
-  path: '/heirloom',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GovernanceRoute = GovernanceRouteImport.update({
-  id: '/governance',
-  path: '/governance',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EditingRoute = EditingRouteImport.update({
-  id: '/editing',
-  path: '/editing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ClientsRoute = ClientsRouteImport.update({
-  id: '/clients',
-  path: '/clients',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BookingsRoute = BookingsRouteImport.update({
-  id: '/bookings',
-  path: '/bookings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexRoute = IndexRouteImport.update({
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const FTokenRoute = FTokenRouteImport.update({
+  id: '/f/$token',
+  path: '/f/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedWhatsappRoute = AuthenticatedWhatsappRouteImport.update({
+  id: '/whatsapp',
+  path: '/whatsapp',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTeamRoute = AuthenticatedTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTasksRoute = AuthenticatedTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSopsRoute = AuthenticatedSopsRouteImport.update({
+  id: '/sops',
+  path: '/sops',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSafetyRoute = AuthenticatedSafetyRouteImport.update({
+  id: '/safety',
+  path: '/safety',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReviewsRoute = AuthenticatedReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedQuoteRoute = AuthenticatedQuoteRouteImport.update({
+  id: '/quote',
+  path: '/quote',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPrivacyRoute = AuthenticatedPrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPrepRoute = AuthenticatedPrepRouteImport.update({
+  id: '/prep',
+  path: '/prep',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPixiesetRoute = AuthenticatedPixiesetRouteImport.update({
+  id: '/pixieset',
+  path: '/pixieset',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPipelineRoute = AuthenticatedPipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPackagesRoute = AuthenticatedPackagesRouteImport.update({
+  id: '/packages',
+  path: '/packages',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMemoryRoute = AuthenticatedMemoryRouteImport.update({
+  id: '/memory',
+  path: '/memory',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMarketingRoute = AuthenticatedMarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLeadsRoute = AuthenticatedLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedKpiRoute = AuthenticatedKpiRouteImport.update({
+  id: '/kpi',
+  path: '/kpi',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHeirloomRoute = AuthenticatedHeirloomRouteImport.update({
+  id: '/heirloom',
+  path: '/heirloom',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedGovernanceRoute = AuthenticatedGovernanceRouteImport.update({
+  id: '/governance',
+  path: '/governance',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEditingRoute = AuthenticatedEditingRouteImport.update({
+  id: '/editing',
+  path: '/editing',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedClientsRoute = AuthenticatedClientsRouteImport.update({
+  id: '/clients',
+  path: '/clients',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedBookingsRoute = AuthenticatedBookingsRouteImport.update({
+  id: '/bookings',
+  path: '/bookings',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/bookings': typeof BookingsRoute
-  '/clients': typeof ClientsRoute
-  '/editing': typeof EditingRoute
-  '/governance': typeof GovernanceRoute
-  '/heirloom': typeof HeirloomRoute
-  '/kpi': typeof KpiRoute
-  '/leads': typeof LeadsRoute
-  '/marketing': typeof MarketingRoute
-  '/memory': typeof MemoryRoute
-  '/packages': typeof PackagesRoute
-  '/pipeline': typeof PipelineRoute
-  '/pixieset': typeof PixiesetRoute
-  '/prep': typeof PrepRoute
-  '/privacy': typeof PrivacyRoute
-  '/quote': typeof QuoteRoute
-  '/reports': typeof ReportsRoute
-  '/reviews': typeof ReviewsRoute
-  '/safety': typeof SafetyRoute
-  '/settings': typeof SettingsRoute
-  '/sops': typeof SopsRoute
-  '/tasks': typeof TasksRoute
-  '/team': typeof TeamRoute
-  '/whatsapp': typeof WhatsappRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/auth': typeof AuthRoute
+  '/bookings': typeof AuthenticatedBookingsRoute
+  '/clients': typeof AuthenticatedClientsRoute
+  '/editing': typeof AuthenticatedEditingRoute
+  '/governance': typeof AuthenticatedGovernanceRoute
+  '/heirloom': typeof AuthenticatedHeirloomRoute
+  '/kpi': typeof AuthenticatedKpiRoute
+  '/leads': typeof AuthenticatedLeadsRoute
+  '/marketing': typeof AuthenticatedMarketingRoute
+  '/memory': typeof AuthenticatedMemoryRoute
+  '/packages': typeof AuthenticatedPackagesRoute
+  '/pipeline': typeof AuthenticatedPipelineRoute
+  '/pixieset': typeof AuthenticatedPixiesetRoute
+  '/prep': typeof AuthenticatedPrepRoute
+  '/privacy': typeof AuthenticatedPrivacyRoute
+  '/quote': typeof AuthenticatedQuoteRoute
+  '/reports': typeof AuthenticatedReportsRoute
+  '/reviews': typeof AuthenticatedReviewsRoute
+  '/safety': typeof AuthenticatedSafetyRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/sops': typeof AuthenticatedSopsRoute
+  '/tasks': typeof AuthenticatedTasksRoute
+  '/team': typeof AuthenticatedTeamRoute
+  '/whatsapp': typeof AuthenticatedWhatsappRoute
+  '/f/$token': typeof FTokenRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/bookings': typeof BookingsRoute
-  '/clients': typeof ClientsRoute
-  '/editing': typeof EditingRoute
-  '/governance': typeof GovernanceRoute
-  '/heirloom': typeof HeirloomRoute
-  '/kpi': typeof KpiRoute
-  '/leads': typeof LeadsRoute
-  '/marketing': typeof MarketingRoute
-  '/memory': typeof MemoryRoute
-  '/packages': typeof PackagesRoute
-  '/pipeline': typeof PipelineRoute
-  '/pixieset': typeof PixiesetRoute
-  '/prep': typeof PrepRoute
-  '/privacy': typeof PrivacyRoute
-  '/quote': typeof QuoteRoute
-  '/reports': typeof ReportsRoute
-  '/reviews': typeof ReviewsRoute
-  '/safety': typeof SafetyRoute
-  '/settings': typeof SettingsRoute
-  '/sops': typeof SopsRoute
-  '/tasks': typeof TasksRoute
-  '/team': typeof TeamRoute
-  '/whatsapp': typeof WhatsappRoute
+  '/auth': typeof AuthRoute
+  '/bookings': typeof AuthenticatedBookingsRoute
+  '/clients': typeof AuthenticatedClientsRoute
+  '/editing': typeof AuthenticatedEditingRoute
+  '/governance': typeof AuthenticatedGovernanceRoute
+  '/heirloom': typeof AuthenticatedHeirloomRoute
+  '/kpi': typeof AuthenticatedKpiRoute
+  '/leads': typeof AuthenticatedLeadsRoute
+  '/marketing': typeof AuthenticatedMarketingRoute
+  '/memory': typeof AuthenticatedMemoryRoute
+  '/packages': typeof AuthenticatedPackagesRoute
+  '/pipeline': typeof AuthenticatedPipelineRoute
+  '/pixieset': typeof AuthenticatedPixiesetRoute
+  '/prep': typeof AuthenticatedPrepRoute
+  '/privacy': typeof AuthenticatedPrivacyRoute
+  '/quote': typeof AuthenticatedQuoteRoute
+  '/reports': typeof AuthenticatedReportsRoute
+  '/reviews': typeof AuthenticatedReviewsRoute
+  '/safety': typeof AuthenticatedSafetyRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/sops': typeof AuthenticatedSopsRoute
+  '/tasks': typeof AuthenticatedTasksRoute
+  '/team': typeof AuthenticatedTeamRoute
+  '/whatsapp': typeof AuthenticatedWhatsappRoute
+  '/f/$token': typeof FTokenRoute
+  '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/bookings': typeof BookingsRoute
-  '/clients': typeof ClientsRoute
-  '/editing': typeof EditingRoute
-  '/governance': typeof GovernanceRoute
-  '/heirloom': typeof HeirloomRoute
-  '/kpi': typeof KpiRoute
-  '/leads': typeof LeadsRoute
-  '/marketing': typeof MarketingRoute
-  '/memory': typeof MemoryRoute
-  '/packages': typeof PackagesRoute
-  '/pipeline': typeof PipelineRoute
-  '/pixieset': typeof PixiesetRoute
-  '/prep': typeof PrepRoute
-  '/privacy': typeof PrivacyRoute
-  '/quote': typeof QuoteRoute
-  '/reports': typeof ReportsRoute
-  '/reviews': typeof ReviewsRoute
-  '/safety': typeof SafetyRoute
-  '/settings': typeof SettingsRoute
-  '/sops': typeof SopsRoute
-  '/tasks': typeof TasksRoute
-  '/team': typeof TeamRoute
-  '/whatsapp': typeof WhatsappRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/bookings': typeof AuthenticatedBookingsRoute
+  '/_authenticated/clients': typeof AuthenticatedClientsRoute
+  '/_authenticated/editing': typeof AuthenticatedEditingRoute
+  '/_authenticated/governance': typeof AuthenticatedGovernanceRoute
+  '/_authenticated/heirloom': typeof AuthenticatedHeirloomRoute
+  '/_authenticated/kpi': typeof AuthenticatedKpiRoute
+  '/_authenticated/leads': typeof AuthenticatedLeadsRoute
+  '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
+  '/_authenticated/memory': typeof AuthenticatedMemoryRoute
+  '/_authenticated/packages': typeof AuthenticatedPackagesRoute
+  '/_authenticated/pipeline': typeof AuthenticatedPipelineRoute
+  '/_authenticated/pixieset': typeof AuthenticatedPixiesetRoute
+  '/_authenticated/prep': typeof AuthenticatedPrepRoute
+  '/_authenticated/privacy': typeof AuthenticatedPrivacyRoute
+  '/_authenticated/quote': typeof AuthenticatedQuoteRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/reviews': typeof AuthenticatedReviewsRoute
+  '/_authenticated/safety': typeof AuthenticatedSafetyRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/sops': typeof AuthenticatedSopsRoute
+  '/_authenticated/tasks': typeof AuthenticatedTasksRoute
+  '/_authenticated/team': typeof AuthenticatedTeamRoute
+  '/_authenticated/whatsapp': typeof AuthenticatedWhatsappRoute
+  '/f/$token': typeof FTokenRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth'
     | '/bookings'
     | '/clients'
     | '/editing'
@@ -261,9 +286,10 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/team'
     | '/whatsapp'
+    | '/f/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
+    | '/auth'
     | '/bookings'
     | '/clients'
     | '/editing'
@@ -287,270 +313,301 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/team'
     | '/whatsapp'
+    | '/f/$token'
+    | '/'
   id:
     | '__root__'
-    | '/'
-    | '/bookings'
-    | '/clients'
-    | '/editing'
-    | '/governance'
-    | '/heirloom'
-    | '/kpi'
-    | '/leads'
-    | '/marketing'
-    | '/memory'
-    | '/packages'
-    | '/pipeline'
-    | '/pixieset'
-    | '/prep'
-    | '/privacy'
-    | '/quote'
-    | '/reports'
-    | '/reviews'
-    | '/safety'
-    | '/settings'
-    | '/sops'
-    | '/tasks'
-    | '/team'
-    | '/whatsapp'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/bookings'
+    | '/_authenticated/clients'
+    | '/_authenticated/editing'
+    | '/_authenticated/governance'
+    | '/_authenticated/heirloom'
+    | '/_authenticated/kpi'
+    | '/_authenticated/leads'
+    | '/_authenticated/marketing'
+    | '/_authenticated/memory'
+    | '/_authenticated/packages'
+    | '/_authenticated/pipeline'
+    | '/_authenticated/pixieset'
+    | '/_authenticated/prep'
+    | '/_authenticated/privacy'
+    | '/_authenticated/quote'
+    | '/_authenticated/reports'
+    | '/_authenticated/reviews'
+    | '/_authenticated/safety'
+    | '/_authenticated/settings'
+    | '/_authenticated/sops'
+    | '/_authenticated/tasks'
+    | '/_authenticated/team'
+    | '/_authenticated/whatsapp'
+    | '/f/$token'
+    | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  BookingsRoute: typeof BookingsRoute
-  ClientsRoute: typeof ClientsRoute
-  EditingRoute: typeof EditingRoute
-  GovernanceRoute: typeof GovernanceRoute
-  HeirloomRoute: typeof HeirloomRoute
-  KpiRoute: typeof KpiRoute
-  LeadsRoute: typeof LeadsRoute
-  MarketingRoute: typeof MarketingRoute
-  MemoryRoute: typeof MemoryRoute
-  PackagesRoute: typeof PackagesRoute
-  PipelineRoute: typeof PipelineRoute
-  PixiesetRoute: typeof PixiesetRoute
-  PrepRoute: typeof PrepRoute
-  PrivacyRoute: typeof PrivacyRoute
-  QuoteRoute: typeof QuoteRoute
-  ReportsRoute: typeof ReportsRoute
-  ReviewsRoute: typeof ReviewsRoute
-  SafetyRoute: typeof SafetyRoute
-  SettingsRoute: typeof SettingsRoute
-  SopsRoute: typeof SopsRoute
-  TasksRoute: typeof TasksRoute
-  TeamRoute: typeof TeamRoute
-  WhatsappRoute: typeof WhatsappRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  FTokenRoute: typeof FTokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/whatsapp': {
-      id: '/whatsapp'
-      path: '/whatsapp'
-      fullPath: '/whatsapp'
-      preLoaderRoute: typeof WhatsappRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/team': {
-      id: '/team'
-      path: '/team'
-      fullPath: '/team'
-      preLoaderRoute: typeof TeamRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tasks': {
-      id: '/tasks'
-      path: '/tasks'
-      fullPath: '/tasks'
-      preLoaderRoute: typeof TasksRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sops': {
-      id: '/sops'
-      path: '/sops'
-      fullPath: '/sops'
-      preLoaderRoute: typeof SopsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/safety': {
-      id: '/safety'
-      path: '/safety'
-      fullPath: '/safety'
-      preLoaderRoute: typeof SafetyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reviews': {
-      id: '/reviews'
-      path: '/reviews'
-      fullPath: '/reviews'
-      preLoaderRoute: typeof ReviewsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reports': {
-      id: '/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof ReportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/quote': {
-      id: '/quote'
-      path: '/quote'
-      fullPath: '/quote'
-      preLoaderRoute: typeof QuoteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/prep': {
-      id: '/prep'
-      path: '/prep'
-      fullPath: '/prep'
-      preLoaderRoute: typeof PrepRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pixieset': {
-      id: '/pixieset'
-      path: '/pixieset'
-      fullPath: '/pixieset'
-      preLoaderRoute: typeof PixiesetRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pipeline': {
-      id: '/pipeline'
-      path: '/pipeline'
-      fullPath: '/pipeline'
-      preLoaderRoute: typeof PipelineRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/packages': {
-      id: '/packages'
-      path: '/packages'
-      fullPath: '/packages'
-      preLoaderRoute: typeof PackagesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/memory': {
-      id: '/memory'
-      path: '/memory'
-      fullPath: '/memory'
-      preLoaderRoute: typeof MemoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/marketing': {
-      id: '/marketing'
-      path: '/marketing'
-      fullPath: '/marketing'
-      preLoaderRoute: typeof MarketingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/leads': {
-      id: '/leads'
-      path: '/leads'
-      fullPath: '/leads'
-      preLoaderRoute: typeof LeadsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/kpi': {
-      id: '/kpi'
-      path: '/kpi'
-      fullPath: '/kpi'
-      preLoaderRoute: typeof KpiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/heirloom': {
-      id: '/heirloom'
-      path: '/heirloom'
-      fullPath: '/heirloom'
-      preLoaderRoute: typeof HeirloomRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/governance': {
-      id: '/governance'
-      path: '/governance'
-      fullPath: '/governance'
-      preLoaderRoute: typeof GovernanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/editing': {
-      id: '/editing'
-      path: '/editing'
-      fullPath: '/editing'
-      preLoaderRoute: typeof EditingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/clients': {
-      id: '/clients'
-      path: '/clients'
-      fullPath: '/clients'
-      preLoaderRoute: typeof ClientsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bookings': {
-      id: '/bookings'
-      path: '/bookings'
-      fullPath: '/bookings'
-      preLoaderRoute: typeof BookingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/f/$token': {
+      id: '/f/$token'
+      path: '/f/$token'
+      fullPath: '/f/$token'
+      preLoaderRoute: typeof FTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/whatsapp': {
+      id: '/_authenticated/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/whatsapp'
+      preLoaderRoute: typeof AuthenticatedWhatsappRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/team': {
+      id: '/_authenticated/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof AuthenticatedTeamRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tasks': {
+      id: '/_authenticated/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof AuthenticatedTasksRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sops': {
+      id: '/_authenticated/sops'
+      path: '/sops'
+      fullPath: '/sops'
+      preLoaderRoute: typeof AuthenticatedSopsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/safety': {
+      id: '/_authenticated/safety'
+      path: '/safety'
+      fullPath: '/safety'
+      preLoaderRoute: typeof AuthenticatedSafetyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reviews': {
+      id: '/_authenticated/reviews'
+      path: '/reviews'
+      fullPath: '/reviews'
+      preLoaderRoute: typeof AuthenticatedReviewsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/quote': {
+      id: '/_authenticated/quote'
+      path: '/quote'
+      fullPath: '/quote'
+      preLoaderRoute: typeof AuthenticatedQuoteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/privacy': {
+      id: '/_authenticated/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof AuthenticatedPrivacyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/prep': {
+      id: '/_authenticated/prep'
+      path: '/prep'
+      fullPath: '/prep'
+      preLoaderRoute: typeof AuthenticatedPrepRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pixieset': {
+      id: '/_authenticated/pixieset'
+      path: '/pixieset'
+      fullPath: '/pixieset'
+      preLoaderRoute: typeof AuthenticatedPixiesetRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pipeline': {
+      id: '/_authenticated/pipeline'
+      path: '/pipeline'
+      fullPath: '/pipeline'
+      preLoaderRoute: typeof AuthenticatedPipelineRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/packages': {
+      id: '/_authenticated/packages'
+      path: '/packages'
+      fullPath: '/packages'
+      preLoaderRoute: typeof AuthenticatedPackagesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/memory': {
+      id: '/_authenticated/memory'
+      path: '/memory'
+      fullPath: '/memory'
+      preLoaderRoute: typeof AuthenticatedMemoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/marketing': {
+      id: '/_authenticated/marketing'
+      path: '/marketing'
+      fullPath: '/marketing'
+      preLoaderRoute: typeof AuthenticatedMarketingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/leads': {
+      id: '/_authenticated/leads'
+      path: '/leads'
+      fullPath: '/leads'
+      preLoaderRoute: typeof AuthenticatedLeadsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/kpi': {
+      id: '/_authenticated/kpi'
+      path: '/kpi'
+      fullPath: '/kpi'
+      preLoaderRoute: typeof AuthenticatedKpiRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/heirloom': {
+      id: '/_authenticated/heirloom'
+      path: '/heirloom'
+      fullPath: '/heirloom'
+      preLoaderRoute: typeof AuthenticatedHeirloomRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/governance': {
+      id: '/_authenticated/governance'
+      path: '/governance'
+      fullPath: '/governance'
+      preLoaderRoute: typeof AuthenticatedGovernanceRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/editing': {
+      id: '/_authenticated/editing'
+      path: '/editing'
+      fullPath: '/editing'
+      preLoaderRoute: typeof AuthenticatedEditingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/clients': {
+      id: '/_authenticated/clients'
+      path: '/clients'
+      fullPath: '/clients'
+      preLoaderRoute: typeof AuthenticatedClientsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/bookings': {
+      id: '/_authenticated/bookings'
+      path: '/bookings'
+      fullPath: '/bookings'
+      preLoaderRoute: typeof AuthenticatedBookingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedBookingsRoute: typeof AuthenticatedBookingsRoute
+  AuthenticatedClientsRoute: typeof AuthenticatedClientsRoute
+  AuthenticatedEditingRoute: typeof AuthenticatedEditingRoute
+  AuthenticatedGovernanceRoute: typeof AuthenticatedGovernanceRoute
+  AuthenticatedHeirloomRoute: typeof AuthenticatedHeirloomRoute
+  AuthenticatedKpiRoute: typeof AuthenticatedKpiRoute
+  AuthenticatedLeadsRoute: typeof AuthenticatedLeadsRoute
+  AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
+  AuthenticatedMemoryRoute: typeof AuthenticatedMemoryRoute
+  AuthenticatedPackagesRoute: typeof AuthenticatedPackagesRoute
+  AuthenticatedPipelineRoute: typeof AuthenticatedPipelineRoute
+  AuthenticatedPixiesetRoute: typeof AuthenticatedPixiesetRoute
+  AuthenticatedPrepRoute: typeof AuthenticatedPrepRoute
+  AuthenticatedPrivacyRoute: typeof AuthenticatedPrivacyRoute
+  AuthenticatedQuoteRoute: typeof AuthenticatedQuoteRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedReviewsRoute: typeof AuthenticatedReviewsRoute
+  AuthenticatedSafetyRoute: typeof AuthenticatedSafetyRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSopsRoute: typeof AuthenticatedSopsRoute
+  AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
+  AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
+  AuthenticatedWhatsappRoute: typeof AuthenticatedWhatsappRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedBookingsRoute: AuthenticatedBookingsRoute,
+  AuthenticatedClientsRoute: AuthenticatedClientsRoute,
+  AuthenticatedEditingRoute: AuthenticatedEditingRoute,
+  AuthenticatedGovernanceRoute: AuthenticatedGovernanceRoute,
+  AuthenticatedHeirloomRoute: AuthenticatedHeirloomRoute,
+  AuthenticatedKpiRoute: AuthenticatedKpiRoute,
+  AuthenticatedLeadsRoute: AuthenticatedLeadsRoute,
+  AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
+  AuthenticatedMemoryRoute: AuthenticatedMemoryRoute,
+  AuthenticatedPackagesRoute: AuthenticatedPackagesRoute,
+  AuthenticatedPipelineRoute: AuthenticatedPipelineRoute,
+  AuthenticatedPixiesetRoute: AuthenticatedPixiesetRoute,
+  AuthenticatedPrepRoute: AuthenticatedPrepRoute,
+  AuthenticatedPrivacyRoute: AuthenticatedPrivacyRoute,
+  AuthenticatedQuoteRoute: AuthenticatedQuoteRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedReviewsRoute: AuthenticatedReviewsRoute,
+  AuthenticatedSafetyRoute: AuthenticatedSafetyRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSopsRoute: AuthenticatedSopsRoute,
+  AuthenticatedTasksRoute: AuthenticatedTasksRoute,
+  AuthenticatedTeamRoute: AuthenticatedTeamRoute,
+  AuthenticatedWhatsappRoute: AuthenticatedWhatsappRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  BookingsRoute: BookingsRoute,
-  ClientsRoute: ClientsRoute,
-  EditingRoute: EditingRoute,
-  GovernanceRoute: GovernanceRoute,
-  HeirloomRoute: HeirloomRoute,
-  KpiRoute: KpiRoute,
-  LeadsRoute: LeadsRoute,
-  MarketingRoute: MarketingRoute,
-  MemoryRoute: MemoryRoute,
-  PackagesRoute: PackagesRoute,
-  PipelineRoute: PipelineRoute,
-  PixiesetRoute: PixiesetRoute,
-  PrepRoute: PrepRoute,
-  PrivacyRoute: PrivacyRoute,
-  QuoteRoute: QuoteRoute,
-  ReportsRoute: ReportsRoute,
-  ReviewsRoute: ReviewsRoute,
-  SafetyRoute: SafetyRoute,
-  SettingsRoute: SettingsRoute,
-  SopsRoute: SopsRoute,
-  TasksRoute: TasksRoute,
-  TeamRoute: TeamRoute,
-  WhatsappRoute: WhatsappRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  FTokenRoute: FTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

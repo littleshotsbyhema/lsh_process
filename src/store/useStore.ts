@@ -285,7 +285,7 @@ const fail = (message: string, warning = true): Result => ({
 
 /* ───────────── Store ───────────── */
 
-type Store = {
+export type StoreData = {
   leads: Lead[];
   clients: Client[];
   bookings: Booking[];
@@ -300,6 +300,10 @@ type Store = {
   reviews: Review[];
   alignment: AlignmentScore[];
   governance: GovernanceRun[];
+};
+
+type Store = StoreData & {
+  hydrateFromDb: (data: Partial<StoreData>) => void;
 
   // lead flow
   setLeadStatus: (leadId: string, status: LeadStatus) => Result;
@@ -434,6 +438,8 @@ export const useStore = create<Store>((set, get) => ({
   reviews: [],
   alignment: [],
   governance: [],
+
+  hydrateFromDb: (data) => set(() => ({ ...data })),
 
   setLeadStatus: (leadId, status) => {
     set((s) => ({
