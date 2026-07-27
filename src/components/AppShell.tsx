@@ -1,69 +1,42 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  Home,
-  Heart,
-  Users,
-  CalendarHeart,
-  Sparkles,
-  ShieldCheck,
-  ClipboardCheck,
-  Image as ImageIcon,
-  Frame,
-  LineChart,
-  BookHeart,
-  Camera,
-  MessageSquareHeart,
-  ListChecks,
-  GitBranch,
-  FileText,
-  Clipboard,
-  Star,
-  Megaphone,
-  Gauge,
-  UsersRound,
-  Settings as SettingsIcon,
-} from "lucide-react";
-import { BookOpen, LogOut, Menu, X } from "lucide-react";
+import { Check, CloudOff, Loader2, LogOut, Menu, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { roleLabels, useSession, type AppRole } from "@/lib/session";
+import { roleLabels, useSession } from "@/lib/session";
+import { visibleNav } from "@/lib/access";
+import { useSaveStatus } from "@/lib/studio-sync";
 
-/**
- * `roles: null` means every studio role can open the page.
- * Founders always see everything.
- */
-const nav: { to: string; label: string; icon: typeof Home; roles: AppRole[] | null }[] = [
-  { to: "/", label: "Dashboard", icon: Home, roles: null },
-  { to: "/leads", label: "Leads", icon: Heart, roles: ["coordinator", "sales"] },
-  { to: "/clients", label: "Clients", icon: Users, roles: ["coordinator", "sales", "accounts"] },
-  { to: "/memory", label: "Memory Profiles", icon: BookHeart, roles: null },
-  { to: "/bookings", label: "Bookings", icon: CalendarHeart, roles: null },
-  { to: "/pipeline", label: "Pipeline", icon: GitBranch, roles: null },
-  { to: "/packages", label: "Packages", icon: Sparkles, roles: ["coordinator", "sales", "accounts"] },
-  { to: "/quote", label: "Quote Builder", icon: FileText, roles: ["coordinator", "sales", "accounts"] },
-  { to: "/whatsapp", label: "WhatsApp Follow-Ups", icon: MessageSquareHeart, roles: ["coordinator", "sales"] },
-  { to: "/prep", label: "Shoot Prep", icon: Clipboard, roles: ["coordinator", "photographer", "assistant", "stylist"] },
-  { to: "/safety", label: "Safety & Comfort", icon: ClipboardCheck, roles: ["coordinator", "photographer", "assistant"] },
-  { to: "/privacy", label: "Privacy & Consent", icon: ShieldCheck, roles: ["coordinator", "marketing"] },
-  { to: "/editing", label: "Editing & Delivery", icon: ImageIcon, roles: ["editor", "coordinator"] },
-  { to: "/pixieset", label: "Pixieset Control", icon: Camera, roles: ["editor", "coordinator"] },
-  { to: "/heirloom", label: "Heirloom Production", icon: Frame, roles: ["album", "coordinator"] },
-  { to: "/tasks", label: "Team Tasks", icon: ListChecks, roles: null },
-  { to: "/sops", label: "SOP Center", icon: BookOpen, roles: null },
-  { to: "/marketing", label: "Marketing Approvals", icon: Megaphone, roles: ["marketing"] },
-  { to: "/reviews", label: "Reviews & Aftercare", icon: Star, roles: ["coordinator", "marketing"] },
-  { to: "/governance", label: "Governance", icon: Gauge, roles: [] },
-  { to: "/reports", label: "Reports / KPIs", icon: LineChart, roles: ["accounts"] },
-  { to: "/kpi", label: "KPI Detail", icon: LineChart, roles: ["accounts"] },
-  { to: "/team", label: "Team", icon: UsersRound, roles: [] },
-  { to: "/settings", label: "Settings", icon: SettingsIcon, roles: [] },
-];
+export { visibleNav } from "@/lib/access";
 
-export function visibleNav(roles: AppRole[]) {
-  if (roles.includes("founder")) return nav;
-  return nav.filter((item) => item.roles === null || item.roles.some((r) => roles.includes(r)));
+export function SaveIndicator() {
+  const { status, pending, retry } = useSaveStatus();
+  if (status === "idle") return null;
+  if (status === "error") {
+    return (
+      <button
+        onClick={retry}
+        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-[11px] text-destructive"
+      >
+        <CloudOff className="h-3 w-3" />
+        Couldn&apos;t save{pending ? ` (${pending})` : ""} — retry
+      </button>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-[11px] text-muted-foreground">
+      {status === "saving" ? (
+        <>
+          <Loader2 className="h-3 w-3 animate-spin" /> Saving…
+        </>
+      ) : (
+        <>
+          <Check className="h-3 w-3 text-gold" /> All changes saved
+        </>
+      )}
+    </span>
+  );
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
