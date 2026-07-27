@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router"
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -39,6 +40,20 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const signInWithGoogle = async () => {
+    setBusy(true);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      toast.error(result.error.message ?? "Google sign-in failed.");
+      setBusy(false);
+      return;
+    }
+    if (result.redirected) return;
+    navigate({ to: safePath(search.redirect), replace: true });
+  };
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
@@ -153,6 +168,20 @@ function AuthPage() {
               {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
             </button>
           </form>
+
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">or</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <button
+            onClick={signInWithGoogle}
+            disabled={busy}
+            className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-primary hover:bg-accent disabled:opacity-60"
+          >
+            Continue with Google
+          </button>
 
           <button
             onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
