@@ -1,53 +1,48 @@
-## Little Moments OS — V3
+## Little Moments OS — V3 Hardening
 
-Confirmed current state: all data lives in an in-memory Zustand store seeded from `src/lib/mock-data.ts` (no persistence layer, no backend, no auth). The SOP Center page exists at `/sops` but has no sidebar link. Work is phased so the app stays usable throughout.
+Four workstreams, in this order. Verified current state first:
+
+- All 14 studio collections already sync to the backend as JSON documents (leads, bookings, clients hold live rows), so persistence exists but is **write-behind and unverified** — no save feedback, no conflict handling, no multi-device refresh.
+- Access rules today are **cosmetic**: the sidebar hides pages a role shouldn't see, but typing the URL still opens any module. Database rules only check "is this person studio staff", not which role.
+- Family-facing links (proposal / consent / delivery) and their responses are built, but no link or response has ever been created — the flow is untested end to end.
+- Only one account has a role (the Founder).
 
 ---
 
-### Phase A — Make the studio's data real (Lovable Cloud)
+### 1. Finish persistence
 
-Turn on Lovable Cloud (database + logins + server code, no external accounts).
+- Replace the silent background sync with an explicit save state: a small "Saving… / All changes saved / Couldn't save" indicator in the header, and a retry when a write fails.
+- Fix the first-run seeding rule so starter demo records are only ever written once for the studio, never re-pushed after a team member deletes something.
+- Persist the modules that currently live only in memory: auto-generated team tasks, quote drafts, and settings/studio preferences.
+- Refresh-on-focus so a second person's changes appear without a reload.
+- Verify by writing in one browser session and reading back in a second.
 
-Tables mirroring today's store: leads, clients, memory_profiles, bookings, quotes, privacy_consents, safety_checklists, shoot_prep, editing_jobs, pixieset_galleries, heirloom_jobs, follow_ups, tasks, reviews, governance_reviews, team_members, settings. Each gets access grants + row-level security so only signed-in studio staff can read/write.
+### 2. Role-based access (real enforcement)
 
-Seeded with the current demo records so the app looks identical on first load, then keeps everything after refresh.
+- Add a shared role guard so every module checks the signed-in person's roles on entry; unauthorised URLs land on a warm "This room isn't yours to open" page instead of the module.
+- Split action permissions from view permissions: e.g. Editors can move editing status but not change money fields; Accounts can see payments but not edit safety checklists; only Founder/Coordinator can advance pipeline stages past Booking Confirmed; only Founder manages the team.
+- Tighten backend rules from "any staff" to role-aware for the sensitive tables (privacy/consent, marketing approval, financial fields on bookings, governance scores) via a migration using the existing role function.
+- Add a "Your access" panel on Settings showing exactly what the current person can and can't do.
 
-The Zustand store stays as the app's state layer — its actions (and all existing guards) start reading/writing the database instead of memory, so no page has to be rewritten.
+### 3. Client-facing views
 
-### Phase B — Logins and role-based access
+- Test and finish the three family link types: proposal (accept / request changes), consent (explicit marketing permission with signature name and date), delivery (gallery link, password, album status).
+- Feed responses back into the studio: an accepted proposal advances the booking stage, a signed consent writes the Privacy record and unlocks Marketing Approvals, and a delivery view logs "family opened gallery".
+- Add link management to every relevant module (not just Bookings): copy link, see status, revoke, regenerate, expiry.
+- Give family pages the studio's brand treatment on mobile first, plus a thank-you state after submitting.
 
-- Email + password sign-in, plus Google sign-in.
-- A separate `user_roles` table (never a column on the profile) holding the 9 roles: Founder/Admin, Studio Manager, Client Coordinator, Photographer, Assistant, Editor, Album Coordinator, Marketing Team, Accounts.
-- Founder/Admin invites team members and assigns roles from the existing Team page.
-- Sidebar shows only the modules a role owns; My Tasks shows only that person's tasks. Access is enforced on the server too, not just hidden in the UI.
-- Warm, on-brand sign-in screen with the philosophy line.
+### 4. Bug sweep & UX polish
 
-### Phase C — Polish and gap fixes
-
-- Add SOP Center to the sidebar (currently unreachable).
-- Mobile navigation: a slide-out drawer for the 20+ nav items on small screens.
-- Per-page metadata: unique title, description and social-preview tags on every route.
-- Global search across leads, clients and bookings.
-- Consistent empty states and a signed-in-user footer that reflects the real account.
-
-### Phase D — Client-facing pages
-
-Public, link-shareable pages (no login) tied to a booking token:
-
-- **Proposal** — recommended package, inclusions, price, accept button.
-- **Consent form** — privacy/marketing consent captured and signed by the family, feeding straight into the Privacy module.
-- **Delivery page** — gallery link, password, album/frame status, and a gentle review request.
-
-Each is warm, minimal, and philosophy-led; submissions land back in the internal modules and trigger the existing task automations.
+- Walk all 22 modules for: empty states, mobile layout at 393px, broken guard messages, dead buttons, and stale mock data still showing as if real.
+- Make every guard failure explain the exact missing step and link to it (e.g. "Safety checklist pending — open Safety & Comfort").
+- Consistent page header, footer line, loading and error states across modules.
+- Confirm dashboard and KPI counts match the database after the persistence fixes.
 
 ---
 
 ### Technical notes
 
-- Backend: Lovable Cloud (Postgres + auth + server functions). Data access via `createServerFn`; protected pages under an authenticated route group.
-- Roles checked through a security-definer `has_role()` function used inside RLS policies, avoiding recursive policy issues.
-- Client-facing pages live under public routes with a random per-booking token and narrowly scoped read policies — no studio data exposed beyond that booking.
-- Existing guards (safety → Shoot Completed, consent → marketing, selection+payment → editing, selections → heirloom) move into server-side checks so they can't be bypassed.
-- All KPI computation stays live, now over database rows.
-
-Suggested order: A → B → C → D. Phase A is the largest single step; I'd do it first so nothing built afterwards has to be redone.
+- Guard: a shared `requireRoles` helper used by each route's `beforeLoad` under `_authenticated`, reading roles from route context (loaded once in the layout) rather than per-page hooks, to avoid content flashing.
+- Role-aware backend rules: new migration adding `has_any_role(...)` checks to policies on `privacy_records`, `bookings`, `governance_runs`, `alignment_scores`; keep `is_staff` for read-only tables.
+- Sync: move save/flush into a small queue with status published to the store; keep the existing `{ id, data }` JSON document shape (no schema rewrite).
+- Client links: extend `submitClientResponse` to apply the effect server-side (privacy record, stage advance) inside the same server function, so families never need an account.
