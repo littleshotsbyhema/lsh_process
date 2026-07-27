@@ -205,7 +205,7 @@ function TeamPage() {
                             ? "good"
                             : inv.status === "pending"
                               ? "warn"
-                              : "muted"
+                              : "neutral"
                         }
                       >
                         {inv.status}
