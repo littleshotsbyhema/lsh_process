@@ -5,6 +5,7 @@ import { useStore, bookingFlags } from "@/store/useStore";
 import { handle } from "@/lib/handle";
 import { MemoryProfileCard } from "@/components/MemoryProfileCard";
 import { JourneyPipeline } from "@/components/JourneyPipeline";
+import { ClientShareLinks } from "@/components/ClientShareLinks";
 import { ShieldCheck, ClipboardCheck, ImageIcon, Frame, CheckCircle2, AlertTriangle, Lock, Unlock, Camera } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/bookings")({
@@ -215,7 +216,7 @@ function BookingsPage() {
                 package: b.package,
                 price: `₹${b.offer.toLocaleString("en-IN")}`,
                 galleryLink: pix?.galleryLink ?? "",
-                galleryPassword: pix?.galleryPassword ?? "",
+                galleryPassword: pix?.password ?? "",
                 heirloomStatus: b.status,
               }}
             />
