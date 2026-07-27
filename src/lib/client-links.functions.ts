@@ -56,11 +56,15 @@ export const submitClientResponse = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: link } = await supabaseAdmin
       .from("client_links" as never)
-      .select("token, kind, expires_at")
+      .select("token, kind, expires_at, booking_id")
       .eq("token", data.token)
       .maybeSingle();
     if (!link) throw new Error("This link is no longer available.");
-    const row = link as unknown as { kind: string; expires_at: string | null };
+    const row = link as unknown as {
+      kind: string;
+      expires_at: string | null;
+      booking_id: string | null;
+    };
     if (row.expires_at && new Date(row.expires_at) < new Date()) {
       throw new Error("This link has expired. Please ask the studio for a fresh one.");
     }
@@ -70,6 +74,18 @@ export const submitClientResponse = createServerFn({ method: "POST" })
       payload: data.payload,
     } as never);
     if (error) throw new Error(error.message);
+
+    // Fold the family's answer straight back into the studio records.
+    try {
+      const { applyClientResponse } = await import("@/lib/client-links.server");
+      await applyClientResponse({
+        kind: row.kind,
+        bookingId: row.booking_id,
+        payload: data.payload,
+      });
+    } catch (effectError) {
+      console.error("[client-links] could not apply response", effectError);
+    }
     return { ok: true };
   });
 
