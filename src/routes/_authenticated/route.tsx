@@ -10,6 +10,9 @@ export const Route = createFileRoute("/_authenticated")({
     if (error || !data.user) {
       throw redirect({ to: "/auth", search: { redirect: location.href } });
     }
+    if (data.user.user_metadata?.must_change_password === true) {
+      throw redirect({ to: "/change-password" });
+    }
     return { user: data.user };
   },
   component: AuthenticatedLayout,
