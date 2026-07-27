@@ -207,6 +207,18 @@ function BookingsPage() {
               </Link>
             </div>
             <JourneyPipeline bookingId={b.id} />
+            <ClientShareLinks
+              bookingId={b.id}
+              payload={{
+                client: b.client,
+                category: b.category,
+                package: b.package,
+                price: `₹${b.offer.toLocaleString("en-IN")}`,
+                galleryLink: pix?.galleryLink ?? "",
+                galleryPassword: pix?.galleryPassword ?? "",
+                heirloomStatus: b.status,
+              }}
+            />
           </Card>
           );
         })}
