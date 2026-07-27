@@ -4,7 +4,16 @@ import { useStore } from "@/store/useStore";
 import { journeyStages } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/_authenticated/pipeline")({
-  head: () => ({ meta: [{ title: "Pipeline · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Pipeline · Little Moments OS" },
+      { name: "description", content: "The 21-stage client journey from first inquiry to the final heirloom, with guard rails." },
+      { property: "og:title", content: "Pipeline · Little Moments OS" },
+      { property: "og:description", content: "The 21-stage client journey from first inquiry to the final heirloom, with guard rails." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: PipelinePage,
 });
 

@@ -7,7 +7,16 @@ import { ShieldAlert } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/privacy")({
-  head: () => ({ meta: [{ title: "Privacy & Consent · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Privacy & Consent · Little Moments OS" },
+      { name: "description", content: "Written consent tracking so no family image is ever shared without permission." },
+      { property: "og:title", content: "Privacy & Consent · Little Moments OS" },
+      { property: "og:description", content: "Written consent tracking so no family image is ever shared without permission." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: PrivacyPage,
 });
 

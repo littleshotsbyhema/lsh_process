@@ -14,7 +14,16 @@ import {
 import { ListChecks, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/tasks")({
-  head: () => ({ meta: [{ title: "Team Tasks · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Team Tasks · Little Moments OS" },
+      { name: "description", content: "Role-based studio tasks, auto-created at the moments that matter." },
+      { property: "og:title", content: "Team Tasks · Little Moments OS" },
+      { property: "og:description", content: "Role-based studio tasks, auto-created at the moments that matter." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: TasksPage,
 });
 

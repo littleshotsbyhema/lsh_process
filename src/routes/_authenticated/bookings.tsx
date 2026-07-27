@@ -9,7 +9,16 @@ import { ClientShareLinks } from "@/components/ClientShareLinks";
 import { ShieldCheck, ClipboardCheck, ImageIcon, Frame, CheckCircle2, AlertTriangle, Lock, Unlock, Camera } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/bookings")({
-  head: () => ({ meta: [{ title: "Bookings · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Bookings · Little Moments OS" },
+      { name: "description", content: "Manage sessions, payments, safety, consent and delivery for every studio booking." },
+      { property: "og:title", content: "Bookings · Little Moments OS" },
+      { property: "og:description", content: "Manage sessions, payments, safety, consent and delivery for every studio booking." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: BookingsPage,
 });
 

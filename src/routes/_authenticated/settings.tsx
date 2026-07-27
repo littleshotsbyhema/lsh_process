@@ -2,7 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, Card, PageHeader } from "@/components/AppShell";
 
 export const Route = createFileRoute("/_authenticated/settings")({
-  head: () => ({ meta: [{ title: "Settings · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Settings · Little Moments OS" },
+      { name: "description", content: "Studio preferences, philosophy statements and workspace configuration." },
+      { property: "og:title", content: "Settings · Little Moments OS" },
+      { property: "og:description", content: "Studio preferences, philosophy statements and workspace configuration." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: SettingsPage,
 });
 

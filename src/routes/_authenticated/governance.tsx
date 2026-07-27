@@ -7,7 +7,16 @@ import { toast } from "sonner";
 import { CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/governance")({
-  head: () => ({ meta: [{ title: "Governance · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Governance · Little Moments OS" },
+      { name: "description", content: "Daily, weekly, monthly and quarterly governance runs plus philosophy alignment scoring." },
+      { property: "og:title", content: "Governance · Little Moments OS" },
+      { property: "og:description", content: "Daily, weekly, monthly and quarterly governance runs plus philosophy alignment scoring." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: GovernancePage,
 });
 

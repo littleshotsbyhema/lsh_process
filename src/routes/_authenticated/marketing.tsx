@@ -4,7 +4,16 @@ import { useStore, bookingFlags } from "@/store/useStore";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/marketing")({
-  head: () => ({ meta: [{ title: "Marketing Approvals · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Marketing Approvals · Little Moments OS" },
+      { name: "description", content: "Approve marketing use of images only where written family consent is recorded." },
+      { property: "og:title", content: "Marketing Approvals · Little Moments OS" },
+      { property: "og:description", content: "Approve marketing use of images only where written family consent is recorded." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: MarketingPage,
 });
 

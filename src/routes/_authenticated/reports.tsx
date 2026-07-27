@@ -3,7 +3,16 @@ import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
 import { useStore, bookingAlignment } from "@/store/useStore";
 
 export const Route = createFileRoute("/_authenticated/reports")({
-  head: () => ({ meta: [{ title: "Reports · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Reports · Little Moments OS" },
+      { name: "description", content: "Founder view of revenue, conversion, package split and operational health." },
+      { property: "og:title", content: "Reports · Little Moments OS" },
+      { property: "og:description", content: "Founder view of revenue, conversion, package split and operational health." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: ReportsPage,
 });
 

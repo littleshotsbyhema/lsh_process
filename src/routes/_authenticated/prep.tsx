@@ -3,7 +3,16 @@ import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
 import { useStore } from "@/store/useStore";
 
 export const Route = createFileRoute("/_authenticated/prep")({
-  head: () => ({ meta: [{ title: "Shoot Prep · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Shoot Prep · Little Moments OS" },
+      { name: "description", content: "Shoot-day preparation: props, styling, comfort plans and the team call sheet." },
+      { property: "og:title", content: "Shoot Prep · Little Moments OS" },
+      { property: "og:description", content: "Shoot-day preparation: props, styling, comfort plans and the team call sheet." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: PrepPage,
 });
 

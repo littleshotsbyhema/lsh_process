@@ -14,7 +14,16 @@ import {
 import { MessageSquareHeart, Copy, Send, CalendarClock, ExternalLink } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/whatsapp")({
-  head: () => ({ meta: [{ title: "WhatsApp Follow-Ups · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "WhatsApp Follow-Ups · Little Moments OS" },
+      { name: "description", content: "Warm, philosophy-aligned WhatsApp templates and a log of every family follow-up." },
+      { property: "og:title", content: "WhatsApp Follow-Ups · Little Moments OS" },
+      { property: "og:description", content: "Warm, philosophy-aligned WhatsApp templates and a log of every family follow-up." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: WhatsappPage,
 });
 

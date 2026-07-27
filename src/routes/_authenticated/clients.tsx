@@ -5,7 +5,16 @@ import { handle } from "@/lib/handle";
 import { CalendarHeart } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/clients")({
-  head: () => ({ meta: [{ title: "Clients · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Clients · Little Moments OS" },
+      { name: "description", content: "Every family we care for, their bookings, milestones and long-term relationship history." },
+      { property: "og:title", content: "Clients · Little Moments OS" },
+      { property: "og:description", content: "Every family we care for, their bookings, milestones and long-term relationship history." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: ClientsPage,
 });
 

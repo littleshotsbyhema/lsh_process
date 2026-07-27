@@ -4,7 +4,16 @@ import { AppShell, Card, PageHeader } from "@/components/AppShell";
 import { packageTiers } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/_authenticated/quote")({
-  head: () => ({ meta: [{ title: "Quote Builder · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Quote Builder · Little Moments OS" },
+      { name: "description", content: "Build warm, clear quotes with packages, add-ons and advance payment terms." },
+      { property: "og:title", content: "Quote Builder · Little Moments OS" },
+      { property: "og:description", content: "Build warm, clear quotes with packages, add-ons and advance payment terms." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: QuoteBuilder,
 });
 

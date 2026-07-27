@@ -4,7 +4,16 @@ import { sops } from "@/lib/mock-data";
 import { BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/sops")({
-  head: () => ({ meta: [{ title: "SOP Center · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "SOP Center · Little Moments OS" },
+      { name: "description", content: "Read-only standard operating procedures that keep studio care consistent." },
+      { property: "og:title", content: "SOP Center · Little Moments OS" },
+      { property: "og:description", content: "Read-only standard operating procedures that keep studio care consistent." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: SOPsPage,
 });
 

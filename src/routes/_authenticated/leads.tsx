@@ -7,7 +7,16 @@ import { MemoryProfileCard } from "@/components/MemoryProfileCard";
 import { UserPlus, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/leads")({
-  head: () => ({ meta: [{ title: "Leads & Inquiries · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Leads & Inquiries · Little Moments OS" },
+      { name: "description", content: "Capture inquiries with their memory goals and move them gently towards a booking." },
+      { property: "og:title", content: "Leads & Inquiries · Little Moments OS" },
+      { property: "og:description", content: "Capture inquiries with their memory goals and move them gently towards a booking." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: LeadsPage,
 });
 

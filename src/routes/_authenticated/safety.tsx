@@ -7,7 +7,16 @@ import { ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/safety")({
-  head: () => ({ meta: [{ title: "Safety & Comfort · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Safety & Comfort · Little Moments OS" },
+      { name: "description", content: "Newborn, maternity and sitter safety and comfort checklists completed before every shoot." },
+      { property: "og:title", content: "Safety & Comfort · Little Moments OS" },
+      { property: "og:description", content: "Newborn, maternity and sitter safety and comfort checklists completed before every shoot." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: SafetyPage,
 });
 

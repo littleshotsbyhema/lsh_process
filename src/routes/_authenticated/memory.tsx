@@ -5,7 +5,16 @@ import { MemoryProfileCard } from "@/components/MemoryProfileCard";
 import { Heart } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/memory")({
-  head: () => ({ meta: [{ title: "Memory Profiles · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Memory Profiles · Little Moments OS" },
+      { name: "description", content: "Emotional memory goals, family stories and notes for photographer, editor and designer." },
+      { property: "og:title", content: "Memory Profiles · Little Moments OS" },
+      { property: "og:description", content: "Emotional memory goals, family stories and notes for photographer, editor and designer." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: MemoryProfilesPage,
 });
 

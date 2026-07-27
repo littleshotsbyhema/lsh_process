@@ -4,7 +4,16 @@ import { packageTiers, sessionTypes } from "@/lib/mock-data";
 import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/packages")({
-  head: () => ({ meta: [{ title: "Package Recommender · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Package Recommender · Little Moments OS" },
+      { name: "description", content: "Recommend Bronze to Emerald packages based on each family's storytelling needs." },
+      { property: "og:title", content: "Package Recommender · Little Moments OS" },
+      { property: "og:description", content: "Recommend Bronze to Emerald packages based on each family's storytelling needs." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: PackagesPage,
 });
 

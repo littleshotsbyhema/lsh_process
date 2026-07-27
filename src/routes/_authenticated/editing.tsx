@@ -5,7 +5,16 @@ import { useStore } from "@/store/useStore";
 import { handle } from "@/lib/handle";
 
 export const Route = createFileRoute("/_authenticated/editing")({
-  head: () => ({ meta: [{ title: "Editing & Delivery · Little Moments OS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Editing & Delivery · Little Moments OS" },
+      { name: "description", content: "Track culling, editing, retouching and delivery for every shoot, with guards before work starts." },
+      { property: "og:title", content: "Editing & Delivery · Little Moments OS" },
+      { property: "og:description", content: "Track culling, editing, retouching and delivery for every shoot, with guards before work starts." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: EditingPage,
 });
 
