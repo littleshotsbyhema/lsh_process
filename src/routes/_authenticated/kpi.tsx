@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
 import { useStore, bookingFlags } from "@/store/useStore";
 
-export const Route = createFileRoute("/kpi")({
+export const Route = createFileRoute("/_authenticated/kpi")({
   head: () => ({ meta: [{ title: "KPI Dashboard · Little Moments OS" }] }),
   component: KpiPage,
 });

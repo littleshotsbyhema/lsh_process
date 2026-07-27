@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
 import { useStore } from "@/store/useStore";
 
-export const Route = createFileRoute("/prep")({
+export const Route = createFileRoute("/_authenticated/prep")({
   head: () => ({ meta: [{ title: "Shoot Prep · Little Moments OS" }] }),
   component: PrepPage,
 });

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
 import { useStore, bookingAlignment } from "@/store/useStore";
 
-export const Route = createFileRoute("/reports")({
+export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({ meta: [{ title: "Reports · Little Moments OS" }] }),
   component: ReportsPage,
 });

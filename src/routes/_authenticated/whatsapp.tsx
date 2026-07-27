@@ -13,7 +13,7 @@ import {
 } from "@/lib/mock-data";
 import { MessageSquareHeart, Copy, Send, CalendarClock, ExternalLink } from "lucide-react";
 
-export const Route = createFileRoute("/whatsapp")({
+export const Route = createFileRoute("/_authenticated/whatsapp")({
   head: () => ({ meta: [{ title: "WhatsApp Follow-Ups · Little Moments OS" }] }),
   component: WhatsappPage,
 });

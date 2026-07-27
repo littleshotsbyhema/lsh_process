@@ -4,7 +4,7 @@ import { useStore } from "@/store/useStore";
 import { MemoryProfileCard } from "@/components/MemoryProfileCard";
 import { Heart } from "lucide-react";
 
-export const Route = createFileRoute("/memory")({
+export const Route = createFileRoute("/_authenticated/memory")({
   head: () => ({ meta: [{ title: "Memory Profiles · Little Moments OS" }] }),
   component: MemoryProfilesPage,
 });

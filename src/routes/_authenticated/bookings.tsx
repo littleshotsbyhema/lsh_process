@@ -7,7 +7,7 @@ import { MemoryProfileCard } from "@/components/MemoryProfileCard";
 import { JourneyPipeline } from "@/components/JourneyPipeline";
 import { ShieldCheck, ClipboardCheck, ImageIcon, Frame, CheckCircle2, AlertTriangle, Lock, Unlock, Camera } from "lucide-react";
 
-export const Route = createFileRoute("/bookings")({
+export const Route = createFileRoute("/_authenticated/bookings")({
   head: () => ({ meta: [{ title: "Bookings · Little Moments OS" }] }),
   component: BookingsPage,
 });

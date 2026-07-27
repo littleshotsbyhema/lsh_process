@@ -6,7 +6,7 @@ import { handle } from "@/lib/handle";
 import { ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 
-export const Route = createFileRoute("/safety")({
+export const Route = createFileRoute("/_authenticated/safety")({
   head: () => ({ meta: [{ title: "Safety & Comfort · Little Moments OS" }] }),
   component: SafetyPage,
 });

@@ -4,7 +4,7 @@ import { useStore } from "@/store/useStore";
 import { handle } from "@/lib/handle";
 import { CalendarHeart } from "lucide-react";
 
-export const Route = createFileRoute("/clients")({
+export const Route = createFileRoute("/_authenticated/clients")({
   head: () => ({ meta: [{ title: "Clients · Little Moments OS" }] }),
   component: ClientsPage,
 });

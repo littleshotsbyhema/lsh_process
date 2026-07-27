@@ -6,7 +6,7 @@ import { handle } from "@/lib/handle";
 import { ShieldAlert } from "lucide-react";
 import { useState } from "react";
 
-export const Route = createFileRoute("/privacy")({
+export const Route = createFileRoute("/_authenticated/privacy")({
   head: () => ({ meta: [{ title: "Privacy & Consent · Little Moments OS" }] }),
   component: PrivacyPage,
 });

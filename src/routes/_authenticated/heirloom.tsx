@@ -14,7 +14,7 @@ const qcChecklist = [
   "Packaging completed",
 ];
 
-export const Route = createFileRoute("/heirloom")({
+export const Route = createFileRoute("/_authenticated/heirloom")({
   head: () => ({ meta: [{ title: "Heirloom Production · Little Moments OS" }] }),
   component: HeirloomPage,
 });

@@ -3,7 +3,7 @@ import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
 import { useStore, bookingFlags } from "@/store/useStore";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/marketing")({
+export const Route = createFileRoute("/_authenticated/marketing")({
   head: () => ({ meta: [{ title: "Marketing Approvals · Little Moments OS" }] }),
   component: MarketingPage,
 });

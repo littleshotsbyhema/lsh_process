@@ -14,7 +14,7 @@ import {
 import type { PixiesetRecord } from "@/store/useStore";
 import { Camera, Save, ExternalLink } from "lucide-react";
 
-export const Route = createFileRoute("/pixieset")({
+export const Route = createFileRoute("/_authenticated/pixieset")({
   head: () => ({ meta: [{ title: "Pixieset Control · Little Moments OS" }] }),
   component: PixiesetPage,
 });

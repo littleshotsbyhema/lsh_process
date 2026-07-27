@@ -3,7 +3,7 @@ import { useState } from "react";
 import { AppShell, Card, PageHeader } from "@/components/AppShell";
 import { packageTiers } from "@/lib/mock-data";
 
-export const Route = createFileRoute("/quote")({
+export const Route = createFileRoute("/_authenticated/quote")({
   head: () => ({ meta: [{ title: "Quote Builder · Little Moments OS" }] }),
   component: QuoteBuilder,
 });

@@ -13,7 +13,7 @@ import {
 } from "@/lib/mock-data";
 import { ListChecks, Plus } from "lucide-react";
 
-export const Route = createFileRoute("/tasks")({
+export const Route = createFileRoute("/_authenticated/tasks")({
   head: () => ({ meta: [{ title: "Team Tasks · Little Moments OS" }] }),
   component: TasksPage,
 });

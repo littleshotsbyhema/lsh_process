@@ -6,7 +6,7 @@ import { handle } from "@/lib/handle";
 import { MemoryProfileCard } from "@/components/MemoryProfileCard";
 import { UserPlus, ArrowRight } from "lucide-react";
 
-export const Route = createFileRoute("/leads")({
+export const Route = createFileRoute("/_authenticated/leads")({
   head: () => ({ meta: [{ title: "Leads & Inquiries · Little Moments OS" }] }),
   component: LeadsPage,
 });

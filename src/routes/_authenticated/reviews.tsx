@@ -16,7 +16,7 @@ import {
 } from "@/lib/mock-data";
 import { Star, Sparkles } from "lucide-react";
 
-export const Route = createFileRoute("/reviews")({
+export const Route = createFileRoute("/_authenticated/reviews")({
   head: () => ({ meta: [{ title: "Reviews & Aftercare · Little Moments OS" }] }),
   component: ReviewsPage,
 });

@@ -3,7 +3,7 @@ import { AppShell, Card, PageHeader } from "@/components/AppShell";
 import { sops } from "@/lib/mock-data";
 import { BookOpen } from "lucide-react";
 
-export const Route = createFileRoute("/sops")({
+export const Route = createFileRoute("/_authenticated/sops")({
   head: () => ({ meta: [{ title: "SOP Center · Little Moments OS" }] }),
   component: SOPsPage,
 });

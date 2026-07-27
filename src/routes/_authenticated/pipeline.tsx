@@ -3,7 +3,7 @@ import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
 import { useStore } from "@/store/useStore";
 import { journeyStages } from "@/lib/mock-data";
 
-export const Route = createFileRoute("/pipeline")({
+export const Route = createFileRoute("/_authenticated/pipeline")({
   head: () => ({ meta: [{ title: "Pipeline · Little Moments OS" }] }),
   component: PipelinePage,
 });

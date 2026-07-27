@@ -3,7 +3,7 @@ import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
 import { useStore, bookingFlags } from "@/store/useStore";
 import { CalendarHeart, Heart, ShieldCheck, ClipboardCheck, Image as ImageIcon, Frame, MessageCircle, Clock, AlertCircle, Star, BookHeart, GitBranch } from "lucide-react";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "Philosophy Command Center · Little Moments OS" },

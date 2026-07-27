@@ -6,7 +6,7 @@ import { governanceChecklists, type GovernanceCadence } from "@/lib/mock-data";
 import { toast } from "sonner";
 import { CheckCircle2 } from "lucide-react";
 
-export const Route = createFileRoute("/governance")({
+export const Route = createFileRoute("/_authenticated/governance")({
   head: () => ({ meta: [{ title: "Governance · Little Moments OS" }] }),
   component: GovernancePage,
 });

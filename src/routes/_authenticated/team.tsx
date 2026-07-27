@@ -3,7 +3,7 @@ import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
 import { useStore } from "@/store/useStore";
 import { teamRoles } from "@/lib/mock-data";
 
-export const Route = createFileRoute("/team")({
+export const Route = createFileRoute("/_authenticated/team")({
   head: () => ({ meta: [{ title: "Team · Little Moments OS" }] }),
   component: TeamPage,
 });

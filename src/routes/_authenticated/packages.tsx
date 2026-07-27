@@ -3,7 +3,7 @@ import { AppShell, Card, PageHeader } from "@/components/AppShell";
 import { packageTiers, sessionTypes } from "@/lib/mock-data";
 import { useMemo, useState } from "react";
 
-export const Route = createFileRoute("/packages")({
+export const Route = createFileRoute("/_authenticated/packages")({
   head: () => ({ meta: [{ title: "Package Recommender · Little Moments OS" }] }),
   component: PackagesPage,
 });

@@ -4,7 +4,7 @@ import { editingStatuses } from "@/lib/mock-data";
 import { useStore } from "@/store/useStore";
 import { handle } from "@/lib/handle";
 
-export const Route = createFileRoute("/editing")({
+export const Route = createFileRoute("/_authenticated/editing")({
   head: () => ({ meta: [{ title: "Editing & Delivery · Little Moments OS" }] }),
   component: EditingPage,
 });
