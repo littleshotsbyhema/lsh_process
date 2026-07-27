@@ -8,6 +8,10 @@ export const Route = createFileRoute("/_authenticated/")({
     meta: [
       { title: "Philosophy Command Center · Little Moments OS" },
       { name: "description", content: "Internal operating system for Little Shots by Hema — preserving family memories with care, trust, and heirloom value." },
+      { property: "og:title", content: "Philosophy Command Center · Little Moments OS" },
+      { property: "og:description", content: "The studio control room for Little Shots by Hema — today's shoots, guards and gentle reminders." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Index,
