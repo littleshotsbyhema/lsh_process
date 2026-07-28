@@ -10,9 +10,17 @@ export const Route = createFileRoute("/_authenticated/governance")({
   head: () => ({
     meta: [
       { title: "Governance · Little Moments OS" },
-      { name: "description", content: "Daily, weekly, monthly and quarterly governance runs plus philosophy alignment scoring." },
+      {
+        name: "description",
+        content:
+          "Daily, weekly, monthly and quarterly governance runs plus philosophy alignment scoring.",
+      },
       { property: "og:title", content: "Governance · Little Moments OS" },
-      { property: "og:description", content: "Daily, weekly, monthly and quarterly governance runs plus philosophy alignment scoring." },
+      {
+        property: "og:description",
+        content:
+          "Daily, weekly, monthly and quarterly governance runs plus philosophy alignment scoring.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -51,10 +59,14 @@ function GovernancePage() {
             <Card key={cad} className="p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{cad} checklist</div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                    {cad} checklist
+                  </div>
                   <h3 className="font-serif text-xl text-primary capitalize mt-1">{cad}</h3>
                 </div>
-                <StatusPill tone={done === items.length ? "good" : "warn"}>{done}/{items.length}</StatusPill>
+                <StatusPill tone={done === items.length ? "good" : "warn"}>
+                  {done}/{items.length}
+                </StatusPill>
               </div>
               <ul className="mt-4 space-y-2">
                 {items.map((it) => (
@@ -62,7 +74,9 @@ function GovernancePage() {
                     <input
                       type="checkbox"
                       checked={!!local[it]}
-                      onChange={(e) => setState((s) => ({ ...s, [cad]: { ...s[cad], [it]: e.target.checked } }))}
+                      onChange={(e) =>
+                        setState((s) => ({ ...s, [cad]: { ...s[cad], [it]: e.target.checked } }))
+                      }
                     />
                     <span className="text-foreground/85">{it}</span>
                   </li>
@@ -70,7 +84,9 @@ function GovernancePage() {
               </ul>
               <div className="mt-4 flex items-center justify-between">
                 <p className="text-[11px] text-muted-foreground">
-                  {lastRun ? `Last run: ${lastRun.date} by ${lastRun.completedBy}` : "No run logged yet"}
+                  {lastRun
+                    ? `Last run: ${lastRun.date} by ${lastRun.completedBy}`
+                    : "No run logged yet"}
                 </p>
                 <button
                   onClick={() => {
@@ -91,10 +107,14 @@ function GovernancePage() {
         <div className="flex items-end justify-between mb-5">
           <div>
             <h2 className="font-serif text-xl text-primary">Philosophy Alignment Score</h2>
-            <p className="text-sm text-muted-foreground">Score each booking 1–5 across six dimensions.</p>
+            <p className="text-sm text-muted-foreground">
+              Score each booking 1–5 across six dimensions.
+            </p>
           </div>
           <div>
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground text-right">Studio average</div>
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground text-right">
+              Studio average
+            </div>
             <div className="font-serif text-3xl text-primary">{monthlyAvg || "—"} / 5</div>
           </div>
         </div>
@@ -107,7 +127,11 @@ function GovernancePage() {
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground border-b border-border">
                   <th className="py-2 pr-3">Booking</th>
-                  {alignmentDimensions.map((d) => <th key={d} className="py-2 px-2">{d}</th>)}
+                  {alignmentDimensions.map((d) => (
+                    <th key={d} className="py-2 px-2">
+                      {d}
+                    </th>
+                  ))}
                   <th className="py-2 pl-2 text-right">Avg</th>
                 </tr>
               </thead>
@@ -119,24 +143,35 @@ function GovernancePage() {
                     <tr key={b.id} className="border-b border-border/60">
                       <td className="py-2 pr-3">
                         <div className="font-medium text-primary">{b.client}</div>
-                        <div className="text-[11px] text-muted-foreground">{b.id} · {b.category}</div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {b.id} · {b.category}
+                        </div>
                       </td>
                       {alignmentDimensions.map((d) => (
                         <td key={d} className="py-2 px-2">
                           <select
                             value={rec?.scores[d] ?? ""}
                             onChange={(e) => {
-                              if (e.target.value) setAlignmentScore(b.id, d, Number(e.target.value));
+                              if (e.target.value)
+                                setAlignmentScore(b.id, d, Number(e.target.value));
                             }}
                             className="w-16 rounded border border-border bg-card px-1.5 py-1 text-xs"
                           >
                             <option value="">—</option>
-                            {[1,2,3,4,5].map((n) => <option key={n} value={n}>{n}</option>)}
+                            {[1, 2, 3, 4, 5].map((n) => (
+                              <option key={n} value={n}>
+                                {n}
+                              </option>
+                            ))}
                           </select>
                         </td>
                       ))}
                       <td className="py-2 pl-2 text-right">
-                        <StatusPill tone={avg >= 4 ? "good" : avg >= 3 ? "warn" : avg ? "bad" : "neutral"}>{avg || "—"}</StatusPill>
+                        <StatusPill
+                          tone={avg >= 4 ? "good" : avg >= 3 ? "warn" : avg ? "bad" : "neutral"}
+                        >
+                          {avg || "—"}
+                        </StatusPill>
                       </td>
                     </tr>
                   );

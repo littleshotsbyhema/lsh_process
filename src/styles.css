@@ -65,26 +65,26 @@
   --radius: 0.875rem;
 
   /* Little Shots by Hema — warm heirloom palette */
-  --background: oklch(0.985 0.012 80);          /* ivory */
-  --foreground: oklch(0.28 0.03 40);            /* deep muted brown */
-  --card: oklch(0.995 0.008 85);                /* warm white */
+  --background: oklch(0.985 0.012 80); /* ivory */
+  --foreground: oklch(0.28 0.03 40); /* deep muted brown */
+  --card: oklch(0.995 0.008 85); /* warm white */
   --card-foreground: oklch(0.28 0.03 40);
   --popover: oklch(0.995 0.008 85);
   --popover-foreground: oklch(0.28 0.03 40);
 
-  --primary: oklch(0.42 0.05 45);               /* muted warm brown */
+  --primary: oklch(0.42 0.05 45); /* muted warm brown */
   --primary-foreground: oklch(0.985 0.012 80);
 
-  --secondary: oklch(0.94 0.025 60);            /* soft beige */
+  --secondary: oklch(0.94 0.025 60); /* soft beige */
   --secondary-foreground: oklch(0.32 0.04 45);
 
-  --muted: oklch(0.95 0.018 70);                /* cream muted */
+  --muted: oklch(0.95 0.018 70); /* cream muted */
   --muted-foreground: oklch(0.5 0.025 50);
 
-  --accent: oklch(0.9 0.04 30);                 /* blush */
+  --accent: oklch(0.9 0.04 30); /* blush */
   --accent-foreground: oklch(0.32 0.04 30);
 
-  --gold: oklch(0.78 0.09 80);                  /* soft gold */
+  --gold: oklch(0.78 0.09 80); /* soft gold */
   --gold-foreground: oklch(0.28 0.04 45);
   --blush: oklch(0.92 0.035 25);
   --rose: oklch(0.84 0.06 25);
@@ -162,7 +162,11 @@
     font-feature-settings: "ss01", "cv11";
   }
 
-  h1, h2, h3, h4, .font-serif {
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-serif {
     font-family: "Cormorant Garamond", "Playfair Display", Georgia, serif;
     letter-spacing: -0.01em;
   }

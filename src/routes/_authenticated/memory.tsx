@@ -8,9 +8,17 @@ export const Route = createFileRoute("/_authenticated/memory")({
   head: () => ({
     meta: [
       { title: "Memory Profiles · Little Moments OS" },
-      { name: "description", content: "Emotional memory goals, family stories and notes for photographer, editor and designer." },
+      {
+        name: "description",
+        content:
+          "Emotional memory goals, family stories and notes for photographer, editor and designer.",
+      },
       { property: "og:title", content: "Memory Profiles · Little Moments OS" },
-      { property: "og:description", content: "Emotional memory goals, family stories and notes for photographer, editor and designer." },
+      {
+        property: "og:description",
+        content:
+          "Emotional memory goals, family stories and notes for photographer, editor and designer.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -68,19 +76,12 @@ function MemoryProfilesPage() {
                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                       {l.id} · {l.sessionType}
                     </div>
-                    <Link
-                      to="/leads"
-                      className="font-serif text-lg text-primary hover:underline"
-                    >
+                    <Link to="/leads" className="font-serif text-lg text-primary hover:underline">
                       {l.parent}
                     </Link>
                   </div>
                 </div>
-                <MemoryProfileCard
-                  ownerType="lead"
-                  ownerId={l.id}
-                  defaultGoal={l.memoryGoal}
-                />
+                <MemoryProfileCard ownerType="lead" ownerId={l.id} defaultGoal={l.memoryGoal} />
               </Card>
             ))}
           </div>

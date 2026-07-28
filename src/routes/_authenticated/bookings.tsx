@@ -8,15 +8,33 @@ import { JourneyPipeline } from "@/components/JourneyPipeline";
 import { ClientShareLinks } from "@/components/ClientShareLinks";
 import { can } from "@/lib/access";
 import { useSession } from "@/lib/session";
-import { ShieldCheck, ClipboardCheck, ImageIcon, Frame, CheckCircle2, AlertTriangle, Lock, Unlock, Camera } from "lucide-react";
+import {
+  ShieldCheck,
+  ClipboardCheck,
+  ImageIcon,
+  Frame,
+  CheckCircle2,
+  AlertTriangle,
+  Lock,
+  Unlock,
+  Camera,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/bookings")({
   head: () => ({
     meta: [
       { title: "Bookings · Little Moments OS" },
-      { name: "description", content: "Manage sessions, payments, safety, consent and delivery for every studio booking." },
+      {
+        name: "description",
+        content:
+          "Manage sessions, payments, safety, consent and delivery for every studio booking.",
+      },
       { property: "og:title", content: "Bookings · Little Moments OS" },
-      { property: "og:description", content: "Manage sessions, payments, safety, consent and delivery for every studio booking." },
+      {
+        property: "og:description",
+        content:
+          "Manage sessions, payments, safety, consent and delivery for every studio booking.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -54,7 +72,12 @@ function BookingsPage() {
 
       <div className="flex flex-wrap gap-2 mb-6">
         {bookingStatuses.map((s) => (
-          <span key={s} className="text-xs px-3 py-1.5 rounded-full bg-muted text-muted-foreground border border-border">{s}</span>
+          <span
+            key={s}
+            className="text-xs px-3 py-1.5 rounded-full bg-muted text-muted-foreground border border-border"
+          >
+            {s}
+          </span>
         ))}
       </div>
 
@@ -62,191 +85,236 @@ function BookingsPage() {
         {bookings.length === 0 && (
           <Card className="p-10 text-center">
             <p className="font-serif text-xl text-primary">No bookings yet.</p>
-            <p className="text-sm text-muted-foreground mt-2">Create one from a client to begin the flow.</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Create one from a client to begin the flow.
+            </p>
           </Card>
         )}
         {bookings.map((b) => {
           const flags = bookingFlags(b);
           const pix = pixieset.find((p) => p.bookingId === b.id);
           return (
-          <Card key={b.id} className="p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{b.id} · {b.category}</div>
-                <h3 className="font-serif text-xl text-primary mt-1">{b.client}</h3>
-                <div className="text-xs text-muted-foreground mt-0.5">{b.date} · {b.city} · {b.locationType}</div>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                <select
-                  value={b.status}
-                  disabled={!mayEdit}
-                  onChange={(e) => handle(setBookingStatus(b.id, e.target.value as BookingStatus))}
-                  className="text-[11px] bg-[var(--gradient-warm)] text-primary border border-gold rounded-full px-2.5 py-1 font-medium disabled:opacity-60"
-                >
-                  {bookingStatuses.map((s) => <option key={s}>{s}</option>)}
-                </select>
-                <StatusPill tone={b.payment === "Paid" ? "good" : "warn"}>{b.payment}</StatusPill>
-                <StatusPill tone={b.safety === "Completed" ? "good" : "bad"}>Safety: {b.safety}</StatusPill>
-                <StatusPill tone={flags.consentRecorded ? "good" : "bad"}>{b.privacy}</StatusPill>
-                <StatusPill tone={flags.marketingAllowed ? "good" : "neutral"}>
-                  {flags.marketingAllowed ? <Unlock className="h-3 w-3 inline mr-1" /> : <Lock className="h-3 w-3 inline mr-1" />}
-                  Marketing {flags.marketingAllowed ? "allowed" : "blocked"}
-                </StatusPill>
-              </div>
-            </div>
-
-            <div className="mt-5 grid md:grid-cols-3 gap-5">
-              <div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Production</div>
-                <Row k="Package" v={b.package} />
-                <Row k="Photographer" v={b.photographer} />
-                <Row k="Assistant" v={b.assistant} />
-                <Row k="Styling" v={b.styling} />
-                <Row k="Add-ons" v={b.addOns} />
-                <Row k="Location" v={b.locationDetails} />
-              </div>
-              <div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Payment</div>
-                <Row k="Package price" v={`₹${b.price.toLocaleString("en-IN")}`} />
-                <Row k="Offer price" v={`₹${b.offer.toLocaleString("en-IN")}`} />
-                <Row k="Advance paid" v={`₹${b.advance.toLocaleString("en-IN")}`} />
-                <Row k="Balance due" v={`₹${b.balance.toLocaleString("en-IN")}`} />
-              </div>
-              <div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Promises</div>
-                <Row k="Delivery deadline" v={b.deadline} />
-                <Row k="Privacy consent" v={b.privacy} />
-                <Row k="Safety checklist" v={b.safety} />
-                <Row k="Booking status" v={b.status} />
-              </div>
-            </div>
-
-            {/* Connected actions */}
-            <div className="mt-5 pt-5 border-t border-border">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Connected actions</div>
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  to="/privacy"
-                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-primary hover:bg-accent"
-                >
-                  <ShieldCheck className="h-3 w-3" /> {flags.consentRecorded ? "View consent" : "Record consent"}
-                </Link>
-                <Link
-                  to="/safety"
-                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-primary hover:bg-accent"
-                >
-                  <ClipboardCheck className="h-3 w-3" /> {b.safety === "Completed" ? "Safety done" : "Submit safety checklist"}
-                </Link>
-                <button
-                  onClick={() => handle(markShootCompleted(b.id))}
-                  disabled={!flags.canCompleteShoot || b.status === "Shoot Completed" || !(mayEdit || maySafety)}
-                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed"
-                  title={!flags.canCompleteShoot ? "Safety checklist must be completed first" : ""}
-                >
-                  <CheckCircle2 className="h-3 w-3" /> Mark shoot completed
-                </button>
-                <button
-                  onClick={() => handle(confirmSelection(b.id))}
-                  disabled={b.selectionConfirmed || !(mayEdit || mayEditing)}
-                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-primary disabled:opacity-40"
-                >
-                  {b.selectionConfirmed ? "Selection confirmed ✓" : "Confirm image selection"}
-                </button>
-                <button
-                  onClick={() => handle(markPaymentPaid(b.id))}
-                  disabled={b.payment === "Paid" || !mayMoney}
-                  title={!mayMoney ? "Only Founder, Sales or Accounts can change money fields" : ""}
-                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-primary disabled:opacity-40"
-                >
-                  {b.payment === "Paid" ? "Payment received ✓" : "Mark full payment received"}
-                </button>
-                <button
-                  onClick={() => {
-                    const r = startEditing(b.id);
-                    handle(r);
-                    if (r.ok) navigate({ to: "/editing" });
-                  }}
-                  disabled={!flags.canStartEditing || !mayEditing}
-                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[var(--gradient-gold)] text-primary disabled:opacity-40 disabled:cursor-not-allowed"
-                  title={
-                    !flags.canStartEditing
-                      ? "Confirm image selection and record full payment before editing can begin"
-                      : ""
-                  }
-                >
-                  <ImageIcon className="h-3 w-3" /> Start editing
-                </button>
-                <button
-                  onClick={() => handle(confirmAlbumSelection(b.id))}
-                  disabled={b.albumSelectionConfirmed || !(mayEdit || mayHeirloom)}
-                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-primary disabled:opacity-40"
-                >
-                  {b.albumSelectionConfirmed ? "Album choices ✓" : "Confirm album / frame choices"}
-                </button>
-                <button
-                  onClick={() => {
-                    const r = startHeirloom(b.id, {
-                      albumSize: "12×12",
-                      pages: 20,
-                      cover: "Linen, ivory",
-                      frame: "—",
-                      selected: "To be tagged",
-                    });
-                    handle(r);
-                    if (r.ok) navigate({ to: "/heirloom" });
-                  }}
-                  disabled={!flags.canStartHeirloom || !mayHeirloom}
-                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[var(--gradient-gold)] text-primary disabled:opacity-40 disabled:cursor-not-allowed"
-                  title={!flags.canStartHeirloom ? "Confirm the album / frame selections first" : ""}
-                >
-                  <Frame className="h-3 w-3" /> Start heirloom production
-                </button>
-              </div>
-
-              {(!flags.consentRecorded || b.safety === "Pending") && (
-                <div className="mt-3 flex items-start gap-2 text-xs text-[oklch(0.45_0.14_30)] bg-[oklch(0.96_0.04_30)] border border-[oklch(0.85_0.06_30)] rounded-lg px-3 py-2">
-                  <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                  <span>
-                    {!flags.consentRecorded && "Privacy consent is not on file — marketing use is blocked. "}
-                    {b.safety === "Pending" && "Safety checklist still pending — shoot cannot be marked complete."}
-                  </span>
+            <Card key={b.id} className="p-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                    {b.id} · {b.category}
+                  </div>
+                  <h3 className="font-serif text-xl text-primary mt-1">{b.client}</h3>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {b.date} · {b.city} · {b.locationType}
+                  </div>
                 </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <select
+                    value={b.status}
+                    disabled={!mayEdit}
+                    onChange={(e) =>
+                      handle(setBookingStatus(b.id, e.target.value as BookingStatus))
+                    }
+                    className="text-[11px] bg-[var(--gradient-warm)] text-primary border border-gold rounded-full px-2.5 py-1 font-medium disabled:opacity-60"
+                  >
+                    {bookingStatuses.map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                  <StatusPill tone={b.payment === "Paid" ? "good" : "warn"}>{b.payment}</StatusPill>
+                  <StatusPill tone={b.safety === "Completed" ? "good" : "bad"}>
+                    Safety: {b.safety}
+                  </StatusPill>
+                  <StatusPill tone={flags.consentRecorded ? "good" : "bad"}>{b.privacy}</StatusPill>
+                  <StatusPill tone={flags.marketingAllowed ? "good" : "neutral"}>
+                    {flags.marketingAllowed ? (
+                      <Unlock className="h-3 w-3 inline mr-1" />
+                    ) : (
+                      <Lock className="h-3 w-3 inline mr-1" />
+                    )}
+                    Marketing {flags.marketingAllowed ? "allowed" : "blocked"}
+                  </StatusPill>
+                </div>
+              </div>
+
+              <div className="mt-5 grid md:grid-cols-3 gap-5">
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
+                    Production
+                  </div>
+                  <Row k="Package" v={b.package} />
+                  <Row k="Photographer" v={b.photographer} />
+                  <Row k="Assistant" v={b.assistant} />
+                  <Row k="Styling" v={b.styling} />
+                  <Row k="Add-ons" v={b.addOns} />
+                  <Row k="Location" v={b.locationDetails} />
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
+                    Payment
+                  </div>
+                  <Row k="Package price" v={`₹${b.price.toLocaleString("en-IN")}`} />
+                  <Row k="Offer price" v={`₹${b.offer.toLocaleString("en-IN")}`} />
+                  <Row k="Advance paid" v={`₹${b.advance.toLocaleString("en-IN")}`} />
+                  <Row k="Balance due" v={`₹${b.balance.toLocaleString("en-IN")}`} />
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
+                    Promises
+                  </div>
+                  <Row k="Delivery deadline" v={b.deadline} />
+                  <Row k="Privacy consent" v={b.privacy} />
+                  <Row k="Safety checklist" v={b.safety} />
+                  <Row k="Booking status" v={b.status} />
+                </div>
+              </div>
+
+              {/* Connected actions */}
+              <div className="mt-5 pt-5 border-t border-border">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">
+                  Connected actions
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    to="/privacy"
+                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-primary hover:bg-accent"
+                  >
+                    <ShieldCheck className="h-3 w-3" />{" "}
+                    {flags.consentRecorded ? "View consent" : "Record consent"}
+                  </Link>
+                  <Link
+                    to="/safety"
+                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-primary hover:bg-accent"
+                  >
+                    <ClipboardCheck className="h-3 w-3" />{" "}
+                    {b.safety === "Completed" ? "Safety done" : "Submit safety checklist"}
+                  </Link>
+                  <button
+                    onClick={() => handle(markShootCompleted(b.id))}
+                    disabled={
+                      !flags.canCompleteShoot ||
+                      b.status === "Shoot Completed" ||
+                      !(mayEdit || maySafety)
+                    }
+                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={
+                      !flags.canCompleteShoot ? "Safety checklist must be completed first" : ""
+                    }
+                  >
+                    <CheckCircle2 className="h-3 w-3" /> Mark shoot completed
+                  </button>
+                  <button
+                    onClick={() => handle(confirmSelection(b.id))}
+                    disabled={b.selectionConfirmed || !(mayEdit || mayEditing)}
+                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-primary disabled:opacity-40"
+                  >
+                    {b.selectionConfirmed ? "Selection confirmed ✓" : "Confirm image selection"}
+                  </button>
+                  <button
+                    onClick={() => handle(markPaymentPaid(b.id))}
+                    disabled={b.payment === "Paid" || !mayMoney}
+                    title={
+                      !mayMoney ? "Only Founder, Sales or Accounts can change money fields" : ""
+                    }
+                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-primary disabled:opacity-40"
+                  >
+                    {b.payment === "Paid" ? "Payment received ✓" : "Mark full payment received"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const r = startEditing(b.id);
+                      handle(r);
+                      if (r.ok) navigate({ to: "/editing" });
+                    }}
+                    disabled={!flags.canStartEditing || !mayEditing}
+                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[var(--gradient-gold)] text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={
+                      !flags.canStartEditing
+                        ? "Confirm image selection and record full payment before editing can begin"
+                        : ""
+                    }
+                  >
+                    <ImageIcon className="h-3 w-3" /> Start editing
+                  </button>
+                  <button
+                    onClick={() => handle(confirmAlbumSelection(b.id))}
+                    disabled={b.albumSelectionConfirmed || !(mayEdit || mayHeirloom)}
+                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-primary disabled:opacity-40"
+                  >
+                    {b.albumSelectionConfirmed
+                      ? "Album choices ✓"
+                      : "Confirm album / frame choices"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const r = startHeirloom(b.id, {
+                        albumSize: "12×12",
+                        pages: 20,
+                        cover: "Linen, ivory",
+                        frame: "—",
+                        selected: "To be tagged",
+                      });
+                      handle(r);
+                      if (r.ok) navigate({ to: "/heirloom" });
+                    }}
+                    disabled={!flags.canStartHeirloom || !mayHeirloom}
+                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[var(--gradient-gold)] text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={
+                      !flags.canStartHeirloom ? "Confirm the album / frame selections first" : ""
+                    }
+                  >
+                    <Frame className="h-3 w-3" /> Start heirloom production
+                  </button>
+                </div>
+
+                {(!flags.consentRecorded || b.safety === "Pending") && (
+                  <div className="mt-3 flex items-start gap-2 text-xs text-[oklch(0.45_0.14_30)] bg-[oklch(0.96_0.04_30)] border border-[oklch(0.85_0.06_30)] rounded-lg px-3 py-2">
+                    <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <span>
+                      {!flags.consentRecorded &&
+                        "Privacy consent is not on file — marketing use is blocked. "}
+                      {b.safety === "Pending" &&
+                        "Safety checklist still pending — shoot cannot be marked complete."}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <MemoryProfileCard ownerType="booking" ownerId={b.id} />
+              <div className="mt-4 rounded-xl border border-border bg-card px-4 py-3 flex items-center gap-3 flex-wrap">
+                <span className="rounded-full bg-[var(--gradient-warm)] p-1.5">
+                  <Camera className="h-3.5 w-3.5 text-gold" />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Pixieset
+                  </div>
+                  <div className="text-sm text-primary">
+                    {pix
+                      ? `${pix.collectionName} · Gallery ${pix.galleryStatus} · Order ${pix.orderStatus}`
+                      : "Not set up yet"}
+                  </div>
+                </div>
+                <Link
+                  to="/pixieset"
+                  className="text-[11px] px-3 py-1.5 rounded-lg border border-gold bg-card text-primary"
+                >
+                  {pix ? "Manage" : "Set up"} →
+                </Link>
+              </div>
+              <JourneyPipeline bookingId={b.id} />
+              {mayShare && (
+                <ClientShareLinks
+                  bookingId={b.id}
+                  payload={{
+                    client: b.client,
+                    category: b.category,
+                    package: b.package,
+                    price: `₹${b.offer.toLocaleString("en-IN")}`,
+                    galleryLink: pix?.galleryLink ?? "",
+                    galleryPassword: pix?.password ?? "",
+                    heirloomStatus: b.status,
+                  }}
+                />
               )}
-            </div>
-
-            <MemoryProfileCard ownerType="booking" ownerId={b.id} />
-            <div className="mt-4 rounded-xl border border-border bg-card px-4 py-3 flex items-center gap-3 flex-wrap">
-              <span className="rounded-full bg-[var(--gradient-warm)] p-1.5">
-                <Camera className="h-3.5 w-3.5 text-gold" />
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Pixieset</div>
-                <div className="text-sm text-primary">
-                  {pix
-                    ? `${pix.collectionName} · Gallery ${pix.galleryStatus} · Order ${pix.orderStatus}`
-                    : "Not set up yet"}
-                </div>
-              </div>
-              <Link to="/pixieset" className="text-[11px] px-3 py-1.5 rounded-lg border border-gold bg-card text-primary">
-                {pix ? "Manage" : "Set up"} →
-              </Link>
-            </div>
-            <JourneyPipeline bookingId={b.id} />
-            {mayShare && (
-              <ClientShareLinks
-                bookingId={b.id}
-                payload={{
-                  client: b.client,
-                  category: b.category,
-                  package: b.package,
-                  price: `₹${b.offer.toLocaleString("en-IN")}`,
-                  galleryLink: pix?.galleryLink ?? "",
-                  galleryPassword: pix?.password ?? "",
-                  heirloomStatus: b.status,
-                }}
-              />
-            )}
-          </Card>
+            </Card>
           );
         })}
       </div>

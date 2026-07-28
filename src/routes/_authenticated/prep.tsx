@@ -6,9 +6,15 @@ export const Route = createFileRoute("/_authenticated/prep")({
   head: () => ({
     meta: [
       { title: "Shoot Prep · Little Moments OS" },
-      { name: "description", content: "Shoot-day preparation: props, styling, comfort plans and the team call sheet." },
+      {
+        name: "description",
+        content: "Shoot-day preparation: props, styling, comfort plans and the team call sheet.",
+      },
       { property: "og:title", content: "Shoot Prep · Little Moments OS" },
-      { property: "og:description", content: "Shoot-day preparation: props, styling, comfort plans and the team call sheet." },
+      {
+        property: "og:description",
+        content: "Shoot-day preparation: props, styling, comfort plans and the team call sheet.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -38,17 +44,27 @@ function PrepPage() {
       ) : (
         <div className="space-y-4">
           {upcoming.map((b) => {
-            const mp = memoryProfiles.find((m) => (m.ownerType === "booking" && m.ownerId === b.id) || (b.clientId && m.ownerType === "client" && m.ownerId === b.clientId));
+            const mp = memoryProfiles.find(
+              (m) =>
+                (m.ownerType === "booking" && m.ownerId === b.id) ||
+                (b.clientId && m.ownerType === "client" && m.ownerId === b.clientId),
+            );
             return (
               <Card key={b.id} className="p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="font-medium text-primary">{b.client}</div>
-                    <div className="text-xs text-muted-foreground">{b.category} · {b.date} · {b.locationType} · {b.locationDetails}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {b.category} · {b.date} · {b.locationType} · {b.locationDetails}
+                    </div>
                   </div>
                   <div className="flex gap-1.5">
-                    <StatusPill tone={b.safety === "Completed" ? "good" : "warn"}>Safety: {b.safety}</StatusPill>
-                    <StatusPill tone={mp ? "good" : "bad"}>Memory: {mp ? "Captured" : "Missing"}</StatusPill>
+                    <StatusPill tone={b.safety === "Completed" ? "good" : "warn"}>
+                      Safety: {b.safety}
+                    </StatusPill>
+                    <StatusPill tone={mp ? "good" : "bad"}>
+                      Memory: {mp ? "Captured" : "Missing"}
+                    </StatusPill>
                   </div>
                 </div>
                 <ul className="mt-4 grid md:grid-cols-2 gap-1.5 text-sm">
@@ -60,8 +76,18 @@ function PrepPage() {
                   {b.category === "Maternity" && <li>· Confirm makeup sensitivities</li>}
                 </ul>
                 <div className="mt-4 flex gap-2">
-                  <Link to="/safety" className="text-xs px-3 py-1.5 rounded-lg border border-gold bg-card text-primary hover:bg-accent">Safety checklist →</Link>
-                  <Link to="/memory" className="text-xs px-3 py-1.5 rounded-lg border border-border bg-card text-primary hover:bg-accent">Memory profile →</Link>
+                  <Link
+                    to="/safety"
+                    className="text-xs px-3 py-1.5 rounded-lg border border-gold bg-card text-primary hover:bg-accent"
+                  >
+                    Safety checklist →
+                  </Link>
+                  <Link
+                    to="/memory"
+                    className="text-xs px-3 py-1.5 rounded-lg border border-border bg-card text-primary hover:bg-accent"
+                  >
+                    Memory profile →
+                  </Link>
                 </div>
               </Card>
             );

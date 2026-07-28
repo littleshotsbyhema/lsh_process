@@ -43,9 +43,7 @@ export function JourneyPipeline({ bookingId }: { bookingId: string }) {
           </select>
           {mayAdvance && currentIdx < journeyStages.length - 1 && (
             <button
-              onClick={() =>
-                handle(setJourneyStage(bookingId, journeyStages[currentIdx + 1]))
-              }
+              onClick={() => handle(setJourneyStage(bookingId, journeyStages[currentIdx + 1]))}
               className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground"
             >
               Advance →
@@ -97,9 +95,7 @@ export function JourneyPipeline({ bookingId }: { bookingId: string }) {
         </button>
         <button
           onClick={() => {
-            const reason = window.prompt(
-              "Reason to intentionally skip aftercare for this family?",
-            );
+            const reason = window.prompt("Reason to intentionally skip aftercare for this family?");
             if (reason) handle(skipAftercare(bookingId, reason));
           }}
           disabled={!!booking.aftercareSkipReason || !mayAdvance}

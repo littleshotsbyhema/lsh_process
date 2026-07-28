@@ -65,12 +65,16 @@ export function ClientShareLinks({
                 onClick={() => make.mutate(kind)}
                 className="text-[11px] px-3 py-1.5 rounded-lg border border-gold bg-card text-primary hover:bg-accent disabled:opacity-50"
               >
-                {existing ? `New ${labels[kind].toLowerCase()} link` : `Share ${labels[kind].toLowerCase()}`}
+                {existing
+                  ? `New ${labels[kind].toLowerCase()} link`
+                  : `Share ${labels[kind].toLowerCase()}`}
               </button>
               {existing && (
                 <button
                   onClick={() => {
-                    void navigator.clipboard.writeText(`${window.location.origin}/f/${existing.token}`);
+                    void navigator.clipboard.writeText(
+                      `${window.location.origin}/f/${existing.token}`,
+                    );
                     toast.success("Link copied.");
                   }}
                   className="text-[11px] text-muted-foreground underline"

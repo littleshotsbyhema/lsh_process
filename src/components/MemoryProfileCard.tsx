@@ -53,9 +53,7 @@ export function MemoryProfileCard({
             Memory Profile {existing ? "· on record" : "· not captured yet"}
           </span>
           <span className="block font-serif text-base text-primary italic truncate">
-            {draft.memoryGoal
-              ? `“${draft.memoryGoal}”`
-              : "What moment do they want to preserve?"}
+            {draft.memoryGoal ? `“${draft.memoryGoal}”` : "What moment do they want to preserve?"}
           </span>
         </span>
         {open ? (
@@ -97,19 +95,27 @@ export function MemoryProfileCard({
               <Field label="Legacy interest">
                 <select
                   value={draft.legacyInterest}
-                  onChange={(e) => set("legacyInterest", e.target.value as typeof draft.legacyInterest)}
+                  onChange={(e) =>
+                    set("legacyInterest", e.target.value as typeof draft.legacyInterest)
+                  }
                   className="w-full rounded-lg border border-border bg-card px-2 py-2 text-sm text-primary"
                 >
-                  {legacyInterestOptions.map((o) => <option key={o}>{o}</option>)}
+                  {legacyInterestOptions.map((o) => (
+                    <option key={o}>{o}</option>
+                  ))}
                 </select>
               </Field>
               <Field label="Emotional priority">
                 <select
                   value={draft.emotionalPriority}
-                  onChange={(e) => set("emotionalPriority", e.target.value as typeof draft.emotionalPriority)}
+                  onChange={(e) =>
+                    set("emotionalPriority", e.target.value as typeof draft.emotionalPriority)
+                  }
                   className="w-full rounded-lg border border-border bg-card px-2 py-2 text-sm text-primary"
                 >
-                  {emotionalPriorityOptions.map((o) => <option key={o}>{o}</option>)}
+                  {emotionalPriorityOptions.map((o) => (
+                    <option key={o}>{o}</option>
+                  ))}
                 </select>
               </Field>
             </div>

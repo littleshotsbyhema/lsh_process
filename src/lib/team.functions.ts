@@ -42,15 +42,16 @@ export const listTeam = createServerFn({ method: "GET" })
 export const setTeamRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z
-      .object({ userId: z.string().uuid(), role: roleEnum, grant: z.boolean() })
-      .parse(input),
+    z.object({ userId: z.string().uuid(), role: roleEnum, grant: z.boolean() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: isFounder } = await context.supabase.rpc("has_role" as never, {
-      _user_id: context.userId,
-      _role: "founder",
-    } as never);
+    const { data: isFounder } = await context.supabase.rpc(
+      "has_role" as never,
+      {
+        _user_id: context.userId,
+        _role: "founder",
+      } as never,
+    );
     if (!isFounder) throw new Error("Only a Founder can change studio roles.");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

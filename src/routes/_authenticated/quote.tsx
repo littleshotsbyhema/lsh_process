@@ -7,9 +7,15 @@ export const Route = createFileRoute("/_authenticated/quote")({
   head: () => ({
     meta: [
       { title: "Quote Builder · Little Moments OS" },
-      { name: "description", content: "Build warm, clear quotes with packages, add-ons and advance payment terms." },
+      {
+        name: "description",
+        content: "Build warm, clear quotes with packages, add-ons and advance payment terms.",
+      },
       { property: "og:title", content: "Quote Builder · Little Moments OS" },
-      { property: "og:description", content: "Build warm, clear quotes with packages, add-ons and advance payment terms." },
+      {
+        property: "og:description",
+        content: "Build warm, clear quotes with packages, add-ons and advance payment terms.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -40,37 +46,70 @@ function QuoteBuilder() {
             <input value={client} onChange={(e) => setClient(e.target.value)} className="input" />
           </Field>
           <Field label="Package">
-            <select value={tier} onChange={(e) => setTier(e.target.value as typeof tier)} className="input">
-              {packageTiers.map((p) => <option key={p.tier} value={p.tier}>{p.tier} — {p.name}</option>)}
+            <select
+              value={tier}
+              onChange={(e) => setTier(e.target.value as typeof tier)}
+              className="input"
+            >
+              {packageTiers.map((p) => (
+                <option key={p.tier} value={p.tier}>
+                  {p.tier} — {p.name}
+                </option>
+              ))}
             </select>
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="List price (₹)">
-              <input type="number" value={price} onChange={(e) => setPrice(Number(e.target.value))} className="input" />
+              <input
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(Number(e.target.value))}
+                className="input"
+              />
             </Field>
             <Field label="Offer price (₹)">
-              <input type="number" value={offer} onChange={(e) => setOffer(Number(e.target.value))} className="input" />
+              <input
+                type="number"
+                value={offer}
+                onChange={(e) => setOffer(Number(e.target.value))}
+                className="input"
+              />
             </Field>
           </div>
           <Field label="Add-ons">
-            <input value={addOns} onChange={(e) => setAddOns(e.target.value)} placeholder="Album, frame, reel…" className="input" />
+            <input
+              value={addOns}
+              onChange={(e) => setAddOns(e.target.value)}
+              placeholder="Album, frame, reel…"
+              className="input"
+            />
           </Field>
         </Card>
 
         <Card className="p-6 bg-[var(--gradient-warm)] border-0">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Quote preview</div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Quote preview
+          </div>
           <h3 className="mt-2 font-serif text-2xl text-primary">{selected.name}</h3>
           <p className="text-sm italic text-primary/80 mt-1">{selected.blurb}</p>
           <ul className="mt-4 space-y-1.5 text-sm">
-            {selected.includes.map((i) => <li key={i}>· {i}</li>)}
+            {selected.includes.map((i) => (
+              <li key={i}>· {i}</li>
+            ))}
             {addOns && <li>· {addOns}</li>}
           </ul>
           <div className="mt-6 border-t border-border pt-4 flex items-end justify-between">
             <div>
-              <div className="text-xs text-muted-foreground line-through">₹{price.toLocaleString("en-IN")}</div>
-              <div className="font-serif text-3xl text-primary">₹{offer.toLocaleString("en-IN")}</div>
+              <div className="text-xs text-muted-foreground line-through">
+                ₹{price.toLocaleString("en-IN")}
+              </div>
+              <div className="font-serif text-3xl text-primary">
+                ₹{offer.toLocaleString("en-IN")}
+              </div>
             </div>
-            <div className="text-xs text-muted-foreground italic">For {client || "your family"}</div>
+            <div className="text-xs text-muted-foreground italic">
+              For {client || "your family"}
+            </div>
           </div>
         </Card>
       </div>

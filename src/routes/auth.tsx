@@ -105,7 +105,8 @@ function AuthPage() {
       }
       const { data } = await supabase.auth.getSession();
       if (data.session) await finish();
-      else toast.success("Check your inbox to confirm your email, then open your invite link again.");
+      else
+        toast.success("Check your inbox to confirm your email, then open your invite link again.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong.");
     } finally {
@@ -152,8 +153,8 @@ function AuthPage() {
 
           {inviteInvalid && (
             <div className="mt-5 rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-              This invitation is no longer valid — it may have been used, revoked, or expired. Please
-              ask a Founder for a fresh link, or sign in below.
+              This invitation is no longer valid — it may have been used, revoked, or expired.
+              Please ask a Founder for a fresh link, or sign in below.
             </div>
           )}
 

@@ -27,10 +27,13 @@ export type StudioInvite = {
 };
 
 async function assertFounder(context: { supabase: any; userId: string }) {
-  const { data: isFounder } = await context.supabase.rpc("has_role" as never, {
-    _user_id: context.userId,
-    _role: "founder",
-  } as never);
+  const { data: isFounder } = await context.supabase.rpc(
+    "has_role" as never,
+    {
+      _user_id: context.userId,
+      _role: "founder",
+    } as never,
+  );
   if (!isFounder) throw new Error("Only a Founder can manage studio invitations.");
 }
 
@@ -107,9 +110,13 @@ export const getInvite = createServerFn({ method: "GET" })
       .select("email, full_name, roles, status, expires_at")
       .eq("token", data.token)
       .maybeSingle();
-    const invite = row as unknown as
-      | { email: string; full_name: string | null; roles: string[]; status: string; expires_at: string }
-      | null;
+    const invite = row as unknown as {
+      email: string;
+      full_name: string | null;
+      roles: string[];
+      status: string;
+      expires_at: string;
+    } | null;
     if (!invite) return null;
     if (invite.status !== "pending") return null;
     if (new Date(invite.expires_at).getTime() < Date.now()) return null;
@@ -129,27 +136,36 @@ export const acceptInvite = createServerFn({ method: "POST" })
       .select("id, email, roles, status, expires_at")
       .eq("token", data.token)
       .maybeSingle();
-    const invite = row as unknown as
-      | { id: string; email: string; roles: string[]; status: string; expires_at: string }
-      | null;
+    const invite = row as unknown as {
+      id: string;
+      email: string;
+      roles: string[];
+      status: string;
+      expires_at: string;
+    } | null;
 
-    if (!invite || invite.status !== "pending") throw new Error("This invitation is no longer valid.");
-    if (new Date(invite.expires_at).getTime() < Date.now()) throw new Error("This invitation has expired.");
+    if (!invite || invite.status !== "pending")
+      throw new Error("This invitation is no longer valid.");
+    if (new Date(invite.expires_at).getTime() < Date.now())
+      throw new Error("This invitation has expired.");
     if (!email || email !== invite.email.toLowerCase()) {
       throw new Error("This invitation was sent to a different email address.");
     }
 
     const { error: roleError } = await supabaseAdmin
       .from("user_roles" as never)
-      .upsert(
-        invite.roles.map((role) => ({ user_id: context.userId, role })) as never,
-        { onConflict: "user_id,role" },
-      );
+      .upsert(invite.roles.map((role) => ({ user_id: context.userId, role })) as never, {
+        onConflict: "user_id,role",
+      });
     if (roleError) throw new Error(roleError.message);
 
     await supabaseAdmin
       .from("studio_invites" as never)
-      .update({ status: "accepted", accepted_at: new Date().toISOString(), accepted_by: context.userId } as never)
+      .update({
+        status: "accepted",
+        accepted_at: new Date().toISOString(),
+        accepted_by: context.userId,
+      } as never)
       .eq("id", invite.id);
 
     return { ok: true, roles: invite.roles };

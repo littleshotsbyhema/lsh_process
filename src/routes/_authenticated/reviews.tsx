@@ -20,9 +20,17 @@ export const Route = createFileRoute("/_authenticated/reviews")({
   head: () => ({
     meta: [
       { title: "Reviews & Aftercare · Little Moments OS" },
-      { name: "description", content: "Request reviews with care, log testimonials and honour repeat milestone opportunities." },
+      {
+        name: "description",
+        content:
+          "Request reviews with care, log testimonials and honour repeat milestone opportunities.",
+      },
       { property: "og:title", content: "Reviews & Aftercare · Little Moments OS" },
-      { property: "og:description", content: "Request reviews with care, log testimonials and honour repeat milestone opportunities." },
+      {
+        property: "og:description",
+        content:
+          "Request reviews with care, log testimonials and honour repeat milestone opportunities.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -33,7 +41,9 @@ export const Route = createFileRoute("/_authenticated/reviews")({
 function ReviewsPage() {
   const { bookings, reviews, upsertReview } = useStore();
   const [openId, setOpenId] = useState<string | null>(null);
-  const eligible = bookings.filter((b) => ["Delivered", "Album/Frame Pending", "Completed"].includes(b.status));
+  const eligible = bookings.filter((b) =>
+    ["Delivered", "Album/Frame Pending", "Completed"].includes(b.status),
+  );
 
   const handle = (bookingId: string, patch: Parameters<typeof upsertReview>[1]) => {
     const r = upsertReview(bookingId, patch);
@@ -54,8 +64,12 @@ function ReviewsPage() {
         <div className="flex items-start gap-3">
           <Sparkles className="h-4 w-4 text-gold mt-1 shrink-0" />
           <div>
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Warm review request message</div>
-            <p className="mt-2 text-sm italic text-primary/85 leading-relaxed">“{reviewRequestMessage}”</p>
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+              Warm review request message
+            </div>
+            <p className="mt-2 text-sm italic text-primary/85 leading-relaxed">
+              “{reviewRequestMessage}”
+            </p>
           </div>
         </div>
       </Card>
@@ -63,7 +77,9 @@ function ReviewsPage() {
       {eligible.length === 0 ? (
         <Card className="p-10 text-center">
           <p className="font-serif text-xl text-primary">No deliveries waiting for a review yet.</p>
-          <p className="mt-2 text-sm italic text-primary/70">Stories will be ready soon — and so will our gratitude.</p>
+          <p className="mt-2 text-sm italic text-primary/70">
+            Stories will be ready soon — and so will our gratitude.
+          </p>
         </Card>
       ) : (
         <div className="space-y-4">
@@ -75,26 +91,45 @@ function ReviewsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="font-medium text-primary">{b.client}</div>
-                    <div className="text-xs text-muted-foreground">{b.category} · {b.id} · {b.date}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {b.category} · {b.id} · {b.date}
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    <StatusPill tone={r?.requestStatus === "Received" ? "good" : r?.requestStatus === "Requested" ? "gold" : "warn"}>
+                    <StatusPill
+                      tone={
+                        r?.requestStatus === "Received"
+                          ? "good"
+                          : r?.requestStatus === "Requested"
+                            ? "gold"
+                            : "warn"
+                      }
+                    >
                       {r?.requestStatus ?? "Pending"}
                     </StatusPill>
                     {r?.rating && (
-                      <StatusPill tone="gold"><Star className="h-3 w-3 inline mr-0.5" />{r.rating}/5</StatusPill>
+                      <StatusPill tone="gold">
+                        <Star className="h-3 w-3 inline mr-0.5" />
+                        {r.rating}/5
+                      </StatusPill>
                     )}
-                    {r?.issueRaised && <StatusPill tone="bad">Issue: {r.issueStatus ?? "Open"}</StatusPill>}
+                    {r?.issueRaised && (
+                      <StatusPill tone="bad">Issue: {r.issueStatus ?? "Open"}</StatusPill>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => handle(b.id, { requestStatus: "Requested" })}
                       className="text-xs px-3 py-1.5 rounded-lg border border-gold bg-card text-primary hover:bg-accent"
-                    >Send request</button>
+                    >
+                      Send request
+                    </button>
                     <button
                       onClick={() => setOpenId(open ? null : b.id)}
                       className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90"
-                    >{open ? "Close" : "Open"}</button>
+                    >
+                      {open ? "Close" : "Open"}
+                    </button>
                   </div>
                 </div>
                 {open && (
@@ -102,27 +137,43 @@ function ReviewsPage() {
                     <Field label="Request status">
                       <select
                         value={r?.requestStatus ?? "Pending"}
-                        onChange={(e) => handle(b.id, { requestStatus: e.target.value as ReviewRequestStatus })}
+                        onChange={(e) =>
+                          handle(b.id, { requestStatus: e.target.value as ReviewRequestStatus })
+                        }
                         className="input"
                       >
-                        {reviewRequestStatuses.map((s) => <option key={s}>{s}</option>)}
+                        {reviewRequestStatuses.map((s) => (
+                          <option key={s}>{s}</option>
+                        ))}
                       </select>
                     </Field>
                     <Field label="Platform">
                       <select
                         value={r?.platform ?? ""}
-                        onChange={(e) => handle(b.id, { platform: (e.target.value || undefined) as ReviewPlatform | undefined })}
+                        onChange={(e) =>
+                          handle(b.id, {
+                            platform: (e.target.value || undefined) as ReviewPlatform | undefined,
+                          })
+                        }
                         className="input"
                       >
                         <option value="">—</option>
-                        {reviewPlatforms.map((p) => <option key={p}>{p}</option>)}
+                        {reviewPlatforms.map((p) => (
+                          <option key={p}>{p}</option>
+                        ))}
                       </select>
                     </Field>
                     <Field label="Rating (1–5)">
                       <input
-                        type="number" min={1} max={5}
+                        type="number"
+                        min={1}
+                        max={5}
                         defaultValue={r?.rating ?? ""}
-                        onBlur={(e) => handle(b.id, { rating: e.target.value ? Number(e.target.value) : undefined })}
+                        onBlur={(e) =>
+                          handle(b.id, {
+                            rating: e.target.value ? Number(e.target.value) : undefined,
+                          })
+                        }
                         className="input"
                       />
                     </Field>
@@ -148,7 +199,8 @@ function ReviewsPage() {
                       <input
                         defaultValue={r?.consentProof ?? ""}
                         onBlur={(e) => handle(b.id, { consentProof: e.target.value })}
-                        className="input" placeholder="WhatsApp screenshot ref / email"
+                        className="input"
+                        placeholder="WhatsApp screenshot ref / email"
                       />
                     </Field>
                     <Field label="Issue raised?">
@@ -166,27 +218,40 @@ function ReviewsPage() {
                         <Field label="Issue category">
                           <select
                             defaultValue={r?.issueCategory ?? ""}
-                            onChange={(e) => handle(b.id, { issueCategory: (e.target.value || undefined) as IssueCategory | undefined })}
+                            onChange={(e) =>
+                              handle(b.id, {
+                                issueCategory: (e.target.value || undefined) as
+                                  | IssueCategory
+                                  | undefined,
+                              })
+                            }
                             className="input"
                           >
                             <option value="">—</option>
-                            {issueCategories.map((c) => <option key={c}>{c}</option>)}
+                            {issueCategories.map((c) => (
+                              <option key={c}>{c}</option>
+                            ))}
                           </select>
                         </Field>
                         <Field label="Issue status">
                           <select
                             defaultValue={r?.issueStatus ?? "Open"}
-                            onChange={(e) => handle(b.id, { issueStatus: e.target.value as IssueStatus })}
+                            onChange={(e) =>
+                              handle(b.id, { issueStatus: e.target.value as IssueStatus })
+                            }
                             className="input"
                           >
-                            {issueStatuses.map((s) => <option key={s}>{s}</option>)}
+                            {issueStatuses.map((s) => (
+                              <option key={s}>{s}</option>
+                            ))}
                           </select>
                         </Field>
                         <Field label="Resolution notes" full>
                           <textarea
                             defaultValue={r?.resolutionNotes ?? ""}
                             onBlur={(e) => handle(b.id, { resolutionNotes: e.target.value })}
-                            rows={2} className="input"
+                            rows={2}
+                            className="input"
                           />
                         </Field>
                       </>
@@ -220,7 +285,15 @@ function ReviewsPage() {
   );
 }
 
-function Field({ label, children, full = false }: { label: string; children: React.ReactNode; full?: boolean }) {
+function Field({
+  label,
+  children,
+  full = false,
+}: {
+  label: string;
+  children: React.ReactNode;
+  full?: boolean;
+}) {
   return (
     <label className={`block ${full ? "md:col-span-2" : ""}`}>
       <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>

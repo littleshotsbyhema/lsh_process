@@ -1,15 +1,36 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
 import { useStore, bookingFlags } from "@/store/useStore";
-import { CalendarHeart, Heart, ShieldCheck, ClipboardCheck, Image as ImageIcon, Frame, MessageCircle, Clock, AlertCircle, Star, BookHeart, GitBranch } from "lucide-react";
+import {
+  CalendarHeart,
+  Heart,
+  ShieldCheck,
+  ClipboardCheck,
+  Image as ImageIcon,
+  Frame,
+  MessageCircle,
+  Clock,
+  AlertCircle,
+  Star,
+  BookHeart,
+  GitBranch,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "Philosophy Command Center · Little Moments OS" },
-      { name: "description", content: "Internal operating system for Little Shots by Hema — preserving family memories with care, trust, and heirloom value." },
+      {
+        name: "description",
+        content:
+          "Internal operating system for Little Shots by Hema — preserving family memories with care, trust, and heirloom value.",
+      },
       { property: "og:title", content: "Philosophy Command Center · Little Moments OS" },
-      { property: "og:description", content: "The studio control room for Little Shots by Hema — today's shoots, guards and gentle reminders." },
+      {
+        property: "og:description",
+        content:
+          "The studio control room for Little Shots by Hema — today's shoots, guards and gentle reminders.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -24,38 +45,128 @@ function Index() {
   const display = todayShoots.length > 0 ? todayShoots : bookings.slice(0, 3);
 
   const newInquiries = leads.filter((l) => l.status === "New Inquiry").length;
-  const followUps = leads.filter((l) => l.status === "Follow-Up Needed" || l.status === "Contacted").length;
-  const pendingBookings = bookings.filter((b) => b.status === "Tentative" || b.status === "Advance Pending").length;
+  const followUps = leads.filter(
+    (l) => l.status === "Follow-Up Needed" || l.status === "Contacted",
+  ).length;
+  const pendingBookings = bookings.filter(
+    (b) => b.status === "Tentative" || b.status === "Advance Pending",
+  ).length;
   const pendingPrivacy = bookings.filter((b) => !privacy.find((p) => p.bookingId === b.id)).length;
   const pendingSafety = bookings.filter((b) => b.safety === "Pending").length;
   const editingDue = editing.filter((e) => e.status !== "Delivered").length;
   const heirloomPending = heirloom.filter((h) => !h.delivered).length;
-  const delayed = editing.filter((e) => e.deadline !== "—" && e.deadline < todayDate && e.status !== "Delivered").length;
+  const delayed = editing.filter(
+    (e) => e.deadline !== "—" && e.deadline < todayDate && e.status !== "Delivered",
+  ).length;
   const reviewRequests = editing.filter((e) => e.status === "Delivered").length;
   const memoryCaptured = memoryProfiles.length;
   const memoryTotal = leads.length + bookings.length;
   const memoryPending = Math.max(0, memoryTotal - memoryCaptured);
-  const journeysActive = bookings.filter((b) => b.journeyStage !== "Completed / Relationship Active").length;
+  const journeysActive = bookings.filter(
+    (b) => b.journeyStage !== "Completed / Relationship Active",
+  ).length;
 
   // Philosophy alignment = blend of safety completion, privacy recording, on-time editing
-  const safetyPct = bookings.length ? (bookings.filter((b) => b.safety === "Completed").length / bookings.length) * 100 : 100;
-  const privacyPct = bookings.length ? (bookings.filter((b) => bookingFlags(b).consentRecorded).length / bookings.length) * 100 : 100;
-  const ontimePct = editing.length ? (editing.filter((e) => e.status === "Delivered" && (e.deadline === "—" || e.deliveryDate <= e.deadline)).length / editing.length) * 100 : 100;
+  const safetyPct = bookings.length
+    ? (bookings.filter((b) => b.safety === "Completed").length / bookings.length) * 100
+    : 100;
+  const privacyPct = bookings.length
+    ? (bookings.filter((b) => bookingFlags(b).consentRecorded).length / bookings.length) * 100
+    : 100;
+  const ontimePct = editing.length
+    ? (editing.filter(
+        (e) => e.status === "Delivered" && (e.deadline === "—" || e.deliveryDate <= e.deadline),
+      ).length /
+        editing.length) *
+      100
+    : 100;
   const philosophyScore = Math.round((safetyPct + privacyPct + ontimePct) / 3);
 
   const tiles = [
-    { label: "Today's shoots", value: todayShoots.length, icon: CalendarHeart, to: "/bookings", tone: "gold" as const },
-    { label: "New inquiries", value: newInquiries, icon: Heart, to: "/leads", tone: "good" as const },
-    { label: "Memory profiles pending", value: memoryPending, icon: BookHeart, to: "/memory", tone: "warn" as const },
-    { label: "Active journeys", value: journeysActive, icon: GitBranch, to: "/bookings", tone: "gold" as const },
-    { label: "Pending follow-ups", value: followUps, icon: MessageCircle, to: "/leads", tone: "warn" as const },
-    { label: "Pending bookings", value: pendingBookings, icon: Clock, to: "/bookings", tone: "warn" as const },
-    { label: "Pending privacy consents", value: pendingPrivacy, icon: ShieldCheck, to: "/privacy", tone: "bad" as const },
-    { label: "Pending safety checklists", value: pendingSafety, icon: ClipboardCheck, to: "/safety", tone: "bad" as const },
-    { label: "Editing deadlines", value: editingDue, icon: ImageIcon, to: "/editing", tone: "warn" as const },
-    { label: "Album / frame pending", value: heirloomPending, icon: Frame, to: "/heirloom", tone: "warn" as const },
-    { label: "Delayed deliveries", value: delayed, icon: AlertCircle, to: "/editing", tone: "bad" as const },
-    { label: "Review requests", value: reviewRequests, icon: Star, to: "/kpi", tone: "gold" as const },
+    {
+      label: "Today's shoots",
+      value: todayShoots.length,
+      icon: CalendarHeart,
+      to: "/bookings",
+      tone: "gold" as const,
+    },
+    {
+      label: "New inquiries",
+      value: newInquiries,
+      icon: Heart,
+      to: "/leads",
+      tone: "good" as const,
+    },
+    {
+      label: "Memory profiles pending",
+      value: memoryPending,
+      icon: BookHeart,
+      to: "/memory",
+      tone: "warn" as const,
+    },
+    {
+      label: "Active journeys",
+      value: journeysActive,
+      icon: GitBranch,
+      to: "/bookings",
+      tone: "gold" as const,
+    },
+    {
+      label: "Pending follow-ups",
+      value: followUps,
+      icon: MessageCircle,
+      to: "/leads",
+      tone: "warn" as const,
+    },
+    {
+      label: "Pending bookings",
+      value: pendingBookings,
+      icon: Clock,
+      to: "/bookings",
+      tone: "warn" as const,
+    },
+    {
+      label: "Pending privacy consents",
+      value: pendingPrivacy,
+      icon: ShieldCheck,
+      to: "/privacy",
+      tone: "bad" as const,
+    },
+    {
+      label: "Pending safety checklists",
+      value: pendingSafety,
+      icon: ClipboardCheck,
+      to: "/safety",
+      tone: "bad" as const,
+    },
+    {
+      label: "Editing deadlines",
+      value: editingDue,
+      icon: ImageIcon,
+      to: "/editing",
+      tone: "warn" as const,
+    },
+    {
+      label: "Album / frame pending",
+      value: heirloomPending,
+      icon: Frame,
+      to: "/heirloom",
+      tone: "warn" as const,
+    },
+    {
+      label: "Delayed deliveries",
+      value: delayed,
+      icon: AlertCircle,
+      to: "/editing",
+      tone: "bad" as const,
+    },
+    {
+      label: "Review requests",
+      value: reviewRequests,
+      icon: Star,
+      to: "/kpi",
+      tone: "gold" as const,
+    },
   ];
 
   return (
@@ -78,7 +189,9 @@ function Index() {
                   </div>
                   <div className="mt-2 font-serif text-3xl text-primary">{value}</div>
                 </div>
-                <span className={`rounded-full p-2 ${tone === "gold" ? "bg-[oklch(0.93_0.07_80)]" : tone === "good" ? "bg-[oklch(0.92_0.05_150)]" : tone === "bad" ? "bg-[oklch(0.92_0.06_25)]" : "bg-muted"}`}>
+                <span
+                  className={`rounded-full p-2 ${tone === "gold" ? "bg-[oklch(0.93_0.07_80)]" : tone === "good" ? "bg-[oklch(0.92_0.05_150)]" : tone === "bad" ? "bg-[oklch(0.92_0.06_25)]" : "bg-muted"}`}
+                >
                   <Icon className="h-4 w-4 text-primary/70" />
                 </span>
               </div>
@@ -93,7 +206,9 @@ function Index() {
             <h2 className="font-serif text-xl text-primary">
               {todayShoots.length ? "Today's shoots" : "Upcoming shoots"}
             </h2>
-            <Link to="/bookings" className="text-xs text-muted-foreground hover:text-primary">View all →</Link>
+            <Link to="/bookings" className="text-xs text-muted-foreground hover:text-primary">
+              View all →
+            </Link>
           </div>
           {todayShoots.length === 0 && display.length > 0 && (
             <div className="mb-4 flex items-start gap-3 rounded-xl bg-[var(--gradient-warm)] border border-border px-4 py-3">
@@ -102,7 +217,9 @@ function Index() {
               </div>
               <div>
                 <p className="font-serif text-base text-primary leading-snug">No shoots today.</p>
-                <p className="text-xs italic text-primary/70 mt-0.5">A quiet day to prepare future memories beautifully.</p>
+                <p className="text-xs italic text-primary/70 mt-0.5">
+                  A quiet day to prepare future memories beautifully.
+                </p>
               </div>
             </div>
           )}
@@ -128,11 +245,15 @@ function Index() {
                 <li key={b.id} className="py-4 flex flex-col sm:flex-row sm:items-center gap-2">
                   <div className="flex-1">
                     <div className="font-medium text-primary">{b.client}</div>
-                    <div className="text-xs text-muted-foreground">{b.category} · {b.locationType} · {b.locationDetails}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {b.category} · {b.locationType} · {b.locationDetails}
+                    </div>
                   </div>
                   <div className="text-sm text-muted-foreground">{b.date}</div>
                   <div className="flex gap-1.5">
-                    <StatusPill tone={b.safety === "Completed" ? "good" : "bad"}>Safety: {b.safety}</StatusPill>
+                    <StatusPill tone={b.safety === "Completed" ? "good" : "bad"}>
+                      Safety: {b.safety}
+                    </StatusPill>
                     <StatusPill tone="gold">{b.photographer}</StatusPill>
                   </div>
                 </li>
@@ -150,10 +271,14 @@ function Index() {
             <span className="text-sm text-muted-foreground mb-2">/ 100</span>
           </div>
           <div className="mt-4 h-2 rounded-full bg-card overflow-hidden">
-            <div className="h-full bg-[var(--gradient-gold)]" style={{ width: `${philosophyScore}%` }} />
+            <div
+              className="h-full bg-[var(--gradient-gold)]"
+              style={{ width: `${philosophyScore}%` }}
+            />
           </div>
           <p className="mt-5 text-sm italic text-primary/80 leading-relaxed">
-            “Safety {Math.round(safetyPct)}% · Consent {Math.round(privacyPct)}% · On-time {Math.round(ontimePct)}%. Every gap is a memory we owe better care.”
+            “Safety {Math.round(safetyPct)}% · Consent {Math.round(privacyPct)}% · On-time{" "}
+            {Math.round(ontimePct)}%. Every gap is a memory we owe better care.”
           </p>
         </Card>
       </section>

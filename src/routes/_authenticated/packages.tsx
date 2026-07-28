@@ -7,9 +7,15 @@ export const Route = createFileRoute("/_authenticated/packages")({
   head: () => ({
     meta: [
       { title: "Package Recommender · Little Moments OS" },
-      { name: "description", content: "Recommend Bronze to Emerald packages based on each family's storytelling needs." },
+      {
+        name: "description",
+        content: "Recommend Bronze to Emerald packages based on each family's storytelling needs.",
+      },
       { property: "og:title", content: "Package Recommender · Little Moments OS" },
-      { property: "og:description", content: "Recommend Bronze to Emerald packages based on each family's storytelling needs." },
+      {
+        property: "og:description",
+        content: "Recommend Bronze to Emerald packages based on each family's storytelling needs.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -48,7 +54,9 @@ function PackagesPage() {
       <Card className="p-6 mb-8">
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">Session category</div>
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+              Session category
+            </div>
             <div className="flex flex-wrap gap-2">
               {(["Maternity", "Newborn", "Sitter"] as const).map((s) => (
                 <button
@@ -69,7 +77,9 @@ function PackagesPage() {
             </p>
           </div>
           <div>
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">What does this family want to keep?</div>
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+              What does this family want to keep?
+            </div>
             <div className="space-y-2">
               {goalOptions.map((g) => (
                 <label
@@ -78,7 +88,13 @@ function PackagesPage() {
                     goal === g.id ? "bg-accent border-gold" : "border-border hover:bg-muted"
                   }`}
                 >
-                  <input type="radio" name="goal" checked={goal === g.id} onChange={() => setGoal(g.id)} className="accent-[var(--gold)]" />
+                  <input
+                    type="radio"
+                    name="goal"
+                    checked={goal === g.id}
+                    onChange={() => setGoal(g.id)}
+                    className="accent-[var(--gold)]"
+                  />
                   <span className="text-primary">{g.label}</span>
                 </label>
               ))}
@@ -100,13 +116,18 @@ function PackagesPage() {
                   Recommended
                 </span>
               )}
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{p.tier}</div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                {p.tier}
+              </div>
               <h3 className="font-serif text-2xl text-primary mt-1">{p.name}</h3>
               <p className="text-sm text-primary/80 italic mt-2">{p.blurb}</p>
               <p className="text-xs text-muted-foreground mt-3">Best for: {p.fitFor}</p>
               <ul className="mt-4 space-y-1.5 text-sm text-primary">
                 {p.includes.map((i) => (
-                  <li key={i} className="flex gap-2"><span className="text-gold">•</span>{i}</li>
+                  <li key={i} className="flex gap-2">
+                    <span className="text-gold">•</span>
+                    {i}
+                  </li>
                 ))}
               </ul>
               <div className="mt-4 pt-4 border-t border-border text-[10px] uppercase tracking-wider text-muted-foreground">

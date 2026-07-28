@@ -7,9 +7,17 @@ export const Route = createFileRoute("/_authenticated/pipeline")({
   head: () => ({
     meta: [
       { title: "Pipeline · Little Moments OS" },
-      { name: "description", content: "The 21-stage client journey from first inquiry to the final heirloom, with guard rails." },
+      {
+        name: "description",
+        content:
+          "The 21-stage client journey from first inquiry to the final heirloom, with guard rails.",
+      },
       { property: "og:title", content: "Pipeline · Little Moments OS" },
-      { property: "og:description", content: "The 21-stage client journey from first inquiry to the final heirloom, with guard rails." },
+      {
+        property: "og:description",
+        content:
+          "The 21-stage client journey from first inquiry to the final heirloom, with guard rails.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -47,9 +55,14 @@ function PipelinePage() {
                 <ul className="space-y-2">
                   {items.map((b) => (
                     <li key={b.id}>
-                      <Link to="/bookings" className="block rounded-lg border border-border bg-card p-3 hover:bg-accent">
+                      <Link
+                        to="/bookings"
+                        className="block rounded-lg border border-border bg-card p-3 hover:bg-accent"
+                      >
                         <div className="text-sm font-medium text-primary truncate">{b.client}</div>
-                        <div className="text-[11px] text-muted-foreground">{b.category} · {b.date}</div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {b.category} · {b.date}
+                        </div>
                       </Link>
                     </li>
                   ))}

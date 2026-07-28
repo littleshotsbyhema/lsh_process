@@ -16,7 +16,8 @@ export const Route = createFileRoute("/_authenticated/team")({
       { title: "Team · Little Moments OS" },
       {
         name: "description",
-        content: "Studio roles, open tasks per role, and who can access which part of Little Moments OS.",
+        content:
+          "Studio roles, open tasks per role, and who can access which part of Little Moments OS.",
       },
       { property: "og:title", content: "Team · Little Moments OS" },
       { property: "og:description", content: "Every role exists to protect a memory." },
@@ -75,12 +76,14 @@ function TeamPage() {
 
   const members = useQuery({ queryKey: ["team"], queryFn: () => fetchTeam() });
   const mutate = useMutation({
-    mutationFn: (vars: { userId: string; role: AppRole; grant: boolean }) => saveRole({ data: vars }),
+    mutationFn: (vars: { userId: string; role: AppRole; grant: boolean }) =>
+      saveRole({ data: vars }),
     onSuccess: () => {
       toast.success("Studio access updated.");
       void queryClient.invalidateQueries({ queryKey: ["team"] });
     },
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Could not update access."),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Could not update access."),
   });
 
   return (
@@ -256,7 +259,9 @@ function TeamPage() {
           <div className="mt-4 space-y-4">
             {members.data.map((m) => (
               <div key={m.id} className="rounded-xl border border-border p-4">
-                <div className="font-medium text-primary">{m.full_name || m.email || "Team member"}</div>
+                <div className="font-medium text-primary">
+                  {m.full_name || m.email || "Team member"}
+                </div>
                 <div className="text-xs text-muted-foreground">{m.email}</div>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {appRoles.map((role) => {
@@ -285,7 +290,9 @@ function TeamPage() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {teamRoles.map((role) => {
-          const open = tasks.filter((t) => t.role === role && t.status !== "Done" && t.status !== "Skipped").length;
+          const open = tasks.filter(
+            (t) => t.role === role && t.status !== "Done" && t.status !== "Skipped",
+          ).length;
           return (
             <Card key={role} className="p-5">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Role</div>
