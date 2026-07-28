@@ -64,14 +64,18 @@ export type Database = {
           code: string
           country_code: string
           created_at: string
+          created_by: string | null
+          deleted_at: string | null
           id: string
           name: string
           organization_id: string
+          phone: string | null
           postal_code: string | null
           state_region: string | null
           status: Database["public"]["Enums"]["branch_status"]
           timezone: string | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           address_line1?: string | null
@@ -80,14 +84,18 @@ export type Database = {
           code: string
           country_code?: string
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
           id?: string
           name: string
           organization_id: string
+          phone?: string | null
           postal_code?: string | null
           state_region?: string | null
           status?: Database["public"]["Enums"]["branch_status"]
           timezone?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           address_line1?: string | null
@@ -96,14 +104,18 @@ export type Database = {
           code?: string
           country_code?: string
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
           id?: string
           name?: string
           organization_id?: string
+          phone?: string | null
           postal_code?: string | null
           state_region?: string | null
           status?: Database["public"]["Enums"]["branch_status"]
           timezone?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -328,34 +340,49 @@ export type Database = {
         Row: {
           brand_logo_url: string | null
           brand_primary_color: string | null
+          broad_consent_reconfirmation_months: number
+          consent_link_expiry_days: number
           created_at: string
           date_format: string
+          delivery_link_expiry_days: number
           locale: string
           organization_id: string
-          settings: Json
+          philosophy_statement: string | null
+          proposal_link_expiry_days: number
           updated_at: string
+          updated_by: string | null
           week_starts_on: number
         }
         Insert: {
           brand_logo_url?: string | null
           brand_primary_color?: string | null
+          broad_consent_reconfirmation_months?: number
+          consent_link_expiry_days?: number
           created_at?: string
           date_format?: string
+          delivery_link_expiry_days?: number
           locale?: string
           organization_id: string
-          settings?: Json
+          philosophy_statement?: string | null
+          proposal_link_expiry_days?: number
           updated_at?: string
+          updated_by?: string | null
           week_starts_on?: number
         }
         Update: {
           brand_logo_url?: string | null
           brand_primary_color?: string | null
+          broad_consent_reconfirmation_months?: number
+          consent_link_expiry_days?: number
           created_at?: string
           date_format?: string
+          delivery_link_expiry_days?: number
           locale?: string
           organization_id?: string
-          settings?: Json
+          philosophy_statement?: string | null
+          proposal_link_expiry_days?: number
           updated_at?: string
+          updated_by?: string | null
           week_starts_on?: number
         }
         Relationships: [
@@ -370,37 +397,49 @@ export type Database = {
       }
       organizations: {
         Row: {
+          brand_prefix: string | null
           created_at: string
+          created_by: string | null
           currency_code: string
+          deleted_at: string | null
+          display_name: string
           id: string
           legal_name: string | null
-          name: string
           slug: string
           status: Database["public"]["Enums"]["organization_status"]
           timezone: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
+          brand_prefix?: string | null
           created_at?: string
+          created_by?: string | null
           currency_code?: string
+          deleted_at?: string | null
+          display_name: string
           id?: string
           legal_name?: string | null
-          name: string
           slug: string
           status?: Database["public"]["Enums"]["organization_status"]
           timezone?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
+          brand_prefix?: string | null
           created_at?: string
+          created_by?: string | null
           currency_code?: string
+          deleted_at?: string | null
+          display_name?: string
           id?: string
           legal_name?: string | null
-          name?: string
           slug?: string
           status?: Database["public"]["Enums"]["organization_status"]
           timezone?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
