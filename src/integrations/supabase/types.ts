@@ -56,6 +56,65 @@ export type Database = {
         }
         Relationships: []
       }
+      branches: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
+          code: string
+          country_code: string
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+          postal_code: string | null
+          state_region: string | null
+          status: Database["public"]["Enums"]["branch_status"]
+          timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          code: string
+          country_code?: string
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+          postal_code?: string | null
+          state_region?: string | null
+          status?: Database["public"]["Enums"]["branch_status"]
+          timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          code?: string
+          country_code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          postal_code?: string | null
+          state_region?: string | null
+          status?: Database["public"]["Enums"]["branch_status"]
+          timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_links: {
         Row: {
           booking_id: string | null
@@ -261,6 +320,86 @@ export type Database = {
           created_at?: string
           data?: Json
           id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      organization_settings: {
+        Row: {
+          brand_logo_url: string | null
+          brand_primary_color: string | null
+          created_at: string
+          date_format: string
+          locale: string
+          organization_id: string
+          settings: Json
+          updated_at: string
+          week_starts_on: number
+        }
+        Insert: {
+          brand_logo_url?: string | null
+          brand_primary_color?: string | null
+          created_at?: string
+          date_format?: string
+          locale?: string
+          organization_id: string
+          settings?: Json
+          updated_at?: string
+          week_starts_on?: number
+        }
+        Update: {
+          brand_logo_url?: string | null
+          brand_primary_color?: string | null
+          created_at?: string
+          date_format?: string
+          locale?: string
+          organization_id?: string
+          settings?: Json
+          updated_at?: string
+          week_starts_on?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          currency_code: string
+          id: string
+          legal_name: string | null
+          name: string
+          slug: string
+          status: Database["public"]["Enums"]["organization_status"]
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency_code?: string
+          id?: string
+          legal_name?: string | null
+          name: string
+          slug: string
+          status?: Database["public"]["Enums"]["organization_status"]
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency_code?: string
+          id?: string
+          legal_name?: string | null
+          name?: string
+          slug?: string
+          status?: Database["public"]["Enums"]["organization_status"]
+          timezone?: string
           updated_at?: string
         }
         Relationships: []
@@ -511,6 +650,8 @@ export type Database = {
         | "album"
         | "marketing"
         | "accounts"
+      branch_status: "active" | "inactive" | "archived"
+      organization_status: "active" | "suspended" | "archived"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -650,6 +791,8 @@ export const Constants = {
         "marketing",
         "accounts",
       ],
+      branch_status: ["active", "inactive", "archived"],
+      organization_status: ["active", "suspended", "archived"],
     },
   },
 } as const
