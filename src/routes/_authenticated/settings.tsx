@@ -8,9 +8,15 @@ export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
       { title: "Settings · Little Moments OS" },
-      { name: "description", content: "Studio preferences, philosophy statements and workspace configuration." },
+      {
+        name: "description",
+        content: "Studio preferences, philosophy statements and workspace configuration.",
+      },
       { property: "og:title", content: "Settings · Little Moments OS" },
-      { property: "og:description", content: "Studio preferences, philosophy statements and workspace configuration." },
+      {
+        property: "og:description",
+        content: "Studio preferences, philosophy statements and workspace configuration.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -49,8 +55,8 @@ function SettingsPage() {
       <Card className="mt-6 p-6">
         <h2 className="font-serif text-lg text-primary">Your access</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Signed in as {roles.length ? roles.map((r) => roleLabels[r]).join(" · ") : "Role pending"}.
-          This is exactly what you can open and change.
+          Signed in as {roles.length ? roles.map((r) => roleLabels[r]).join(" · ") : "Role pending"}
+          . This is exactly what you can open and change.
         </p>
 
         <div className="mt-5">

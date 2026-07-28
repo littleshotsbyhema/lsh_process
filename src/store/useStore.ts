@@ -272,9 +272,7 @@ const profileKey = (ownerType: MemoryProfileOwner, ownerId: string) => `${ownerT
 
 /* ───────────── Result helpers ───────────── */
 
-type Result =
-  | { ok: true; message: string }
-  | { ok: false; message: string; warning?: boolean };
+type Result = { ok: true; message: string } | { ok: false; message: string; warning?: boolean };
 
 const ok = (message: string): Result => ({ ok: true, message });
 const fail = (message: string, warning = true): Result => ({
@@ -335,7 +333,13 @@ type Store = StoreData & {
     bookingId: string,
     draft: Pick<HeirloomJob, "albumSize" | "pages" | "cover" | "frame" | "selected">,
   ) => Result & { jobId?: string };
-  advanceHeirloom: (jobId: string, step: keyof Pick<HeirloomJob, "proofSent" | "approved" | "sentToProduction" | "produced" | "packed" | "ready" | "delivered">) => Result;
+  advanceHeirloom: (
+    jobId: string,
+    step: keyof Pick<
+      HeirloomJob,
+      "proofSent" | "approved" | "sentToProduction" | "produced" | "packed" | "ready" | "delivered"
+    >,
+  ) => Result;
   passHeirloomQC: (jobId: string) => Result;
 
   // memory profiles
@@ -365,18 +369,28 @@ type Store = StoreData & {
 
   // tasks
   createTask: (
-    data: Omit<Task, "id" | "createdAt" | "status" | "priority" | "notes" | "assignee" | "dueDate"> &
+    data: Omit<
+      Task,
+      "id" | "createdAt" | "status" | "priority" | "notes" | "assignee" | "dueDate"
+    > &
       Partial<Pick<Task, "status" | "priority" | "notes" | "assignee" | "dueDate">>,
   ) => Result & { taskId?: string };
   updateTask: (id: string, patch: Partial<Task>) => Result;
 
   // reviews
-  upsertReview: (bookingId: string, patch: Partial<Omit<Review, "id" | "bookingId" | "createdAt" | "updatedAt">>) => Result;
+  upsertReview: (
+    bookingId: string,
+    patch: Partial<Omit<Review, "id" | "bookingId" | "createdAt" | "updatedAt">>,
+  ) => Result;
   // alignment
   setAlignmentScore: (bookingId: string, dimension: AlignmentDimension, score: number) => Result;
   setAlignmentNotes: (bookingId: string, notes: string) => Result;
   // governance
-  saveGovernanceRun: (cadence: GovernanceCadence, items: Record<string, boolean>, completedBy?: string) => Result;
+  saveGovernanceRun: (
+    cadence: GovernanceCadence,
+    items: Record<string, boolean>,
+    completedBy?: string,
+  ) => Result;
 };
 
 const nextId = (prefix: string, list: { id: string }[]) => {
@@ -402,26 +416,34 @@ const statusToJourney: Record<BookingStatus, JourneyStage> = {
   Completed: "Completed / Relationship Active",
 };
 
-const initialBookings: Booking[] = (seedBookings as unknown as (Omit<Booking, "selectionConfirmed" | "albumSelectionConfirmed" | "journeyStage"> & Partial<Pick<Booking, "selectionConfirmed" | "albumSelectionConfirmed" | "journeyStage">>)[]).map(
-  (b) => ({
-    ...b,
-    selectionConfirmed: b.status === "Editing" || b.status === "Delivered" || b.status === "Completed",
-    albumSelectionConfirmed: b.status === "Album/Frame Pending" || b.status === "Completed",
-    journeyStage: b.journeyStage ?? statusToJourney[b.status] ?? "Booking Confirmed",
-  }),
-);
+const initialBookings: Booking[] = (
+  seedBookings as unknown as (Omit<
+    Booking,
+    "selectionConfirmed" | "albumSelectionConfirmed" | "journeyStage"
+  > &
+    Partial<Pick<Booking, "selectionConfirmed" | "albumSelectionConfirmed" | "journeyStage">>)[]
+).map((b) => ({
+  ...b,
+  selectionConfirmed:
+    b.status === "Editing" || b.status === "Delivered" || b.status === "Completed",
+  albumSelectionConfirmed: b.status === "Album/Frame Pending" || b.status === "Completed",
+  journeyStage: b.journeyStage ?? statusToJourney[b.status] ?? "Booking Confirmed",
+}));
 
-const initialPrivacy: PrivacyRecord[] = (seedPrivacy as unknown as (Omit<PrivacyRecord, "bookingId"> & { booking: string })[]).map(
-  ({ booking, ...rest }) => ({ ...rest, bookingId: booking }),
-);
+const initialPrivacy: PrivacyRecord[] = (
+  seedPrivacy as unknown as (Omit<PrivacyRecord, "bookingId"> & { booking: string })[]
+).map(({ booking, ...rest }) => ({ ...rest, bookingId: booking }));
 
-const initialEditing: EditingJob[] = (seedEditing as unknown as (Omit<EditingJob, "bookingId"> & { booking: string })[]).map(
-  ({ booking, ...rest }) => ({ ...rest, bookingId: booking }),
-);
+const initialEditing: EditingJob[] = (
+  seedEditing as unknown as (Omit<EditingJob, "bookingId"> & { booking: string })[]
+).map(({ booking, ...rest }) => ({ ...rest, bookingId: booking }));
 
-const initialHeirloom: HeirloomJob[] = (seedHeirloom as unknown as (Omit<HeirloomJob, "bookingId" | "proofSent"> & { booking: string; proof: string })[]).map(
-  ({ booking, proof, ...rest }) => ({ ...rest, bookingId: booking, proofSent: proof !== "—" }),
-);
+const initialHeirloom: HeirloomJob[] = (
+  seedHeirloom as unknown as (Omit<HeirloomJob, "bookingId" | "proofSent"> & {
+    booking: string;
+    proof: string;
+  })[]
+).map(({ booking, proof, ...rest }) => ({ ...rest, bookingId: booking, proofSent: proof !== "—" }));
 
 export const useStore = create<Store>((set, get) => ({
   leads: seedLeads as Lead[],
@@ -452,7 +474,10 @@ export const useStore = create<Store>((set, get) => ({
     const lead = get().leads.find((l) => l.id === leadId);
     if (!lead) return { ...fail("Lead not found.") };
     if (lead.convertedClientId)
-      return { ...fail("This lead is already linked to a client.", false), clientId: lead.convertedClientId };
+      return {
+        ...fail("This lead is already linked to a client.", false),
+        clientId: lead.convertedClientId,
+      };
 
     const clientId = nextId("C", get().clients);
     const newClient: Client = {
@@ -485,7 +510,10 @@ export const useStore = create<Store>((set, get) => ({
       priority: "High",
       sop: "SOP-01",
     });
-    return { ...ok(`${lead.parent} added as a client. Their memory is now in our care.`), clientId };
+    return {
+      ...ok(`${lead.parent} added as a client. Their memory is now in our care.`),
+      clientId,
+    };
   },
 
   createBookingForClient: (clientId, draft) => {
@@ -522,17 +550,75 @@ export const useStore = create<Store>((set, get) => ({
     set((s) => ({ bookings: [newBooking, ...s.bookings] }));
     const session = newBooking.category;
     const ct = get().createTask;
-    ct({ title: `Send booking confirmation to ${client.name}`, role: "Client Coordinator", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-03", priority: "High" });
-    ct({ title: `Send pre-shoot guide`, role: "Client Coordinator", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-04" });
-    ct({ title: `Review Memory Profile before shoot`, role: "Photographer", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-04" });
-    ct({ title: `Verify advance payment`, role: "Accounts", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, priority: "High" });
+    ct({
+      title: `Send booking confirmation to ${client.name}`,
+      role: "Client Coordinator",
+      relatedType: "booking",
+      relatedId: bookingId,
+      relatedLabel: client.name,
+      sop: "SOP-03",
+      priority: "High",
+    });
+    ct({
+      title: `Send pre-shoot guide`,
+      role: "Client Coordinator",
+      relatedType: "booking",
+      relatedId: bookingId,
+      relatedLabel: client.name,
+      sop: "SOP-04",
+    });
+    ct({
+      title: `Review Memory Profile before shoot`,
+      role: "Photographer",
+      relatedType: "booking",
+      relatedId: bookingId,
+      relatedLabel: client.name,
+      sop: "SOP-04",
+    });
+    ct({
+      title: `Verify advance payment`,
+      role: "Accounts",
+      relatedType: "booking",
+      relatedId: bookingId,
+      relatedLabel: client.name,
+      priority: "High",
+    });
     if (session === "Newborn") {
-      ct({ title: `Complete newborn safety checklist`, role: "Photographer", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-05", priority: "Urgent" });
-      ct({ title: `Prepare newborn props and wraps`, role: "Assistant / Baby Care Support", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-05" });
+      ct({
+        title: `Complete newborn safety checklist`,
+        role: "Photographer",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: client.name,
+        sop: "SOP-05",
+        priority: "Urgent",
+      });
+      ct({
+        title: `Prepare newborn props and wraps`,
+        role: "Assistant / Baby Care Support",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: client.name,
+        sop: "SOP-05",
+      });
     }
     if (session === "Maternity") {
-      ct({ title: `Confirm outfits and makeup`, role: "Stylist / Makeup Artist", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-06" });
-      ct({ title: `Confirm maternity comfort notes`, role: "Photographer", relatedType: "booking", relatedId: bookingId, relatedLabel: client.name, sop: "SOP-06" });
+      ct({
+        title: `Confirm outfits and makeup`,
+        role: "Stylist / Makeup Artist",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: client.name,
+        sop: "SOP-06",
+      });
+      ct({
+        title: `Confirm maternity comfort notes`,
+        role: "Photographer",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: client.name,
+        sop: "SOP-06",
+      });
     }
     return { ...ok(`Tentative booking created for ${client.name}.`), bookingId };
   },
@@ -547,8 +633,23 @@ export const useStore = create<Store>((set, get) => ({
     }));
     if (status === "Shoot Completed") {
       const ct = get().createTask;
-      ct({ title: `Prepare preview gallery for ${b.client}`, role: "Editor / Retoucher", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, sop: "SOP-08", priority: "High" });
-      ct({ title: `Send selection reminder to ${b.client}`, role: "Client Coordinator", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, sop: "SOP-08" });
+      ct({
+        title: `Prepare preview gallery for ${b.client}`,
+        role: "Editor / Retoucher",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: b.client,
+        sop: "SOP-08",
+        priority: "High",
+      });
+      ct({
+        title: `Send selection reminder to ${b.client}`,
+        role: "Client Coordinator",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: b.client,
+        sop: "SOP-08",
+      });
     }
     return ok(`Booking updated to “${status}”.`);
   },
@@ -564,8 +665,22 @@ export const useStore = create<Store>((set, get) => ({
     }));
     if (b) {
       const ct = get().createTask;
-      ct({ title: `Confirm full payment for ${b.client}`, role: "Accounts", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, priority: "High" });
-      ct({ title: `Begin editing for ${b.client}`, role: "Editor / Retoucher", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, sop: "SOP-08" });
+      ct({
+        title: `Confirm full payment for ${b.client}`,
+        role: "Accounts",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: b.client,
+        priority: "High",
+      });
+      ct({
+        title: `Begin editing for ${b.client}`,
+        role: "Editor / Retoucher",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: b.client,
+        sop: "SOP-08",
+      });
     }
     return ok("Image selection confirmed.");
   },
@@ -579,8 +694,23 @@ export const useStore = create<Store>((set, get) => ({
     }));
     if (b) {
       const ct = get().createTask;
-      ct({ title: `Prepare album proof for ${b.client}`, role: "Album / Print Coordinator", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, sop: "SOP-09", priority: "High" });
-      ct({ title: `Complete print QC for ${b.client}`, role: "Album / Print Coordinator", relatedType: "booking", relatedId: bookingId, relatedLabel: b.client, sop: "SOP-09" });
+      ct({
+        title: `Prepare album proof for ${b.client}`,
+        role: "Album / Print Coordinator",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: b.client,
+        sop: "SOP-09",
+        priority: "High",
+      });
+      ct({
+        title: `Complete print QC for ${b.client}`,
+        role: "Album / Print Coordinator",
+        relatedType: "booking",
+        relatedId: bookingId,
+        relatedLabel: b.client,
+        sop: "SOP-09",
+      });
     }
     return ok("Album / frame selections confirmed.");
   },
@@ -604,7 +734,11 @@ export const useStore = create<Store>((set, get) => ({
         b.id === rec.bookingId ? { ...b, privacy: rec.consent } : b,
       ),
     }));
-    if (["Portfolio Release", "Social Media Approved", "Ads Approved"].some((k) => rec.consent.includes(k))) {
+    if (
+      ["Portfolio Release", "Social Media Approved", "Ads Approved"].some((k) =>
+        rec.consent.includes(k),
+      )
+    ) {
       get().createTask({
         title: `Review marketing-approved content for ${rec.client}`,
         role: "Marketing Team",
@@ -620,16 +754,16 @@ export const useStore = create<Store>((set, get) => ({
     const required = Object.values(s.items).length;
     const completed = Object.values(s.items).filter(Boolean).length;
     if (completed < required)
-      return fail(`${required - completed} item${required - completed === 1 ? "" : "s"} still unchecked. Comfort first — finish every check before submitting.`);
+      return fail(
+        `${required - completed} item${required - completed === 1 ? "" : "s"} still unchecked. Comfort first — finish every check before submitting.`,
+      );
     const submission: SafetySubmission = {
       ...s,
       submittedAt: s.submittedAt ?? new Date().toISOString(),
     };
     set((st) => ({
       safety: [submission, ...st.safety.filter((x) => x.bookingId !== s.bookingId)],
-      bookings: st.bookings.map((b) =>
-        b.id === s.bookingId ? { ...b, safety: "Completed" } : b,
-      ),
+      bookings: st.bookings.map((b) => (b.id === s.bookingId ? { ...b, safety: "Completed" } : b)),
     }));
     return ok("Safety checklist submitted. The shoot may now be marked complete.");
   },
@@ -639,8 +773,7 @@ export const useStore = create<Store>((set, get) => ({
     if (!b) return fail("Booking not found.");
     if (!b.selectionConfirmed)
       return fail("Image selection must be confirmed before editing can begin.");
-    if (b.payment !== "Paid")
-      return fail("Editing cannot begin until full payment is confirmed.");
+    if (b.payment !== "Paid") return fail("Editing cannot begin until full payment is confirmed.");
     if (get().editing.find((e) => e.bookingId === bookingId))
       return fail("Editing job already exists for this booking.", false);
     const jobId = nextId("E", get().editing);
@@ -816,7 +949,8 @@ export const useStore = create<Store>((set, get) => ({
     if (stage === "Package Recommended") {
       const mp =
         get().memoryProfiles.find((p) => p.ownerType === "booking" && p.ownerId === bookingId) ||
-        (b.clientId && get().memoryProfiles.find((p) => p.ownerType === "client" && p.ownerId === b.clientId!));
+        (b.clientId &&
+          get().memoryProfiles.find((p) => p.ownerType === "client" && p.ownerId === b.clientId!));
       if (!mp || !mp.memoryGoal.trim())
         return fail("Capture the family's Memory Goal before recommending a package.");
     }
@@ -853,9 +987,7 @@ export const useStore = create<Store>((set, get) => ({
 
   requestReview: (bookingId) => {
     set((s) => ({
-      bookings: s.bookings.map((b) =>
-        b.id === bookingId ? { ...b, reviewRequested: true } : b,
-      ),
+      bookings: s.bookings.map((b) => (b.id === bookingId ? { ...b, reviewRequested: true } : b)),
     }));
     return ok("Review request logged.");
   },
@@ -985,11 +1117,12 @@ export const useStore = create<Store>((set, get) => ({
     };
     const next: Review = { ...base, ...patch, updatedAt: new Date().toISOString() };
     set((s) => ({
-      reviews: existing
-        ? s.reviews.map((r) => (r === existing ? next : r))
-        : [next, ...s.reviews],
+      reviews: existing ? s.reviews.map((r) => (r === existing ? next : r)) : [next, ...s.reviews],
     }));
-    if (patch.requestStatus === "Requested" && (!existing || existing.requestStatus !== "Requested")) {
+    if (
+      patch.requestStatus === "Requested" &&
+      (!existing || existing.requestStatus !== "Requested")
+    ) {
       set((s) => ({
         bookings: s.bookings.map((x) => (x.id === bookingId ? { ...x, reviewRequested: true } : x)),
       }));
@@ -1027,24 +1160,38 @@ export const useStore = create<Store>((set, get) => ({
   setAlignmentScore: (bookingId, dimension, score) => {
     if (score < 1 || score > 5) return fail("Score must be between 1 and 5.");
     const existing = get().alignment.find((a) => a.bookingId === bookingId);
-    const base: AlignmentScore = existing ?? { bookingId, scores: {}, notes: "", updatedAt: new Date().toISOString() };
+    const base: AlignmentScore = existing ?? {
+      bookingId,
+      scores: {},
+      notes: "",
+      updatedAt: new Date().toISOString(),
+    };
     const next: AlignmentScore = {
       ...base,
       scores: { ...base.scores, [dimension]: score },
       updatedAt: new Date().toISOString(),
     };
     set((s) => ({
-      alignment: existing ? s.alignment.map((a) => (a === existing ? next : a)) : [next, ...s.alignment],
+      alignment: existing
+        ? s.alignment.map((a) => (a === existing ? next : a))
+        : [next, ...s.alignment],
     }));
     return ok(`“${dimension}” scored ${score}/5.`);
   },
 
   setAlignmentNotes: (bookingId, notes) => {
     const existing = get().alignment.find((a) => a.bookingId === bookingId);
-    const base: AlignmentScore = existing ?? { bookingId, scores: {}, notes: "", updatedAt: new Date().toISOString() };
+    const base: AlignmentScore = existing ?? {
+      bookingId,
+      scores: {},
+      notes: "",
+      updatedAt: new Date().toISOString(),
+    };
     const next: AlignmentScore = { ...base, notes, updatedAt: new Date().toISOString() };
     set((s) => ({
-      alignment: existing ? s.alignment.map((a) => (a === existing ? next : a)) : [next, ...s.alignment],
+      alignment: existing
+        ? s.alignment.map((a) => (a === existing ? next : a))
+        : [next, ...s.alignment],
     }));
     return ok("Alignment notes saved.");
   },
@@ -1060,8 +1207,8 @@ export const useStore = create<Store>((set, get) => ({
 /* ───────────── Derived helpers ───────────── */
 
 export function bookingFlags(b: Booking) {
-  const marketingAllowed = ["Portfolio Release", "Social Media Approved", "Ads Approved"].some((k) =>
-    b.privacy.includes(k),
+  const marketingAllowed = ["Portfolio Release", "Social Media Approved", "Ads Approved"].some(
+    (k) => b.privacy.includes(k),
   );
   const consentRecorded = b.privacy !== "Not recorded";
   const canCompleteShoot = b.safety === "Completed";
@@ -1088,10 +1235,7 @@ export { alignmentDimensions };
 /* ───────────── Template helpers ───────────── */
 
 export function renderTemplate(template: string, vars: Record<string, string>) {
-  return Object.entries(vars).reduce(
-    (acc, [k, v]) => acc.split(k).join(v || k),
-    template,
-  );
+  return Object.entries(vars).reduce((acc, [k, v]) => acc.split(k).join(v || k), template);
 }
 
 type StoreSnapshot = {

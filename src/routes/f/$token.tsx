@@ -25,8 +25,12 @@ export const Route = createFileRoute("/f/$token")({
     ],
   }),
   component: ClientLinkPage,
-  errorComponent: () => <Shell title="This link couldn't be opened">Please ask the studio for a fresh link.</Shell>,
-  notFoundComponent: () => <Shell title="Link not found">Please ask the studio for a fresh link.</Shell>,
+  errorComponent: () => (
+    <Shell title="This link couldn't be opened">Please ask the studio for a fresh link.</Shell>
+  ),
+  notFoundComponent: () => (
+    <Shell title="Link not found">Please ask the studio for a fresh link.</Shell>
+  ),
 });
 
 function Shell({ title, children }: { title: string; children: React.ReactNode }) {
@@ -64,7 +68,11 @@ function ClientLinkPage() {
 
   if (!link) return <Shell title="Link not found">Please ask the studio for a fresh link.</Shell>;
   if (link.expired)
-    return <Shell title="This link has gently expired">Message the studio and we'll send a new one right away.</Shell>;
+    return (
+      <Shell title="This link has gently expired">
+        Message the studio and we'll send a new one right away.
+      </Shell>
+    );
 
   const payload = link.payload as Record<string, unknown>;
   const family = str(payload, "client", "Dear family");
@@ -125,11 +133,21 @@ function ClientLinkPage() {
           written permission — and you can change your mind at any time.
         </p>
         <label className="mt-5 flex items-start gap-2 text-sm">
-          <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1" />
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            className="mt-1"
+          />
           <span>I consent to Little Shots by Hema photographing and editing our session.</span>
         </label>
         <label className="mt-3 flex items-start gap-2 text-sm">
-          <input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} className="mt-1" />
+          <input
+            type="checkbox"
+            checked={marketing}
+            onChange={(e) => setMarketing(e.target.checked)}
+            className="mt-1"
+          />
           <span>You may also share selected images on your website and social channels.</span>
         </label>
         <input
@@ -152,18 +170,25 @@ function ClientLinkPage() {
   return (
     <Shell title="Your story is ready">
       <dl className="space-y-3">
-        <Row label="Gallery" value={str(payload, "galleryLink", "Your gallery link will arrive shortly")} />
+        <Row
+          label="Gallery"
+          value={str(payload, "galleryLink", "Your gallery link will arrive shortly")}
+        />
         <Row label="Gallery password" value={str(payload, "galleryPassword", "—")} />
         <Row label="Album / frame" value={str(payload, "heirloomStatus", "—")} />
       </dl>
-      <p className="mt-5">If these images made you feel something, we'd be so grateful to hear it.</p>
+      <p className="mt-5">
+        If these images made you feel something, we'd be so grateful to hear it.
+      </p>
       <div className="mt-3 flex gap-2">
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
             onClick={() => setRating(n)}
             className={`h-9 w-9 rounded-full border text-sm ${
-              rating >= n ? "border-gold bg-accent text-primary" : "border-border text-muted-foreground"
+              rating >= n
+                ? "border-gold bg-accent text-primary"
+                : "border-border text-muted-foreground"
             }`}
           >
             {n}

@@ -10,9 +10,15 @@ export const Route = createFileRoute("/_authenticated/privacy")({
   head: () => ({
     meta: [
       { title: "Privacy & Consent · Little Moments OS" },
-      { name: "description", content: "Written consent tracking so no family image is ever shared without permission." },
+      {
+        name: "description",
+        content: "Written consent tracking so no family image is ever shared without permission.",
+      },
       { property: "og:title", content: "Privacy & Consent · Little Moments OS" },
-      { property: "og:description", content: "Written consent tracking so no family image is ever shared without permission." },
+      {
+        property: "og:description",
+        content: "Written consent tracking so no family image is ever shared without permission.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -41,17 +47,23 @@ function PrivacyPage() {
           <div>
             <div className="text-sm font-medium text-primary">Marketing rule</div>
             <p className="text-sm text-primary/80">
-              Marketing use is <strong>blocked</strong> on every booking unless written consent is recorded here.
+              Marketing use is <strong>blocked</strong> on every booking unless written consent is
+              recorded here.
             </p>
           </div>
         </div>
       </Card>
 
       <Card className="p-6 mb-6">
-        <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-3">Consent options</div>
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-3">
+          Consent options
+        </div>
         <div className="grid sm:grid-cols-2 gap-2">
           {privacyOptions.map((o) => (
-            <div key={o} className="rounded-lg border border-border px-3 py-2 text-sm text-primary bg-muted/40">
+            <div
+              key={o}
+              className="rounded-lg border border-border px-3 py-2 text-sm text-primary bg-muted/40"
+            >
               {o}
             </div>
           ))}
@@ -63,7 +75,12 @@ function PrivacyPage() {
           <h2 className="font-serif text-xl text-primary mb-3">Bookings awaiting consent</h2>
           <div className="space-y-4 mb-8">
             {pending.map((b) => (
-              <RecordForm key={b.id} bookingId={b.id} client={b.client} onSave={(rec) => handle(recordPrivacy(rec))} />
+              <RecordForm
+                key={b.id}
+                bookingId={b.id}
+                client={b.client}
+                onSave={(rec) => handle(recordPrivacy(rec))}
+              />
             ))}
           </div>
         </>
@@ -80,10 +97,14 @@ function PrivacyPage() {
           <Card key={p.id} className="p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{p.id} · Booking {p.bookingId}</div>
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  {p.id} · Booking {p.bookingId}
+                </div>
                 <h3 className="font-serif text-lg text-primary mt-1">{p.client}</h3>
               </div>
-              <StatusPill tone={p.confirmed ? "good" : "bad"}>{p.confirmed ? "Confirmed in writing" : "Not confirmed"}</StatusPill>
+              <StatusPill tone={p.confirmed ? "good" : "bad"}>
+                {p.confirmed ? "Confirmed in writing" : "Not confirmed"}
+              </StatusPill>
             </div>
             <div className="mt-4 grid md:grid-cols-2 gap-3 text-sm">
               <F k="Consent type" v={p.consent} />
@@ -127,32 +148,67 @@ function RecordForm({
     <Card className="p-5">
       <div className="flex items-start justify-between mb-3">
         <div>
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Booking {bookingId}</div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Booking {bookingId}
+          </div>
           <h3 className="font-serif text-lg text-primary mt-1">{client}</h3>
         </div>
         <StatusPill tone="bad">Awaiting consent</StatusPill>
       </div>
       <div className="grid md:grid-cols-2 gap-3">
         <label className="text-xs">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Consent type</div>
-          <select value={consent} onChange={(e) => setConsent(e.target.value)} className="w-full border border-border rounded-lg bg-card px-3 py-2 text-sm text-primary">
-            {privacyOptions.map((o) => <option key={o}>{o}</option>)}
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+            Consent type
+          </div>
+          <select
+            value={consent}
+            onChange={(e) => setConsent(e.target.value)}
+            className="w-full border border-border rounded-lg bg-card px-3 py-2 text-sm text-primary"
+          >
+            {privacyOptions.map((o) => (
+              <option key={o}>{o}</option>
+            ))}
           </select>
         </label>
         <label className="text-xs">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Approved platforms</div>
-          <input value={platforms} onChange={(e) => setPlatforms(e.target.value)} placeholder="Instagram, Portfolio…" className="w-full border border-border rounded-lg bg-card px-3 py-2 text-sm text-primary" />
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+            Approved platforms
+          </div>
+          <input
+            value={platforms}
+            onChange={(e) => setPlatforms(e.target.value)}
+            placeholder="Instagram, Portfolio…"
+            className="w-full border border-border rounded-lg bg-card px-3 py-2 text-sm text-primary"
+          />
         </label>
         <label className="text-xs md:col-span-2">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Approved image IDs / notes</div>
-          <input value={images} onChange={(e) => setImages(e.target.value)} placeholder="e.g. frames 04, 11, 23 — or 'all images private'" className="w-full border border-border rounded-lg bg-card px-3 py-2 text-sm text-primary" />
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+            Approved image IDs / notes
+          </div>
+          <input
+            value={images}
+            onChange={(e) => setImages(e.target.value)}
+            placeholder="e.g. frames 04, 11, 23 — or 'all images private'"
+            className="w-full border border-border rounded-lg bg-card px-3 py-2 text-sm text-primary"
+          />
         </label>
         <label className="text-xs">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Recorded by</div>
-          <input value={recordedBy} onChange={(e) => setRecordedBy(e.target.value)} className="w-full border border-border rounded-lg bg-card px-3 py-2 text-sm text-primary" />
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+            Recorded by
+          </div>
+          <input
+            value={recordedBy}
+            onChange={(e) => setRecordedBy(e.target.value)}
+            className="w-full border border-border rounded-lg bg-card px-3 py-2 text-sm text-primary"
+          />
         </label>
         <label className="text-xs flex items-center gap-2 mt-5">
-          <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="accent-[var(--gold)]" />
+          <input
+            type="checkbox"
+            checked={confirmed}
+            onChange={(e) => setConfirmed(e.target.checked)}
+            className="accent-[var(--gold)]"
+          />
           <span className="text-primary">Parent confirmed consent in writing</span>
         </label>
       </div>

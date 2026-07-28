@@ -17,9 +17,15 @@ export const Route = createFileRoute("/_authenticated/whatsapp")({
   head: () => ({
     meta: [
       { title: "WhatsApp Follow-Ups · Little Moments OS" },
-      { name: "description", content: "Warm, philosophy-aligned WhatsApp templates and a log of every family follow-up." },
+      {
+        name: "description",
+        content: "Warm, philosophy-aligned WhatsApp templates and a log of every family follow-up.",
+      },
       { property: "og:title", content: "WhatsApp Follow-Ups · Little Moments OS" },
-      { property: "og:description", content: "Warm, philosophy-aligned WhatsApp templates and a log of every family follow-up." },
+      {
+        property: "og:description",
+        content: "Warm, philosophy-aligned WhatsApp templates and a log of every family follow-up.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -43,8 +49,17 @@ function WhatsappPage() {
   type Target = { kind: "lead" | "booking"; id: string; label: string; phone?: string };
   const targets: Target[] = useMemo(
     () => [
-      ...bookings.map<Target>((b) => ({ kind: "booking", id: b.id, label: `${b.client} · ${b.id}` })),
-      ...leads.map<Target>((l) => ({ kind: "lead", id: l.id, label: `${l.parent} · ${l.id}`, phone: l.phone })),
+      ...bookings.map<Target>((b) => ({
+        kind: "booking",
+        id: b.id,
+        label: `${b.client} · ${b.id}`,
+      })),
+      ...leads.map<Target>((l) => ({
+        kind: "lead",
+        id: l.id,
+        label: `${l.parent} · ${l.id}`,
+        phone: l.phone,
+      })),
     ],
     [bookings, leads],
   );
@@ -132,7 +147,9 @@ function WhatsappPage() {
                 }}
                 className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
               >
-                {whatsappMessageTypes.map((t) => <option key={t}>{t}</option>)}
+                {whatsappMessageTypes.map((t) => (
+                  <option key={t}>{t}</option>
+                ))}
               </select>
             </L>
           </div>
@@ -203,7 +220,9 @@ function WhatsappPage() {
         <Card className="p-5">
           <div className="font-serif text-lg text-primary mb-3">Follow-up log</div>
           {followUps.length === 0 ? (
-            <p className="text-sm italic text-muted-foreground">No follow-ups yet — every kind word starts here.</p>
+            <p className="text-sm italic text-muted-foreground">
+              No follow-ups yet — every kind word starts here.
+            </p>
           ) : (
             <ul className="space-y-3 max-h-[480px] overflow-auto pr-1">
               {followUps.map((f) => (
@@ -217,15 +236,23 @@ function WhatsappPage() {
                     </div>
                     <select
                       value={f.status}
-                      onChange={(e) => handle(update(f.id, { status: e.target.value as FollowUpStatus }))}
+                      onChange={(e) =>
+                        handle(update(f.id, { status: e.target.value as FollowUpStatus }))
+                      }
                       className="text-[11px] rounded-full border border-border bg-card px-2 py-0.5 text-primary"
                     >
-                      {followUpStatuses.map((s) => <option key={s}>{s}</option>)}
+                      {followUpStatuses.map((s) => (
+                        <option key={s}>{s}</option>
+                      ))}
                     </select>
                   </div>
                   <p className="text-xs italic text-primary/80 mt-2 line-clamp-3">{f.message}</p>
                   <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
-                    <StatusPill tone={f.status === "Sent" ? "good" : f.status === "Scheduled" ? "warn" : "neutral"}>
+                    <StatusPill
+                      tone={
+                        f.status === "Sent" ? "good" : f.status === "Scheduled" ? "warn" : "neutral"
+                      }
+                    >
                       {f.status}
                     </StatusPill>
                     <span>{f.scheduledDate}</span>
@@ -243,7 +270,9 @@ function WhatsappPage() {
 function L({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{label}</span>
+      <span className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+        {label}
+      </span>
       {children}
     </label>
   );

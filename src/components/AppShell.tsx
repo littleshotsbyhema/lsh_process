@@ -46,15 +46,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { roles, displayName } = useSession();
   const [open, setOpen] = useState(false);
   const items = visibleNav(roles);
-  const roleLine = roles.length
-    ? roles.map((r) => roleLabels[r]).join(" · ")
-    : "Role pending";
+  const roleLine = roles.length ? roles.map((r) => roleLabels[r]).join(" · ") : "Role pending";
 
   const signOut = async () => {
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    navigate({ to: "/auth", search: { redirect: "/" }, replace: true });
+    navigate({ to: "/auth", search: { redirect: "/", invite: undefined }, replace: true });
   };
 
   const navList = (
@@ -150,9 +148,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="hidden lg:flex justify-end px-12 pt-6">
           <SaveIndicator />
         </div>
-        <div className="px-5 sm:px-8 lg:px-12 py-8 lg:py-10 max-w-[1400px] mx-auto">
-          {children}
-        </div>
+        <div className="px-5 sm:px-8 lg:px-12 py-8 lg:py-10 max-w-[1400px] mx-auto">{children}</div>
         <footer className="px-5 sm:px-8 lg:px-12 py-6 border-t border-border bg-sidebar/40">
           <p className="text-center text-xs italic text-muted-foreground">
             Little Moments OS — Built to protect the memories that become everything.
@@ -182,9 +178,7 @@ export function PageHeader({
         </div>
       )}
       <h1 className="font-serif text-3xl sm:text-4xl text-primary leading-tight">{title}</h1>
-      {subtitle && (
-        <p className="mt-2 text-sm text-muted-foreground max-w-2xl">{subtitle}</p>
-      )}
+      {subtitle && <p className="mt-2 text-sm text-muted-foreground max-w-2xl">{subtitle}</p>}
       {quote && (
         <p className="mt-4 italic text-sm text-primary/80 max-w-2xl border-l-2 border-gold pl-4">
           {quote}
@@ -194,13 +188,7 @@ export function PageHeader({
   );
 }
 
-export function Card({
-  children,
-  className = "",
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <div
       className={`rounded-2xl border border-border bg-card shadow-[var(--shadow-soft)] ${className}`}
@@ -210,7 +198,13 @@ export function Card({
   );
 }
 
-export function StatusPill({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "good" | "warn" | "bad" | "gold" }) {
+export function StatusPill({
+  children,
+  tone = "neutral",
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "good" | "warn" | "bad" | "gold";
+}) {
   const tones: Record<string, string> = {
     neutral: "bg-muted text-muted-foreground",
     good: "bg-[oklch(0.92_0.05_150)] text-[oklch(0.32_0.08_150)]",
@@ -219,7 +213,9 @@ export function StatusPill({ children, tone = "neutral" }: { children: ReactNode
     gold: "bg-[oklch(0.93_0.07_80)] text-[oklch(0.38_0.08_60)]",
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ${tones[tone]}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ${tones[tone]}`}
+    >
       {children}
     </span>
   );

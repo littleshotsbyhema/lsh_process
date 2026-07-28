@@ -1,6 +1,13 @@
 export type SessionType = "Maternity" | "Newborn" | "Sitter" | "Baby" | "Child" | "Family";
 
-export const sessionTypes: SessionType[] = ["Maternity", "Newborn", "Sitter", "Baby", "Child", "Family"];
+export const sessionTypes: SessionType[] = [
+  "Maternity",
+  "Newborn",
+  "Sitter",
+  "Baby",
+  "Child",
+  "Family",
+];
 
 export const leadStatuses = [
   "New Inquiry",
@@ -614,7 +621,13 @@ export const packageTiers = [
     name: "The Complete Legacy",
     blurb: "Cinematic reel, heirloom album, framed centerpiece — a legacy set.",
     fitFor: "Premium legacy.",
-    includes: ["Half-day session", "100+ edited images", "30-page album", "Wall frame", "Cinematic reel"],
+    includes: [
+      "Half-day session",
+      "100+ edited images",
+      "30-page album",
+      "Wall frame",
+      "Cinematic reel",
+    ],
   },
 ] as const;
 

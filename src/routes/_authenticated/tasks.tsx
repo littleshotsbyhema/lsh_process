@@ -17,9 +17,15 @@ export const Route = createFileRoute("/_authenticated/tasks")({
   head: () => ({
     meta: [
       { title: "Team Tasks · Little Moments OS" },
-      { name: "description", content: "Role-based studio tasks, auto-created at the moments that matter." },
+      {
+        name: "description",
+        content: "Role-based studio tasks, auto-created at the moments that matter.",
+      },
       { property: "og:title", content: "Team Tasks · Little Moments OS" },
-      { property: "og:description", content: "Role-based studio tasks, auto-created at the moments that matter." },
+      {
+        property: "og:description",
+        content: "Role-based studio tasks, auto-created at the moments that matter.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -43,10 +49,15 @@ function TasksPage() {
   });
 
   const visible = tasks.filter(
-    (t) => (filter === "All" || t.role === filter) && (statusFilter === "All" || t.status === statusFilter),
+    (t) =>
+      (filter === "All" || t.role === filter) &&
+      (statusFilter === "All" || t.status === statusFilter),
   );
 
-  const counts = teamRoles.map((r) => ({ role: r, n: tasks.filter((t) => t.role === r && t.status !== "Done" && t.status !== "Skipped").length }));
+  const counts = teamRoles.map((r) => ({
+    role: r,
+    n: tasks.filter((t) => t.role === r && t.status !== "Done" && t.status !== "Skipped").length,
+  }));
 
   return (
     <AppShell>
@@ -64,7 +75,9 @@ function TasksPage() {
             onClick={() => setFilter(role)}
             className={`text-left rounded-xl border px-3 py-2.5 ${filter === role ? "bg-[var(--gradient-warm)] border-gold" : "bg-card border-border"}`}
           >
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">{role}</div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">
+              {role}
+            </div>
             <div className="font-serif text-xl text-primary mt-0.5">{n}</div>
           </button>
         ))}
@@ -88,7 +101,9 @@ function TasksPage() {
             onChange={(e) => setDraft({ ...draft, role: e.target.value as TeamRole })}
             className="rounded-lg border border-border bg-card px-2 py-2 text-sm text-primary"
           >
-            {teamRoles.map((r) => <option key={r}>{r}</option>)}
+            {teamRoles.map((r) => (
+              <option key={r}>{r}</option>
+            ))}
           </select>
           <input
             value={draft.assignee}
@@ -108,7 +123,9 @@ function TasksPage() {
             onChange={(e) => setDraft({ ...draft, priority: e.target.value as TaskPriority })}
             className="rounded-lg border border-border bg-card px-2 py-2 text-sm text-primary"
           >
-            {taskPriorities.map((p) => <option key={p}>{p}</option>)}
+            {taskPriorities.map((p) => (
+              <option key={p}>{p}</option>
+            ))}
           </select>
         </div>
         <div className="mt-3 flex justify-end">
@@ -129,15 +146,29 @@ function TasksPage() {
       </Card>
 
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        <select value={filter} onChange={(e) => setFilter(e.target.value as TeamRole | "All")} className="text-xs rounded-lg border border-border bg-card px-2 py-1.5 text-primary">
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as TeamRole | "All")}
+          className="text-xs rounded-lg border border-border bg-card px-2 py-1.5 text-primary"
+        >
           <option value="All">All roles</option>
-          {teamRoles.map((r) => <option key={r}>{r}</option>)}
+          {teamRoles.map((r) => (
+            <option key={r}>{r}</option>
+          ))}
         </select>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as TaskStatus | "All")} className="text-xs rounded-lg border border-border bg-card px-2 py-1.5 text-primary">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as TaskStatus | "All")}
+          className="text-xs rounded-lg border border-border bg-card px-2 py-1.5 text-primary"
+        >
           <option value="All">All statuses</option>
-          {taskStatuses.map((s) => <option key={s}>{s}</option>)}
+          {taskStatuses.map((s) => (
+            <option key={s}>{s}</option>
+          ))}
         </select>
-        <span className="text-xs text-muted-foreground ml-auto">{visible.length} task{visible.length === 1 ? "" : "s"}</span>
+        <span className="text-xs text-muted-foreground ml-auto">
+          {visible.length} task{visible.length === 1 ? "" : "s"}
+        </span>
       </div>
 
       <Card className="p-0 overflow-hidden">
@@ -163,7 +194,11 @@ function TasksPage() {
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <StatusPill tone={t.priority === "Urgent" ? "bad" : t.priority === "High" ? "warn" : "neutral"}>
+                  <StatusPill
+                    tone={
+                      t.priority === "Urgent" ? "bad" : t.priority === "High" ? "warn" : "neutral"
+                    }
+                  >
                     {t.priority}
                   </StatusPill>
                   <select
@@ -171,7 +206,9 @@ function TasksPage() {
                     onChange={(e) => handle(update(t.id, { status: e.target.value as TaskStatus }))}
                     className="text-[11px] rounded-full border border-gold bg-[var(--gradient-warm)] px-2 py-0.5 text-primary"
                   >
-                    {taskStatuses.map((s) => <option key={s}>{s}</option>)}
+                    {taskStatuses.map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
                   </select>
                   <input
                     value={t.assignee}

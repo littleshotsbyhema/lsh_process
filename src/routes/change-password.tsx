@@ -33,7 +33,12 @@ function ChangePasswordPage() {
 
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) navigate({ to: "/auth", replace: true });
+      if (!data.user)
+        navigate({
+          to: "/auth",
+          search: { redirect: undefined, invite: undefined },
+          replace: true,
+        });
     });
   }, [navigate]);
 
