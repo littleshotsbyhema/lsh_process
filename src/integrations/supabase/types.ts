@@ -315,6 +315,91 @@ export type Database = {
         }
         Relationships: []
       }
+      member_role_grants: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          organization_id: string
+          organization_member_id: string
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          role_id: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          organization_id: string
+          organization_member_id: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          role_id: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          organization_id?: string
+          organization_member_id?: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_role_grants_branch_fkey"
+            columns: ["branch_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "member_role_grants_granted_by_fkey"
+            columns: ["granted_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "member_role_grants_member_fkey"
+            columns: ["organization_member_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "member_role_grants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_role_grants_revoked_by_fkey"
+            columns: ["revoked_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "member_role_grants_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memory_profiles: {
         Row: {
           created_at: string
@@ -335,6 +420,105 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      organization_members: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          display_name: string | null
+          email: string | null
+          exit_reason: string | null
+          exited_at: string | null
+          exited_by: string | null
+          id: string
+          joined_at: string
+          organization_id: string
+          phone: string | null
+          status: Database["public"]["Enums"]["member_status"]
+          suspended_at: string | null
+          suspended_by: string | null
+          suspension_reason: string | null
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          display_name?: string | null
+          email?: string | null
+          exit_reason?: string | null
+          exited_at?: string | null
+          exited_by?: string | null
+          id?: string
+          joined_at?: string
+          organization_id: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["member_status"]
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          display_name?: string | null
+          email?: string | null
+          exit_reason?: string | null
+          exited_at?: string | null
+          exited_by?: string | null
+          id?: string
+          joined_at?: string
+          organization_id?: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["member_status"]
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_created_by_fkey"
+            columns: ["created_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "organization_members_exited_by_fkey"
+            columns: ["exited_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_members_suspended_by_fkey"
+            columns: ["suspended_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "organization_members_updated_by_fkey"
+            columns: ["updated_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
       }
       organization_settings: {
         Row: {
@@ -757,10 +941,31 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_organization_member: {
+        Args: { p_organization_id: string }
+        Returns: string
+      }
+      current_user_organization_ids: { Args: never; Returns: string[] }
+      effective_permissions: {
+        Args: { p_branch_id?: string; p_organization_id: string }
+        Returns: string[]
+      }
       has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]
           _user_id: string
+        }
+        Returns: boolean
+      }
+      has_branch_scope: {
+        Args: { p_branch_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      has_permission: {
+        Args: {
+          p_branch_id?: string
+          p_organization_id: string
+          p_permission_key: string
         }
         Returns: boolean
       }
@@ -772,6 +977,60 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      lsh_assert_founder_coverage: {
+        Args: { p_organization_id: string }
+        Returns: undefined
+      }
+      lsh_bootstrap_founder: {
+        Args: never
+        Returns: {
+          grant_created: boolean
+          grant_id: string
+          legacy_founder_user_id: string
+          member_created: boolean
+          member_id: string
+          organization_id: string
+        }[]
+      }
+      my_membership: {
+        Args: { p_organization_id: string }
+        Returns: {
+          assigned_role_keys: string[]
+          assigned_role_labels: string[]
+          branch_names: string[]
+          display_name: string
+          email: string
+          joined_at: string
+          member_status: Database["public"]["Enums"]["member_status"]
+          organization_id: string
+          organization_name: string
+          organization_wide: boolean
+          phone: string
+        }[]
+      }
+      role_catalogue: {
+        Args: never
+        Returns: {
+          description: string
+          key: string
+          label: string
+          sort_order: number
+        }[]
+      }
+      team_directory: {
+        Args: { p_organization_id: string }
+        Returns: {
+          assigned_branch_names: string[]
+          assigned_role_keys: string[]
+          assigned_role_labels: string[]
+          display_name: string
+          email: string
+          joined_at: string
+          member_status: Database["public"]["Enums"]["member_status"]
+          organization_wide: boolean
+          phone: string
+        }[]
+      }
     }
     Enums: {
       app_role:
@@ -786,6 +1045,7 @@ export type Database = {
         | "marketing"
         | "accounts"
       branch_status: "active" | "inactive" | "archived"
+      member_status: "active" | "suspended" | "left" | "revoked"
       organization_status: "active" | "suspended" | "archived"
     }
     CompositeTypes: {
@@ -927,6 +1187,7 @@ export const Constants = {
         "accounts",
       ],
       branch_status: ["active", "inactive", "archived"],
+      member_status: ["active", "suspended", "left", "revoked"],
       organization_status: ["active", "suspended", "archived"],
     },
   },
