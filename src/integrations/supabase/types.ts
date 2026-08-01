@@ -56,6 +56,77 @@ export type Database = {
         }
         Relationships: []
       }
+      branches: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
+          code: string
+          country_code: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          name: string
+          organization_id: string
+          phone: string | null
+          postal_code: string | null
+          state_region: string | null
+          status: Database["public"]["Enums"]["branch_status"]
+          timezone: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          code: string
+          country_code?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          phone?: string | null
+          postal_code?: string | null
+          state_region?: string | null
+          status?: Database["public"]["Enums"]["branch_status"]
+          timezone?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          code?: string
+          country_code?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          phone?: string | null
+          postal_code?: string | null
+          state_region?: string | null
+          status?: Database["public"]["Enums"]["branch_status"]
+          timezone?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_links: {
         Row: {
           booking_id: string | null
@@ -160,6 +231,123 @@ export type Database = {
         }
         Relationships: []
       }
+      families: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          assigned_owner_member_id: string | null
+          branch_id: string | null
+          created_at: string
+          created_by: string
+          display_name: string
+          family_code: string
+          id: string
+          merged_at: string | null
+          merged_by: string | null
+          merged_into_family_id: string | null
+          organization_id: string
+          sort_name: string
+          status: Database["public"]["Enums"]["family_status"]
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          assigned_owner_member_id?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by: string
+          display_name: string
+          family_code?: string
+          id?: string
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_into_family_id?: string | null
+          organization_id: string
+          sort_name: string
+          status?: Database["public"]["Enums"]["family_status"]
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          assigned_owner_member_id?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string
+          display_name?: string
+          family_code?: string
+          id?: string
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_into_family_id?: string | null
+          organization_id?: string
+          sort_name?: string
+          status?: Database["public"]["Enums"]["family_status"]
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "families_archived_by_fkey"
+            columns: ["archived_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "families_assigned_owner_fkey"
+            columns: ["assigned_owner_member_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "families_branch_fkey"
+            columns: ["branch_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "families_created_by_fkey"
+            columns: ["created_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "families_merged_by_fkey"
+            columns: ["merged_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "families_merged_into_fkey"
+            columns: ["merged_into_family_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "families_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "families_updated_by_fkey"
+            columns: ["updated_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
       follow_ups: {
         Row: {
           created_at: string
@@ -244,6 +432,91 @@ export type Database = {
         }
         Relationships: []
       }
+      member_role_grants: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          organization_id: string
+          organization_member_id: string
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          role_id: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          organization_id: string
+          organization_member_id: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          role_id: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          organization_id?: string
+          organization_member_id?: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_role_grants_branch_fkey"
+            columns: ["branch_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "member_role_grants_granted_by_fkey"
+            columns: ["granted_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "member_role_grants_member_fkey"
+            columns: ["organization_member_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "member_role_grants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_role_grants_revoked_by_fkey"
+            columns: ["revoked_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "member_role_grants_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memory_profiles: {
         Row: {
           created_at: string
@@ -262,6 +535,242 @@ export type Database = {
           data?: Json
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      organization_members: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          display_name: string | null
+          email: string | null
+          exit_reason: string | null
+          exited_at: string | null
+          exited_by: string | null
+          id: string
+          joined_at: string
+          organization_id: string
+          phone: string | null
+          status: Database["public"]["Enums"]["member_status"]
+          suspended_at: string | null
+          suspended_by: string | null
+          suspension_reason: string | null
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          display_name?: string | null
+          email?: string | null
+          exit_reason?: string | null
+          exited_at?: string | null
+          exited_by?: string | null
+          id?: string
+          joined_at?: string
+          organization_id: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["member_status"]
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          display_name?: string | null
+          email?: string | null
+          exit_reason?: string | null
+          exited_at?: string | null
+          exited_by?: string | null
+          id?: string
+          joined_at?: string
+          organization_id?: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["member_status"]
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_created_by_fkey"
+            columns: ["created_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "organization_members_exited_by_fkey"
+            columns: ["exited_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_members_suspended_by_fkey"
+            columns: ["suspended_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "organization_members_updated_by_fkey"
+            columns: ["updated_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      organization_settings: {
+        Row: {
+          brand_logo_url: string | null
+          brand_primary_color: string | null
+          broad_consent_reconfirmation_months: number
+          consent_link_expiry_days: number
+          created_at: string
+          date_format: string
+          delivery_link_expiry_days: number
+          locale: string
+          organization_id: string
+          philosophy_statement: string | null
+          proposal_link_expiry_days: number
+          updated_at: string
+          updated_by: string | null
+          week_starts_on: number
+        }
+        Insert: {
+          brand_logo_url?: string | null
+          brand_primary_color?: string | null
+          broad_consent_reconfirmation_months?: number
+          consent_link_expiry_days?: number
+          created_at?: string
+          date_format?: string
+          delivery_link_expiry_days?: number
+          locale?: string
+          organization_id: string
+          philosophy_statement?: string | null
+          proposal_link_expiry_days?: number
+          updated_at?: string
+          updated_by?: string | null
+          week_starts_on?: number
+        }
+        Update: {
+          brand_logo_url?: string | null
+          brand_primary_color?: string | null
+          broad_consent_reconfirmation_months?: number
+          consent_link_expiry_days?: number
+          created_at?: string
+          date_format?: string
+          delivery_link_expiry_days?: number
+          locale?: string
+          organization_id?: string
+          philosophy_statement?: string | null
+          proposal_link_expiry_days?: number
+          updated_at?: string
+          updated_by?: string | null
+          week_starts_on?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          brand_prefix: string | null
+          created_at: string
+          created_by: string | null
+          currency_code: string
+          deleted_at: string | null
+          display_name: string
+          id: string
+          legal_name: string | null
+          slug: string
+          status: Database["public"]["Enums"]["organization_status"]
+          timezone: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          brand_prefix?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string
+          deleted_at?: string | null
+          display_name: string
+          id?: string
+          legal_name?: string | null
+          slug: string
+          status?: Database["public"]["Enums"]["organization_status"]
+          timezone?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          brand_prefix?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string
+          deleted_at?: string | null
+          display_name?: string
+          id?: string
+          legal_name?: string | null
+          slug?: string
+          status?: Database["public"]["Enums"]["organization_status"]
+          timezone?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      permissions: {
+        Row: {
+          created_at: string
+          description: string | null
+          domain: string
+          id: string
+          key: string
+          label: string
+          requires_server_enforcement: boolean
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          domain: string
+          id?: string
+          key: string
+          label: string
+          requires_server_enforcement?: boolean
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          domain?: string
+          id?: string
+          key?: string
+          label?: string
+          requires_server_enforcement?: boolean
         }
         Relationships: []
       }
@@ -346,6 +855,72 @@ export type Database = {
           data?: Json
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          permission_id: string
+          role_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission_id: string
+          role_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission_id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_system_role: boolean
+          key: string
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system_role?: boolean
+          key: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system_role?: boolean
+          key?: string
+          label?: string
+          sort_order?: number
         }
         Relationships: []
       }
@@ -483,10 +1058,65 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_family: {
+        Args: {
+          p_assigned_owner_member_id?: string
+          p_branch_id?: string
+          p_display_name: string
+          p_organization_id: string
+          p_sort_name: string
+        }
+        Returns: {
+          archived_at: string | null
+          archived_by: string | null
+          assigned_owner_member_id: string | null
+          branch_id: string | null
+          created_at: string
+          created_by: string
+          display_name: string
+          family_code: string
+          id: string
+          merged_at: string | null
+          merged_by: string | null
+          merged_into_family_id: string | null
+          organization_id: string
+          sort_name: string
+          status: Database["public"]["Enums"]["family_status"]
+          updated_at: string
+          updated_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "families"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      current_organization_member: {
+        Args: { p_organization_id: string }
+        Returns: string
+      }
+      current_user_organization_ids: { Args: never; Returns: string[] }
+      effective_permissions: {
+        Args: { p_branch_id?: string; p_organization_id: string }
+        Returns: string[]
+      }
       has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]
           _user_id: string
+        }
+        Returns: boolean
+      }
+      has_branch_scope: {
+        Args: { p_branch_id: string; p_organization_id: string }
+        Returns: boolean
+      }
+      has_permission: {
+        Args: {
+          p_branch_id?: string
+          p_organization_id: string
+          p_permission_key: string
         }
         Returns: boolean
       }
@@ -498,6 +1128,61 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      lsh_assert_founder_coverage: {
+        Args: { p_organization_id: string }
+        Returns: undefined
+      }
+      lsh_bootstrap_founder: {
+        Args: never
+        Returns: {
+          grant_created: boolean
+          grant_id: string
+          legacy_founder_user_id: string
+          member_created: boolean
+          member_id: string
+          organization_id: string
+        }[]
+      }
+      lsh_family_code_suffix: { Args: never; Returns: string }
+      my_membership: {
+        Args: { p_organization_id: string }
+        Returns: {
+          assigned_role_keys: string[]
+          assigned_role_labels: string[]
+          branch_names: string[]
+          display_name: string
+          email: string
+          joined_at: string
+          member_status: Database["public"]["Enums"]["member_status"]
+          organization_id: string
+          organization_name: string
+          organization_wide: boolean
+          phone: string
+        }[]
+      }
+      role_catalogue: {
+        Args: never
+        Returns: {
+          description: string
+          key: string
+          label: string
+          sort_order: number
+        }[]
+      }
+      team_directory: {
+        Args: { p_organization_id: string }
+        Returns: {
+          assigned_branch_names: string[]
+          assigned_role_keys: string[]
+          assigned_role_labels: string[]
+          display_name: string
+          email: string
+          joined_at: string
+          member_status: Database["public"]["Enums"]["member_status"]
+          organization_wide: boolean
+          phone: string
+        }[]
+      }
     }
     Enums: {
       app_role:
@@ -511,6 +1196,10 @@ export type Database = {
         | "album"
         | "marketing"
         | "accounts"
+      branch_status: "active" | "inactive" | "archived"
+      family_status: "active" | "inactive" | "archived" | "merged"
+      member_status: "active" | "suspended" | "left" | "revoked"
+      organization_status: "active" | "suspended" | "archived"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -650,6 +1339,10 @@ export const Constants = {
         "marketing",
         "accounts",
       ],
+      branch_status: ["active", "inactive", "archived"],
+      family_status: ["active", "inactive", "archived", "merged"],
+      member_status: ["active", "suspended", "left", "revoked"],
+      organization_status: ["active", "suspended", "archived"],
     },
   },
 } as const
