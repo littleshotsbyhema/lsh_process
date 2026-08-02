@@ -37,3 +37,6 @@ dist-ssr
 .env.*.local
 *.pem
 *.key
+
+supabase/.temp/
+supabase/.branches/
