@@ -231,6 +231,123 @@ export type Database = {
         }
         Relationships: []
       }
+      families: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          assigned_owner_member_id: string | null
+          branch_id: string | null
+          created_at: string
+          created_by: string
+          display_name: string
+          family_code: string
+          id: string
+          merged_at: string | null
+          merged_by: string | null
+          merged_into_family_id: string | null
+          organization_id: string
+          sort_name: string
+          status: Database["public"]["Enums"]["family_status"]
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          assigned_owner_member_id?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by: string
+          display_name: string
+          family_code?: string
+          id?: string
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_into_family_id?: string | null
+          organization_id: string
+          sort_name: string
+          status?: Database["public"]["Enums"]["family_status"]
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          assigned_owner_member_id?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string
+          display_name?: string
+          family_code?: string
+          id?: string
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_into_family_id?: string | null
+          organization_id?: string
+          sort_name?: string
+          status?: Database["public"]["Enums"]["family_status"]
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "families_archived_by_fkey"
+            columns: ["archived_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "families_assigned_owner_fkey"
+            columns: ["assigned_owner_member_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "families_branch_fkey"
+            columns: ["branch_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "families_created_by_fkey"
+            columns: ["created_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "families_merged_by_fkey"
+            columns: ["merged_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "families_merged_into_fkey"
+            columns: ["merged_into_family_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "families_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "families_updated_by_fkey"
+            columns: ["updated_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
       follow_ups: {
         Row: {
           created_at: string
@@ -941,6 +1058,40 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_family: {
+        Args: {
+          p_assigned_owner_member_id?: string
+          p_branch_id?: string
+          p_display_name: string
+          p_organization_id: string
+          p_sort_name: string
+        }
+        Returns: {
+          archived_at: string | null
+          archived_by: string | null
+          assigned_owner_member_id: string | null
+          branch_id: string | null
+          created_at: string
+          created_by: string
+          display_name: string
+          family_code: string
+          id: string
+          merged_at: string | null
+          merged_by: string | null
+          merged_into_family_id: string | null
+          organization_id: string
+          sort_name: string
+          status: Database["public"]["Enums"]["family_status"]
+          updated_at: string
+          updated_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "families"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_organization_member: {
         Args: { p_organization_id: string }
         Returns: string
@@ -992,6 +1143,7 @@ export type Database = {
           organization_id: string
         }[]
       }
+      lsh_family_code_suffix: { Args: never; Returns: string }
       my_membership: {
         Args: { p_organization_id: string }
         Returns: {
@@ -1045,6 +1197,7 @@ export type Database = {
         | "marketing"
         | "accounts"
       branch_status: "active" | "inactive" | "archived"
+      family_status: "active" | "inactive" | "archived" | "merged"
       member_status: "active" | "suspended" | "left" | "revoked"
       organization_status: "active" | "suspended" | "archived"
     }
@@ -1187,6 +1340,7 @@ export const Constants = {
         "accounts",
       ],
       branch_status: ["active", "inactive", "archived"],
+      family_status: ["active", "inactive", "archived", "merged"],
       member_status: ["active", "suspended", "left", "revoked"],
       organization_status: ["active", "suspended", "archived"],
     },
