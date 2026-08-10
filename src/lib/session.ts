@@ -14,22 +14,25 @@ export const appRoles = [
   "marketing",
   "accounts",
 ] as const;
+
 export type AppRole = (typeof appRoles)[number];
 
 export const roleLabels: Record<AppRole, string> = {
   founder: "Founder / Studio Head",
   coordinator: "Client Coordinator",
-  sales: "Sales Lead",
+  sales: "Sales",
   photographer: "Photographer",
-  assistant: "Assistant / Baby Care Support",
-  stylist: "Stylist / Makeup Artist",
-  editor: "Editor / Retoucher",
-  album: "Album / Print Coordinator",
-  marketing: "Marketing Team",
+  assistant: "Assistant",
+  stylist: "Stylist",
+  editor: "Editor",
+  album: "Album Coordinator",
+  marketing: "Marketing",
   accounts: "Accounts",
 };
 
-export type SessionState = {
+const ORGANIZATION_ID = "590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc";
+
+type SessionState = {
   loading: boolean;
   session: Session | null;
   user: User | null;
@@ -37,48 +40,128 @@ export type SessionState = {
   displayName: string;
 };
 
+type MembershipResult = {
+  organization_id: string;
+  organization_name: string;
+  member_status: string;
+  display_name: string | null;
+  email: string | null;
+  phone: string | null;
+  joined_at: string;
+  assigned_role_keys: string[] | null;
+  assigned_role_labels: string[] | null;
+  branch_names: string[] | null;
+  organization_wide: boolean;
+};
+
+function isAppRole(value: string): value is AppRole {
+  return appRoles.includes(value as AppRole);
+}
+
 export function useSession(): SessionState {
   const [session, setSession] = useState<Session | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [membershipName, setMembershipName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
 
-    const loadRoles = async (userId: string | undefined) => {
-      if (!userId) {
-        if (active) setRoles([]);
-        return;
-      }
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-      if (active) setRoles(((data ?? []) as { role: AppRole }[]).map((r) => r.role));
+    const clearMembership = () => {
+      if (!active) return;
+
+      setRoles([]);
+      setMembershipName(null);
     };
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
-      if (!active) return;
-      setSession(next);
-      void loadRoles(next?.user?.id);
-    });
+    const loadMembership = async (userId: string | undefined) => {
+      if (!userId) {
+        clearMembership();
+        return;
+      }
 
-    void supabase.auth.getSession().then(async ({ data }) => {
+      const { data, error } = await supabase.rpc("my_membership", {
+        p_organization_id: ORGANIZATION_ID,
+      });
+
+      if (error) {
+        console.error("Failed to load studio membership:", error);
+        clearMembership();
+        return;
+      }
+
+      const rows = (data ?? []) as unknown as MembershipResult[];
+      const membership = rows[0];
+
+      if (!membership || membership.member_status !== "active") {
+        clearMembership();
+        return;
+      }
+
+      const resolvedRoles = (membership.assigned_role_keys ?? []).filter(
+        isAppRole,
+      );
+
       if (!active) return;
+
+      setRoles([...new Set(resolvedRoles)]);
+      setMembershipName(membership.display_name);
+    };
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, nextSession) => {
+        if (!active) return;
+
+        setSession(nextSession);
+        setLoading(true);
+
+        void loadMembership(nextSession?.user?.id).finally(() => {
+          if (active) {
+            setLoading(false);
+          }
+        });
+      },
+    );
+
+    void supabase.auth.getSession().then(async ({ data, error }) => {
+      if (!active) return;
+
+      if (error) {
+        console.error("Failed to load Supabase session:", error);
+        setSession(null);
+        clearMembership();
+        setLoading(false);
+        return;
+      }
+
       setSession(data.session);
-      await loadRoles(data.session?.user?.id);
-      if (active) setLoading(false);
+      await loadMembership(data.session?.user?.id);
+
+      if (active) {
+        setLoading(false);
+      }
     });
 
     return () => {
       active = false;
-      sub.subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
   }, []);
 
   const user = session?.user ?? null;
+
   const displayName =
+    membershipName ||
     (user?.user_metadata?.full_name as string | undefined) ||
     (user?.user_metadata?.name as string | undefined) ||
     user?.email ||
     "Team member";
 
-  return { loading, session, user, roles, displayName };
+  return {
+    loading,
+    session,
+    user,
+    roles,
+    displayName,
+  };
 }
