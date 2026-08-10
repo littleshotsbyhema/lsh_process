@@ -56,6 +56,10 @@ function ClientsPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
+  const [archivingId, setArchivingId] = useState<string | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [archiveSuccess, setArchiveSuccess] = useState<string | null>(null);
+
   const loadFamilies = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
@@ -114,6 +118,8 @@ function ClientsPage() {
     setCreating(true);
     setCreateError(null);
     setCreateSuccess(null);
+    setArchiveError(null);
+    setArchiveSuccess(null);
 
     const { data, error } = await supabase.rpc("create_family", {
       p_organization_id: ORGANIZATION_ID,
@@ -146,6 +152,42 @@ function ClientsPage() {
     await loadFamilies();
   };
 
+  const archiveFamily = async (family: FamilyRow) => {
+    const confirmed = window.confirm(
+      `Archive ${family.display_name}?\n\nThe family record will remain in the database and can be reactivated later.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setArchivingId(family.id);
+    setArchiveError(null);
+    setArchiveSuccess(null);
+    setCreateError(null);
+    setCreateSuccess(null);
+
+    const { error } = await db
+      .from("families")
+      .update({
+        status: "archived",
+      })
+      .eq("id", family.id)
+      .eq("organization_id", ORGANIZATION_ID);
+
+    if (error) {
+      console.error("[families] archive failed", error);
+      setArchiveError(error.message ?? "Could not archive family.");
+      setArchivingId(null);
+      return;
+    }
+
+    setArchiveSuccess(`${family.display_name} archived successfully.`);
+    setArchivingId(null);
+
+    await loadFamilies();
+  };
+
   return (
     <AppShell>
       <PageHeader
@@ -174,7 +216,7 @@ function ClientsPage() {
       </div>
 
       {showCreate && (
-        <Card className="mb-6 p-6 max-w-2xl">
+        <Card className="mb-6 max-w-2xl p-6">
           <div>
             <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
               New family
@@ -184,7 +226,7 @@ function ClientsPage() {
               Begin a family record
             </h2>
 
-            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               Create the household record first. Contact details, family members, children,
               notes and milestones will be added through their dedicated modules.
             </p>
@@ -257,6 +299,18 @@ function ClientsPage() {
         </Card>
       )}
 
+      {archiveError && (
+        <Card className="mb-5 border-destructive/30 p-4">
+          <p className="text-sm text-destructive">{archiveError}</p>
+        </Card>
+      )}
+
+      {archiveSuccess && (
+        <Card className="mb-5 p-4">
+          <p className="text-sm text-primary">{archiveSuccess}</p>
+        </Card>
+      )}
+
       {loading && (
         <Card className="p-10 text-center">
           <p className="font-serif text-xl text-primary">
@@ -312,6 +366,29 @@ function ClientsPage() {
                   history will appear here as their rebuilt modules are connected.
                 </p>
               </div>
+
+              {family.status !== "archived" && family.status !== "merged" && (
+                <div className="mt-4 border-t border-border pt-4">
+                  <button
+                    type="button"
+                    onClick={() => void archiveFamily(family)}
+                    disabled={archivingId === family.id}
+                    className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-primary hover:bg-muted disabled:opacity-60"
+                  >
+                    {archivingId === family.id
+                      ? "Archiving…"
+                      : "Archive family"}
+                  </button>
+                </div>
+              )}
+
+              {family.status === "archived" && (
+                <div className="mt-4 border-t border-border pt-4">
+                  <p className="text-xs italic text-muted-foreground">
+                    This family is archived. Its history has been preserved.
+                  </p>
+                </div>
+              )}
             </Card>
           ))}
 
