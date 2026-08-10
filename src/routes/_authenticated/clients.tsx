@@ -20,7 +20,7 @@ export const Route = createFileRoute("/_authenticated/clients")({
       {
         name: "description",
         content:
-          "Every family we care for, their bookings, milestones and long-term relationship history.",
+          "Families, relationships, contact channels and communication preferences.",
       },
       {
         property: "og:title",
@@ -29,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/clients")({
       {
         property: "og:description",
         content:
-          "Every family we care for, their bookings, milestones and long-term relationship history.",
+          "Families, relationships, contact channels and communication preferences.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -46,6 +46,23 @@ const FAMILY_QUERY_KEY = [
   ORGANIZATION_ID,
 ] as const;
 
+type FamilyStatus =
+  | "active"
+  | "inactive"
+  | "archived"
+  | "merged";
+
+type ContactChannelType =
+  | "phone"
+  | "email"
+  | "whatsapp"
+  | "other";
+
+type ContactabilityStatus =
+  | "contactable"
+  | "limited"
+  | "do_not_contact";
+
 type FamilyRow = {
   id: string;
   organization_id: string;
@@ -53,51 +70,229 @@ type FamilyRow = {
   family_code: string;
   display_name: string;
   sort_name: string;
-  status: string;
+  status: FamilyStatus;
   assigned_owner_member_id: string | null;
   created_at: string;
   updated_at: string;
 };
 
-const db = supabase as unknown as {
-  from: (table: string) => any;
+type FamilyContactRow = {
+  id: string;
+  organization_id: string;
+  family_id: string;
+  full_name: string;
+  relationship_label: string;
+  is_primary: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deactivated_at: string | null;
 };
 
-async function fetchFamilies(): Promise<FamilyRow[]> {
-  const { data, error } = await db
-    .from("families")
-    .select(
-      [
-        "id",
-        "organization_id",
-        "branch_id",
-        "family_code",
-        "display_name",
-        "sort_name",
-        "status",
-        "assigned_owner_member_id",
-        "created_at",
-        "updated_at",
-      ].join(","),
-    )
-    .eq("organization_id", ORGANIZATION_ID)
-    .order("sort_name", { ascending: true });
+type FamilyContactChannelRow = {
+  id: string;
+  organization_id: string;
+  family_contact_id: string;
+  channel_type: ContactChannelType;
+  channel_value: string;
+  normalized_value: string;
+  is_preferred: boolean;
+  is_verified: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deactivated_at: string | null;
+};
 
-  if (error) {
-    console.error("[families] load failed", error);
+type FamilyCommunicationControlRow = {
+  id: string;
+  organization_id: string;
+  family_id: string;
+  contactability_status: ContactabilityStatus;
+  preferred_channel_type: ContactChannelType | null;
+  do_not_contact: boolean;
+  do_not_contact_reason: string | null;
+  quiet_hours_start: string | null;
+  quiet_hours_end: string | null;
+  timezone: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type FamilyRecord = FamilyRow & {
+  contacts: Array<
+    FamilyContactRow & {
+      channels: FamilyContactChannelRow[];
+    }
+  >;
+  communicationControls:
+    | FamilyCommunicationControlRow
+    | null;
+};
+
+const db = supabase as any;
+
+async function fetchFamilies(): Promise<FamilyRecord[]> {
+  const [
+    familiesResult,
+    contactsResult,
+    channelsResult,
+    controlsResult,
+  ] = await Promise.all([
+    db
+      .from("families")
+      .select(
+        [
+          "id",
+          "organization_id",
+          "branch_id",
+          "family_code",
+          "display_name",
+          "sort_name",
+          "status",
+          "assigned_owner_member_id",
+          "created_at",
+          "updated_at",
+        ].join(","),
+      )
+      .eq("organization_id", ORGANIZATION_ID)
+      .order("sort_name", { ascending: true }),
+
+    db
+      .from("family_contacts")
+      .select(
+        [
+          "id",
+          "organization_id",
+          "family_id",
+          "full_name",
+          "relationship_label",
+          "is_primary",
+          "is_active",
+          "created_at",
+          "updated_at",
+          "deactivated_at",
+        ].join(","),
+      )
+      .eq("organization_id", ORGANIZATION_ID)
+      .order("is_primary", { ascending: false })
+      .order("full_name", { ascending: true }),
+
+    db
+      .from("family_contact_channels")
+      .select(
+        [
+          "id",
+          "organization_id",
+          "family_contact_id",
+          "channel_type",
+          "channel_value",
+          "normalized_value",
+          "is_preferred",
+          "is_verified",
+          "is_active",
+          "created_at",
+          "updated_at",
+          "deactivated_at",
+        ].join(","),
+      )
+      .eq("organization_id", ORGANIZATION_ID)
+      .order("is_preferred", { ascending: false })
+      .order("channel_type", { ascending: true }),
+
+    db
+      .from("family_communication_controls")
+      .select(
+        [
+          "id",
+          "organization_id",
+          "family_id",
+          "contactability_status",
+          "preferred_channel_type",
+          "do_not_contact",
+          "do_not_contact_reason",
+          "quiet_hours_start",
+          "quiet_hours_end",
+          "timezone",
+          "notes",
+          "created_at",
+          "updated_at",
+        ].join(","),
+      )
+      .eq("organization_id", ORGANIZATION_ID),
+  ]);
+
+  if (familiesResult.error) {
     throw new Error(
-      error.message ?? "Could not load family records.",
+      familiesResult.error.message ??
+        "Could not load family records.",
     );
   }
 
-  return (data ?? []) as FamilyRow[];
+  if (contactsResult.error) {
+    throw new Error(
+      contactsResult.error.message ??
+        "Could not load family contacts.",
+    );
+  }
+
+  if (channelsResult.error) {
+    throw new Error(
+      channelsResult.error.message ??
+        "Could not load family contact channels.",
+    );
+  }
+
+  if (controlsResult.error) {
+    throw new Error(
+      controlsResult.error.message ??
+        "Could not load family communication controls.",
+    );
+  }
+
+  const families =
+    (familiesResult.data ?? []) as FamilyRow[];
+
+  const contacts =
+    (contactsResult.data ?? []) as FamilyContactRow[];
+
+  const channels =
+    (channelsResult.data ??
+      []) as FamilyContactChannelRow[];
+
+  const controls =
+    (controlsResult.data ??
+      []) as FamilyCommunicationControlRow[];
+
+  return families.map((family) => ({
+    ...family,
+
+    contacts: contacts
+      .filter(
+        (contact) => contact.family_id === family.id,
+      )
+      .map((contact) => ({
+        ...contact,
+        channels: channels.filter(
+          (channel) =>
+            channel.family_contact_id === contact.id,
+        ),
+      })),
+
+    communicationControls:
+      controls.find(
+        (control) => control.family_id === family.id,
+      ) ?? null,
+  }));
 }
 
 function ClientsPage() {
   const queryClient = useQueryClient();
 
   const [showCreate, setShowCreate] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
+  const [showArchived, setShowArchived] =
+    useState(false);
 
   const [displayName, setDisplayName] = useState("");
   const [sortName, setSortName] = useState("");
@@ -114,18 +309,17 @@ function ClientsPage() {
   const familiesQuery = useQuery({
     queryKey: FAMILY_QUERY_KEY,
     queryFn: fetchFamilies,
-
-    // Keep family data warm while moving around the studio.
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
-
-    // Switching browser tabs should not cause an automatic refetch.
     refetchOnWindowFocus: false,
-
-    // A temporary network interruption should not repeatedly flash
-    // the screen while navigating around the app.
     retry: 1,
   });
+
+  const refreshFamilies = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: FAMILY_QUERY_KEY,
+    });
+  };
 
   const createFamilyMutation = useMutation({
     mutationFn: async ({
@@ -135,7 +329,7 @@ function ClientsPage() {
       displayName: string;
       sortName: string;
     }) => {
-      const { data, error } = await supabase.rpc(
+      const { data, error } = await db.rpc(
         "create_family",
         {
           p_organization_id: ORGANIZATION_ID,
@@ -147,11 +341,6 @@ function ClientsPage() {
       );
 
       if (error) {
-        console.error(
-          "[families] create_family failed",
-          error,
-        );
-
         throw new Error(
           error.message ?? "Could not create family.",
         );
@@ -175,28 +364,19 @@ function ClientsPage() {
       setDisplayName("");
       setSortName("");
 
-      await queryClient.invalidateQueries({
-        queryKey: FAMILY_QUERY_KEY,
-      });
+      await refreshFamilies();
     },
   });
 
   const archiveFamilyMutation = useMutation({
-    mutationFn: async (family: FamilyRow) => {
+    mutationFn: async (family: FamilyRecord) => {
       const { error } = await db
         .from("families")
-        .update({
-          status: "archived",
-        })
+        .update({ status: "archived" })
         .eq("id", family.id)
         .eq("organization_id", ORGANIZATION_ID);
 
       if (error) {
-        console.error(
-          "[families] archive failed",
-          error,
-        );
-
         throw new Error(
           error.message ?? "Could not archive family.",
         );
@@ -211,39 +391,27 @@ function ClientsPage() {
         `${family.display_name} archived successfully.`,
       );
 
-      await queryClient.invalidateQueries({
-        queryKey: FAMILY_QUERY_KEY,
-      });
+      await refreshFamilies();
     },
 
     onError: (error) => {
       setLifecycleMessage(null);
-      setLifecycleError(
-        error instanceof Error
-          ? error.message
-          : "Could not archive family.",
-      );
+      setLifecycleError(getErrorMessage(error));
     },
   });
 
   const reactivateFamilyMutation = useMutation({
-    mutationFn: async (family: FamilyRow) => {
+    mutationFn: async (family: FamilyRecord) => {
       const { error } = await db
         .from("families")
-        .update({
-          status: "active",
-        })
+        .update({ status: "active" })
         .eq("id", family.id)
         .eq("organization_id", ORGANIZATION_ID);
 
       if (error) {
-        console.error(
-          "[families] reactivate failed",
-          error,
-        );
-
         throw new Error(
-          error.message ?? "Could not reactivate family.",
+          error.message ??
+            "Could not reactivate family.",
         );
       }
 
@@ -256,18 +424,12 @@ function ClientsPage() {
         `${family.display_name} reactivated successfully.`,
       );
 
-      await queryClient.invalidateQueries({
-        queryKey: FAMILY_QUERY_KEY,
-      });
+      await refreshFamilies();
     },
 
     onError: (error) => {
       setLifecycleMessage(null);
-      setLifecycleError(
-        error instanceof Error
-          ? error.message
-          : "Could not reactivate family.",
-      );
+      setLifecycleError(getErrorMessage(error));
     },
   });
 
@@ -313,13 +475,13 @@ function ClientsPage() {
         sortName: cleanSortName,
       });
     } catch {
-      // Error is displayed from mutation state below.
+      // Mutation state renders the error.
     }
   };
 
-  const archiveFamily = (family: FamilyRow) => {
+  const archiveFamily = (family: FamilyRecord) => {
     const confirmed = window.confirm(
-      `Archive ${family.display_name}?\n\nThe family record will remain preserved and can be reactivated later.`,
+      `Archive ${family.display_name}?\n\nThe family record and contact history will remain preserved and can be reactivated later.`,
     );
 
     if (!confirmed) {
@@ -330,7 +492,7 @@ function ClientsPage() {
     archiveFamilyMutation.mutate(family);
   };
 
-  const reactivateFamily = (family: FamilyRow) => {
+  const reactivateFamily = (family: FamilyRecord) => {
     const confirmed = window.confirm(
       `Reactivate ${family.display_name}?\n\nThe family will return to the active client list.`,
     );
@@ -347,7 +509,8 @@ function ClientsPage() {
     archiveFamilyMutation.isPending
       ? archiveFamilyMutation.variables?.id ?? null
       : reactivateFamilyMutation.isPending
-        ? reactivateFamilyMutation.variables?.id ?? null
+        ? reactivateFamilyMutation.variables?.id ??
+          null
         : null;
 
   return (
@@ -368,12 +531,14 @@ function ClientsPage() {
           }}
           className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
         >
-          {showCreate ? "Close form" : "Create family"}
+          {showCreate
+            ? "Close form"
+            : "Create family"}
         </button>
 
         <span className="text-xs text-muted-foreground">
-          New families are created through the controlled
-          family workflow.
+          Family and contact information is protected by
+          organisation permissions and audit controls.
         </span>
 
         {familiesQuery.isFetching &&
@@ -386,91 +551,54 @@ function ClientsPage() {
 
       {showCreate && (
         <Card className="mb-6 max-w-2xl p-6">
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              New family
-            </div>
-
-            <h2 className="mt-1 font-serif text-2xl text-primary">
-              Begin a family record
-            </h2>
-
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Create the household record first. Contact
-              details, family members, children, notes and
-              milestones will be added through their dedicated
-              modules.
-            </p>
+          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            New family
           </div>
+
+          <h2 className="mt-1 font-serif text-2xl text-primary">
+            Begin a family record
+          </h2>
 
           <form
             onSubmit={submitCreateFamily}
             className="mt-6 space-y-4"
           >
-            <label className="block">
-              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Family display name
-              </span>
+            <InputField
+              label="Family display name"
+              value={displayName}
+              onChange={(value) => {
+                setDisplayName(value);
 
-              <input
-                type="text"
-                value={displayName}
-                onChange={(event) => {
-                  const value = event.target.value;
-
-                  setDisplayName(value);
-
-                  if (!sortName) {
-                    setSortName(value);
-                  }
-                }}
-                placeholder="Example: Mehta Family"
-                required
-                maxLength={160}
-                className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary outline-none focus:ring-1 focus:ring-primary"
-              />
-            </label>
-
-            <label className="block">
-              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Sort name
-              </span>
-
-              <input
-                type="text"
-                value={sortName}
-                onChange={(event) =>
-                  setSortName(event.target.value)
+                if (!sortName) {
+                  setSortName(value);
                 }
-                placeholder="Example: Mehta Family"
-                required
-                maxLength={160}
-                className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary outline-none focus:ring-1 focus:ring-primary"
-              />
+              }}
+              placeholder="Example: Mehta Family"
+            />
 
-              <span className="mt-1 block text-xs text-muted-foreground">
-                Used to alphabetize the family list.
-              </span>
-            </label>
+            <InputField
+              label="Sort name"
+              value={sortName}
+              onChange={setSortName}
+              placeholder="Example: Mehta Family"
+            />
 
             {createFamilyMutation.isError && (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                {createFamilyMutation.error instanceof Error
-                  ? createFamilyMutation.error.message
-                  : "Could not create family."}
-              </div>
+              <ErrorBox>
+                {getErrorMessage(
+                  createFamilyMutation.error,
+                )}
+              </ErrorBox>
             )}
 
             {createMessage && (
-              <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary">
-                {createMessage}
-              </div>
+              <SuccessBox>{createMessage}</SuccessBox>
             )}
 
             <button
               type="submit"
               disabled={createFamilyMutation.isPending}
-              className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+              className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-60"
             >
               {createFamilyMutation.isPending
                 ? "Creating family…"
@@ -481,19 +609,15 @@ function ClientsPage() {
       )}
 
       {lifecycleError && (
-        <Card className="mb-5 border-destructive/30 p-4">
-          <p className="text-sm text-destructive">
-            {lifecycleError}
-          </p>
-        </Card>
+        <ErrorBox className="mb-5">
+          {lifecycleError}
+        </ErrorBox>
       )}
 
       {lifecycleMessage && (
-        <Card className="mb-5 p-4">
-          <p className="text-sm text-primary">
-            {lifecycleMessage}
-          </p>
-        </Card>
+        <SuccessBox className="mb-5">
+          {lifecycleMessage}
+        </SuccessBox>
       )}
 
       {familiesQuery.isPending && (
@@ -516,14 +640,14 @@ function ClientsPage() {
             </p>
 
             <p className="mt-2 text-sm text-muted-foreground">
-              {familiesQuery.error instanceof Error
-                ? familiesQuery.error.message
-                : "Could not load family records."}
+              {getErrorMessage(familiesQuery.error)}
             </p>
 
             <button
               type="button"
-              onClick={() => void familiesQuery.refetch()}
+              onClick={() =>
+                void familiesQuery.refetch()
+              }
               className="mt-4 rounded-lg border border-border px-3 py-2 text-xs text-primary"
             >
               Try again
@@ -535,27 +659,14 @@ function ClientsPage() {
         !familiesQuery.isError && (
           <>
             <section>
-              <div className="mb-4 flex items-end justify-between gap-4">
-                <div>
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                    Current families
-                  </div>
-
-                  <h2 className="mt-1 font-serif text-2xl text-primary">
-                    Families in our care
-                  </h2>
-                </div>
-
-                <div className="text-xs text-muted-foreground">
-                  {currentFamilies.length}{" "}
-                  {currentFamilies.length === 1
-                    ? "family"
-                    : "families"}
-                </div>
-              </div>
+              <SectionHeading
+                eyebrow="Current families"
+                title="Families in our care"
+                count={currentFamilies.length}
+              />
 
               {currentFamilies.length > 0 ? (
-                <div className="grid gap-5 lg:grid-cols-2">
+                <div className="space-y-6">
                   {currentFamilies.map((family) => (
                     <FamilyCard
                       key={family.id}
@@ -564,6 +675,7 @@ function ClientsPage() {
                         changingFamilyId === family.id
                       }
                       onArchive={archiveFamily}
+                      onRefresh={refreshFamilies}
                     />
                   ))}
                 </div>
@@ -611,34 +723,25 @@ function ClientsPage() {
               </button>
 
               {showArchived && (
-                <div className="mt-5">
+                <div className="mt-5 space-y-5">
                   {archivedFamilies.length > 0 ? (
-                    <div className="grid gap-5 lg:grid-cols-2">
-                      {archivedFamilies.map(
-                        (family) => (
-                          <ArchivedFamilyCard
-                            key={family.id}
-                            family={family}
-                            busy={
-                              changingFamilyId ===
-                              family.id
-                            }
-                            onReactivate={
-                              reactivateFamily
-                            }
-                          />
-                        ),
-                      )}
-                    </div>
+                    archivedFamilies.map((family) => (
+                      <ArchivedFamilyCard
+                        key={family.id}
+                        family={family}
+                        busy={
+                          changingFamilyId ===
+                          family.id
+                        }
+                        onReactivate={
+                          reactivateFamily
+                        }
+                      />
+                    ))
                   ) : (
                     <Card className="p-8 text-center">
                       <p className="font-serif text-lg text-primary">
                         No archived families.
-                      </p>
-
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Archived family records will remain
-                        preserved here.
                       </p>
                     </Card>
                   )}
@@ -648,24 +751,15 @@ function ClientsPage() {
 
             {mergedFamilies.length > 0 && (
               <section className="mt-8">
-                <div className="mb-4">
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                    Protected history
-                  </div>
+                <SectionHeading
+                  eyebrow="Protected history"
+                  title="Merged family records"
+                  count={mergedFamilies.length}
+                />
 
-                  <h2 className="mt-1 font-serif text-xl text-primary">
-                    Merged family records
-                  </h2>
-
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Merged records are terminal and retained
-                    for historical continuity.
-                  </p>
-                </div>
-
-                <div className="grid gap-5 lg:grid-cols-2">
+                <div className="space-y-5">
                   {mergedFamilies.map((family) => (
-                    <MergedFamilyCard
+                    <HistoricalFamilyCard
                       key={family.id}
                       family={family}
                     />
@@ -683,10 +777,12 @@ function FamilyCard({
   family,
   busy,
   onArchive,
+  onRefresh,
 }: {
-  family: FamilyRow;
+  family: FamilyRecord;
   busy: boolean;
-  onArchive: (family: FamilyRow) => void;
+  onArchive: (family: FamilyRecord) => void;
+  onRefresh: () => Promise<void>;
 }) {
   return (
     <Card className="p-6">
@@ -694,15 +790,19 @@ function FamilyCard({
 
       <FamilyDetails family={family} />
 
-      <div className="mt-5 border-t border-border pt-4">
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          Contact details, family members, children, notes,
-          milestones and booking history will appear here as
-          their rebuilt modules are connected.
-        </p>
-      </div>
+      <FamilyContactsSection
+        family={family}
+        editable
+        onRefresh={onRefresh}
+      />
 
-      <div className="mt-4 border-t border-border pt-4">
+      <CommunicationControlsSection
+        family={family}
+        editable
+        onRefresh={onRefresh}
+      />
+
+      <div className="mt-6 border-t border-border pt-4">
         <button
           type="button"
           onClick={() => onArchive(family)}
@@ -721,29 +821,36 @@ function ArchivedFamilyCard({
   busy,
   onReactivate,
 }: {
-  family: FamilyRow;
+  family: FamilyRecord;
   busy: boolean;
-  onReactivate: (family: FamilyRow) => void;
+  onReactivate: (family: FamilyRecord) => void;
 }) {
   return (
     <Card className="p-6">
       <FamilyHeader family={family} />
-
       <FamilyDetails family={family} />
 
-      <div className="mt-5 border-t border-border pt-4">
-        <p className="text-xs italic leading-relaxed text-muted-foreground">
-          This family is archived. Its history has been
-          preserved.
-        </p>
-      </div>
+      <FamilyContactsSection
+        family={family}
+        editable={false}
+      />
 
-      <div className="mt-4 border-t border-border pt-4">
+      <CommunicationControlsSection
+        family={family}
+        editable={false}
+      />
+
+      <div className="mt-5 border-t border-border pt-4">
+        <p className="text-xs italic text-muted-foreground">
+          This family is archived. Its relationship and
+          communication history remains preserved.
+        </p>
+
         <button
           type="button"
           onClick={() => onReactivate(family)}
           disabled={busy}
-          className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-primary hover:bg-muted disabled:opacity-60"
+          className="mt-3 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-primary hover:bg-muted disabled:opacity-60"
         >
           {busy
             ? "Reactivating…"
@@ -754,31 +861,885 @@ function ArchivedFamilyCard({
   );
 }
 
-function MergedFamilyCard({
+function HistoricalFamilyCard({
   family,
 }: {
-  family: FamilyRow;
+  family: FamilyRecord;
 }) {
   return (
     <Card className="p-6">
       <FamilyHeader family={family} />
-
       <FamilyDetails family={family} />
 
-      <div className="mt-5 border-t border-border pt-4">
-        <p className="text-xs italic leading-relaxed text-muted-foreground">
-          This family record has been merged and is preserved
-          as terminal history.
-        </p>
-      </div>
+      <FamilyContactsSection
+        family={family}
+        editable={false}
+      />
+
+      <CommunicationControlsSection
+        family={family}
+        editable={false}
+      />
+
+      <p className="mt-5 border-t border-border pt-4 text-xs italic text-muted-foreground">
+        This merged family record is terminal historical
+        data.
+      </p>
     </Card>
+  );
+}
+
+function FamilyContactsSection({
+  family,
+  editable,
+  onRefresh,
+}: {
+  family: FamilyRecord;
+  editable: boolean;
+  onRefresh?: () => Promise<void>;
+}) {
+  const [showAddContact, setShowAddContact] =
+    useState(false);
+
+  return (
+    <section className="mt-6 border-t border-border pt-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            Relationships
+          </div>
+
+          <h4 className="mt-1 font-serif text-lg text-primary">
+            Family contacts
+          </h4>
+        </div>
+
+        {editable && onRefresh && (
+          <button
+            type="button"
+            onClick={() =>
+              setShowAddContact((current) => !current)
+            }
+            className="rounded-lg border border-border px-3 py-1.5 text-xs text-primary hover:bg-muted"
+          >
+            {showAddContact
+              ? "Close"
+              : "Add contact"}
+          </button>
+        )}
+      </div>
+
+      {showAddContact && editable && onRefresh && (
+        <AddContactForm
+          family={family}
+          onRefresh={onRefresh}
+          onDone={() => setShowAddContact(false)}
+        />
+      )}
+
+      <div className="mt-4 space-y-4">
+        {family.contacts.length > 0 ? (
+          family.contacts.map((contact) => (
+            <ContactCard
+              key={contact.id}
+              contact={contact}
+              editable={editable}
+              onRefresh={onRefresh}
+            />
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No family contacts recorded yet.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ContactCard({
+  contact,
+  editable,
+  onRefresh,
+}: {
+  contact: FamilyRecord["contacts"][number];
+  editable: boolean;
+  onRefresh?: () => Promise<void>;
+}) {
+  const [showChannelForm, setShowChannelForm] =
+    useState(false);
+
+  return (
+    <div className="rounded-xl border border-border bg-muted/20 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h5 className="font-medium text-primary">
+              {contact.full_name}
+            </h5>
+
+            {contact.is_primary && (
+              <span className="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">
+                Primary
+              </span>
+            )}
+
+            {!contact.is_active && (
+              <span className="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                Inactive
+              </span>
+            )}
+          </div>
+
+          <div className="mt-1 text-xs capitalize text-muted-foreground">
+            {contact.relationship_label}
+          </div>
+        </div>
+
+        {editable &&
+          contact.is_active &&
+          onRefresh && (
+            <button
+              type="button"
+              onClick={() =>
+                setShowChannelForm(
+                  (current) => !current,
+                )
+              }
+              className="rounded-lg border border-border px-3 py-1.5 text-xs text-primary hover:bg-muted"
+            >
+              {showChannelForm
+                ? "Close"
+                : "Add channel"}
+            </button>
+          )}
+      </div>
+
+      {showChannelForm &&
+        editable &&
+        contact.is_active &&
+        onRefresh && (
+          <AddChannelForm
+            contact={contact}
+            onRefresh={onRefresh}
+            onDone={() =>
+              setShowChannelForm(false)
+            }
+          />
+        )}
+
+      <div className="mt-4 space-y-2">
+        {contact.channels.length > 0 ? (
+          contact.channels.map((channel) => (
+            <div
+              key={channel.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2"
+            >
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {channel.channel_type}
+                </div>
+
+                <div className="mt-0.5 text-sm text-primary">
+                  {channel.channel_value}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider">
+                {channel.is_preferred && (
+                  <span className="text-primary">
+                    Preferred
+                  </span>
+                )}
+
+                <span className="text-muted-foreground">
+                  {channel.is_verified
+                    ? "Verified"
+                    : "Unverified"}
+                </span>
+
+                {!channel.is_active && (
+                  <span className="text-muted-foreground">
+                    Inactive
+                  </span>
+                )}
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            No phone, WhatsApp or email channels yet.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AddContactForm({
+  family,
+  onRefresh,
+  onDone,
+}: {
+  family: FamilyRecord;
+  onRefresh: () => Promise<void>;
+  onDone: () => void;
+}) {
+  const [fullName, setFullName] = useState("");
+  const [relationship, setRelationship] =
+    useState("");
+  const [isPrimary, setIsPrimary] =
+    useState(false);
+  const [message, setMessage] =
+    useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const cleanName = fullName.trim();
+      const cleanRelationship =
+        relationship.trim().toLowerCase();
+
+      if (!cleanName) {
+        throw new Error("Full name is required.");
+      }
+
+      if (!cleanRelationship) {
+        throw new Error(
+          "Relationship is required.",
+        );
+      }
+
+      const { error } = await db.rpc(
+        "create_family_contact",
+        {
+          p_family_id: family.id,
+          p_full_name: cleanName,
+          p_relationship_label:
+            cleanRelationship,
+          p_is_primary: isPrimary,
+        },
+      );
+
+      if (error) {
+        throw new Error(
+          error.message ??
+            "Could not create family contact.",
+        );
+      }
+    },
+
+    onSuccess: async () => {
+      await onRefresh();
+      setMessage("Contact added successfully.");
+      setFullName("");
+      setRelationship("");
+      setIsPrimary(false);
+    },
+  });
+
+  const submit = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    setMessage(null);
+
+    try {
+      await mutation.mutateAsync();
+    } catch {
+      // Rendered below.
+    }
+  };
+
+  return (
+    <form
+      onSubmit={submit}
+      className="mt-4 rounded-xl border border-border bg-card p-4"
+    >
+      <div className="grid gap-4 md:grid-cols-2">
+        <InputField
+          label="Full name"
+          value={fullName}
+          onChange={setFullName}
+          placeholder="Example: Priya Mehta"
+        />
+
+        <InputField
+          label="Relationship"
+          value={relationship}
+          onChange={setRelationship}
+          placeholder="Example: mother"
+        />
+      </div>
+
+      <label className="mt-4 flex items-center gap-2 text-sm text-primary">
+        <input
+          type="checkbox"
+          checked={isPrimary}
+          onChange={(event) =>
+            setIsPrimary(event.target.checked)
+          }
+        />
+
+        Primary family contact
+      </label>
+
+      <p className="mt-1 text-xs text-muted-foreground">
+        Making this person primary will replace the
+        current active primary contact.
+      </p>
+
+      {mutation.isError && (
+        <ErrorBox className="mt-4">
+          {getErrorMessage(mutation.error)}
+        </ErrorBox>
+      )}
+
+      {message && (
+        <SuccessBox className="mt-4">
+          {message}
+        </SuccessBox>
+      )}
+
+      <div className="mt-4 flex gap-2">
+        <button
+          type="submit"
+          disabled={mutation.isPending}
+          className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
+        >
+          {mutation.isPending
+            ? "Adding…"
+            : "Add contact"}
+        </button>
+
+        <button
+          type="button"
+          onClick={onDone}
+          className="rounded-lg border border-border px-3 py-2 text-xs text-primary"
+        >
+          Done
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function AddChannelForm({
+  contact,
+  onRefresh,
+  onDone,
+}: {
+  contact: FamilyRecord["contacts"][number];
+  onRefresh: () => Promise<void>;
+  onDone: () => void;
+}) {
+  const [channelType, setChannelType] =
+    useState<ContactChannelType>("whatsapp");
+
+  const [channelValue, setChannelValue] =
+    useState("");
+
+  const [isPreferred, setIsPreferred] =
+    useState(false);
+
+  const [message, setMessage] =
+    useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const cleanValue = channelValue.trim();
+
+      if (!cleanValue) {
+        throw new Error(
+          "Channel value is required.",
+        );
+      }
+
+      if (
+        (channelType === "phone" ||
+          channelType === "whatsapp") &&
+        !/^\+[0-9]+$/.test(cleanValue)
+      ) {
+        throw new Error(
+          "Phone and WhatsApp numbers must use international format, for example +919876543210.",
+        );
+      }
+
+      const { error } = await db.rpc(
+        "add_family_contact_channel",
+        {
+          p_family_contact_id: contact.id,
+          p_channel_type: channelType,
+          p_channel_value: cleanValue,
+          p_is_preferred: isPreferred,
+        },
+      );
+
+      if (error) {
+        throw new Error(
+          error.message ??
+            "Could not add contact channel.",
+        );
+      }
+    },
+
+    onSuccess: async () => {
+      await onRefresh();
+      setMessage("Channel added successfully.");
+      setChannelValue("");
+      setIsPreferred(false);
+    },
+  });
+
+  const submit = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    setMessage(null);
+
+    try {
+      await mutation.mutateAsync();
+    } catch {
+      // Rendered below.
+    }
+  };
+
+  return (
+    <form
+      onSubmit={submit}
+      className="mt-4 rounded-xl border border-border bg-card p-4"
+    >
+      <div className="grid gap-4 md:grid-cols-[180px_1fr]">
+        <label className="block">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Channel
+          </span>
+
+          <select
+            value={channelType}
+            onChange={(event) =>
+              setChannelType(
+                event.target
+                  .value as ContactChannelType,
+              )
+            }
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
+          >
+            <option value="whatsapp">
+              WhatsApp
+            </option>
+            <option value="phone">Phone</option>
+            <option value="email">Email</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+
+        <InputField
+          label="Value"
+          value={channelValue}
+          onChange={setChannelValue}
+          placeholder={
+            channelType === "email"
+              ? "name@example.com"
+              : channelType === "phone" ||
+                  channelType === "whatsapp"
+                ? "+919876543210"
+                : "Contact detail"
+          }
+        />
+      </div>
+
+      {(channelType === "phone" ||
+        channelType === "whatsapp") && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Use international format with + and digits
+          only, for example +919876543210.
+        </p>
+      )}
+
+      <label className="mt-4 flex items-center gap-2 text-sm text-primary">
+        <input
+          type="checkbox"
+          checked={isPreferred}
+          onChange={(event) =>
+            setIsPreferred(event.target.checked)
+          }
+        />
+
+        Preferred channel for this person
+      </label>
+
+      {mutation.isError && (
+        <ErrorBox className="mt-4">
+          {getErrorMessage(mutation.error)}
+        </ErrorBox>
+      )}
+
+      {message && (
+        <SuccessBox className="mt-4">
+          {message}
+        </SuccessBox>
+      )}
+
+      <div className="mt-4 flex gap-2">
+        <button
+          type="submit"
+          disabled={mutation.isPending}
+          className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
+        >
+          {mutation.isPending
+            ? "Adding…"
+            : "Add channel"}
+        </button>
+
+        <button
+          type="button"
+          onClick={onDone}
+          className="rounded-lg border border-border px-3 py-2 text-xs text-primary"
+        >
+          Done
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function CommunicationControlsSection({
+  family,
+  editable,
+  onRefresh,
+}: {
+  family: FamilyRecord;
+  editable: boolean;
+  onRefresh?: () => Promise<void>;
+}) {
+  const controls = family.communicationControls;
+
+  const [editing, setEditing] = useState(false);
+
+  const [status, setStatus] =
+    useState<ContactabilityStatus>(
+      controls?.contactability_status ??
+        "contactable",
+    );
+
+  const [preferredChannel, setPreferredChannel] =
+    useState<ContactChannelType | "">(
+      controls?.preferred_channel_type ?? "",
+    );
+
+  const [reason, setReason] = useState(
+    controls?.do_not_contact_reason ?? "",
+  );
+
+  const [quietStart, setQuietStart] = useState(
+    toTimeInputValue(controls?.quiet_hours_start),
+  );
+
+  const [quietEnd, setQuietEnd] = useState(
+    toTimeInputValue(controls?.quiet_hours_end),
+  );
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (
+        status === "do_not_contact" &&
+        !reason.trim()
+      ) {
+        throw new Error(
+          "A reason is required when a family must not be contacted.",
+        );
+      }
+
+      if (
+        Boolean(quietStart) !== Boolean(quietEnd)
+      ) {
+        throw new Error(
+          "Quiet hours require both a start and an end time.",
+        );
+      }
+
+      const { error } = await db.rpc(
+        "update_family_communication_controls",
+        {
+          p_family_id: family.id,
+          p_contactability_status: status,
+          p_do_not_contact:
+            status === "do_not_contact",
+          p_do_not_contact_reason:
+            status === "do_not_contact"
+              ? reason.trim()
+              : null,
+          p_preferred_channel_type:
+            preferredChannel || null,
+          p_quiet_hours_start:
+            quietStart || null,
+          p_quiet_hours_end: quietEnd || null,
+        },
+      );
+
+      if (error) {
+        throw new Error(
+          error.message ??
+            "Could not update communication controls.",
+        );
+      }
+    },
+
+    onSuccess: async () => {
+      if (onRefresh) {
+        await onRefresh();
+      }
+
+      setEditing(false);
+    },
+  });
+
+  if (!editing) {
+    return (
+      <section className="mt-6 border-t border-border pt-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              Careful communication
+            </div>
+
+            <h4 className="mt-1 font-serif text-lg text-primary">
+              Communication preferences
+            </h4>
+          </div>
+
+          {editable && onRefresh && (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs text-primary hover:bg-muted"
+            >
+              {controls ? "Edit" : "Set preferences"}
+            </button>
+          )}
+        </div>
+
+        {controls ? (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Field
+              label="Contactability"
+              value={humanize(
+                controls.contactability_status,
+              )}
+            />
+
+            <Field
+              label="Preferred channel"
+              value={
+                controls.preferred_channel_type
+                  ? humanize(
+                      controls.preferred_channel_type,
+                    )
+                  : "—"
+              }
+            />
+
+            <Field
+              label="Quiet hours"
+              value={
+                controls.quiet_hours_start &&
+                controls.quiet_hours_end
+                  ? `${formatTime(
+                      controls.quiet_hours_start,
+                    )} – ${formatTime(
+                      controls.quiet_hours_end,
+                    )}`
+                  : "—"
+              }
+            />
+
+            <Field
+              label="Timezone"
+              value={controls.timezone}
+            />
+
+            {controls.do_not_contact && (
+              <div className="sm:col-span-2 lg:col-span-4">
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wider text-destructive">
+                    Do not contact
+                  </div>
+
+                  <div className="mt-1 text-sm text-destructive">
+                    {controls.do_not_contact_reason}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">
+            No explicit communication preferences have
+            been recorded yet.
+          </p>
+        )}
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-6 border-t border-border pt-5">
+      <div>
+        <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          Careful communication
+        </div>
+
+        <h4 className="mt-1 font-serif text-lg text-primary">
+          Communication preferences
+        </h4>
+      </div>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <label className="block">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Contactability
+          </span>
+
+          <select
+            value={status}
+            onChange={(event) =>
+              setStatus(
+                event.target
+                  .value as ContactabilityStatus,
+              )
+            }
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
+          >
+            <option value="contactable">
+              Contactable
+            </option>
+            <option value="limited">
+              Limited
+            </option>
+            <option value="do_not_contact">
+              Do not contact
+            </option>
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Preferred channel
+          </span>
+
+          <select
+            value={preferredChannel}
+            onChange={(event) =>
+              setPreferredChannel(
+                event.target.value as
+                  | ContactChannelType
+                  | "",
+              )
+            }
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
+          >
+            <option value="">
+              No preference
+            </option>
+            <option value="whatsapp">
+              WhatsApp
+            </option>
+            <option value="phone">Phone</option>
+            <option value="email">Email</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Quiet hours start
+          </span>
+
+          <input
+            type="time"
+            value={quietStart}
+            onChange={(event) =>
+              setQuietStart(event.target.value)
+            }
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
+          />
+        </label>
+
+        <label className="block">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Quiet hours end
+          </span>
+
+          <input
+            type="time"
+            value={quietEnd}
+            onChange={(event) =>
+              setQuietEnd(event.target.value)
+            }
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
+          />
+        </label>
+      </div>
+
+      {status === "do_not_contact" && (
+        <label className="mt-4 block">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Do not contact reason
+          </span>
+
+          <textarea
+            value={reason}
+            onChange={(event) =>
+              setReason(event.target.value)
+            }
+            rows={3}
+            placeholder="Record the family's request or reason."
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
+          />
+        </label>
+      )}
+
+      <p className="mt-3 text-xs text-muted-foreground">
+        Quiet hours are stored in Asia/Kolkata by the
+        backend. Both start and end are required when
+        quiet hours are used.
+      </p>
+
+      {mutation.isError && (
+        <ErrorBox className="mt-4">
+          {getErrorMessage(mutation.error)}
+        </ErrorBox>
+      )}
+
+      <div className="mt-4 flex gap-2">
+        <button
+          type="button"
+          onClick={() => mutation.mutate()}
+          disabled={mutation.isPending}
+          className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
+        >
+          {mutation.isPending
+            ? "Saving…"
+            : "Save preferences"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setEditing(false)}
+          disabled={mutation.isPending}
+          className="rounded-lg border border-border px-3 py-2 text-xs text-primary disabled:opacity-60"
+        >
+          Cancel
+        </button>
+      </div>
+    </section>
   );
 }
 
 function FamilyHeader({
   family,
 }: {
-  family: FamilyRow;
+  family: FamilyRecord;
 }) {
   return (
     <div className="flex items-start justify-between gap-4">
@@ -808,16 +1769,19 @@ function FamilyHeader({
 function FamilyDetails({
   family,
 }: {
-  family: FamilyRow;
+  family: FamilyRecord;
 }) {
   return (
-    <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+    <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm lg:grid-cols-4">
       <Field
         label="Family code"
         value={family.family_code}
       />
 
-      <Field label="Status" value={family.status} />
+      <Field
+        label="Status"
+        value={humanize(family.status)}
+      />
 
       <Field
         label="Created"
@@ -829,6 +1793,65 @@ function FamilyDetails({
         value={formatDate(family.updated_at)}
       />
     </div>
+  );
+}
+
+function SectionHeading({
+  eyebrow,
+  title,
+  count,
+}: {
+  eyebrow: string;
+  title: string;
+  count: number;
+}) {
+  return (
+    <div className="mb-4 flex items-end justify-between gap-4">
+      <div>
+        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          {eyebrow}
+        </div>
+
+        <h2 className="mt-1 font-serif text-2xl text-primary">
+          {title}
+        </h2>
+      </div>
+
+      <div className="text-xs text-muted-foreground">
+        {count} {count === 1 ? "family" : "families"}
+      </div>
+    </div>
+  );
+}
+
+function InputField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+
+      <input
+        type="text"
+        value={value}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+        placeholder={placeholder}
+        required
+        className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary outline-none focus:ring-1 focus:ring-primary"
+      />
+    </label>
   );
 }
 
@@ -852,6 +1875,54 @@ function Field({
   );
 }
 
+function ErrorBox({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function SuccessBox({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Something went wrong.";
+}
+
+function humanize(value: string) {
+  return value
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (character) =>
+      character.toUpperCase(),
+    );
+}
+
 function formatDate(value: string) {
   const date = new Date(value);
 
@@ -864,4 +1935,18 @@ function formatDate(value: string) {
     month: "short",
     year: "numeric",
   }).format(date);
+}
+
+function formatTime(value: string) {
+  return value.slice(0, 5);
+}
+
+function toTimeInputValue(
+  value: string | null | undefined,
+) {
+  if (!value) {
+    return "";
+  }
+
+  return value.slice(0, 5);
 }
