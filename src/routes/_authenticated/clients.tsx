@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -50,15 +50,17 @@ function ClientsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [showCreate, setShowCreate] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+
   const [displayName, setDisplayName] = useState("");
   const [sortName, setSortName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
-  const [archivingId, setArchivingId] = useState<string | null>(null);
-  const [archiveError, setArchiveError] = useState<string | null>(null);
-  const [archiveSuccess, setArchiveSuccess] = useState<string | null>(null);
+  const [changingFamilyId, setChangingFamilyId] = useState<string | null>(null);
+  const [lifecycleError, setLifecycleError] = useState<string | null>(null);
+  const [lifecycleSuccess, setLifecycleSuccess] = useState<string | null>(null);
 
   const loadFamilies = useCallback(async () => {
     setLoading(true);
@@ -99,7 +101,28 @@ function ClientsPage() {
     void loadFamilies();
   }, [loadFamilies]);
 
-  const submitCreateFamily = async (event: FormEvent<HTMLFormElement>) => {
+  const currentFamilies = families.filter(
+    (family) => family.status !== "archived" && family.status !== "merged",
+  );
+
+  const archivedFamilies = families.filter(
+    (family) => family.status === "archived",
+  );
+
+  const mergedFamilies = families.filter(
+    (family) => family.status === "merged",
+  );
+
+  const clearMessages = () => {
+    setCreateError(null);
+    setCreateSuccess(null);
+    setLifecycleError(null);
+    setLifecycleSuccess(null);
+  };
+
+  const submitCreateFamily = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
 
     const cleanDisplayName = displayName.trim();
@@ -116,10 +139,7 @@ function ClientsPage() {
     }
 
     setCreating(true);
-    setCreateError(null);
-    setCreateSuccess(null);
-    setArchiveError(null);
-    setArchiveSuccess(null);
+    clearMessages();
 
     const { data, error } = await supabase.rpc("create_family", {
       p_organization_id: ORGANIZATION_ID,
@@ -154,18 +174,15 @@ function ClientsPage() {
 
   const archiveFamily = async (family: FamilyRow) => {
     const confirmed = window.confirm(
-      `Archive ${family.display_name}?\n\nThe family record will remain in the database and can be reactivated later.`,
+      `Archive ${family.display_name}?\n\nThe family record will remain preserved and can be reactivated later.`,
     );
 
     if (!confirmed) {
       return;
     }
 
-    setArchivingId(family.id);
-    setArchiveError(null);
-    setArchiveSuccess(null);
-    setCreateError(null);
-    setCreateSuccess(null);
+    setChangingFamilyId(family.id);
+    clearMessages();
 
     const { error } = await db
       .from("families")
@@ -177,14 +194,51 @@ function ClientsPage() {
 
     if (error) {
       console.error("[families] archive failed", error);
-      setArchiveError(error.message ?? "Could not archive family.");
-      setArchivingId(null);
+      setLifecycleError(error.message ?? "Could not archive family.");
+      setChangingFamilyId(null);
       return;
     }
 
-    setArchiveSuccess(`${family.display_name} archived successfully.`);
-    setArchivingId(null);
+    setLifecycleSuccess(
+      `${family.display_name} archived successfully.`,
+    );
 
+    setChangingFamilyId(null);
+    await loadFamilies();
+  };
+
+  const reactivateFamily = async (family: FamilyRow) => {
+    const confirmed = window.confirm(
+      `Reactivate ${family.display_name}?\n\nThe family will return to the active client list.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setChangingFamilyId(family.id);
+    clearMessages();
+
+    const { error } = await db
+      .from("families")
+      .update({
+        status: "active",
+      })
+      .eq("id", family.id)
+      .eq("organization_id", ORGANIZATION_ID);
+
+    if (error) {
+      console.error("[families] reactivate failed", error);
+      setLifecycleError(error.message ?? "Could not reactivate family.");
+      setChangingFamilyId(null);
+      return;
+    }
+
+    setLifecycleSuccess(
+      `${family.display_name} reactivated successfully.`,
+    );
+
+    setChangingFamilyId(null);
     await loadFamilies();
   };
 
@@ -202,8 +256,7 @@ function ClientsPage() {
           type="button"
           onClick={() => {
             setShowCreate((current) => !current);
-            setCreateError(null);
-            setCreateSuccess(null);
+            clearMessages();
           }}
           className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
         >
@@ -227,12 +280,16 @@ function ClientsPage() {
             </h2>
 
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Create the household record first. Contact details, family members, children,
-              notes and milestones will be added through their dedicated modules.
+              Create the household record first. Contact details, family
+              members, children, notes and milestones will be added through
+              their dedicated modules.
             </p>
           </div>
 
-          <form onSubmit={submitCreateFamily} className="mt-6 space-y-4">
+          <form
+            onSubmit={submitCreateFamily}
+            className="mt-6 space-y-4"
+          >
             <label className="block">
               <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
                 Family display name
@@ -264,7 +321,9 @@ function ClientsPage() {
               <input
                 type="text"
                 value={sortName}
-                onChange={(event) => setSortName(event.target.value)}
+                onChange={(event) =>
+                  setSortName(event.target.value)
+                }
                 placeholder="Example: Mehta Family"
                 required
                 maxLength={160}
@@ -299,15 +358,19 @@ function ClientsPage() {
         </Card>
       )}
 
-      {archiveError && (
+      {lifecycleError && (
         <Card className="mb-5 border-destructive/30 p-4">
-          <p className="text-sm text-destructive">{archiveError}</p>
+          <p className="text-sm text-destructive">
+            {lifecycleError}
+          </p>
         </Card>
       )}
 
-      {archiveSuccess && (
+      {lifecycleSuccess && (
         <Card className="mb-5 p-4">
-          <p className="text-sm text-primary">{archiveSuccess}</p>
+          <p className="text-sm text-primary">
+            {lifecycleSuccess}
+          </p>
         </Card>
       )}
 
@@ -329,81 +392,290 @@ function ClientsPage() {
             We couldn&apos;t open the family records
           </p>
 
-          <p className="mt-2 text-sm text-muted-foreground">{loadError}</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {loadError}
+          </p>
         </Card>
       )}
 
       {!loading && !loadError && (
-        <div className="grid gap-5 lg:grid-cols-2">
-          {families.map((family) => (
-            <Card key={family.id} className="p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                    {family.family_code}
-                  </div>
-
-                  <h3 className="mt-1 font-serif text-xl text-primary">
-                    {family.display_name}
-                  </h3>
+        <>
+          <section>
+            <div className="mb-4 flex items-end justify-between gap-4">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Current families
                 </div>
 
-                <StatusPill tone={family.status === "active" ? "gold" : "muted"}>
-                  {family.status}
-                </StatusPill>
+                <h2 className="mt-1 font-serif text-2xl text-primary">
+                  Families in our care
+                </h2>
               </div>
 
-              <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                <Field label="Family code" value={family.family_code} />
-                <Field label="Status" value={family.status} />
-                <Field label="Created" value={formatDate(family.created_at)} />
-                <Field label="Last updated" value={formatDate(family.updated_at)} />
+              <div className="text-xs text-muted-foreground">
+                {currentFamilies.length}{" "}
+                {currentFamilies.length === 1 ? "family" : "families"}
+              </div>
+            </div>
+
+            {currentFamilies.length > 0 ? (
+              <div className="grid gap-5 lg:grid-cols-2">
+                {currentFamilies.map((family) => (
+                  <FamilyCard
+                    key={family.id}
+                    family={family}
+                    busy={changingFamilyId === family.id}
+                    onArchive={archiveFamily}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card className="p-10 text-center">
+                <p className="font-serif text-xl text-primary">
+                  No active families yet.
+                </p>
+
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Create a family above to begin a new relationship record.
+                </p>
+              </Card>
+            )}
+          </section>
+
+          <section className="mt-8">
+            <button
+              type="button"
+              onClick={() =>
+                setShowArchived((current) => !current)
+              }
+              className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-5 py-4 text-left hover:bg-muted/40"
+            >
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Historical records
+                </div>
+
+                <div className="mt-1 font-serif text-xl text-primary">
+                  Archived families
+                </div>
               </div>
 
-              <div className="mt-5 border-t border-border pt-4">
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  Contact details, family members, children, notes, milestones and booking
-                  history will appear here as their rebuilt modules are connected.
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground">
+                  {archivedFamilies.length}
+                </span>
+
+                <span className="text-sm text-primary">
+                  {showArchived ? "Hide" : "View"}
+                </span>
+              </div>
+            </button>
+
+            {showArchived && (
+              <div className="mt-5">
+                {archivedFamilies.length > 0 ? (
+                  <div className="grid gap-5 lg:grid-cols-2">
+                    {archivedFamilies.map((family) => (
+                      <ArchivedFamilyCard
+                        key={family.id}
+                        family={family}
+                        busy={changingFamilyId === family.id}
+                        onReactivate={reactivateFamily}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="p-8 text-center">
+                    <p className="font-serif text-lg text-primary">
+                      No archived families.
+                    </p>
+
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Archived family records will remain preserved here.
+                    </p>
+                  </Card>
+                )}
+              </div>
+            )}
+          </section>
+
+          {mergedFamilies.length > 0 && (
+            <section className="mt-8">
+              <div className="mb-4">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Protected history
+                </div>
+
+                <h2 className="mt-1 font-serif text-xl text-primary">
+                  Merged family records
+                </h2>
+
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Merged records are terminal and retained for historical
+                  continuity.
                 </p>
               </div>
 
-              {family.status !== "archived" && family.status !== "merged" && (
-                <div className="mt-4 border-t border-border pt-4">
-                  <button
-                    type="button"
-                    onClick={() => void archiveFamily(family)}
-                    disabled={archivingId === family.id}
-                    className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-primary hover:bg-muted disabled:opacity-60"
-                  >
-                    {archivingId === family.id
-                      ? "Archiving…"
-                      : "Archive family"}
-                  </button>
-                </div>
-              )}
-
-              {family.status === "archived" && (
-                <div className="mt-4 border-t border-border pt-4">
-                  <p className="text-xs italic text-muted-foreground">
-                    This family is archived. Its history has been preserved.
-                  </p>
-                </div>
-              )}
-            </Card>
-          ))}
-
-          {families.length === 0 && (
-            <Card className="col-span-full p-10 text-center">
-              <p className="font-serif text-xl text-primary">No families yet.</p>
-
-              <p className="mt-2 text-sm text-muted-foreground">
-                Use Create family above to begin the first family record.
-              </p>
-            </Card>
+              <div className="grid gap-5 lg:grid-cols-2">
+                {mergedFamilies.map((family) => (
+                  <MergedFamilyCard
+                    key={family.id}
+                    family={family}
+                  />
+                ))}
+              </div>
+            </section>
           )}
-        </div>
+        </>
       )}
     </AppShell>
+  );
+}
+
+function FamilyCard({
+  family,
+  busy,
+  onArchive,
+}: {
+  family: FamilyRow;
+  busy: boolean;
+  onArchive: (family: FamilyRow) => Promise<void>;
+}) {
+  return (
+    <Card className="p-6">
+      <FamilyHeader family={family} />
+
+      <FamilyDetails family={family} />
+
+      <div className="mt-5 border-t border-border pt-4">
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Contact details, family members, children, notes, milestones and
+          booking history will appear here as their rebuilt modules are
+          connected.
+        </p>
+      </div>
+
+      <div className="mt-4 border-t border-border pt-4">
+        <button
+          type="button"
+          onClick={() => void onArchive(family)}
+          disabled={busy}
+          className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-primary hover:bg-muted disabled:opacity-60"
+        >
+          {busy ? "Archiving…" : "Archive family"}
+        </button>
+      </div>
+    </Card>
+  );
+}
+
+function ArchivedFamilyCard({
+  family,
+  busy,
+  onReactivate,
+}: {
+  family: FamilyRow;
+  busy: boolean;
+  onReactivate: (family: FamilyRow) => Promise<void>;
+}) {
+  return (
+    <Card className="p-6">
+      <FamilyHeader family={family} />
+
+      <FamilyDetails family={family} />
+
+      <div className="mt-5 border-t border-border pt-4">
+        <p className="text-xs italic leading-relaxed text-muted-foreground">
+          This family is archived. Its history has been preserved.
+        </p>
+      </div>
+
+      <div className="mt-4 border-t border-border pt-4">
+        <button
+          type="button"
+          onClick={() => void onReactivate(family)}
+          disabled={busy}
+          className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-primary hover:bg-muted disabled:opacity-60"
+        >
+          {busy ? "Reactivating…" : "Reactivate family"}
+        </button>
+      </div>
+    </Card>
+  );
+}
+
+function MergedFamilyCard({
+  family,
+}: {
+  family: FamilyRow;
+}) {
+  return (
+    <Card className="p-6">
+      <FamilyHeader family={family} />
+
+      <FamilyDetails family={family} />
+
+      <div className="mt-5 border-t border-border pt-4">
+        <p className="text-xs italic leading-relaxed text-muted-foreground">
+          This family record has been merged and is preserved as terminal
+          history.
+        </p>
+      </div>
+    </Card>
+  );
+}
+
+function FamilyHeader({
+  family,
+}: {
+  family: FamilyRow;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+          {family.family_code}
+        </div>
+
+        <h3 className="mt-1 font-serif text-xl text-primary">
+          {family.display_name}
+        </h3>
+      </div>
+
+      <StatusPill tone={family.status === "active" ? "gold" : "muted"}>
+        {family.status}
+      </StatusPill>
+    </div>
+  );
+}
+
+function FamilyDetails({
+  family,
+}: {
+  family: FamilyRow;
+}) {
+  return (
+    <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+      <Field
+        label="Family code"
+        value={family.family_code}
+      />
+
+      <Field
+        label="Status"
+        value={family.status}
+      />
+
+      <Field
+        label="Created"
+        value={formatDate(family.created_at)}
+      />
+
+      <Field
+        label="Last updated"
+        value={formatDate(family.updated_at)}
+      />
+    </div>
   );
 }
 
@@ -420,7 +692,9 @@ function Field({
         {label}
       </div>
 
-      <div className="mt-0.5 text-primary">{value || "—"}</div>
+      <div className="mt-0.5 text-primary">
+        {value || "—"}
+      </div>
     </div>
   );
 }
