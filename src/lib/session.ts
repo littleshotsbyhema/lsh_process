@@ -30,7 +30,7 @@ export const roleLabels: Record<AppRole, string> = {
   accounts: "Accounts",
 };
 
-const ORGANIZATION_ID = "590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc";
+export const ORGANIZATION_ID = "590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc";
 
 type SessionState = {
   loading: boolean;
