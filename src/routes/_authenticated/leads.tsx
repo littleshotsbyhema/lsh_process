@@ -966,10 +966,19 @@ function LeadsPage() {
                       </span>
                     )}
 
+                    <Link
+                      to="/leads/$leadId"
+                      params={{ leadId: lead.id }}
+                      className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-primary"
+                    >
+                      Open workspace
+                      <ArrowRight className="h-3 w-3" />
+                    </Link>
+
                     {lead.converted_family_id ? (
                       <Link
                         to="/clients"
-                        className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-gold bg-accent px-3 py-1.5 text-xs text-primary"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-gold bg-accent px-3 py-1.5 text-xs text-primary"
                       >
                         Open family
                         <ArrowRight className="h-3 w-3" />
@@ -984,7 +993,7 @@ function LeadsPage() {
                         onClick={() =>
                           void convert(lead)
                         }
-                        className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
                       >
                         {converting ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
