@@ -63,6 +63,57 @@ type ContactabilityStatus =
   | "limited"
   | "do_not_contact";
 
+type ChildStage =
+  | "expected"
+  | "newborn"
+  | "baby"
+  | "sitter"
+  | "toddler"
+  | "child";
+
+type ChildStatus =
+  | "active"
+  | "archived";
+
+type PrivacyPreferenceType =
+  | "full_privacy"
+  | "selective_sharing"
+  | "anonymous_sharing"
+  | "portfolio_release"
+  | "decide_later";
+
+type ChildRow = {
+  id: string;
+  organization_id: string;
+  family_id: string;
+  child_reference: string;
+  first_name: string | null;
+  birth_date: string | null;
+  expected_due_date: string | null;
+  current_stage: ChildStage | null;
+  privacy_restriction: PrivacyPreferenceType | null;
+  status: ChildStatus;
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+};
+
+type MemoryProfileRow = {
+  id: string;
+  organization_id: string;
+  family_id: string;
+  child_id: string | null;
+  memory_goal: string | null;
+  story_notes: string | null;
+  emotional_tags: string[];
+  milestone_notes: string | null;
+  future_memory_notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+};
+
 type FamilyRow = {
   id: string;
   organization_id: string;
@@ -126,9 +177,18 @@ type FamilyRecord = FamilyRow & {
       channels: FamilyContactChannelRow[];
     }
   >;
+
   communicationControls:
     | FamilyCommunicationControlRow
     | null;
+
+  children: Array<
+    ChildRow & {
+      memoryProfile: MemoryProfileRow | null;
+    }
+  >;
+
+  familyMemoryProfile: MemoryProfileRow | null;
 };
 
 const db = supabase as any;
@@ -139,6 +199,8 @@ async function fetchFamilies(): Promise<FamilyRecord[]> {
     contactsResult,
     channelsResult,
     controlsResult,
+    childrenResult,
+    memoryProfilesResult,
   ] = await Promise.all([
     db
       .from("families")
@@ -221,6 +283,51 @@ async function fetchFamilies(): Promise<FamilyRecord[]> {
         ].join(","),
       )
       .eq("organization_id", ORGANIZATION_ID),
+
+    db
+      .from("children")
+      .select(
+        [
+          "id",
+          "organization_id",
+          "family_id",
+          "child_reference",
+          "first_name",
+          "birth_date",
+          "expected_due_date",
+          "current_stage",
+          "privacy_restriction",
+          "status",
+          "created_at",
+          "updated_at",
+          "archived_at",
+        ].join(","),
+      )
+      .eq("organization_id", ORGANIZATION_ID)
+      .order("created_at", { ascending: true }),
+
+    db
+      .from("memory_profiles")
+      .select(
+        [
+          "id",
+          "organization_id",
+          "family_id",
+          "child_id",
+          "memory_goal",
+          "story_notes",
+          "emotional_tags",
+          "milestone_notes",
+          "future_memory_notes",
+          "is_active",
+          "created_at",
+          "updated_at",
+          "archived_at",
+        ].join(","),
+      )
+      .eq("organization_id", ORGANIZATION_ID)
+      .eq("is_active", true)
+      .order("created_at", { ascending: true }),
   ]);
 
   if (familiesResult.error) {
@@ -251,6 +358,20 @@ async function fetchFamilies(): Promise<FamilyRecord[]> {
     );
   }
 
+  if (childrenResult.error) {
+    throw new Error(
+      childrenResult.error.message ??
+        "Could not load child records.",
+    );
+  }
+
+  if (memoryProfilesResult.error) {
+    throw new Error(
+      memoryProfilesResult.error.message ??
+        "Could not load memory profiles.",
+    );
+  }
+
   const families =
     (familiesResult.data ?? []) as FamilyRow[];
 
@@ -264,6 +385,13 @@ async function fetchFamilies(): Promise<FamilyRecord[]> {
   const controls =
     (controlsResult.data ??
       []) as FamilyCommunicationControlRow[];
+
+  const children =
+    (childrenResult.data ?? []) as ChildRow[];
+
+  const memoryProfiles =
+    (memoryProfilesResult.data ??
+      []) as MemoryProfileRow[];
 
   return families.map((family) => ({
     ...family,
@@ -283,6 +411,28 @@ async function fetchFamilies(): Promise<FamilyRecord[]> {
     communicationControls:
       controls.find(
         (control) => control.family_id === family.id,
+      ) ?? null,
+
+    children: children
+      .filter(
+        (child) => child.family_id === family.id,
+      )
+      .map((child) => ({
+        ...child,
+
+        memoryProfile:
+          memoryProfiles.find(
+            (profile) =>
+              profile.family_id === family.id &&
+              profile.child_id === child.id,
+          ) ?? null,
+      })),
+
+    familyMemoryProfile:
+      memoryProfiles.find(
+        (profile) =>
+          profile.family_id === family.id &&
+          profile.child_id === null,
       ) ?? null,
   }));
 }
@@ -790,6 +940,12 @@ function FamilyCard({
 
       <FamilyDetails family={family} />
 
+      <ChildrenMemorySection
+        family={family}
+        editable
+        onRefresh={onRefresh}
+      />
+
       <FamilyContactsSection
         family={family}
         editable
@@ -829,6 +985,11 @@ function ArchivedFamilyCard({
     <Card className="p-6">
       <FamilyHeader family={family} />
       <FamilyDetails family={family} />
+
+      <ChildrenMemorySection
+        family={family}
+        editable={false}
+      />
 
       <FamilyContactsSection
         family={family}
@@ -871,6 +1032,11 @@ function HistoricalFamilyCard({
       <FamilyHeader family={family} />
       <FamilyDetails family={family} />
 
+      <ChildrenMemorySection
+        family={family}
+        editable={false}
+      />
+
       <FamilyContactsSection
         family={family}
         editable={false}
@@ -886,6 +1052,791 @@ function HistoricalFamilyCard({
         data.
       </p>
     </Card>
+  );
+}
+
+function ChildrenMemorySection({
+  family,
+  editable,
+  onRefresh,
+}: {
+  family: FamilyRecord;
+  editable: boolean;
+  onRefresh?: () => Promise<void>;
+}) {
+  const [showAddChild, setShowAddChild] =
+    useState(false);
+
+  const activeChildren = family.children.filter(
+    (child) => child.status === "active",
+  );
+
+  const archivedChildren = family.children.filter(
+    (child) => child.status === "archived",
+  );
+
+  return (
+    <section className="mt-6 border-t border-border pt-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            Growing together
+          </div>
+
+          <h4 className="mt-1 font-serif text-lg text-primary">
+            Children & memory profiles
+          </h4>
+
+          <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
+            Keep only the child and memory information
+            that helps the studio care for this family
+            across meaningful milestones.
+          </p>
+        </div>
+
+        {editable && onRefresh && (
+          <button
+            type="button"
+            onClick={() =>
+              setShowAddChild((current) => !current)
+            }
+            className="rounded-lg border border-border px-3 py-1.5 text-xs text-primary hover:bg-muted"
+          >
+            {showAddChild ? "Close" : "Add child"}
+          </button>
+        )}
+      </div>
+
+      {showAddChild && editable && onRefresh && (
+        <AddChildForm
+          family={family}
+          onRefresh={onRefresh}
+          onDone={() => setShowAddChild(false)}
+        />
+      )}
+
+      <div className="mt-5">
+        <MemoryProfileEditor
+          family={family}
+          child={null}
+          profile={family.familyMemoryProfile}
+          editable={editable}
+          onRefresh={onRefresh}
+        />
+      </div>
+
+      <div className="mt-5 space-y-4">
+        {activeChildren.length > 0 ? (
+          activeChildren.map((child) => (
+            <ChildCard
+              key={child.id}
+              family={family}
+              child={child}
+              editable={editable}
+              onRefresh={onRefresh}
+            />
+          ))
+        ) : (
+          <div className="rounded-xl border border-border bg-muted/20 p-4">
+            <p className="text-sm text-muted-foreground">
+              No active child records yet.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {archivedChildren.length > 0 && (
+        <div className="mt-5">
+          <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            Archived child records
+          </div>
+
+          <div className="mt-3 space-y-3">
+            {archivedChildren.map((child) => (
+              <ChildCard
+                key={child.id}
+                family={family}
+                child={child}
+                editable={false}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AddChildForm({
+  family,
+  onRefresh,
+  onDone,
+}: {
+  family: FamilyRecord;
+  onRefresh: () => Promise<void>;
+  onDone: () => void;
+}) {
+  const [firstName, setFirstName] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [expectedDueDate, setExpectedDueDate] =
+    useState("");
+  const [stage, setStage] =
+    useState<ChildStage | "">("");
+  const [privacy, setPrivacy] =
+    useState<PrivacyPreferenceType | "">("");
+  const [message, setMessage] =
+    useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const cleanName = firstName.trim();
+
+      const { error } = await db.rpc(
+        "create_child",
+        {
+          p_family_id: family.id,
+          p_first_name: cleanName || null,
+          p_birth_date: birthDate || null,
+          p_expected_due_date:
+            expectedDueDate || null,
+          p_current_stage: stage || null,
+          p_privacy_restriction:
+            privacy || null,
+        },
+      );
+
+      if (error) {
+        throw new Error(
+          error.message ??
+            "Could not create child record.",
+        );
+      }
+    },
+
+    onSuccess: async () => {
+      await onRefresh();
+
+      setMessage(
+        "Child record created successfully.",
+      );
+      setFirstName("");
+      setBirthDate("");
+      setExpectedDueDate("");
+      setStage("");
+      setPrivacy("");
+    },
+  });
+
+  const submit = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    setMessage(null);
+
+    try {
+      await mutation.mutateAsync();
+    } catch {
+      // Mutation state renders the error.
+    }
+  };
+
+  return (
+    <form
+      onSubmit={submit}
+      className="mt-4 rounded-xl border border-border bg-card p-4"
+    >
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="block">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            First name
+          </span>
+
+          <input
+            type="text"
+            value={firstName}
+            onChange={(event) =>
+              setFirstName(event.target.value)
+            }
+            placeholder="Optional"
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary outline-none focus:ring-1 focus:ring-primary"
+          />
+        </label>
+
+        <label className="block">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Current stage
+          </span>
+
+          <select
+            value={stage}
+            onChange={(event) =>
+              setStage(
+                event.target.value as
+                  | ChildStage
+                  | "",
+              )
+            }
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
+          >
+            <option value="">Not set</option>
+            <option value="expected">
+              Expected
+            </option>
+            <option value="newborn">
+              Newborn
+            </option>
+            <option value="baby">Baby</option>
+            <option value="sitter">Sitter</option>
+            <option value="toddler">
+              Toddler
+            </option>
+            <option value="child">Child</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Birth date
+          </span>
+
+          <input
+            type="date"
+            value={birthDate}
+            onChange={(event) =>
+              setBirthDate(event.target.value)
+            }
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
+          />
+        </label>
+
+        <label className="block">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Expected due date
+          </span>
+
+          <input
+            type="date"
+            value={expectedDueDate}
+            onChange={(event) =>
+              setExpectedDueDate(
+                event.target.value,
+              )
+            }
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
+          />
+        </label>
+
+        <label className="block md:col-span-2">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Child-specific privacy preference
+          </span>
+
+          <select
+            value={privacy}
+            onChange={(event) =>
+              setPrivacy(
+                event.target.value as
+                  | PrivacyPreferenceType
+                  | "",
+              )
+            }
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
+          >
+            <option value="">
+              No child-specific preference recorded
+            </option>
+
+            <option value="full_privacy">
+              Full privacy
+            </option>
+
+            <option value="selective_sharing">
+              Selective sharing
+            </option>
+
+            <option value="anonymous_sharing">
+              Anonymous sharing
+            </option>
+
+            <option value="portfolio_release">
+              Portfolio release
+            </option>
+
+            <option value="decide_later">
+              Decide later
+            </option>
+          </select>
+
+          <p className="mt-1 text-xs text-muted-foreground">
+            Leaving this unset does not imply consent.
+          </p>
+        </label>
+      </div>
+
+      {mutation.isError && (
+        <ErrorBox className="mt-4">
+          {getErrorMessage(mutation.error)}
+        </ErrorBox>
+      )}
+
+      {message && (
+        <SuccessBox className="mt-4">
+          {message}
+        </SuccessBox>
+      )}
+
+      <div className="mt-4 flex gap-2">
+        <button
+          type="submit"
+          disabled={mutation.isPending}
+          className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
+        >
+          {mutation.isPending
+            ? "Creating…"
+            : "Create child"}
+        </button>
+
+        <button
+          type="button"
+          onClick={onDone}
+          disabled={mutation.isPending}
+          className="rounded-lg border border-border px-3 py-2 text-xs text-primary disabled:opacity-60"
+        >
+          Done
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function ChildCard({
+  family,
+  child,
+  editable,
+  onRefresh,
+}: {
+  family: FamilyRecord;
+  child: FamilyRecord["children"][number];
+  editable: boolean;
+  onRefresh?: () => Promise<void>;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-muted/20 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            {child.child_reference}
+          </div>
+
+          <h5 className="mt-1 font-medium text-primary">
+            {child.first_name || "Child record"}
+          </h5>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {child.current_stage && (
+            <span className="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">
+              {humanize(child.current_stage)}
+            </span>
+          )}
+
+          {child.status === "archived" && (
+            <span className="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+              Archived
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Field
+          label="Birth date"
+          value={
+            child.birth_date
+              ? formatDate(child.birth_date)
+              : "—"
+          }
+        />
+
+        <Field
+          label="Expected due date"
+          value={
+            child.expected_due_date
+              ? formatDate(
+                  child.expected_due_date,
+                )
+              : "—"
+          }
+        />
+
+        <Field
+          label="Stage"
+          value={
+            child.current_stage
+              ? humanize(child.current_stage)
+              : "—"
+          }
+        />
+
+        <Field
+          label="Privacy"
+          value={
+            child.privacy_restriction
+              ? humanize(
+                  child.privacy_restriction,
+                )
+              : "No child-specific preference"
+          }
+        />
+      </div>
+
+      <div className="mt-4">
+        <MemoryProfileEditor
+          family={family}
+          child={child}
+          profile={child.memoryProfile}
+          editable={
+            editable &&
+            child.status === "active"
+          }
+          onRefresh={onRefresh}
+        />
+      </div>
+    </div>
+  );
+}
+
+function MemoryProfileEditor({
+  family,
+  child,
+  profile,
+  editable,
+  onRefresh,
+}: {
+  family: FamilyRecord;
+  child:
+    | FamilyRecord["children"][number]
+    | null;
+  profile: MemoryProfileRow | null;
+  editable: boolean;
+  onRefresh?: () => Promise<void>;
+}) {
+  const [editing, setEditing] =
+    useState(false);
+
+  const [memoryGoal, setMemoryGoal] = useState(
+    profile?.memory_goal ?? "",
+  );
+
+  const [storyNotes, setStoryNotes] = useState(
+    profile?.story_notes ?? "",
+  );
+
+  const [emotionalTags, setEmotionalTags] =
+    useState(
+      (profile?.emotional_tags ?? []).join(", "),
+    );
+
+  const [milestoneNotes, setMilestoneNotes] =
+    useState(
+      profile?.milestone_notes ?? "",
+    );
+
+  const [futureMemoryNotes, setFutureMemoryNotes] =
+    useState(
+      profile?.future_memory_notes ?? "",
+    );
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const tags = emotionalTags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+
+      const { error } = await db.rpc(
+        "upsert_memory_profile",
+        {
+          p_family_id: family.id,
+          p_child_id: child?.id ?? null,
+          p_memory_goal:
+            memoryGoal.trim() || null,
+          p_story_notes:
+            storyNotes.trim() || null,
+          p_emotional_tags: tags,
+          p_milestone_notes:
+            milestoneNotes.trim() || null,
+          p_future_memory_notes:
+            futureMemoryNotes.trim() || null,
+        },
+      );
+
+      if (error) {
+        throw new Error(
+          error.message ??
+            "Could not save memory profile.",
+        );
+      }
+    },
+
+    onSuccess: async () => {
+      if (onRefresh) {
+        await onRefresh();
+      }
+
+      setEditing(false);
+    },
+  });
+
+  const startEditing = () => {
+    setMemoryGoal(profile?.memory_goal ?? "");
+    setStoryNotes(profile?.story_notes ?? "");
+    setEmotionalTags(
+      (profile?.emotional_tags ?? []).join(", "),
+    );
+    setMilestoneNotes(
+      profile?.milestone_notes ?? "",
+    );
+    setFutureMemoryNotes(
+      profile?.future_memory_notes ?? "",
+    );
+    setEditing(true);
+  };
+
+  if (!editing) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              {child
+                ? "Child memory profile"
+                : "Family memory profile"}
+            </div>
+
+            <h5 className="mt-1 font-serif text-base text-primary">
+              {child
+                ? child.first_name
+                  ? `${child.first_name}'s story`
+                  : "Child story"
+                : "Family story & memory goals"}
+            </h5>
+          </div>
+
+          {editable && onRefresh && (
+            <button
+              type="button"
+              onClick={startEditing}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs text-primary hover:bg-muted"
+            >
+              {profile ? "Edit" : "Add profile"}
+            </button>
+          )}
+        </div>
+
+        {profile ? (
+          <div className="mt-4 space-y-4">
+            <MemoryTextBlock
+              label="Memory goal"
+              value={profile.memory_goal}
+            />
+
+            <MemoryTextBlock
+              label="Story notes"
+              value={profile.story_notes}
+            />
+
+            <MemoryTextBlock
+              label="Milestone notes"
+              value={profile.milestone_notes}
+            />
+
+            <MemoryTextBlock
+              label="Future memory notes"
+              value={
+                profile.future_memory_notes
+              }
+            />
+
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Emotional tags
+              </div>
+
+              {profile.emotional_tags.length >
+              0 ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {profile.emotional_tags.map(
+                    (tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-border px-2 py-1 text-[10px] text-primary"
+                      >
+                        {humanize(tag)}
+                      </span>
+                    ),
+                  )}
+                </div>
+              ) : (
+                <div className="mt-1 text-sm text-muted-foreground">
+                  —
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">
+            No memory profile recorded yet.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        {child
+          ? "Child memory profile"
+          : "Family memory profile"}
+      </div>
+
+      <div className="mt-4 space-y-4">
+        <MemoryTextarea
+          label="Memory goal"
+          value={memoryGoal}
+          onChange={setMemoryGoal}
+          placeholder="What does this family most want to remember?"
+          rows={3}
+        />
+
+        <MemoryTextarea
+          label="Story notes"
+          value={storyNotes}
+          onChange={setStoryNotes}
+          placeholder="Meaningful context, relationships or story details relevant to future sessions."
+          rows={4}
+        />
+
+        <label className="block">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Emotional tags
+          </span>
+
+          <input
+            type="text"
+            value={emotionalTags}
+            onChange={(event) =>
+              setEmotionalTags(
+                event.target.value,
+              )
+            }
+            placeholder="gentle, playful, sentimental"
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary outline-none focus:ring-1 focus:ring-primary"
+          />
+
+          <p className="mt-1 text-xs text-muted-foreground">
+            Separate tags with commas.
+          </p>
+        </label>
+
+        <MemoryTextarea
+          label="Milestone notes"
+          value={milestoneNotes}
+          onChange={setMilestoneNotes}
+          placeholder="Upcoming or meaningful milestones relevant to future photography."
+          rows={3}
+        />
+
+        <MemoryTextarea
+          label="Future memory notes"
+          value={futureMemoryNotes}
+          onChange={setFutureMemoryNotes}
+          placeholder="Ideas or moments worth remembering for later."
+          rows={3}
+        />
+      </div>
+
+      {mutation.isError && (
+        <ErrorBox className="mt-4">
+          {getErrorMessage(mutation.error)}
+        </ErrorBox>
+      )}
+
+      <div className="mt-4 flex gap-2">
+        <button
+          type="button"
+          onClick={() => mutation.mutate()}
+          disabled={mutation.isPending}
+          className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
+        >
+          {mutation.isPending
+            ? "Saving…"
+            : "Save memory profile"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setEditing(false)}
+          disabled={mutation.isPending}
+          className="rounded-lg border border-border px-3 py-2 text-xs text-primary disabled:opacity-60"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MemoryTextarea({
+  label,
+  value,
+  onChange,
+  placeholder,
+  rows,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  rows: number;
+}) {
+  return (
+    <label className="block">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+
+      <textarea
+        value={value}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+        placeholder={placeholder}
+        rows={rows}
+        className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary outline-none focus:ring-1 focus:ring-primary"
+      />
+    </label>
+  );
+}
+
+function MemoryTextBlock({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null;
+}) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+
+      <div className="mt-1 whitespace-pre-wrap text-sm leading-6 text-primary">
+        {value || "—"}
+      </div>
+    </div>
   );
 }
 
