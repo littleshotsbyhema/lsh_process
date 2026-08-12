@@ -22,6 +22,7 @@ import {
   UsersRound,
   BookOpen,
   Settings as SettingsIcon,
+  BrainCircuit,
 } from "lucide-react";
 import type { AppRole } from "@/lib/session";
 
@@ -36,6 +37,12 @@ export type NavItem = {
 export const nav: NavItem[] = [
   { to: "/", label: "Dashboard", icon: Home, roles: null },
   { to: "/leads", label: "Leads", icon: Heart, roles: ["coordinator", "sales"] },
+  {
+    to: "/guide-reviews",
+    label: "Memory Guide Reviews",
+    icon: BrainCircuit,
+    roles: ["coordinator", "sales"],
+  },
   { to: "/clients", label: "Clients", icon: Users, roles: ["coordinator", "sales", "accounts"] },
   { to: "/memory", label: "Memory Profiles", icon: BookHeart, roles: null },
   { to: "/bookings", label: "Bookings", icon: CalendarHeart, roles: null },

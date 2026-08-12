@@ -1,0 +1,642 @@
+export type MemoryGuideQuestion = {
+  questionId: string;
+  stageId: string;
+  fieldKey: string;
+  prompt: string;
+  control: "single_select" | "multi_select" | "short_text" | "boolean" | "phone" | "email";
+  requirement: string;
+  options: readonly string[];
+  validation: string | null;
+  classification: string;
+};
+
+export type GuideAnswerValue = string | string[] | boolean;
+export type GuideAnswers = Record<string, GuideAnswerValue>;
+
+export const GUIDE_SCHEMA_VERSION = "v1";
+
+export const memoryGuideQuestions = [
+  {
+    questionId: "Q-001",
+    stageId: "STG-02",
+    fieldKey: "service_category",
+    prompt: "Which stage are you preserving?",
+    control: "single_select",
+    requirement: "Required",
+    options: [
+      "maternity",
+      "newborn",
+      "sitter",
+      "baby",
+      "birthday",
+      "child",
+      "family",
+      "generational",
+    ],
+    validation: null,
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-002",
+    stageId: "STG-03",
+    fieldKey: "maternity_timing",
+    prompt: "Where are you in your pregnancy journey?",
+    control: "single_select",
+    requirement: "Conditional",
+    options: ["early", "middle", "later", "not_sure"],
+    validation: null,
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-003",
+    stageId: "STG-03",
+    fieldKey: "newborn_timing",
+    prompt: "When are you hoping to photograph your baby?",
+    control: "single_select",
+    requirement: "Conditional",
+    options: ["expecting", "first_2_weeks", "first_6_weeks", "later", "not_sure"],
+    validation: null,
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-004",
+    stageId: "STG-03",
+    fieldKey: "sitter_readiness",
+    prompt: "Can your baby sit independently and safely?",
+    control: "single_select",
+    requirement: "Conditional",
+    options: ["yes", "almost", "not_yet", "not_sure"],
+    validation: null,
+    classification: "Review Trigger",
+  },
+  {
+    questionId: "Q-005",
+    stageId: "STG-04",
+    fieldKey: "emotional_goal",
+    prompt: "What matters most about this memory?",
+    control: "multi_select",
+    requirement: "Required",
+    options: [
+      "connection",
+      "tiny_details",
+      "personality",
+      "family_story",
+      "milestone",
+      "legacy",
+      "not_sure",
+    ],
+    validation: "max 3",
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-006",
+    stageId: "STG-04",
+    fieldKey: "story_note",
+    prompt: "Is there anything meaningful you want us to understand?",
+    control: "short_text",
+    requirement: "Optional",
+    options: [],
+    validation: "max 240 chars",
+    classification: "Restricted",
+  },
+  {
+    questionId: "Q-007",
+    stageId: "STG-05",
+    fieldKey: "participants",
+    prompt: "Who would you like included?",
+    control: "multi_select",
+    requirement: "Required",
+    options: [
+      "child_only",
+      "mother",
+      "father",
+      "parents",
+      "siblings",
+      "grandparents",
+      "extended_family",
+      "not_sure",
+    ],
+    validation: "max 5",
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-008",
+    stageId: "STG-05",
+    fieldKey: "participant_count",
+    prompt: "Roughly how many people may join?",
+    control: "single_select",
+    requirement: "Conditional",
+    options: ["1", "2", "3_4", "5_7", "8_plus", "not_sure"],
+    validation: null,
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-009",
+    stageId: "STG-06",
+    fieldKey: "experience_depth",
+    prompt: "How complete would you like the story to feel?",
+    control: "single_select",
+    requirement: "Required",
+    options: ["essential", "connected", "heirloom", "complete", "guide_me"],
+    validation: null,
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-010",
+    stageId: "STG-06",
+    fieldKey: "moment_variety",
+    prompt: "How much variety feels right?",
+    control: "single_select",
+    requirement: "Required",
+    options: ["simple", "some_variety", "many_chapters", "guide_me"],
+    validation: null,
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-011",
+    stageId: "STG-07",
+    fieldKey: "keepsakes",
+    prompt: "Which keepsakes matter to you?",
+    control: "multi_select",
+    requirement: "Required",
+    options: ["digital", "prints", "album", "frames", "film", "gift_copies", "undecided"],
+    validation: "max 6",
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-012",
+    stageId: "STG-07",
+    fieldKey: "album_interest",
+    prompt: "How important is an album?",
+    control: "single_select",
+    requirement: "Conditional",
+    options: ["not_needed", "nice_to_have", "important", "essential", "not_sure"],
+    validation: null,
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-013",
+    stageId: "STG-07",
+    fieldKey: "wall_art_interest",
+    prompt: "Would you like framed memories for your home?",
+    control: "single_select",
+    requirement: "Optional",
+    options: ["no", "maybe", "yes", "not_sure"],
+    validation: null,
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-014",
+    stageId: "STG-07",
+    fieldKey: "film_interest",
+    prompt: "Would a short film add meaning?",
+    control: "single_select",
+    requirement: "Optional",
+    options: ["no", "maybe", "yes", "not_sure"],
+    validation: null,
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-015",
+    stageId: "STG-08",
+    fieldKey: "styling_support",
+    prompt: "How much styling support would feel helpful?",
+    control: "single_select",
+    requirement: "Optional",
+    options: ["none", "light_guidance", "full_guidance", "not_sure"],
+    validation: null,
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-016",
+    stageId: "STG-08",
+    fieldKey: "visual_style",
+    prompt: "Which feeling draws you most?",
+    control: "multi_select",
+    requirement: "Optional",
+    options: ["minimal", "warm", "fine_art", "playful", "natural", "classic", "guide_me"],
+    validation: "max 2",
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-017",
+    stageId: "STG-09",
+    fieldKey: "setup_preference",
+    prompt: "How would you like the session to unfold?",
+    control: "single_select",
+    requirement: "Required",
+    options: ["one_refined_setup", "few_varied_setups", "story_chapters", "guide_me"],
+    validation: null,
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-018",
+    stageId: "STG-10",
+    fieldKey: "budget_band",
+    prompt: "Which investment range feels comfortable?",
+    control: "single_select",
+    requirement: "Optional",
+    options: [
+      "essential_range",
+      "signature_range",
+      "heirloom_range",
+      "complete_range",
+      "prefer_guidance",
+      "skip",
+    ],
+    validation: null,
+    classification: "Sensitive",
+  },
+  {
+    questionId: "Q-019",
+    stageId: "STG-11",
+    fieldKey: "privacy_choice",
+    prompt: "How would you like your images handled?",
+    control: "single_select",
+    requirement: "Required",
+    options: [
+      "full_privacy",
+      "selective_sharing",
+      "anonymous_sharing",
+      "portfolio_release",
+      "decide_later",
+    ],
+    validation: null,
+    classification: "Trust Critical",
+  },
+  {
+    questionId: "Q-020",
+    stageId: "STG-11",
+    fieldKey: "privacy_note",
+    prompt: "Would you like to discuss privacy privately?",
+    control: "boolean",
+    requirement: "Optional",
+    options: ["yes", "no"],
+    validation: null,
+    classification: "Restricted",
+  },
+  {
+    questionId: "Q-021",
+    stageId: "STG-12",
+    fieldKey: "comfort_needs",
+    prompt: "Should we plan for any comfort or access needs?",
+    control: "multi_select",
+    requirement: "Optional",
+    options: [
+      "mobility",
+      "pregnancy_comfort",
+      "sensory",
+      "feeding_breaks",
+      "settling_breaks",
+      "quiet_environment",
+      "private_discussion",
+      "other",
+      "none",
+    ],
+    validation: "max 4",
+    classification: "Restricted",
+  },
+  {
+    questionId: "Q-022",
+    stageId: "STG-12",
+    fieldKey: "safety_note",
+    prompt: "Share only what the team needs to plan safely.",
+    control: "short_text",
+    requirement: "Optional",
+    options: [],
+    validation: "max 300 chars",
+    classification: "Restricted",
+  },
+  {
+    questionId: "Q-023",
+    stageId: "STG-13",
+    fieldKey: "location_preference",
+    prompt: "Where would you prefer the experience?",
+    control: "single_select",
+    requirement: "Required",
+    options: ["studio", "outdoor", "home", "undecided", "custom_review"],
+    validation: null,
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-024",
+    stageId: "STG-13",
+    fieldKey: "travel_area",
+    prompt: "Which area should we consider?",
+    control: "short_text",
+    requirement: "Conditional",
+    options: [],
+    validation: "max 80 chars",
+    classification: "Sensitive",
+  },
+  {
+    questionId: "Q-025",
+    stageId: "STG-14",
+    fieldKey: "contact_name",
+    prompt: "What should we call you?",
+    control: "short_text",
+    requirement: "Required for handoff",
+    options: [],
+    validation: "max 80 chars",
+    classification: "PII",
+  },
+  {
+    questionId: "Q-026",
+    stageId: "STG-14",
+    fieldKey: "contact_phone",
+    prompt: "What is the best mobile number?",
+    control: "phone",
+    requirement: "Required for handoff",
+    options: [],
+    validation: "E.164/India validation",
+    classification: "PII",
+  },
+  {
+    questionId: "Q-027",
+    stageId: "STG-14",
+    fieldKey: "contact_email",
+    prompt: "Where may we send your guide?",
+    control: "email",
+    requirement: "Optional",
+    options: [],
+    validation: "email validation",
+    classification: "PII",
+  },
+  {
+    questionId: "Q-028",
+    stageId: "STG-14",
+    fieldKey: "contact_permission",
+    prompt: "May we contact you about this enquiry?",
+    control: "boolean",
+    requirement: "Required for handoff",
+    options: ["yes", "no"],
+    validation: null,
+    classification: "Trust Critical",
+  },
+  {
+    questionId: "Q-029",
+    stageId: "STG-14",
+    fieldKey: "preferred_contact",
+    prompt: "How would you prefer us to respond?",
+    control: "single_select",
+    requirement: "Required for handoff",
+    options: ["whatsapp", "phone", "email", "no_preference"],
+    validation: null,
+    classification: "Standard",
+  },
+  {
+    questionId: "Q-030",
+    stageId: "STG-16",
+    fieldKey: "next_action",
+    prompt: "What would you like to do next?",
+    control: "single_select",
+    requirement: "Required",
+    options: ["book_consultation", "request_quote", "whatsapp", "save_for_later", "human_review"],
+    validation: null,
+    classification: "Standard",
+  },
+] as const satisfies readonly MemoryGuideQuestion[];
+
+export const guideStages = [
+  {
+    id: "STG-02",
+    title: "Your chapter",
+    eyebrow: "Life stage",
+    description: "Start with the moment you want to preserve.",
+  },
+  {
+    id: "STG-03",
+    title: "Timing and readiness",
+    eyebrow: "Timing",
+    description: "We use broad timing only to guide the experience — never to give medical advice.",
+  },
+  {
+    id: "STG-04",
+    title: "What matters most",
+    eyebrow: "Memory goal",
+    description: "Tell us which parts of this chapter you most want to remember.",
+  },
+  {
+    id: "STG-05",
+    title: "Who belongs in the story",
+    eyebrow: "Family",
+    description: "No names are needed here; broad participation is enough.",
+  },
+  {
+    id: "STG-06",
+    title: "How complete should it feel?",
+    eyebrow: "Story depth",
+    description: "Choose the depth and variety that feel right, not the biggest package.",
+  },
+  {
+    id: "STG-07",
+    title: "How you want to keep it",
+    eyebrow: "Keepsakes",
+    description:
+      "Digital memories, albums, frames and film can guide fit without forcing an upgrade.",
+  },
+  {
+    id: "STG-08",
+    title: "Styling support",
+    eyebrow: "Preparation",
+    description: "Choose only the amount of creative support that would feel helpful.",
+  },
+  {
+    id: "STG-09",
+    title: "Session rhythm",
+    eyebrow: "Setups",
+    description: "A focused setup can be just as meaningful as a larger story.",
+  },
+  {
+    id: "STG-10",
+    title: "Investment comfort",
+    eyebrow: "Budget",
+    description:
+      "Optional and private. This prevents unsuitable recommendations; it never decides the result by itself.",
+  },
+  {
+    id: "STG-11",
+    title: "Your privacy preference",
+    eyebrow: "Privacy",
+    description:
+      "Your family memories are private by default. This preference is not image-use consent.",
+  },
+  {
+    id: "STG-12",
+    title: "Comfort and care",
+    eyebrow: "Safety",
+    description:
+      "Share only what the team needs to prepare with care. You can ask to discuss anything privately.",
+  },
+  {
+    id: "STG-13",
+    title: "Where it may happen",
+    eyebrow: "Location",
+    description: "A broad location choice is enough; we do not collect a home address here.",
+  },
+  {
+    id: "STG-14",
+    title: "Would you like a human follow-up?",
+    eyebrow: "Contact",
+    description:
+      "Contact details are optional for the guide. We only create a CRM handoff when you explicitly allow enquiry contact.",
+  },
+] as const;
+
+export const recommendationInputFields = memoryGuideQuestions
+  .filter((question) => !["STG-14", "STG-16"].includes(question.stageId))
+  .map((question) => question.fieldKey);
+
+export const contactFields = [
+  "contact_name",
+  "contact_phone",
+  "contact_email",
+  "contact_permission",
+  "preferred_contact",
+] as const;
+
+export function questionsForStage(stageId: string, answers: GuideAnswers) {
+  return memoryGuideQuestions.filter(
+    (question) => question.stageId === stageId && isQuestionRelevant(question.fieldKey, answers),
+  );
+}
+
+export function isQuestionRelevant(fieldKey: string, answers: GuideAnswers) {
+  const service = answers.service_category;
+  if (fieldKey === "maternity_timing") return service === "maternity";
+  if (fieldKey === "newborn_timing") return service === "newborn";
+  if (fieldKey === "sitter_readiness") return service === "sitter";
+  if (fieldKey === "participant_count") {
+    const participants = Array.isArray(answers.participants) ? answers.participants : [];
+    return participants.some((value) =>
+      ["siblings", "grandparents", "extended_family", "not_sure"].includes(value),
+    );
+  }
+  if (fieldKey === "album_interest") {
+    const keepsakes = Array.isArray(answers.keepsakes) ? answers.keepsakes : [];
+    return keepsakes.includes("album") || keepsakes.includes("undecided");
+  }
+  if (fieldKey === "travel_area")
+    return ["outdoor", "home", "custom_review"].includes(String(answers.location_preference ?? ""));
+  return true;
+}
+
+export function maxSelections(question: MemoryGuideQuestion) {
+  const match = question.validation?.match(/^max (\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
+const optionLabels: Record<string, string> = {
+  maternity: "I am expecting",
+  newborn: "My baby just arrived",
+  sitter: "My baby is sitting",
+  baby: "Baby milestone",
+  birthday: "Birthday",
+  child: "Childhood",
+  family: "Family portrait",
+  generational: "Generational portrait",
+  early: "Early pregnancy",
+  middle: "Middle pregnancy",
+  later: "Later pregnancy",
+  not_sure: "I’m not sure",
+  expecting: "Baby is still expected",
+  first_2_weeks: "First 2 weeks",
+  first_6_weeks: "First 6 weeks",
+  yes: "Yes",
+  no: "No",
+  almost: "Almost",
+  not_yet: "Not yet",
+  connection: "Connection",
+  tiny_details: "Tiny details",
+  personality: "Personality",
+  family_story: "Family story",
+  milestone: "Milestone",
+  legacy: "Legacy",
+  child_only: "Child only",
+  mother: "Mother",
+  father: "Father",
+  parents: "Parents",
+  siblings: "Siblings",
+  grandparents: "Grandparents",
+  extended_family: "Extended family",
+  "1": "1 person",
+  "2": "2 people",
+  "3_4": "3–4 people",
+  "5_7": "5–7 people",
+  "8_plus": "8+ people",
+  connected: "Connection and family",
+  heirloom: "Full story and heirlooms",
+  complete: "Complete legacy experience",
+  guide_me: "Guide me",
+  simple: "One focused story",
+  some_variety: "Some variety",
+  many_chapters: "Many chapters",
+  digital: "Digital images",
+  prints: "Prints",
+  album: "Album",
+  frames: "Frames / wall art",
+  film: "Cinematic film",
+  gift_copies: "Gift copies",
+  undecided: "Undecided",
+  not_needed: "Not needed",
+  nice_to_have: "Nice to have",
+  important: "Important",
+  essential: "Essential",
+  none: "None",
+  light_guidance: "Light guidance",
+  full_guidance: "Full guidance",
+  minimal: "Minimal",
+  warm: "Warm",
+  fine_art: "Fine art",
+  playful: "Playful",
+  natural: "Natural",
+  classic: "Classic",
+  one_refined_setup: "One refined setup",
+  few_varied_setups: "A few varied setups",
+  story_chapters: "Story chapters",
+  essential_range: "Essential range",
+  signature_range: "Signature range",
+  heirloom_range: "Heirloom range",
+  complete_range: "Complete range",
+  prefer_guidance: "Show me the options first",
+  skip: "Prefer not to say",
+  full_privacy: "Full privacy",
+  selective_sharing: "Selective sharing",
+  anonymous_sharing: "Anonymous sharing",
+  portfolio_release: "Portfolio release preference",
+  decide_later: "Decide later",
+  mobility: "Mobility support",
+  pregnancy_comfort: "Pregnancy comfort",
+  sensory: "Sensory considerations",
+  feeding_breaks: "Feeding breaks",
+  settling_breaks: "Settling breaks",
+  quiet_environment: "Quiet environment",
+  private_discussion: "Discuss privately",
+  other: "Other",
+  studio: "Little Shots studio",
+  outdoor: "Outdoor",
+  home: "Home",
+  custom_review: "Special / custom location",
+  whatsapp: "WhatsApp",
+  phone: "Phone",
+  email: "Email",
+  no_preference: "No preference",
+  book_consultation: "Book a consultation",
+  request_quote: "Request a quote",
+  save_for_later: "Save for later",
+  human_review: "Ask for a human review",
+};
+
+const fieldOptionLabels: Record<string, string> = {
+  "experience_depth:essential": "Simple and meaningful",
+  "album_interest:essential": "Essential",
+};
+
+export function optionLabel(value: string, fieldKey?: string) {
+  if (fieldKey && fieldOptionLabels[`${fieldKey}:${value}`])
+    return fieldOptionLabels[`${fieldKey}:${value}`];
+  return (
+    optionLabels[value] ??
+    value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
+  );
+}
