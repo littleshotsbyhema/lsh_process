@@ -1,9 +1,9 @@
 # Little Shots by Hema OS — Sprint Master Register
 
-**Project:** LSH - Active / Memory Keeper OS  
-**Repository:** `Little-Shots-by-Hema-OS/memory-keeper-os`  
-**Primary release branch:** `architecture-rebuild`  
-**Register version:** 1.0  
+**Project:** LSH - Active / Memory Keeper OS
+**Repository:** `Little-Shots-by-Hema-OS/memory-keeper-os`
+**Primary release branch:** `architecture-rebuild`
+**Register version:** 1.0
 **Last updated:** 2026-08-12
 
 ---
@@ -529,4 +529,3 @@ As of 2026-08-12:
 - **Latest Production DB migration:** `20260811150000_sprint7_ai_memory_guide_foundation.sql`
 - **Next sprint:** Sprint 8 — Packages, Quotations & Booking Conversion Foundation
 - **Sprint 8 implementation:** Not started
-
