@@ -1,146 +1,268 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
+
 import { AppShell, Card, PageHeader } from "@/components/AppShell";
-import { packageTiers, sessionTypes } from "@/lib/mock-data";
-import { useMemo, useState } from "react";
+import {
+  listCommercialCatalogue,
+  type CommercialCatalogueAddon,
+  type CommercialCataloguePackage,
+  type CommercialPackageTier,
+} from "@/lib/commercial.functions";
 
 export const Route = createFileRoute("/_authenticated/packages")({
   head: () => ({
     meta: [
-      { title: "Package Recommender · Little Moments OS" },
+      {
+        title: "Package Catalogue · Little Moments OS",
+      },
       {
         name: "description",
-        content: "Recommend Bronze to Emerald packages based on each family's storytelling needs.",
+        content: "Authoritative commercial catalogue for Maternity, Newborn and Sitter sessions.",
       },
-      { property: "og:title", content: "Package Recommender · Little Moments OS" },
+      {
+        property: "og:title",
+        content: "Package Catalogue · Little Moments OS",
+      },
       {
         property: "og:description",
-        content: "Recommend Bronze to Emerald packages based on each family's storytelling needs.",
+        content: "Authoritative commercial catalogue for Maternity, Newborn and Sitter sessions.",
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      {
+        property: "og:type",
+        content: "website",
+      },
+      {
+        name: "twitter:card",
+        content: "summary",
+      },
     ],
   }),
   component: PackagesPage,
 });
 
-const goalOptions = [
-  { id: "simple", label: "A simple, treasured memory" },
-  { id: "connection", label: "Baby / mother + family connection" },
-  { id: "album", label: "Album or fuller story to keep on the shelf" },
-  { id: "legacy", label: "Cinematic reel, album, frame — full legacy" },
+const categories = [
+  {
+    key: "maternity",
+    label: "Maternity",
+  },
+  {
+    key: "newborn",
+    label: "Newborn",
+  },
+  {
+    key: "sitter",
+    label: "Sitter",
+  },
 ] as const;
 
-function recommend(goal: string) {
-  if (goal === "legacy") return "Emerald";
-  if (goal === "album") return "Diamond";
-  if (goal === "connection") return "Gold";
-  return "Bronze";
+type ServiceCategory = (typeof categories)[number]["key"];
+
+const tierLabels: Record<CommercialPackageTier, string> = {
+  bronze: "Bronze",
+  gold: "Gold",
+  diamond: "Diamond",
+  emerald: "Emerald",
+};
+
+function formatInr(value: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function addonPrice(addon: CommercialCatalogueAddon) {
+  if (addon.pricingType === "fixed_amount" && addon.amountInr !== null) {
+    return formatInr(addon.amountInr);
+  }
+
+  if (addon.pricingType === "percentage" && addon.percentageValue !== null) {
+    return `${addon.percentageValue}%`;
+  }
+
+  return "Quoted separately";
+}
+
+function packageScope(addon: CommercialCatalogueAddon) {
+  if (addon.applicablePackageKeys.length === 0) {
+    return "Category-wide";
+  }
+
+  return addon.applicablePackageKeys
+    .map((key) => {
+      const tier = key.split("_").at(-1);
+
+      if (tier === "bronze" || tier === "gold" || tier === "diamond" || tier === "emerald") {
+        return tierLabels[tier];
+      }
+
+      return key;
+    })
+    .join(" · ");
+}
+
+function PackageCard({ item }: { item: CommercialCataloguePackage }) {
+  return (
+    <Card className="p-6">
+      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+        {tierLabels[item.tier]}
+      </div>
+
+      <h3 className="mt-1 font-serif text-2xl text-primary">{item.publicName}</h3>
+
+      <div className="mt-4">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">List price</div>
+        <div className="mt-1 font-serif text-2xl text-primary">{formatInr(item.listPriceInr)}</div>
+      </div>
+
+      <ul className="mt-5 space-y-2 text-sm text-primary">
+        {item.inclusions.map((inclusion) => (
+          <li key={inclusion.id} className="flex gap-2">
+            <span className="text-gold">•</span>
+            <span>
+              {inclusion.label}
+              {inclusion.description ? (
+                <span className="block text-xs text-muted-foreground">{inclusion.description}</span>
+              ) : null}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-5 border-t border-border pt-4 text-[10px] uppercase tracking-wider text-muted-foreground">
+        Catalogue v{item.versionNumber}
+      </div>
+    </Card>
+  );
 }
 
 function PackagesPage() {
-  const [session, setSession] = useState<string>("Newborn");
-  const [goal, setGoal] = useState<string>("connection");
-  const recommended = useMemo(() => recommend(goal), [goal]);
+  const [category, setCategory] = useState<ServiceCategory>("newborn");
+
+  const catalogueQuery = useQuery({
+    queryKey: ["commercial-catalogue"],
+    queryFn: () => listCommercialCatalogue(),
+  });
+
+  const packages =
+    catalogueQuery.data?.packages.filter((item) => item.serviceCategory === category) ?? [];
+
+  const addons =
+    catalogueQuery.data?.addons.filter((item) =>
+      item.applicableServiceCategories.includes(category),
+    ) ?? [];
 
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Recommendation"
-        title="Package Recommender"
-        subtitle="Help families find the package that protects the moment they actually want to keep."
-        quote="Sell the memory, never the megapixel."
+        eyebrow="Commercial catalogue"
+        title="Packages"
+        subtitle="Use the approved catalogue as the commercial source of truth for every family."
+        quote="Because these little moments become everything."
       />
 
-      <Card className="p-6 mb-8">
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
-              Session category
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(["Maternity", "Newborn", "Sitter"] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSession(s)}
-                  className={`px-4 py-2 rounded-full text-sm border transition-all ${
-                    session === s
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card text-primary border-border hover:bg-muted"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Categories shown: Maternity, Newborn, Sitter (also available for Baby, Child, Family).
-            </p>
-          </div>
-          <div>
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
-              What does this family want to keep?
-            </div>
-            <div className="space-y-2">
-              {goalOptions.map((g) => (
-                <label
-                  key={g.id}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm border cursor-pointer transition-all ${
-                    goal === g.id ? "bg-accent border-gold" : "border-border hover:bg-muted"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="goal"
-                    checked={goal === g.id}
-                    onChange={() => setGoal(g.id)}
-                    className="accent-[var(--gold)]"
-                  />
-                  <span className="text-primary">{g.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+      <Card className="mb-8 p-6">
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+          Session category
         </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {categories.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setCategory(item.key)}
+              className={`rounded-full border px-4 py-2 text-sm transition-all ${
+                category === item.key
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card text-primary hover:bg-muted"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          Only Maternity, Newborn and Sitter currently have approved commercial catalogue pricing.
+        </p>
       </Card>
 
-      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5">
-        {packageTiers.map((p) => {
-          const isRec = p.tier === recommended;
-          return (
-            <Card
-              key={p.tier}
-              className={`p-6 relative ${isRec ? "border-gold ring-2 ring-[oklch(0.85_0.08_80)] bg-[var(--gradient-warm)]" : ""}`}
-            >
-              {isRec && (
-                <span className="absolute -top-3 left-6 bg-[var(--gradient-gold)] text-primary text-[10px] uppercase tracking-wider px-3 py-1 rounded-full shadow-[var(--shadow-soft)]">
-                  Recommended
-                </span>
-              )}
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                {p.tier}
-              </div>
-              <h3 className="font-serif text-2xl text-primary mt-1">{p.name}</h3>
-              <p className="text-sm text-primary/80 italic mt-2">{p.blurb}</p>
-              <p className="text-xs text-muted-foreground mt-3">Best for: {p.fitFor}</p>
-              <ul className="mt-4 space-y-1.5 text-sm text-primary">
-                {p.includes.map((i) => (
-                  <li key={i} className="flex gap-2">
-                    <span className="text-gold">•</span>
-                    {i}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-4 pt-4 border-t border-border text-[10px] uppercase tracking-wider text-muted-foreground">
-                Available for {session}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+      {catalogueQuery.isPending ? (
+        <Card className="p-8">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading approved catalogue…
+          </div>
+        </Card>
+      ) : catalogueQuery.isError ? (
+        <Card className="p-8">
+          <div className="text-sm text-destructive">
+            Unable to load the commercial catalogue:{" "}
+            {catalogueQuery.error instanceof Error ? catalogueQuery.error.message : "Unknown error"}
+          </div>
+        </Card>
+      ) : (
+        <>
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {packages.map((item) => (
+              <PackageCard key={item.id} item={item} />
+            ))}
+          </div>
 
-      <p className="text-[11px] text-muted-foreground mt-6">
-        Session categories supported in the engine: {sessionTypes.join(" · ")}.
-      </p>
+          {packages.length === 0 ? (
+            <Card className="p-8">
+              <p className="text-sm text-muted-foreground">
+                No current approved packages are available for this category.
+              </p>
+            </Card>
+          ) : null}
+
+          <div className="mt-10">
+            <div className="mb-4">
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Structured add-ons
+              </div>
+              <h2 className="mt-1 font-serif text-2xl text-primary">Approved additions</h2>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {addons.map((addon) => (
+                <Card key={addon.id} className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="font-medium text-primary">{addon.publicName}</h3>
+
+                      {addon.description ? (
+                        <p className="mt-1 text-xs text-muted-foreground">{addon.description}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="shrink-0 text-sm font-medium text-primary">
+                      {addonPrice(addon)}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 border-t border-border pt-3 text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {packageScope(addon)}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          <Card className="mt-8 p-5">
+            <p className="text-xs leading-5 text-muted-foreground">
+              Prices shown here are authoritative catalogue list prices. Source-document promotional
+              “Offer Price” values are not applied automatically. Any commercial override must use
+              the separately authorized pricing path.
+            </p>
+          </Card>
+        </>
+      )}
     </AppShell>
   );
 }
