@@ -1,111 +1,81 @@
-import { useStore } from "@/store/useStore";
-import { journeyStages, type JourneyStage } from "@/lib/mock-data";
-import { handle } from "@/lib/handle";
-import { can } from "@/lib/access";
-import { useSession } from "@/lib/session";
 import { Check, Circle } from "lucide-react";
 
-export function JourneyPipeline({ bookingId }: { bookingId: string }) {
-  const booking = useStore((s) => s.bookings.find((b) => b.id === bookingId));
-  const setJourneyStage = useStore((s) => s.setJourneyStage);
-  const requestReview = useStore((s) => s.requestReview);
-  const skipAftercare = useStore((s) => s.skipAftercare);
-  const { roles } = useSession();
-  const mayAdvance = can("pipeline.advance", roles);
-  if (!booking) return null;
+import type { BookingJourneyStageRow } from "@/lib/booking.functions";
 
-  const currentIdx = journeyStages.indexOf(booking.journeyStage);
+export function JourneyPipeline({
+  stages,
+  currentStageId,
+  version,
+}: {
+  stages: BookingJourneyStageRow[];
+  currentStageId: string | null;
+  version?: number | null;
+}) {
+  const orderedStages = [...stages].sort((a, b) => a.stage_order - b.stage_order);
+
+  const currentStage = orderedStages.find((stage) => stage.id === currentStageId) ?? null;
+
+  const currentOrder = currentStage?.stage_order ?? 0;
 
   return (
-    <div className="mt-5 rounded-xl border border-border bg-[var(--gradient-warm)]/60 px-4 py-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <div className="rounded-xl border border-border bg-[var(--gradient-warm)]/60 px-4 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Client Journey Pipeline
+            Client Journey
           </div>
-          <div className="font-serif text-base text-primary mt-0.5">
-            {booking.journeyStage}{" "}
-            <span className="text-xs text-muted-foreground">
-              · {currentIdx + 1}/{journeyStages.length}
-            </span>
+
+          <div className="mt-1 font-serif text-base text-primary">
+            {currentStage?.label ?? "Journey state unavailable"}
+
+            {currentStage ? (
+              <span className="ml-2 font-sans text-xs text-muted-foreground">
+                {currentStage.stage_order}/{orderedStages.length}
+              </span>
+            ) : null}
           </div>
+
+          {version ? (
+            <div className="mt-1 text-[11px] text-muted-foreground">Journey version {version}</div>
+          ) : null}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <select
-            value={booking.journeyStage}
-            disabled={!mayAdvance}
-            onChange={(e) => handle(setJourneyStage(bookingId, e.target.value as JourneyStage))}
-            className="text-xs bg-card text-primary border border-gold rounded-lg px-2.5 py-1.5 disabled:opacity-50"
-          >
-            {journeyStages.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-          {mayAdvance && currentIdx < journeyStages.length - 1 && (
-            <button
-              onClick={() => handle(setJourneyStage(bookingId, journeyStages[currentIdx + 1]))}
-              className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground"
-            >
-              Advance →
-            </button>
-          )}
-        </div>
+
+        <p className="max-w-lg text-[11px] leading-5 text-muted-foreground">
+          This journey is read-only. Stage changes require an authoritative backend transition path
+          and are not simulated in the browser.
+        </p>
       </div>
 
-      {!mayAdvance && (
-        <p className="mb-3 text-[11px] italic text-muted-foreground">
-          Only a Founder or Client Coordinator can move a family's journey stage.
-        </p>
-      )}
+      <ol className="mt-4 flex flex-wrap gap-1.5">
+        {orderedStages.map((stage) => {
+          const done = stage.stage_order < currentOrder;
+          const current = stage.id === currentStageId;
 
-      <ol className="flex flex-wrap gap-1.5">
-        {journeyStages.map((s, i) => {
-          const done = i < currentIdx;
-          const current = i === currentIdx;
           return (
             <li
-              key={s}
-              className={`flex items-center gap-1.5 text-[10.5px] px-2 py-1 rounded-full border ${
+              key={stage.id}
+              className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10.5px] ${
                 current
-                  ? "bg-[var(--gradient-gold)] text-primary border-gold"
+                  ? "border-gold bg-[var(--gradient-gold)] text-primary"
                   : done
-                    ? "bg-card text-primary/80 border-border"
-                    : "bg-transparent text-muted-foreground border-border/60"
+                    ? "border-border bg-card text-primary/80"
+                    : "border-border/60 bg-transparent text-muted-foreground"
               }`}
-              title={s}
+              title={`${stage.stage_order}. ${stage.label}`}
             >
               {done ? (
                 <Check className="h-2.5 w-2.5" />
               ) : (
                 <Circle className={`h-2 w-2 ${current ? "fill-gold text-gold" : ""}`} />
               )}
-              <span>{s}</span>
+
+              <span>
+                {stage.stage_order}. {stage.label}
+              </span>
             </li>
           );
         })}
       </ol>
-
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => handle(requestReview(bookingId))}
-          disabled={booking.reviewRequested || !can("reviews.write", roles)}
-          className="text-[11px] px-3 py-1.5 rounded-lg border border-border bg-card text-primary disabled:opacity-40"
-        >
-          {booking.reviewRequested ? "Review requested ✓" : "Request review"}
-        </button>
-        <button
-          onClick={() => {
-            const reason = window.prompt("Reason to intentionally skip aftercare for this family?");
-            if (reason) handle(skipAftercare(bookingId, reason));
-          }}
-          disabled={!!booking.aftercareSkipReason || !mayAdvance}
-          className="text-[11px] px-3 py-1.5 rounded-lg border border-border bg-card text-primary disabled:opacity-40"
-        >
-          {booking.aftercareSkipReason
-            ? `Aftercare skipped: ${booking.aftercareSkipReason}`
-            : "Skip aftercare with reason"}
-        </button>
-      </div>
     </div>
   );
 }
