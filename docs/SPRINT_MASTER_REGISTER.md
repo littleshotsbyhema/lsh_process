@@ -42,9 +42,9 @@ Sprint 6 and Sprint 7 have stronger explicit sprint/release boundaries in the im
 | Sprint 5 | Leads & CRM Foundation | Complete | Released |
 | Sprint 6 | Lead Workspace & Sales Operations | Complete | Released |
 | Sprint 7 | AI Memory Guide Core Flow & Recommendation Engine | Complete | Released |
-| Sprint 8 | Packages, Quotations & Booking Conversion Foundation | Release candidate validated | Not released |
+| Sprint 8 | Packages, Quotations & Booking Conversion Foundation | Complete | Released |
 
-Current position: **Sprint 7 remains the latest closed Production sprint. Sprint 8 implementation is complete locally, release-candidate validation is clean, and Production release is pending.**
+Current position: **Sprint 8 is closed in Production. The authoritative commercial catalogue, quotation workflow, booking conversion boundary and canonical journey foundation are released.**
 
 ---
 
@@ -400,7 +400,7 @@ Vercel runtime check after smoke:
 
 ## Status
 
-**IMPLEMENTATION COMPLETE / RELEASE CANDIDATE VALIDATED / NOT PRODUCTION RELEASED**
+**COMPLETE / PRODUCTION RELEASED / CLOSED**
 
 ## Objective
 
@@ -590,16 +590,46 @@ The Production release commit is intentionally not recorded yet because Sprint 8
 
 ## Production state
 
-**NOT RELEASED**
+**PRODUCTION RELEASED / CLOSED**
 
-At the final local gate:
+Production rollout completed on 2026-08-13.
 
-- `architecture-rebuild` was 8 commits ahead of `origin/architecture-rebuild`;
-- no Sprint 8 migration had been pushed to Production;
-- no Sprint 8 application deployment had been promoted to Production;
-- Sprint 7 remains the latest closed Production sprint.
+Database release:
 
-Production release requires a separate controlled rollout and post-deployment validation.
+- `20260812122822_sprint8_commercial_foundation.sql` applied;
+- `20260812125649_sprint8_quotations_foundation.sql` applied;
+- `20260812131648_sprint8_booking_conversion_foundation.sql` applied;
+- linked Production migration history verified Local = Remote through all three Sprint 8 migrations;
+- Production database invariants verified after migration:
+  - 12 commercial packages;
+  - 12 commercial package versions;
+  - 16 commercial add-ons;
+  - 16 commercial add-on versions;
+  - 95 package inclusions;
+  - 21 canonical booking journey stages;
+  - 0 quotations and quotation line items at release;
+  - 0 bookings, journey states and booking transitions at release;
+- RLS and FORCE RLS verified on the new commercial, quotation and booking tables;
+- `create_quotation`, `transition_quotation` and dedicated `accept_quotation(uuid)` functions verified in Production.
+
+Application release:
+
+- Production application release commit: `73d12bf070a3148f624598b1c124f1b33f700da4`;
+- Vercel Production deployment reached `READY`;
+- Production aliases were attached successfully;
+- Production root returned HTTP 200;
+- authenticated Production smoke passed for:
+  - Studio Control Room;
+  - Packages;
+  - Quote Builder;
+  - Bookings;
+  - Pipeline;
+  - direct contained `/privacy` route;
+- no Production runtime error clusters were found after deployment and authenticated smoke.
+
+Production smoke confirmed that no Sprint 8 quotation or booking test data was created during release validation.
+
+The Quote Builder subject selector exposed two historical test/demo-named CRM records (`Sprint 6 E2E Parent` and `Demo Sharma Family`). These pre-existing lead records are separate Production data-hygiene debt and are not Sprint 8 quotation or booking records.
 
 ---
 
@@ -654,11 +684,9 @@ For every future sprint:
 
 As of 2026-08-13:
 
-- **Latest closed Production sprint:** Sprint 7
-- **Latest Production release commit:** `578024e5dc932f33b16b221da411192d8362a025`
-- **Latest Production DB migration:** `20260811150000_sprint7_ai_memory_guide_foundation.sql`
-- **Current release candidate:** Sprint 8 — Packages, Quotations & Booking Conversion Foundation
-- **Sprint 8 local implementation head:** `0bd8f09`
-- **Sprint 8 validation:** database lint clean; 149/149 pgTAP PASS; schema diff clean; Production build PASS; post-build TypeScript PASS; runtime acceptance smoke PASS
-- **Sprint 8 Production state:** Not released
-- **Next action:** controlled Production rollout decision, migration/deployment, and post-release validation
+- **Latest closed Production sprint:** Sprint 8 — Packages, Quotations & Booking Conversion Foundation
+- **Sprint 8 Production application release commit:** `73d12bf070a3148f624598b1c124f1b33f700da4`
+- **Latest Production DB migration:** `20260812131648_sprint8_booking_conversion_foundation.sql`
+- **Sprint 8 validation:** database lint clean; 149/149 pgTAP PASS; schema diff clean; Production build PASS; post-build TypeScript PASS; local runtime acceptance PASS; Production database invariants PASS; authenticated Production smoke PASS; Production runtime error check clean
+- **Sprint 8 Production state:** Released / Closed
+- **Next sprint:** not yet frozen
