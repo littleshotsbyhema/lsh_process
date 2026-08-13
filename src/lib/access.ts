@@ -102,20 +102,53 @@ export const nav: NavItem[] = [
   { to: "/settings", label: "Settings", icon: SettingsIcon, roles: null },
 ];
 
-export function visibleNav(roles: AppRole[]) {
-  if (roles.includes("founder")) return nav;
-  return nav.filter((item) => item.roles === null || item.roles.some((r) => roles.includes(r)));
-}
-
 function normalise(pathname: string) {
   if (pathname !== "/" && pathname.endsWith("/")) return pathname.slice(0, -1);
   return pathname;
 }
 
+/**
+ * Later-sprint rooms that still depend on the legacy seeded booking store.
+ *
+ * Keep their source available for deliberate migration, but do not expose
+ * them as operational studio systems until they are connected to canonical
+ * booking and journey records.
+ */
+export const temporarilyUnavailablePaths = new Set([
+  "/prep",
+  "/safety",
+  "/privacy",
+  "/editing",
+  "/pixieset",
+  "/heirloom",
+  "/marketing",
+  "/reviews",
+  "/governance",
+  "/reports",
+  "/kpi",
+]);
+
+export function isTemporarilyUnavailable(pathname: string) {
+  return temporarilyUnavailablePaths.has(normalise(pathname));
+}
+
+export function visibleNav(roles: AppRole[]) {
+  const available = nav.filter((item) => !temporarilyUnavailablePaths.has(item.to));
+
+  if (roles.includes("founder")) return available;
+
+  return available.filter(
+    (item) => item.roles === null || item.roles.some((r) => roles.includes(r)),
+  );
+}
+
 /** Can this person open this module at all (typed URL included)? */
 export function canView(pathname: string, roles: AppRole[]) {
-  if (roles.includes("founder")) return true;
   const path = normalise(pathname);
+
+  if (temporarilyUnavailablePaths.has(path)) return false;
+  if (roles.includes("founder")) return true;
+
   const item = nav.find((n) => n.to === path);
   if (!item) return true; // unknown path — let the router's not-found handle it
   if (item.roles === null) return true;

@@ -1,43 +1,13 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Check, CloudOff, Loader2, LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { roleLabels, useSession } from "@/lib/session";
 import { visibleNav } from "@/lib/access";
-import { useSaveStatus } from "@/lib/studio-sync";
 
 export { visibleNav } from "@/lib/access";
-
-export function SaveIndicator() {
-  const { status, pending, retry } = useSaveStatus();
-  if (status === "idle") return null;
-  if (status === "error") {
-    return (
-      <button
-        onClick={retry}
-        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-[11px] text-destructive"
-      >
-        <CloudOff className="h-3 w-3" />
-        Couldn&apos;t save{pending ? ` (${pending})` : ""} — retry
-      </button>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-[11px] text-muted-foreground">
-      {status === "saving" ? (
-        <>
-          <Loader2 className="h-3 w-3 animate-spin" /> Saving…
-        </>
-      ) : (
-        <>
-          <Check className="h-3 w-3 text-gold" /> All changes saved
-        </>
-      )}
-    </span>
-  );
-}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { location } = useRouterState();
@@ -135,7 +105,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="font-serif text-lg text-primary">Little Moments OS</div>
           </div>
           <div className="flex items-center gap-2">
-            <SaveIndicator />
             <button
               onClick={() => setOpen(true)}
               aria-label="Open menu"
@@ -144,9 +113,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Menu className="h-5 w-5" />
             </button>
           </div>
-        </div>
-        <div className="hidden lg:flex justify-end px-12 pt-6">
-          <SaveIndicator />
         </div>
         <div className="px-5 sm:px-8 lg:px-12 py-8 lg:py-10 max-w-[1400px] mx-auto">{children}</div>
         <footer className="px-5 sm:px-8 lg:px-12 py-6 border-t border-border bg-sidebar/40">
