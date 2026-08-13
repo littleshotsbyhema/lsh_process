@@ -43,9 +43,9 @@ Sprint 6 and Sprint 7 have stronger explicit sprint/release boundaries in the im
 | Sprint 6 | Lead Workspace & Sales Operations | Complete | Released |
 | Sprint 7 | AI Memory Guide Core Flow & Recommendation Engine | Complete | Released |
 | Sprint 8 | Packages, Quotations & Booking Conversion Foundation | Complete | Released |
-| Sprint 9 | Advance Payment, Booking Confirmation & KPI Foundation | Scope frozen | Not released |
+| Sprint 9 | Advance Payment, Booking Confirmation & KPI Foundation | In progress | Not released |
 
-Current position: **Sprint 8 is closed in Production. Sprint 9 scope is frozen and implementation has not started.**
+Current position: **Sprint 8 is closed in Production. Sprint 9 finance/KPI design is frozen and implementation is now in progress.**
 
 ---
 
@@ -638,7 +638,7 @@ The Quote Builder subject selector exposed two historical test/demo-named CRM re
 
 ## Status
 
-**SCOPE FROZEN / IMPLEMENTATION NOT STARTED**
+**IN PROGRESS / DESIGN FROZEN / NOT RELEASED**
 
 ## Objective
 
@@ -665,6 +665,33 @@ Sprint 9 is not a full accounting system. It establishes payment evidence requir
 15. `Booking Confirmed` requires valid collected payment greater than or equal to the required advance.
 16. Booking confirmation does not mean full payment has been received.
 17. Full payment before editing remains a separate later workflow condition.
+
+## Final finance design decisions
+
+The following implementation decisions are frozen:
+
+- payment-method vocabulary is `cash`, `upi`, `bank_transfer`, `card`, `other`;
+- payment external/reference identifier is optional because cash payments may legitimately have no external transaction reference;
+- payment receipts are immutable evidence;
+- reversals are separate immutable evidence referencing the original payment rather than mutable `reversed_at` state on the payment row;
+- a payment may be reversed at most once;
+- a corrected payment is represented as original payment -> reversal -> new payment;
+- recording payment evidence does not itself confirm a booking;
+- booking confirmation remains a separate controlled operation;
+- if a valid payment is reversed after the booking has already been validly confirmed, the historical booking journey is not moved backwards;
+- the original `Advance Pending` -> `Booking Confirmed` transition remains historical truth;
+- current derived payment state must expose the resulting advance shortfall for operational attention;
+- no generic booking-stage mutation may bypass these rules.
+
+The initial authoritative finance concepts are frozen as:
+
+- `booking_payment_requirements`;
+- `booking_payments`;
+- `booking_payment_reversals`;
+- permission-aware derived payment summary;
+- controlled `record_booking_payment(...)`;
+- controlled `reverse_booking_payment(...)`;
+- controlled `confirm_booking_after_advance(uuid)`.
 
 ## Finance architecture freeze
 
@@ -784,9 +811,9 @@ The KPI dictionary may reserve future definitions, but Sprint 9 must not manufac
 
 Those metrics become displayable only when their authoritative domain workflows are implemented.
 
-## Proposed permissions
+## Frozen permissions
 
-Sprint 9 implementation should establish narrowly scoped permissions equivalent to:
+Sprint 9 implementation will establish these narrowly scoped permissions:
 
 - `payment.read`;
 - `payment.record`;
@@ -846,9 +873,11 @@ Unless separately approved during implementation, Sprint 9 does not include:
 - reviews;
 - album/frame production.
 
-## Pre-implementation gate
+## Pre-implementation gate — COMPLETE
 
-Before the first Sprint 9 migration is written:
+The Sprint 9 pre-implementation gate was completed on 2026-08-13 before the first migration was written.
+
+The completed gate required:
 
 1. inspect all surviving legacy payment/KPI implementation;
 2. freeze exact payment/reversal data model;
@@ -918,7 +947,7 @@ As of 2026-08-13:
 - **Latest Production DB migration:** `20260812131648_sprint8_booking_conversion_foundation.sql`
 - **Sprint 8 Production state:** Released / Closed
 - **Current sprint:** Sprint 9 — Advance Payment, Booking Confirmation & KPI Foundation
-- **Sprint 9 state:** Scope frozen / implementation not started
+- **Sprint 9 state:** In progress / finance and KPI design frozen
 - **Sprint 9 advance rule:** 50% of final accepted quotation value, whole-INR, half-rupee rounded upward
 - **Sprint 9 Production state:** Not released
-- **Next action:** pre-implementation finance/KPI data-model and test-contract design
+- **Next action:** Slice 1 — Advance Payment Evidence Foundation
