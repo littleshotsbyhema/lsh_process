@@ -43,8 +43,9 @@ Sprint 6 and Sprint 7 have stronger explicit sprint/release boundaries in the im
 | Sprint 6 | Lead Workspace & Sales Operations | Complete | Released |
 | Sprint 7 | AI Memory Guide Core Flow & Recommendation Engine | Complete | Released |
 | Sprint 8 | Packages, Quotations & Booking Conversion Foundation | Complete | Released |
+| Sprint 9 | Advance Payment, Booking Confirmation & KPI Foundation | Scope frozen | Not released |
 
-Current position: **Sprint 8 is closed in Production. The authoritative commercial catalogue, quotation workflow, booking conversion boundary and canonical journey foundation are released.**
+Current position: **Sprint 8 is closed in Production. Sprint 9 scope is frozen and implementation has not started.**
 
 ---
 
@@ -633,6 +634,234 @@ The Quote Builder subject selector exposed two historical test/demo-named CRM re
 
 ---
 
+# Sprint 9 — Advance Payment, Booking Confirmation & KPI Foundation
+
+## Status
+
+**SCOPE FROZEN / IMPLEMENTATION NOT STARTED**
+
+## Objective
+
+Create authoritative advance-payment evidence, make the `Advance Pending` -> `Booking Confirmed` transition dependent on verified payment evidence, and establish the first trustworthy KPI/read-model foundation without reviving legacy mock metrics.
+
+Sprint 9 is not a full accounting system. It establishes payment evidence required for booking confirmation and management KPIs whose source data is already authoritative.
+
+## Frozen commercial rules
+
+1. Required advance is **50% of the final accepted quotation value**.
+2. The accepted quotation's immutable `quoted_total_inr` is the authoritative calculation basis.
+3. All commercial/payment values use **whole INR only**.
+4. If 50% produces exactly ₹0.50, round upward to the next whole rupee.
+5. Example: ₹15,001 accepted quotation total -> ₹7,501 required advance.
+6. Catalogue changes after quotation acceptance cannot change the required advance.
+7. Offer Price metadata is not automatically applied.
+8. Privacy preference, image-use consent, contact permission and marketing consent cannot affect pricing or required advance.
+9. Partial payments are allowed.
+10. Multiple valid payments may cumulatively satisfy the advance.
+11. Overpayment may be recorded but does not alter the required advance.
+12. Payment mistakes must be corrected through reversal/correction evidence rather than silent historical edits.
+13. Quotation acceptance continues to create exactly one booking at `Advance Pending`.
+14. Quotation acceptance does not itself prove payment or confirm a booking.
+15. `Booking Confirmed` requires valid collected payment greater than or equal to the required advance.
+16. Booking confirmation does not mean full payment has been received.
+17. Full payment before editing remains a separate later workflow condition.
+
+## Finance architecture freeze
+
+Sprint 9 must use append-only financial/payment evidence rather than mutable financial truth on `bookings`.
+
+The implementation should establish authoritative concepts equivalent to:
+
+- booking advance/payment requirement;
+- payment receipt/evidence;
+- payment reversal/correction evidence;
+- derived valid collected amount;
+- derived advance outstanding amount;
+- derived advance-satisfied state.
+
+Mutable legacy fields such as `advance`, `balance`, `paid`, `payment_status`, or similar values must not become authoritative booking columns.
+
+The intended authority chain is:
+
+`accepted quotation`
+-> `booking at Advance Pending`
+-> authoritative payment evidence
+-> required advance satisfied
+-> controlled booking-confirmation RPC
+-> `Booking Confirmed`
+-> append-only journey transition
+-> audit evidence.
+
+No UI action or generic journey mutation may bypass the financial condition.
+
+## Booking confirmation boundary
+
+The controlled confirmation operation must require, at minimum:
+
+- active organization membership;
+- appropriate booking/payment permission;
+- booking currently at canonical Stage 7 `Advance Pending`;
+- authoritative accepted quotation linkage;
+- valid required-advance calculation;
+- valid non-reversed collected payment greater than or equal to required advance.
+
+Successful confirmation must:
+
+- transition only from `Advance Pending` to `Booking Confirmed`;
+- increment current journey-state version exactly once;
+- update `stage_entered_at`;
+- append exactly one canonical stage-transition record;
+- preserve actor provenance;
+- append audit evidence;
+- remain idempotent against duplicate/replayed confirmation attempts.
+
+A general unrestricted booking-stage mutation RPC is not part of this freeze.
+
+## KPI Foundation v1
+
+Sprint 9 should establish a typed KPI semantic/read-model layer.
+
+Only metrics backed by authoritative domain data may be exposed.
+
+### Sales KPIs
+
+- new inquiries;
+- quotations sent;
+- accepted quotations;
+- quoted value;
+- accepted quotation value;
+- quotation acceptance conversion.
+
+### Booking KPIs
+
+- canonical bookings;
+- Advance Pending count;
+- Booking Confirmed count;
+- bookings by canonical journey stage;
+- journey/stage aging where source timestamps support it.
+
+### Payment KPIs
+
+- required advance;
+- advance collected;
+- advance outstanding;
+- advance satisfaction rate;
+- valid payments collected.
+
+### Conversion KPIs
+
+- inquiry -> accepted quotation;
+- accepted quotation -> booking;
+- booking -> confirmed booking.
+
+## KPI naming rules
+
+Financial labels must reflect the underlying evidence precisely.
+
+The following concepts must remain distinct:
+
+- accepted quotation value;
+- booked/commercial value;
+- payments collected;
+- advance outstanding;
+- accounting revenue.
+
+Sprint 9 must not label accepted quotation value or cash collected as accounting `Revenue` unless a later approved revenue-recognition rule establishes that meaning.
+
+## KPI domains intentionally unavailable
+
+The KPI dictionary may reserve future definitions, but Sprint 9 must not manufacture metrics for domains that are not yet canonical, including:
+
+- safety completion;
+- privacy/consent compliance;
+- shoot preparation completion;
+- editing turnaround;
+- QC performance;
+- Pixieset/delivery performance;
+- review performance;
+- album/frame production;
+- aftercare/milestone follow-up.
+
+Those metrics become displayable only when their authoritative domain workflows are implemented.
+
+## Proposed permissions
+
+Sprint 9 implementation should establish narrowly scoped permissions equivalent to:
+
+- `payment.read`;
+- `payment.record`;
+- `payment.reverse`;
+- `booking.confirm`;
+- `kpi.read`.
+
+Founder receives the initial grants.
+
+`booking.confirm` authorizes execution of the confirmation operation but must never bypass the required-advance condition.
+
+## Required validation coverage
+
+Sprint 9 acceptance testing must cover, at minimum:
+
+- exact 50% advance calculation;
+- odd-rupee `.50` rounding upward;
+- partial payment;
+- multiple cumulative payments;
+- exact-threshold satisfaction;
+- overpayment;
+- payment reversal/correction;
+- insufficient advance rejection;
+- exact `Advance Pending` -> `Booking Confirmed` transition;
+- booking journey-state version increment;
+- append-only transition history;
+- duplicate/replayed confirmation idempotency;
+- direct authenticated table-write denial;
+- anonymous-access denial;
+- cross-organization isolation;
+- permission enforcement;
+- audit actor provenance;
+- Sprint 8 booking/quotation regression;
+- KPI calculations derived only from authoritative records.
+
+## Explicitly out of scope
+
+Unless separately approved during implementation, Sprint 9 does not include:
+
+- GST invoice generation;
+- accounting invoices;
+- expense accounting;
+- P&L;
+- revenue recognition;
+- payroll;
+- tax accounting;
+- bank reconciliation;
+- refund workflow;
+- credit notes;
+- payment gateway integration;
+- automated WhatsApp payment collection;
+- arbitrary booking-stage advancement beyond Booking Confirmed;
+- shoot preparation;
+- safety;
+- editing;
+- delivery/Pixieset;
+- reviews;
+- album/frame production.
+
+## Pre-implementation gate
+
+Before the first Sprint 9 migration is written:
+
+1. inspect all surviving legacy payment/KPI implementation;
+2. freeze exact payment/reversal data model;
+3. freeze booking-confirmation RPC semantics and idempotency;
+4. freeze permissions;
+5. freeze KPI query/read-model ownership;
+6. define database tests before implementation;
+7. confirm no legacy financial values are promoted to canonical truth;
+8. confirm no Production write occurs before local validation passes.
+
+
+---
+
 # Cross-Sprint Architecture Rules
 
 These rules remain binding unless explicitly superseded by a higher-authority project decision:
@@ -687,6 +916,9 @@ As of 2026-08-13:
 - **Latest closed Production sprint:** Sprint 8 — Packages, Quotations & Booking Conversion Foundation
 - **Sprint 8 Production application release commit:** `73d12bf070a3148f624598b1c124f1b33f700da4`
 - **Latest Production DB migration:** `20260812131648_sprint8_booking_conversion_foundation.sql`
-- **Sprint 8 validation:** database lint clean; 149/149 pgTAP PASS; schema diff clean; Production build PASS; post-build TypeScript PASS; local runtime acceptance PASS; Production database invariants PASS; authenticated Production smoke PASS; Production runtime error check clean
 - **Sprint 8 Production state:** Released / Closed
-- **Next sprint:** not yet frozen
+- **Current sprint:** Sprint 9 — Advance Payment, Booking Confirmation & KPI Foundation
+- **Sprint 9 state:** Scope frozen / implementation not started
+- **Sprint 9 advance rule:** 50% of final accepted quotation value, whole-INR, half-rupee rounded upward
+- **Sprint 9 Production state:** Not released
+- **Next action:** pre-implementation finance/KPI data-model and test-contract design
