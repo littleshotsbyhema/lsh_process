@@ -42,9 +42,9 @@ Sprint 6 and Sprint 7 have stronger explicit sprint/release boundaries in the im
 | Sprint 5 | Leads & CRM Foundation | Complete | Released |
 | Sprint 6 | Lead Workspace & Sales Operations | Complete | Released |
 | Sprint 7 | AI Memory Guide Core Flow & Recommendation Engine | Complete | Released |
-| Sprint 8 | Packages, Quotations & Booking Conversion Foundation | Not started | Not released |
+| Sprint 8 | Packages, Quotations & Booking Conversion Foundation | Release candidate validated | Not released |
 
-Current position: **Sprint 7 is closed in Production. Sprint 8 is the next implementation sprint.**
+Current position: **Sprint 7 remains the latest closed Production sprint. Sprint 8 implementation is complete locally, release-candidate validation is clean, and Production release is pending.**
 
 ---
 
@@ -400,76 +400,206 @@ Vercel runtime check after smoke:
 
 ## Status
 
-**NOT STARTED**
+**IMPLEMENTATION COMPLETE / RELEASE CANDIDATE VALIDATED / NOT PRODUCTION RELEASED**
 
-## Proposed objective
+## Objective
 
-Create the authoritative commercial layer that turns an approved package recommendation or staff-selected package into a versioned quotation and, after explicit acceptance, into a booking.
+Create the authoritative commercial layer that turns an approved package recommendation or staff-selected package into a versioned quotation and, after explicit acceptance, into exactly one tentative booking shell with an authoritative journey state.
 
-## Proposed core scope
+Sprint 8 establishes commercial truth and booking conversion without pretending that quotation acceptance proves payment or confirms a session date.
 
-### Package catalogue
+## Founder / preflight freeze
 
-- typed `packages`;
-- package versions;
-- package inclusions;
-- package active/inactive lifecycle;
-- approved Maternity/Newborn/Sitter catalogue data only;
-- no invented pricing for unsupported categories;
-- historical price/version preservation.
+The following decisions were frozen before implementation:
+
+1. The canonical journey contains 21 typed stages, with `Advance Pending` at Stage 7 between `Follow-Up Pending` and `Booking Confirmed`. Current state is typed and transition history is append-only.
+2. Quotation lifecycle is `draft`, `ready`, `sent`, `accepted`, `declined`, `expired`, `superseded`. Accepted quotations are immutable; commercial revisions require a new/superseding quotation rather than rewriting accepted history.
+3. Accepting a quotation creates exactly one tentative booking shell and places its journey at `Advance Pending`. Quotation acceptance does not reserve a date and does not create `Booking Confirmed`.
+4. Sprint 8 is not a payment ledger. It does not invent payment totals, balances, receipts, refunds or transaction history.
+5. Sprint 7 `memory_guide_packages` remain recommendation/source evidence. Sprint 8 owns the authoritative commercial catalogue with stable package identity and versioned definitions. Historical quotation pricing is snapshotted.
+6. Only approved Maternity, Newborn and Sitter catalogue data is seeded. No pricing is invented for unsupported categories.
+7. Source-document Offer Price values are retained only as promotional metadata. They are not automatically applied. Privacy preference, image-use consent and contact permission cannot affect package eligibility, recommendation ranking, list price or discount.
+8. Add-ons are structured, versioned and category-scoped. Quotation line items snapshot the exact commercial name, quantity and price used at the time.
+9. New commercial permissions include `package.catalogue.manage` and `commercial.price.override`; founder access is the initial authority boundary.
+10. Legacy mock/Zustand booking, quotation and pipeline records are not migrated into canonical truth. Demo booking state is discarded rather than promoted into Production authority.
+
+## Delivered scope
+
+### Commercial catalogue
+
+- authoritative commercial packages and package versions;
+- versioned package inclusions;
+- structured add-ons and add-on versions;
+- category-scoped commercial definitions;
+- approved Maternity/Newborn/Sitter catalogue only;
+- 12 seeded packages;
+- 16 seeded add-ons;
+- 95 seeded package inclusions;
+- List Price is authoritative;
+- historical catalogue/version preservation;
+- authenticated reads through user-scoped Supabase access;
+- no normal commercial path uses service-role bypass.
 
 ### Quotations
 
-- authoritative quotation model;
-- quotation line items;
-- immutable price snapshot;
-- human-readable quote reference;
-- draft / ready / sent / accepted / declined / expired lifecycle;
-- Lead/Family linkage;
-- owner and audit trail;
-- custom pricing routed through human approval;
-- no automatic upsell objective.
+- authoritative `quotations`;
+- authoritative `quotation_line_items`;
+- immutable commercial snapshots;
+- human-readable quotation references;
+- package, add-on, custom and discount line support;
+- quotation lifecycle RPCs;
+- dedicated quotation acceptance RPC;
+- accepted quotation immutability;
+- superseding/revision model instead of rewriting accepted history;
+- `approved_offer` is reserved at the database layer but automatic Offer Price execution remains blocked;
+- consent cannot act as a commercial eligibility or discount rule.
 
 ### Booking conversion
 
-- accepted quotation can create at most one authoritative booking;
-- booking references the accepted quotation/family instead of duplicating financial truth;
-- typed booking status/reference;
-- idempotent conversion boundary;
-- no payment/invoice implementation inside the same sprint unless explicitly approved.
+- authoritative `bookings`;
+- authoritative `booking_journey_states`;
+- append-only `booking_stage_transitions`;
+- human-readable booking references;
+- no fake booking payment/reservation fields;
+- journey state, not a legacy booking-status enum, is authoritative;
+- `accept_quotation(uuid)` performs atomic conversion;
+- acceptance requires active organization membership and `quote.write`;
+- a sent quotation can create at most one booking;
+- idempotent replay returns the same booking instead of creating duplicates;
+- initial journey state is `Advance Pending`;
+- initial transition is recorded with actor provenance;
+- `Booking Confirmed` is intentionally not created by quotation acceptance and requires a later authoritative advance condition.
 
-### Pipeline foundation
+### Application cutover
 
-- begin replacement of legacy/mock Booking/Pipeline state;
-- authoritative current journey state;
-- append-only transition history;
-- database-enforced valid transitions;
-- preserve the existing 21-stage model verbatim until the typed system is stable and real analytics justify optimization.
+The live commercial surfaces were cut over from legacy/mock state:
 
-## Explicitly out of scope unless Sprint 8 preflight changes it
+- `/packages` -> authoritative commercial catalogue;
+- `/quote` -> persistent quotation workflow;
+- `/bookings` -> canonical booking and journey state;
+- `/pipeline` -> read-only canonical 21-stage journey.
 
-- full invoices/payments/refunds;
-- shoot/session preparation;
-- safety workflow;
-- editing/delivery workflow;
-- Pixieset integration;
-- heirloom fulfillment;
-- aftercare automation.
+The quotation acceptance UI uses the dedicated `acceptQuotation` server function -> `accept_quotation` RPC boundary.
 
-## Required preflight before implementation
+The Booking and Pipeline surfaces do not expose fake payment, arbitrary journey mutation or legacy status controls.
 
-Before any Sprint 8 migration/code is written:
+### Legacy containment
 
-1. inspect current Package / Quotation / Booking / Pipeline legacy implementation;
-2. compare it against governing architecture and package source documents;
-3. identify all schema conflicts and duplication risks;
-4. freeze price/version ownership rules;
-5. freeze quotation lifecycle and acceptance rules;
-6. freeze booking conversion/idempotency rules;
-7. define permissions and sensitive-data boundaries;
-8. define functional, permission, decision and acceptance tests;
-9. confirm no package price is invented for unsupported categories;
-10. approve the Sprint 8 release gate before implementation.
+Legacy state that belongs to later sprints was not rebuilt inside Sprint 8.
+
+The obsolete family-link commercial workflow was contained:
+
+- public `/f/$token` legacy mutation flow replaced with a temporary unavailable surface;
+- legacy client-link server/function modules removed;
+- legacy client-share mutation controls removed.
+
+Booking-dependent later-sprint rooms that still depend on seeded Zustand/mock booking truth are temporarily unavailable:
+
+- `/prep`;
+- `/safety`;
+- `/privacy`;
+- `/editing`;
+- `/pixieset`;
+- `/heirloom`;
+- `/marketing`;
+- `/reviews`;
+- `/governance`;
+- `/reports`;
+- `/kpi`.
+
+Those rooms are removed from navigation and denied on typed/direct URL access until their own canonical domain work is implemented.
+
+The dormant legacy studio-sync engine was removed. It was not active at the time of removal and is not represented as having corrupted canonical data.
+
+The authenticated dashboard was replaced with a canonical-safe control room and no longer calculates fake booking, revenue, payment, safety, consent, editing, delivery, review or production metrics from legacy demo data.
+
+## Primary migrations
+
+- `20260812122822_sprint8_commercial_foundation.sql`
+- `20260812125649_sprint8_quotations_foundation.sql`
+- `20260812131648_sprint8_booking_conversion_foundation.sql`
+
+## Database validation evidence
+
+Final local release-candidate database gate:
+
+- local Supabase development environment: operational;
+- `supabase db lint --local`: **No schema errors found**;
+- pgTAP suites: **4 files / 149 tests / PASS**;
+- Sprint 7 Memory Guide regression suite: PASS;
+- Sprint 8 commercial foundation suite: PASS;
+- Sprint 8 quotations suite: PASS;
+- Sprint 8 booking conversion suite: PASS;
+- shadow-database migration replay through all Sprint 8 migrations: PASS;
+- `supabase db diff --local`: **No schema changes found**.
+
+## Application / repository validation evidence
+
+Final release-candidate application gate:
+
+- canonical commercial-path legacy guard: clean;
+- removed legacy infrastructure guard: clean;
+- quotation acceptance authority verified as `acceptQuotation` -> `accept_quotation`;
+- Production build: PASS;
+- post-build `npx tsc --noEmit`: PASS;
+- `git diff --check`: PASS;
+- generated `src/routeTree.gen.ts` restored and excluded from the release diff;
+- final worktree after validation: clean.
+
+Build warnings remain non-blocking known debt:
+
+- older `.inputValidator()` usages are deprecated;
+- main client chunk exceeds the current 500 kB warning threshold;
+- Cloudflare/Nitro emits the existing `platform` option warning;
+- dependency-level module `"use client"` directives are ignored during bundling.
+
+## Runtime acceptance evidence
+
+Authenticated local runtime smoke passed for the Sprint 8 release candidate:
+
+- Studio Control Room renders without legacy fake booking/revenue/safety/consent KPIs;
+- contained legacy rooms are absent from navigation;
+- direct access to a contained room renders the temporary rebuild notice instead of the legacy workflow;
+- `/packages` renders the canonical catalogue;
+- `/quote` renders the persisted accepted quotation and associated booking reference;
+- `/bookings` renders the canonical booking at `Advance Pending` and explicitly distinguishes quote total from payment status;
+- `/pipeline` renders the canonical Stage 7 booking and the complete 21-stage journey;
+- no arbitrary commercial/journey mutation controls are exposed by the read-only Booking/Pipeline cutover.
+
+## Local Sprint 8 implementation commit stack
+
+- `53db7cf` — `feat: add sprint 8 commercial booking foundation`
+- `ce1d5d1` — `chore: refresh supabase types for sprint 8`
+- `ea9c814` — `feat: cut over packages to commercial catalogue`
+- `062e8b3` — `feat: cut over quotations to canonical workflow`
+- `f2a5aa0` — `feat: cut over bookings to canonical journey`
+- `b7225c0` — `feat: cut over pipeline to canonical journey`
+- `f35bcfb` — `chore: contain legacy family link workflow`
+- `0bd8f09` — `chore: contain legacy booking-dependent workflows`
+
+`ce1d5d1` was re-audited before release. Its large apparent diffs in Clients and Lead Workspace were primarily formatting; normalized comparison showed only two substantive compatibility adjustments:
+
+- `StatusPill` legacy `muted` tone -> supported `neutral` tone;
+- Lead activity metadata `Record<string, unknown>` -> recursive serializable JSON typing compatible with refreshed Supabase JSON types.
+
+No unrelated Clients or Lead Workspace business-logic change was found.
+
+Current local Sprint 8 implementation head before this register update: `0bd8f09`.
+
+The Production release commit is intentionally not recorded yet because Sprint 8 has not been pushed/deployed to Production.
+
+## Production state
+
+**NOT RELEASED**
+
+At the final local gate:
+
+- `architecture-rebuild` was 8 commits ahead of `origin/architecture-rebuild`;
+- no Sprint 8 migration had been pushed to Production;
+- no Sprint 8 application deployment had been promoted to Production;
+- Sprint 7 remains the latest closed Production sprint.
+
+Production release requires a separate controlled rollout and post-deployment validation.
 
 ---
 
@@ -492,10 +622,10 @@ These rules remain binding unless explicitly superseded by a higher-authority pr
 
 # Known Cross-Sprint Debt / Future Work
 
-The following items are known but are **not unresolved Sprint 7 release blockers**:
+The following items are known but are **not Sprint 8 release-candidate blockers**:
 
-- legacy/mock Booking and Pipeline implementation remains to be replaced;
-- repository-wide TypeScript errors existed before Sprint 7 and require a separate cleanup initiative;
+- legacy mock/Zustand booking-dependent implementations remain in later-sprint domains, but their affected routes are temporarily contained and are not authoritative Sprint 8 booking truth;
+- repository-wide TypeScript errors existed before Sprint 7; the Sprint 8 authoritative post-build `npx tsc --noEmit` gate is clean, while TanStack route generation must precede that final typecheck;
 - repository-wide ESLint baseline debt existed before Sprint 7 and requires a separate cleanup initiative;
 - older `.inputValidator()` usages are deprecated and should be modernized in a bounded refactor;
 - Lead-to-Family conversion does not yet transfer every family-contact / memory-goal field automatically;
@@ -522,10 +652,13 @@ For every future sprint:
 
 # Current Release Marker
 
-As of 2026-08-12:
+As of 2026-08-13:
 
-- **Latest closed sprint:** Sprint 7
+- **Latest closed Production sprint:** Sprint 7
 - **Latest Production release commit:** `578024e5dc932f33b16b221da411192d8362a025`
 - **Latest Production DB migration:** `20260811150000_sprint7_ai_memory_guide_foundation.sql`
-- **Next sprint:** Sprint 8 — Packages, Quotations & Booking Conversion Foundation
-- **Sprint 8 implementation:** Not started
+- **Current release candidate:** Sprint 8 — Packages, Quotations & Booking Conversion Foundation
+- **Sprint 8 local implementation head:** `0bd8f09`
+- **Sprint 8 validation:** database lint clean; 149/149 pgTAP PASS; schema diff clean; Production build PASS; post-build TypeScript PASS; runtime acceptance smoke PASS
+- **Sprint 8 Production state:** Not released
+- **Next action:** controlled Production rollout decision, migration/deployment, and post-release validation
