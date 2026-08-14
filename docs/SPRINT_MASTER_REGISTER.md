@@ -1982,6 +1982,89 @@ Slice 3 does not complete Sprint 10. Team assignment, restricted safety readines
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
 
+### Slice 4 founder decision freeze — Booking Team Assignment Foundation
+
+Founder business decisions approved on 2026-08-15.
+
+Slice 4 establishes canonical booking-scoped operational team-assignment evidence. It does not redefine organization membership or organization role grants.
+
+Approved founder decisions:
+
+1. Canonical booking-team evidence will use the concept `booking_team_assignments`.
+
+2. Organization roles and booking assignments are separate facts. An organization role establishes operational eligibility; it does not itself mean that member is assigned to a specific booking.
+
+3. Initial booking-assignment roles are exactly:
+   - `lead_photographer`
+   - `assistant`
+   - `stylist`
+
+   Editor, Album / Print Coordinator, Marketing, Accounts, Client Coordinator and later-production responsibilities are not booking-assignment roles in Slice 4.
+
+4. Current-assignment cardinality:
+   - exactly one current `lead_photographer` per booking;
+   - multiple current `assistant` assignments are permitted;
+   - multiple current `stylist` assignments are permitted.
+
+   Singular Lead Photographer semantics are required because later Newborn safety authorization depends on identifying the booking's assigned Lead Photographer unambiguously.
+
+5. Assignment eligibility:
+   - `lead_photographer` requires an active `photographer` organization-role grant;
+   - `assistant` requires an active `assistant` organization-role grant;
+   - `stylist` requires an active `stylist` organization-role grant.
+
+   Founder or Studio Manager authority alone does not make a member operationally eligible for one of these assignment roles. A member must hold the corresponding operational role.
+
+6. Branch eligibility:
+   - for a branch-scoped booking, the assignee's qualifying organization-role grant must be organization-wide or scoped to that booking's branch;
+   - a role scoped only to another branch is insufficient;
+   - for a booking with no branch, the qualifying role must be organization-wide.
+
+7. Slice 4 introduces the dedicated permission `booking.team.assign` with server-side enforcement required.
+
+   Initial role grants for `booking.team.assign` are exactly:
+   - Founder (`founder`);
+   - Studio Manager (`studio_manager`);
+   - Client Coordinator (`client_coordinator`).
+
+   Photographer, Assistant and Stylist roles do not receive self-assignment authority merely because they are eligible to be assigned.
+
+8. Read access to booking-team assignments follows `booking.read` plus the booking-derived branch-scope boundary. `team.role.assign` is not required merely to view booking staffing.
+
+9. Team assignments may be created, replaced or removed only while the booking is in one of these canonical stages:
+   - Stage 8 — `booking_confirmed`;
+   - Stage 9 — `pre_shoot_preparation`;
+   - Stage 10 — `shoot_scheduled`.
+
+   Team assignment mutation never advances or rewinds the booking journey.
+
+10. Assignment replacement/removal must preserve historical evidence. Normal application behavior must not silently overwrite or delete prior assignment history.
+
+    - first assignment does not require a replacement reason;
+    - replacement or removal requires a nonblank reason;
+    - an exact replay of the current assignment state must be idempotent;
+    - an idempotent replay must not create duplicate assignment history or duplicate audit evidence.
+
+11. Slice 4 does not freeze category-specific Stage 9 -> 10 team requirements. The later dedicated Stage 9 -> 10 gate will determine which assignment roles are mandatory for each applicable service category using the canonical assignment evidence created here.
+
+12. The public mutation boundary remains the previously frozen `assign_booking_team_member(...)` concept. Exact parameters, return type, locking, replacement semantics, history representation, RLS policy shape and audit payload remain subject to a separate Slice 4 technical design freeze.
+
+13. Slice 4 containment is explicit:
+    - no `safety.signoff` role-grant change;
+    - no safety or comfort-readiness data;
+    - no Newborn safety-signoff implementation;
+    - no Stage 9 -> 10 transition;
+    - no Stage 10 -> 11 transition;
+    - no photographer-capacity, studio-capacity, scheduling-overlap or availability engine;
+    - no `/bookings`, `/prep` or `/safety` UI implementation;
+    - no Production database migration.
+
+The approved business source remains aligned with the studio operating model: booking confirmation includes team assignment, while shoot responsibilities are booking/session-specific, including Lead Photographer + Assistant / Baby Care Support for Newborn work and Lead Photographer + Stylist / Makeup Artist for Maternity work.
+
+This founder freeze approves the operational semantics only. Database shape, assignment-history model, RPC contract, locking order, security policies, direct-write denial, audit payloads, exact idempotency mechanics and pgTAP coverage must be frozen separately before implementation.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
 ---
 
 # Cross-Sprint Architecture Rules
@@ -2078,4 +2161,5 @@ As of 2026-08-15:
 - **Slice 3 Production static security:** exact 16-column table surface PASS; forced RLS PASS; authenticated SELECT-only table ACL PASS; anon denial PASS; exact preparation permission grants PASS; guard-trigger/integrity boundary PASS; RPC SECURITY DEFINER / empty search_path / authenticated-only execution PASS
 - **Slice 3 Production runtime mutation:** intentionally not exercised because `booking_preparations` and `booking_preparation_items` both contained zero rows at static validation time
 - **Slice 3 Vercel deployment:** `dpl_Fv9XHo9N7Yo1YWRyxHaitsSSUiGi` READY at exact branch checkpoint SHA `63ef223263b29bafb281d02ec3efaf7b6a33c463`
-- **Next action:** record and push the Slice 3 Production checkpoint, then select and freeze the next bounded Sprint 10 implementation slice separately; do not introduce team assignment, safety-signoff behavior or Stage 9 -> 10 advancement without its approved bounded design.
+- **Slice 4:** Booking Team Assignment Foundation — founder business decisions approved; technical design not yet frozen; no implementation started
+- **Next action:** perform and approve the Slice 4 technical design freeze for canonical booking-scoped team-assignment evidence before creating any migration, test or application code.
