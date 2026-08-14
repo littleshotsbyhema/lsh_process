@@ -794,6 +794,19 @@ FROM public.record_booking_payment(
   'Reversal occurs after historical report cutoff'
 );
 
+-- Sprint 10 regression adaptation — Booking A shoot proposal
+-- First-time confirmation now requires current Stage 7 schedule evidence.
+CREATE TEMP TABLE s9k_a_schedule_proposal AS
+SELECT *
+FROM public.propose_booking_shoot_schedule(
+  (SELECT id FROM s9k_booking_a),
+  '2030-03-01 10:00:00+05:30'::timestamptz,
+  '2030-03-01 12:00:00+05:30'::timestamptz,
+  'Asia/Kolkata',
+  'studio',
+  'Sprint 9 KPI regression studio A'
+);
+
 SELECT public.confirm_booking_after_advance(
   (SELECT id FROM s9k_booking_a)
 );
@@ -811,6 +824,20 @@ FROM public.record_booking_payment(
   (SELECT t0 FROM s9k_clock),
   'S9-KPI-B',
   'KPI confirmed-shortfall fixture'
+);
+
+-- Sprint 10 regression adaptation — Booking B shoot proposal
+-- Keep the historical KPI journey semantics unchanged while satisfying
+-- the new first-time confirmation schedule gate.
+CREATE TEMP TABLE s9k_b_schedule_proposal AS
+SELECT *
+FROM public.propose_booking_shoot_schedule(
+  (SELECT id FROM s9k_booking_b),
+  '2030-03-02 09:00:00+05:30'::timestamptz,
+  '2030-03-02 11:00:00+05:30'::timestamptz,
+  'Asia/Kolkata',
+  'studio',
+  'Sprint 9 KPI regression studio B'
 );
 
 SELECT public.confirm_booking_after_advance(

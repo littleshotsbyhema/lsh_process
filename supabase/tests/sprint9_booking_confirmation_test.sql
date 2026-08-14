@@ -569,6 +569,21 @@ SELECT is(
   'exact required advance satisfies payment gate'
 );
 
+-- Sprint 10 regression adaptation:
+-- first-time confirmation now requires a current Stage 7 shoot proposal.
+-- This is fixture evidence only; the existing Sprint 9 assertions remain
+-- unchanged.
+CREATE TEMP TABLE s9c_schedule_proposal AS
+SELECT *
+FROM public.propose_booking_shoot_schedule(
+  (SELECT id FROM s9c_booking),
+  '2030-02-01 10:00:00+05:30'::timestamptz,
+  '2030-02-01 12:00:00+05:30'::timestamptz,
+  'Asia/Kolkata',
+  'studio',
+  'Sprint 9 regression studio'
+);
+
 -- 29
 SELECT lives_ok(
   $$
@@ -1026,6 +1041,19 @@ SELECT ok(
     )
   ),
   'overpayment fixture exceeds immutable required advance'
+);
+
+-- Sprint 10 regression adaptation for the independent overpayment
+-- fixture. First-time confirmation requires its own Stage 7 proposal.
+CREATE TEMP TABLE s9c_over_schedule_proposal AS
+SELECT *
+FROM public.propose_booking_shoot_schedule(
+  (SELECT id FROM s9c_over_booking),
+  '2030-02-02 09:00:00+05:30'::timestamptz,
+  '2030-02-02 11:30:00+05:30'::timestamptz,
+  'Asia/Kolkata',
+  'studio',
+  'Sprint 9 overpayment regression studio'
 );
 
 -- 57
