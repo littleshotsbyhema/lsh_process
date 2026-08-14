@@ -33,19 +33,20 @@ Sprint 6 and Sprint 7 have stronger explicit sprint/release boundaries in the im
 
 ## 2. Sprint Register — Executive View
 
-| Sprint   | Normalized title                                       | Current status | Production status |
-| -------- | ------------------------------------------------------ | -------------- | ----------------- |
-| Sprint 1 | Core Platform, Organization & Security                 | Complete       | Released          |
-| Sprint 2 | Families Foundation & Audit                            | Complete       | Released          |
-| Sprint 3 | Family Contacts & Communication Controls               | Complete       | Released          |
-| Sprint 4 | Children & Memory Profiles                             | Complete       | Released          |
-| Sprint 5 | Leads & CRM Foundation                                 | Complete       | Released          |
-| Sprint 6 | Lead Workspace & Sales Operations                      | Complete       | Released          |
-| Sprint 7 | AI Memory Guide Core Flow & Recommendation Engine      | Complete       | Released          |
-| Sprint 8 | Packages, Quotations & Booking Conversion Foundation   | Complete       | Released          |
-| Sprint 9 | Advance Payment, Booking Confirmation & KPI Foundation | Complete       | Released          |
+| Sprint    | Normalized title                                                      | Current status | Production status |
+| --------- | --------------------------------------------------------------------- | -------------- | ----------------- |
+| Sprint 1  | Core Platform, Organization & Security                                | Complete       | Released          |
+| Sprint 2  | Families Foundation & Audit                                           | Complete       | Released          |
+| Sprint 3  | Family Contacts & Communication Controls                              | Complete       | Released          |
+| Sprint 4  | Children & Memory Profiles                                            | Complete       | Released          |
+| Sprint 5  | Leads & CRM Foundation                                                | Complete       | Released          |
+| Sprint 6  | Lead Workspace & Sales Operations                                     | Complete       | Released          |
+| Sprint 7  | AI Memory Guide Core Flow & Recommendation Engine                     | Complete       | Released          |
+| Sprint 8  | Packages, Quotations & Booking Conversion Foundation                  | Complete       | Released          |
+| Sprint 9  | Advance Payment, Booking Confirmation & KPI Foundation                | Complete       | Released          |
+| Sprint 10 | Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation | Scope frozen   | Not released      |
 
-Current position: **Sprint 9 is closed in Production. Its advance-payment evidence, advance-gated booking confirmation, Founder KPI read model, authenticated KPI boundary, and Founder Control Room are released and validated.**
+Current position: **Sprint 9 remains the latest closed Production sprint. Sprint 10 scope is frozen for pre-shoot preparation, safety readiness and shoot scheduling; implementation has not started and nothing from Sprint 10 is released.**
 
 ---
 
@@ -1110,6 +1111,279 @@ Sprint 9 is therefore accepted as **Complete / Released**.
 
 ---
 
+# Sprint 10 — Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation
+
+## Status
+
+**SCOPE FROZEN / IMPLEMENTATION NOT STARTED / NOT RELEASED**
+
+## Objective
+
+Turn an authoritative `Booking Confirmed` booking into an operationally ready scheduled shoot through canonical shoot scheduling, structured pre-shoot preparation, restricted safety/comfort readiness evidence, team assignment and tightly controlled journey advancement through Stage 10.
+
+Sprint 10 must preserve the Sprint 9 advance-payment confirmation invariant and must not create a generic unrestricted booking-stage mutation path.
+
+## Frozen journey boundary
+
+Sprint 10 owns only this journey boundary:
+
+- Stage 7 — `Advance Pending`
+- Stage 8 — `Booking Confirmed`
+- Stage 9 — `Pre-Shoot Preparation`
+- Stage 10 — `Shoot Scheduled`
+
+A proposed shoot plan may exist at Stage 7, but it does not reserve the date.
+
+`Advance Pending` -> `Booking Confirmed` continues to require the Sprint 9 advance-payment condition and additionally requires a valid current proposed shoot plan.
+
+Confirmation must atomically convert that proposal into the authoritative reserved shoot schedule.
+
+Stage 8 -> 9 and Stage 9 -> 10 must each use dedicated permission-aware operations.
+
+Sprint 10 must not create a Stage 10 -> 11 transition.
+
+Rescheduling must not move the journey backward.
+
+## Scheduling model
+
+Sprint 10 distinguishes a proposed shoot plan from a reserved shoot schedule.
+
+Before `Booking Confirmed`, date, time and location may be proposed but are not reserved.
+
+At confirmation, the current valid proposal becomes the reserved schedule.
+
+After confirmation, rescheduling creates a new schedule version. Previous versions remain historical evidence and cannot be silently rewritten or deleted.
+
+A reschedule reason is required.
+
+Sprint 10 does not impose studio-capacity, photographer-capacity or overlap rules because no authoritative capacity policy has been approved.
+
+## Canonical data concepts
+
+Sprint 10 will introduce these authoritative concepts:
+
+### `booking_shoot_schedules`
+
+Versioned shoot scheduling evidence containing booking identity, organization and branch scope, scheduled start/end, timezone, location, schedule state, version, predecessor/reschedule lineage, reason where applicable, actor and timestamps.
+
+Historical versions must be immutable through normal application paths.
+
+### `booking_preparations`
+
+One authoritative pre-shoot preparation instance for a booking.
+
+### `booking_preparation_items`
+
+Structured preparation evidence for approved applicable pre-shoot requirements.
+
+Restricted safety/comfort details must not be copied into broad preparation summaries.
+
+### `booking_team_assignments`
+
+Authoritative operational booking-team assignments, including the assigned Lead Photographer used by the Newborn safety authorization rule.
+
+### `booking_safety_readiness`
+
+Restricted pre-shoot safety/comfort readiness evidence.
+
+This represents readiness before the shoot. It is not proof that shoot-day actions actually occurred.
+
+### `booking_safety_signoffs`
+
+Immutable formal readiness approval evidence where a separate sign-off is required.
+
+## Safety semantics
+
+Newborn requires completed applicable safety readiness plus formal sign-off before Stage 10.
+
+An ordinary Photographer may perform Newborn sign-off only when that member is the booking's assigned Lead Photographer.
+
+Founder and Studio Manager retain administrative sign-off authority.
+
+Maternity requires completed comfort readiness before Stage 10 but does not require the separate Newborn formal sign-off.
+
+Sitter / Baby / Child requires completed safety/comfort readiness before Stage 10 but does not require the separate Newborn formal sign-off.
+
+Shoot-day actions, stop rules, real-time comfort checks and post-session safety evidence remain outside Sprint 10.
+
+## Permission boundary
+
+Sprint 10 introduces these permission concepts:
+
+- `prep.read`
+- `prep.write`
+- `shoot.schedule`
+- `booking.team.assign`
+
+Existing relevant permissions remain authoritative:
+
+- `booking.read`
+- `booking.write`
+- `booking.stage.advance`
+- `safety.read`
+- `safety.write`
+- `safety.signoff`
+
+The approved authorization change is to grant `safety.signoff` to the Photographer role.
+
+The database must enforce that an ordinary Photographer can use that permission for Newborn sign-off only when assigned as that booking's Lead Photographer.
+
+Founder and Studio Manager retain administrative sign-off authority.
+
+All Sprint 10 operational tables must enable and force RLS.
+
+`anon` receives no Sprint 10 table or RPC access.
+
+Authenticated direct writes to canonical Sprint 10 tables remain revoked. Mutations occur through permission-aware RPCs.
+
+Restricted safety/comfort information requires `safety.read` and must not leak into broad CRM, booking-list, preparation or KPI surfaces.
+
+Exact least-privilege initial role grants for the new non-safety permission keys must be documented and tested during implementation preflight.
+
+## Frozen public RPC boundary
+
+The intended public mutation boundary is:
+
+- `propose_booking_shoot_schedule(...)`
+- `reschedule_booking_shoot(...)`
+- `start_pre_shoot_preparation(...)`
+- `update_pre_shoot_preparation_item(...)`
+- `assign_booking_team_member(...)`
+- `record_booking_safety_readiness(...)`
+- `signoff_booking_safety_readiness(...)`
+- `mark_booking_shoot_scheduled(...)`
+
+The existing `confirm_booking_after_advance(uuid)` operation must be extended without weakening the Sprint 9 advance gate.
+
+Internal helpers may be added, but Sprint 10 must not expose a second generic journey-mutation path.
+
+## Stage 7 -> 8 invariant
+
+`Advance Pending` -> `Booking Confirmed` requires:
+
+- current stage exactly `Advance Pending`;
+- authoritative required-advance evidence;
+- valid non-reversed collections greater than or equal to required advance;
+- valid current proposed shoot plan;
+- booking-confirm permission.
+
+The operation must atomically reserve the proposed shoot plan, create exactly one Stage 7 -> 8 transition and update current journey state.
+
+Accepted quotation and advance snapshots remain historical truth.
+
+## Stage 8 -> 9 invariant
+
+`Booking Confirmed` -> `Pre-Shoot Preparation` requires:
+
+- current stage exactly `Booking Confirmed`;
+- active reserved shoot schedule;
+- permitted actor.
+
+It must create or resolve exactly one authoritative preparation instance and be safe for idempotent retry.
+
+## Stage 9 -> 10 invariant
+
+`Pre-Shoot Preparation` -> `Shoot Scheduled` requires:
+
+- current stage exactly `Pre-Shoot Preparation`;
+- active reserved shoot schedule;
+- all applicable required preparation items satisfied;
+- required team assignments present;
+- applicable safety/comfort readiness completed;
+- valid Newborn formal sign-off when the session is Newborn;
+- permitted actor.
+
+No Sprint 10 operation may create Stage 10 -> 11.
+
+## UI scope
+
+Sprint 10 may modify only the canonical surfaces required by this workflow:
+
+- `/bookings`
+- `/prep`
+- `/safety`
+
+`/bookings` may expose current proposed/reserved scheduling, schedule history, team assignments and Stage 8–10 readiness.
+
+`/prep` must be rebuilt against canonical Sprint 10 preparation data.
+
+`/safety` must be rebuilt against canonical restricted safety-readiness data.
+
+`/prep` and `/safety` remain contained until their canonical database, server-function and authenticated browser paths pass validation.
+
+Legacy Zustand/mock data remains non-authoritative.
+
+`/kpi`, `/reports` and later contained workflows remain unchanged.
+
+## Explicitly out of scope
+
+Sprint 10 does not include Stage 10 -> 11 / `Shoot Completed`, shoot-completion evidence, shoot-day safety-event evidence, post-session safety notes, editing, selection, QC, Pixieset, delivery, heirloom production, reviews, marketing, revenue recognition, new KPI calculations, refunds, payment gateways, automatic WhatsApp messaging, automatic client reminders, booking cancellation workflow, client self-service scheduling, external calendar-provider integration, capacity optimisation, generic arbitrary journey advancement, or consent/privacy/marketing changes.
+
+## Minimum acceptance tests
+
+Sprint 10 implementation must prove:
+
+1. proposed scheduling is permitted only in the approved booking lifecycle;
+2. a proposed schedule is not treated as reserved before booking confirmation;
+3. advance evidence alone cannot confirm when the required shoot plan is absent;
+4. valid advance plus valid plan confirms atomically;
+5. the reserved schedule is snapshotted;
+6. historical schedule versions cannot be updated or deleted normally;
+7. rescheduling requires a reason;
+8. rescheduling creates a new version and preserves history;
+9. rescheduling does not move the journey backward;
+10. Stage 8 -> 9 occurs only through its dedicated operation;
+11. Stage 9 -> 10 fails without an active reserved schedule;
+12. Stage 9 -> 10 fails with incomplete applicable preparation;
+13. Stage 9 -> 10 fails without required safety/comfort readiness;
+14. Newborn Stage 9 -> 10 fails without valid formal sign-off;
+15. an unassigned ordinary Photographer cannot sign Newborn readiness;
+16. the assigned Lead Photographer with `safety.signoff` can sign;
+17. Founder and Studio Manager administrative sign-off remains valid;
+18. Maternity does not require the separate Newborn sign-off;
+19. Sitter / Baby / Child does not require the separate Newborn sign-off;
+20. restricted safety reads require `safety.read`;
+21. safety readiness writes require `safety.write`;
+22. formal sign-off requires `safety.signoff`;
+23. preparation writes require `prep.write`;
+24. scheduling mutation requires `shoot.schedule`;
+25. team assignment requires `booking.team.assign`;
+26. journey advancement requires the approved booking-stage permission;
+27. anonymous execution is denied;
+28. direct authenticated writes are denied;
+29. organization and branch isolation are enforced;
+30. required retry/idempotency behavior is verified;
+31. no Sprint 10 operation creates Stage 10 -> 11;
+32. the existing Sprint 9 payment, confirmation and KPI regression remains green.
+
+## Release gate
+
+Before Sprint 10 can become a release candidate, local database reset, database lint, complete pgTAP regression, empty local schema drift, application build, authoritative post-build TypeScript validation, targeted ESLint, Prettier, legacy-authority checks and restricted-safety leakage checks must pass.
+
+No unsupported revenue or KPI logic may be introduced.
+
+`/prep` and `/safety` may leave containment only after canonical runtime validation.
+
+Before Production rollout, migration history must match the released baseline, relevant Production anomalies must be checked read-only, linked migration dry-run must contain only intended Sprint 10 migrations, Production migration requires separate approval, post-migration RLS/ACL/RPC invariants must pass, and authenticated Production RPC and browser smoke tests must pass.
+
+Only then may Sprint 10 be marked Complete / Released.
+
+## Founder decision record
+
+Approved on 2026-08-14:
+
+Grant `safety.signoff` to the Photographer role, but permit an ordinary Photographer to sign Newborn readiness only when that member is the booking's assigned Lead Photographer. Founder and Studio Manager retain administrative sign-off capability.
+
+This decision is part of the frozen Sprint 10 authorization boundary.
+
+## Implementation state
+
+No Sprint 10 migration or application implementation exists at scope freeze.
+
+The next permitted step is implementation preflight and database design against this frozen contract.
+
+---
+
 # Cross-Sprint Architecture Rules
 
 These rules remain binding unless explicitly superseded by a higher-authority project decision:
@@ -1163,13 +1437,20 @@ As of 2026-08-14:
 
 - **Latest closed Production sprint:** Sprint 9 — Advance Payment, Booking Confirmation & KPI Foundation
 - **Sprint 9 Production application release SHA:** `633c318baf0a1985c17d364f3ab043f442b69332`
+- **Sprint 9 Production closeout commit:** `eb784f4bfe7606e13d20e36ad6bb4e9338ef81db`
 - **Sprint 9 application implementation head:** `89956ae`
 - **Latest Production DB migration:** `20260813170101_sprint9_kpi_read_model_foundation.sql`
 - **Sprint 9 Production state:** Released / Closed
+- **Current sprint:** Sprint 10 — Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation
+- **Sprint 10 state:** Scope frozen / implementation not started / not released
+- **Sprint 10 journey boundary:** extend the authoritative Stage 7 -> 8 confirmation gate with proposed-shoot-plan reservation, then implement dedicated Stage 8 -> 9 and Stage 9 -> 10 transitions; no Stage 10 -> 11
+- **Sprint 10 Newborn safety rule:** formal readiness sign-off is required before Stage 10
+- **Sprint 10 Photographer sign-off rule:** an ordinary Photographer may sign Newborn readiness only when assigned as that booking's Lead Photographer; Founder and Studio Manager retain administrative sign-off authority
+- **Sprint 10 containment:** `/prep` and `/safety` remain unavailable until canonical runtime validation passes
 - **Sprint 9 advance rule:** 50% of final accepted quotation value, whole-INR, half-rupee rounded upward
 - **Sprint 9 local regression:** 361/361 pgTAP PASS; DB lint PASS; schema drift none; build/typecheck/targeted lint/format PASS
 - **Sprint 9 Production database gates:** pre-migration readiness PASS; migration rollout PASS; post-migration static security/invariant gate PASS
 - **Sprint 9 Production authenticated KPI smoke:** PASS
 - **Sprint 9 Production authenticated browser smoke:** PASS
 - **Legacy `/kpi` and `/reports` containment:** preserved
-- **Next action:** commit and push the Sprint 9 Production closeout register update before beginning the next sprint.
+- **Next action:** perform Sprint 10 implementation preflight and database design against the frozen contract; do not make Production changes.
