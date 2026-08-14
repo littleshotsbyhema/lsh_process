@@ -46,7 +46,7 @@ Sprint 6 and Sprint 7 have stronger explicit sprint/release boundaries in the im
 | Sprint 9  | Advance Payment, Booking Confirmation & KPI Foundation                | Complete                   | Released          |
 | Sprint 10 | Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation | Implementation in progress | Not released      |
 
-Current position: **Sprint 9 remains the latest closed Production sprint. Sprint 10 scope is frozen and implementation is in progress. Slice 1 — Shoot Scheduling Evidence + Confirmation Reservation Gate — has been implemented, validated, pushed and migrated to the Production database. Slice 2 — Pre-Shoot Preparation Instance + Controlled Stage 8 -> 9 Gate — has been implemented, fully validated locally, pushed and migrated to the Production database, with post-rollout static security/invariant validation complete. Sprint 10 as a whole is not released.**
+Current position: **Sprint 9 remains the latest closed Production sprint. Sprint 10 scope is frozen and implementation is in progress. Slice 1 — Shoot Scheduling Evidence + Confirmation Reservation Gate — has been implemented, validated, pushed and migrated to the Production database. Slice 2 — Pre-Shoot Preparation Instance + Controlled Stage 8 -> 9 Gate — has been implemented, fully validated locally, pushed and migrated to the Production database, with post-rollout static security/invariant validation complete. Slice 3 — Preparation Checklist Foundation — has been implemented and fully validated locally in commit `691b708`, but has not yet been pushed or migrated to Production. Sprint 10 as a whole is not released.**
 
 ---
 
@@ -1866,6 +1866,73 @@ Production rollout and static-validation evidence:
 
 Slice 2 does not complete Sprint 10. Preparation-item workflow, team assignment, safety readiness/sign-off, the dedicated Stage 9 -> 10 gate, application/runtime integration and later Production/runtime validation remain outstanding.
 
+### Slice 3 implementation checkpoint — local validation complete
+
+Slice 3 — **Preparation Checklist Foundation** — has now been implemented locally within the frozen boundary.
+
+Implementation artifacts:
+
+- migration: `20260814191047_sprint10_preparation_checklist_foundation.sql`;
+- dedicated pgTAP suite: `sprint10_preparation_items_test.sql`;
+- implementation commit: `691b708` (`feat: add sprint 10 preparation checklist foundation`);
+- canonical `booking_preparation_items` evidence with the frozen 16-column surface;
+- internal immutable taxonomy-v1 source supporting exactly Maternity, Newborn and Sitter;
+- extended `start_pre_shoot_preparation(uuid)` with authoritative category derivation, atomic taxonomy snapshot creation and strict Stage 9 structural replay validation;
+- controlled `update_pre_shoot_preparation_item(uuid, boolean)` with exact Stage 9 gating, `prep.write`, same-state idempotency and one audit event per real satisfaction-state change.
+
+Local validation evidence:
+
+- fresh local database reset through `20260814191047_sprint10_preparation_checklist_foundation.sql`: PASS;
+- database lint: PASS with no schema errors;
+- dedicated Slice 3 pgTAP: 83/83 PASS;
+- complete local pgTAP regression: 626/626 PASS across 10 files;
+- existing Slice 2 pgTAP remains 71/71 PASS;
+- local schema drift: none;
+- `git diff --check`: PASS;
+- refined out-of-scope leak check: empty.
+
+Behavioral and integrity evidence:
+
+- exact taxonomy snapshots proven for Maternity 11 items, Newborn 11 items and Sitter 12 items;
+- exactly 8 required items proven for every supported category;
+- unsupported categories fail closed;
+- exact Stage 8 -> 9 preparation start creates one preparation instance, the exact checklist snapshot, one dedicated transition and one start audit atomically;
+- exact Stage 9 replay is idempotent and permits legitimate satisfaction-state differences;
+- structurally damaged Stage 9 checklist evidence fails closed without repair or journey movement;
+- checklist-instantiation failure rolls back preparation, checklist, transition, journey and audit evidence atomically;
+- `false -> true`, same-state replay and `true -> false` item mutations are validated with correct satisfaction attribution and audit cardinality;
+- checklist mutation never advances, regresses or versions the booking journey;
+- authenticated direct preparation-item INSERT, UPDATE and DELETE are denied;
+- missing `prep.write`, wrong-stage mutation, branch-scope violation and cross-organization mutation are denied without evidence mutation;
+- forced RLS read isolation is validated for branch-scoped and foreign-organization actors.
+
+Authorization remains unchanged:
+
+- `prep.read` and `prep.write` remain limited to Founder, Studio Manager and Client Coordinator;
+- no Photographer, Assistant, Stylist or other role receives preparation permission in Slice 3;
+- `start_pre_shoot_preparation(...)` retains the Slice 2 `booking.stage.advance` requirement;
+- `update_pre_shoot_preparation_item(...)` requires `prep.write` but does not require or perform journey advancement.
+
+Slice 3 containment remains intact:
+
+- no team-assignment implementation;
+- no safety-readiness or formal safety-signoff implementation;
+- no `safety.signoff` role-grant change;
+- no Stage 9 -> 10 operation;
+- no Stage 10 -> 11 operation;
+- no `/prep` runtime/UI release;
+- no Production migration or runtime rollout.
+
+Production status at this checkpoint:
+
+- implementation commit `691b708` is local-only and has not yet been pushed to `origin/architecture-rebuild`;
+- migration `20260814191047_sprint10_preparation_checklist_foundation.sql` has not been applied to Production;
+- latest Production DB migration remains `20260814172955_sprint10_pre_shoot_preparation_foundation.sql`;
+- no blind preparation-item backfill exists;
+- immediately before any Slice 3 Production migration, `booking_preparations` must be re-checked read-only and any unmatched existing preparation row places rollout on HOLD pending an explicit controlled design.
+
+Slice 3 does not complete Sprint 10. Team assignment, restricted safety readiness/sign-off, the dedicated Stage 9 -> 10 gate, application/runtime integration and later Production/runtime validation remain outstanding.
+
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
 
 ---
@@ -1950,10 +2017,15 @@ As of 2026-08-15:
 - **Slice 2 Production runtime mutation:** intentionally not exercised against a real booking; `booking_preparations` contained zero rows at static validation time
 - **Sprint 10 Slice 3 checklist:** founder-approved on 2026-08-15 — canonical common, Maternity, Newborn and Sitter preparation taxonomy with required/optional classifications frozen
 - **Sprint 10 Slice 3 technical design:** frozen on 2026-08-15 — Preparation Checklist Foundation
+- **Slice 3 implementation:** locally complete in commit `691b708` (`feat: add sprint 10 preparation checklist foundation`); not yet pushed
+- **Slice 3 migration:** `20260814191047_sprint10_preparation_checklist_foundation.sql`; not yet applied to Production
 - **Slice 3 data boundary:** `booking_preparation_items` plus taxonomy-v1 instantiation inside `start_pre_shoot_preparation(uuid)`
 - **Slice 3 mutation boundary:** `update_pre_shoot_preparation_item(uuid, boolean)`; `prep.write` required; exact Stage 9 only; no journey movement
 - **Slice 3 taxonomy boundary:** Maternity 11 items / Newborn 11 items / Sitter 12 items; exactly 8 required items per supported category; unsupported categories fail closed
 - **Slice 3 authorization:** existing Founder, Studio Manager and Client Coordinator `prep.read` / `prep.write` grants remain unchanged
+- **Slice 3 local validation:** fresh DB reset PASS; DB lint PASS; dedicated pgTAP 83/83 PASS; complete regression 626/626 PASS across 10 files; schema drift none
+- **Slice 3 integrity validation:** atomic first start PASS; exact Stage 9 replay/idempotency PASS; malformed replay fail-closed PASS; item set/clear/idempotency PASS; direct-write denial PASS; organization/branch isolation PASS; forced-instantiation rollback PASS
 - **Slice 3 containment:** no team assignment, safety readiness/sign-off, Stage 9 -> 10, Stage 10 -> 11, UI release or Production rollout
 - **Slice 3 Production safeguard:** no blind backfill; pre-rollout `booking_preparations` anomaly check is mandatory and any unmatched existing preparation row places rollout on HOLD
-- **Next action:** implement the bounded Slice 3 database migration and dedicated pgTAP coverage locally; preserve the existing Slice 2 regression, do not implement Stage 9 -> 10 or later Sprint 10 domains, and do not make Production changes.
+- **Slice 3 Production state:** implementation commit remains local-only; latest Production DB migration remains `20260814172955_sprint10_pre_shoot_preparation_foundation.sql`
+- **Next action:** inspect and approve the Slice 3 checkpoint commit, then perform a separate branch-push / Production-rollout preflight; do not migrate Production before the mandatory read-only `booking_preparations` anomaly check and linked migration dry-run.
