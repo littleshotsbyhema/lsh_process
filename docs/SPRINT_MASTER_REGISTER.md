@@ -33,19 +33,19 @@ Sprint 6 and Sprint 7 have stronger explicit sprint/release boundaries in the im
 
 ## 2. Sprint Register — Executive View
 
-| Sprint   | Normalized title                                       | Current status    | Production status |
-| -------- | ------------------------------------------------------ | ----------------- | ----------------- |
-| Sprint 1 | Core Platform, Organization & Security                 | Complete          | Released          |
-| Sprint 2 | Families Foundation & Audit                            | Complete          | Released          |
-| Sprint 3 | Family Contacts & Communication Controls               | Complete          | Released          |
-| Sprint 4 | Children & Memory Profiles                             | Complete          | Released          |
-| Sprint 5 | Leads & CRM Foundation                                 | Complete          | Released          |
-| Sprint 6 | Lead Workspace & Sales Operations                      | Complete          | Released          |
-| Sprint 7 | AI Memory Guide Core Flow & Recommendation Engine      | Complete          | Released          |
-| Sprint 8 | Packages, Quotations & Booking Conversion Foundation   | Complete          | Released          |
-| Sprint 9 | Advance Payment, Booking Confirmation & KPI Foundation | Release candidate | Not released      |
+| Sprint   | Normalized title                                       | Current status | Production status |
+| -------- | ------------------------------------------------------ | -------------- | ----------------- |
+| Sprint 1 | Core Platform, Organization & Security                 | Complete       | Released          |
+| Sprint 2 | Families Foundation & Audit                            | Complete       | Released          |
+| Sprint 3 | Family Contacts & Communication Controls               | Complete       | Released          |
+| Sprint 4 | Children & Memory Profiles                             | Complete       | Released          |
+| Sprint 5 | Leads & CRM Foundation                                 | Complete       | Released          |
+| Sprint 6 | Lead Workspace & Sales Operations                      | Complete       | Released          |
+| Sprint 7 | AI Memory Guide Core Flow & Recommendation Engine      | Complete       | Released          |
+| Sprint 8 | Packages, Quotations & Booking Conversion Foundation   | Complete       | Released          |
+| Sprint 9 | Advance Payment, Booking Confirmation & KPI Foundation | Complete       | Released          |
 
-Current position: **Sprint 8 remains the latest closed Production sprint. Sprint 9 implementation is complete locally, its release-candidate technical gate has passed, and Production rollout has not started.**
+Current position: **Sprint 9 is closed in Production. Its advance-payment evidence, advance-gated booking confirmation, Founder KPI read model, authenticated KPI boundary, and Founder Control Room are released and validated.**
 
 ---
 
@@ -638,7 +638,7 @@ The Quote Builder subject selector exposed two historical test/demo-named CRM re
 
 ## Status
 
-**IMPLEMENTATION COMPLETE / LOCAL RELEASE CANDIDATE / NOT RELEASED**
+**COMPLETE / RELEASED**
 
 ## Objective
 
@@ -1047,17 +1047,66 @@ Supporting scope/design commits:
 
 Current Sprint 9 application/implementation head before this register update: `89956ae`.
 
-### Production state
+### Production release
 
-**NOT RELEASED**
+**RELEASED / CLOSED**
 
-As of 2026-08-14:
+Production rollout completed on 2026-08-14.
 
-- no Sprint 9 migration has been applied to the linked Production database;
-- no Sprint 9 application commit has been pushed as the Production release;
-- Sprint 8 remains the latest closed Production sprint;
-- the latest Production database migration remains `20260812131648_sprint8_booking_conversion_foundation.sql`;
-- Production rollout must be separately validated and recorded before Sprint 9 can be marked Complete / Released.
+Database release evidence:
+
+- linked migration history was verified Local = Remote through the Sprint 8 baseline before rollout;
+- Sprint 9 dry-run proposed exactly the three intended migrations and no others;
+- the Production pre-migration integrity gate returned `production_ready_for_sprint9 = true`;
+- `20260813160413_sprint9_advance_payment_evidence_foundation.sql` applied successfully;
+- `20260813164041_sprint9_booking_confirmation_foundation.sql` applied successfully;
+- `20260813170101_sprint9_kpi_read_model_foundation.sql` applied successfully;
+- linked migration history was then verified Local = Remote through `20260813170101`;
+- the Production post-migration static gate returned `post_migration_static_ok = true`;
+- all three Sprint 9 payment tables were present with forced RLS;
+- anonymous payment-table privileges remained zero;
+- authenticated direct payment-table write privileges remained zero;
+- all five Sprint 9 permissions existed with the initial Founder grants;
+- all six Sprint 9 payment, booking-confirmation and KPI RPCs were present as `SECURITY DEFINER` functions with safe search paths;
+- authenticated RPC execution was enabled and anonymous execution remained denied.
+
+Authenticated Production KPI validation:
+
+- the existing active organization-wide Founder account authenticated successfully;
+- `get_founder_kpi_summary(...)` returned HTTP 200 and exactly one aggregate row;
+- `get_founder_booking_stage_kpis(...)` returned HTTP 200 and all 21 canonical stages;
+- canonical stage ordering 1 through 21 passed;
+- the Production KPI smoke returned `FOUNDER KPI PRODUCTION SMOKE: PASS`;
+- the canonical 30-day summary showed two real inquiries and no quotations, bookings or payment collections;
+- zero-denominator conversion rates remained `null` and were rendered as `—`;
+- inquiry-to-accepted-quote conversion correctly rendered `0%` because the inquiry denominator was non-zero.
+
+Application release evidence:
+
+- Git release branch `architecture-rebuild` was pushed successfully;
+- local and `origin/architecture-rebuild` converged with divergence `0 / 0`;
+- exact Production deployment SHA: `633c318baf0a1985c17d364f3ab043f442b69332`;
+- release commit: `633c318` — `docs: record sprint 9 release candidate`;
+- Sprint 9 application implementation head: `89956ae` — `feat: add sprint 9 founder control room kpis`;
+- Vercel Production deployment: `dpl_42g4mxYsVLwZQeEfpayhokCiatXp`;
+- Vercel deployment state reached `READY`;
+- Production aliases were attached successfully;
+- Production root returned HTTP 200;
+- the checked release window contained no Vercel error/fatal runtime logs.
+
+Authenticated Production browser smoke passed:
+
+- the Founder Studio Control Room rendered the canonical Founder view;
+- `New Inquiries` displayed `2`;
+- quotation, booking and advance-payment indicators matched the authoritative Production KPI RPC results;
+- zero-denominator conversion cards displayed `—` rather than invented percentages;
+- all 21 canonical booking stages rendered;
+- all current stage counts were zero and empty age values displayed as `—`;
+- `/kpi` remained contained behind the rebuild screen;
+- `/reports` remained contained behind the rebuild screen;
+- no visible fallback/demo KPI values or broken KPI cards were present.
+
+Sprint 9 is therefore accepted as **Complete / Released**.
 
 ---
 
@@ -1080,14 +1129,14 @@ These rules remain binding unless explicitly superseded by a higher-authority pr
 
 # Known Cross-Sprint Debt / Future Work
 
-The following items are known but are **not Sprint 8 release-candidate blockers**:
+The following items remain known cross-sprint debt. They are **not blockers to the accepted Sprint 9 Production release**, but they remain subject to future bounded remediation:
 
-- legacy mock/Zustand booking-dependent implementations remain in later-sprint domains, but their affected routes are temporarily contained and are not authoritative Sprint 8 booking truth;
-- repository-wide TypeScript errors existed before Sprint 7; the Sprint 8 authoritative post-build `npx tsc --noEmit` gate is clean, while TanStack route generation must precede that final typecheck;
-- repository-wide ESLint baseline debt existed before Sprint 7 and requires a separate cleanup initiative;
+- legacy mock/Zustand implementations remain in later-sprint domains; affected routes remain temporarily contained and are not authoritative canonical booking, journey, KPI or financial truth;
+- repository-wide TypeScript debt predates the rebuilt sprint boundaries; the Sprint 9 authoritative post-build `npx tsc -p tsconfig.json` gate is clean, and TanStack route generation must precede the final typecheck;
+- repository-wide ESLint baseline debt predates Sprint 7 and requires a separate cleanup initiative;
 - older `.inputValidator()` usages are deprecated and should be modernized in a bounded refactor;
 - Lead-to-Family conversion does not yet transfer every family-contact / memory-goal field automatically;
-- Supabase Security Advisor continues to warn about intentional authenticated/public `SECURITY DEFINER` RPC patterns; these must remain individually audited rather than dismissed wholesale.
+- Supabase Security Advisor warnings around intentional authenticated/public `SECURITY DEFINER` RPC patterns must continue to be evaluated function-by-function rather than dismissed wholesale.
 
 ---
 
@@ -1112,14 +1161,15 @@ For every future sprint:
 
 As of 2026-08-14:
 
-- **Latest closed Production sprint:** Sprint 8 — Packages, Quotations & Booking Conversion Foundation
-- **Sprint 8 Production application release commit:** `73d12bf070a3148f624598b1c124f1b33f700da4`
-- **Latest Production DB migration:** `20260812131648_sprint8_booking_conversion_foundation.sql`
-- **Sprint 8 Production state:** Released / Closed
-- **Current sprint:** Sprint 9 — Advance Payment, Booking Confirmation & KPI Foundation
-- **Sprint 9 state:** Implementation complete / local release candidate validated
-- **Sprint 9 local implementation head before RC documentation:** `89956ae`
+- **Latest closed Production sprint:** Sprint 9 — Advance Payment, Booking Confirmation & KPI Foundation
+- **Sprint 9 Production application release SHA:** `633c318baf0a1985c17d364f3ab043f442b69332`
+- **Sprint 9 application implementation head:** `89956ae`
+- **Latest Production DB migration:** `20260813170101_sprint9_kpi_read_model_foundation.sql`
+- **Sprint 9 Production state:** Released / Closed
 - **Sprint 9 advance rule:** 50% of final accepted quotation value, whole-INR, half-rupee rounded upward
 - **Sprint 9 local regression:** 361/361 pgTAP PASS; DB lint PASS; schema drift none; build/typecheck/targeted lint/format PASS
-- **Sprint 9 Production state:** Not released
-- **Next action:** commit the Sprint 9 release-candidate register update, then perform a separate Production rollout preflight before any linked database write or application push.
+- **Sprint 9 Production database gates:** pre-migration readiness PASS; migration rollout PASS; post-migration static security/invariant gate PASS
+- **Sprint 9 Production authenticated KPI smoke:** PASS
+- **Sprint 9 Production authenticated browser smoke:** PASS
+- **Legacy `/kpi` and `/reports` containment:** preserved
+- **Next action:** commit and push the Sprint 9 Production closeout register update before beginning the next sprint.
