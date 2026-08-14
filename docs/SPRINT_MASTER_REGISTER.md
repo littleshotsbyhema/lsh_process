@@ -46,7 +46,7 @@ Sprint 6 and Sprint 7 have stronger explicit sprint/release boundaries in the im
 | Sprint 9  | Advance Payment, Booking Confirmation & KPI Foundation                | Complete                   | Released          |
 | Sprint 10 | Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation | Implementation in progress | Not released      |
 
-Current position: **Sprint 9 remains the latest closed Production sprint. Sprint 10 scope is frozen and implementation is in progress. Slice 1 — Shoot Scheduling Evidence + Confirmation Reservation Gate — has been implemented, validated, pushed and migrated to the Production database. Slice 2 — Pre-Shoot Preparation Instance + Controlled Stage 8 -> 9 Gate — has been implemented, fully validated locally, pushed and migrated to the Production database, with post-rollout static security/invariant validation complete. Slice 3 — Preparation Checklist Foundation — has been implemented and fully validated locally in commit `691b708`, but has not yet been pushed or migrated to Production. Sprint 10 as a whole is not released.**
+Current position: **Sprint 9 remains the latest closed Production sprint. Sprint 10 scope is frozen and implementation is in progress. Slice 1 — Shoot Scheduling Evidence + Confirmation Reservation Gate — has been implemented, validated, pushed and migrated to the Production database. Slice 2 — Pre-Shoot Preparation Instance + Controlled Stage 8 -> 9 Gate — has been implemented, fully validated locally, pushed and migrated to the Production database, with post-rollout static security/invariant validation complete. Slice 3 — Preparation Checklist Foundation — has been implemented, fully validated locally, pushed and migrated to the Production database, with post-rollout static security/invariant validation complete. Sprint 10 as a whole is not released.**
 
 ---
 
@@ -1933,6 +1933,53 @@ Production status at this checkpoint:
 
 Slice 3 does not complete Sprint 10. Team assignment, restricted safety readiness/sign-off, the dedicated Stage 9 -> 10 gate, application/runtime integration and later Production/runtime validation remain outstanding.
 
+### Slice 3 Production checkpoint — database + static validation complete
+
+Slice 3 implementation commit `691b708` and local-checkpoint commit `63ef223` were pushed to `origin/architecture-rebuild`. Migration `20260814191047_sprint10_preparation_checklist_foundation.sql` has been applied to the Production database.
+
+Production rollout evidence:
+
+- pre-rollout linked migration history matched Production through `20260814172955_sprint10_pre_shoot_preparation_foundation.sql`;
+- mandatory just-in-time read-only `booking_preparations` anomaly check returned zero rows;
+- pre-rollout Production had no `booking_preparation_items` table and no `update_pre_shoot_preparation_item(uuid, boolean)` RPC;
+- linked `db push --dry-run` proposed exactly `20260814191047_sprint10_preparation_checklist_foundation.sql`;
+- Production migration rollout: PASS;
+- post-rollout migration history Local = Remote through `20260814191047`;
+- post-rollout linked dry run reports the remote database up to date;
+- linked database lint: PASS with no schema errors.
+
+Production static security and invariant evidence:
+
+- `booking_preparation_items` has exactly the frozen 16-column surface;
+- `booking_preparation_items` has RLS enabled and forced;
+- `anon` has no table SELECT, INSERT, UPDATE or DELETE access;
+- `authenticated` has SELECT access only and no direct INSERT, UPDATE or DELETE access;
+- the authenticated SELECT policy requires `prep.read` and the derived booking branch-scope boundary;
+- the canonical preparation-item guard trigger is enabled for INSERT, UPDATE and DELETE;
+- organization-safe preparation/member foreign keys, tenant uniqueness, item-key, label, taxonomy-version, sort-order and satisfaction-state constraints are present;
+- `start_pre_shoot_preparation(uuid)` remains `SECURITY DEFINER`, uses empty `search_path`, is authenticated-executable and anon-inaccessible;
+- `update_pre_shoot_preparation_item(uuid, boolean)` is `SECURITY DEFINER`, uses empty `search_path`, is authenticated-executable and anon-inaccessible;
+- the internal taxonomy helper is not executable by `anon` or `authenticated`;
+- `prep.read` and `prep.write` remain granted exactly to Founder, Studio Manager and Client Coordinator;
+- Production function definitions retain the approved Maternity, Newborn and Sitter taxonomy markers, unsupported-category fail-closed guard, strict Stage 9 structural replay guard, exact Stage 9 checklist-mutation gate and preparation-item update audit;
+- the successful Production migration necessarily passed its embedded taxonomy cardinality/integrity assertions.
+
+Production data state at static validation time:
+
+- `booking_preparations`: zero rows;
+- `booking_preparation_items`: zero rows;
+- no artificial Production booking/preparation mutation was created solely for rollout validation.
+
+Vercel deployment evidence:
+
+- Production deployment `dpl_Fv9XHo9N7Yo1YWRyxHaitsSSUiGi`: READY;
+- deployed Git commit: `63ef223263b29bafb281d02ec3efaf7b6a33c463`;
+- deployed Git branch: `architecture-rebuild`.
+
+Slice 3 remains contained at its approved database-foundation boundary. No team assignment, safety readiness/sign-off, `safety.signoff` role change, Stage 9 -> 10 transition, Stage 10 -> 11 transition or `/prep` runtime/UI release is included.
+
+Slice 3 does not complete Sprint 10. Team assignment, restricted safety readiness/sign-off, the dedicated Stage 9 -> 10 gate, application/runtime integration and remaining Sprint 10 validation remain outstanding.
+
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
 
 ---
@@ -1992,7 +2039,7 @@ As of 2026-08-15:
 - **Sprint 9 Production application release SHA:** `633c318baf0a1985c17d364f3ab043f442b69332`
 - **Sprint 9 Production closeout commit:** `eb784f4bfe7606e13d20e36ad6bb4e9338ef81db`
 - **Sprint 9 application implementation head:** `89956ae`
-- **Latest Production DB migration:** `20260814172955_sprint10_pre_shoot_preparation_foundation.sql` (Sprint 10 Slice 2 database foundation; Sprint 10 not released)
+- **Latest Production DB migration:** `20260814191047_sprint10_preparation_checklist_foundation.sql` (Sprint 10 Slice 3 database foundation; Sprint 10 not released)
 - **Sprint 9 Production state:** Released / Closed
 - **Current sprint:** Sprint 10 — Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation
 - **Sprint 10 state:** Scope frozen / implementation in progress / not released
@@ -2017,15 +2064,18 @@ As of 2026-08-15:
 - **Slice 2 Production runtime mutation:** intentionally not exercised against a real booking; `booking_preparations` contained zero rows at static validation time
 - **Sprint 10 Slice 3 checklist:** founder-approved on 2026-08-15 — canonical common, Maternity, Newborn and Sitter preparation taxonomy with required/optional classifications frozen
 - **Sprint 10 Slice 3 technical design:** frozen on 2026-08-15 — Preparation Checklist Foundation
-- **Slice 3 implementation:** locally complete in commit `691b708` (`feat: add sprint 10 preparation checklist foundation`); not yet pushed
-- **Slice 3 migration:** `20260814191047_sprint10_preparation_checklist_foundation.sql`; not yet applied to Production
+- **Slice 3 implementation:** complete in commit `691b708` (`feat: add sprint 10 preparation checklist foundation`); pushed in the branch stack through checkpoint commit `63ef223`
+- **Slice 3 migration:** `20260814191047_sprint10_preparation_checklist_foundation.sql`; applied to Production
 - **Slice 3 data boundary:** `booking_preparation_items` plus taxonomy-v1 instantiation inside `start_pre_shoot_preparation(uuid)`
 - **Slice 3 mutation boundary:** `update_pre_shoot_preparation_item(uuid, boolean)`; `prep.write` required; exact Stage 9 only; no journey movement
 - **Slice 3 taxonomy boundary:** Maternity 11 items / Newborn 11 items / Sitter 12 items; exactly 8 required items per supported category; unsupported categories fail closed
 - **Slice 3 authorization:** existing Founder, Studio Manager and Client Coordinator `prep.read` / `prep.write` grants remain unchanged
 - **Slice 3 local validation:** fresh DB reset PASS; DB lint PASS; dedicated pgTAP 83/83 PASS; complete regression 626/626 PASS across 10 files; schema drift none
 - **Slice 3 integrity validation:** atomic first start PASS; exact Stage 9 replay/idempotency PASS; malformed replay fail-closed PASS; item set/clear/idempotency PASS; direct-write denial PASS; organization/branch isolation PASS; forced-instantiation rollback PASS
-- **Slice 3 containment:** no team assignment, safety readiness/sign-off, Stage 9 -> 10, Stage 10 -> 11, UI release or Production rollout
+- **Slice 3 containment:** no team assignment, safety readiness/sign-off, Stage 9 -> 10, Stage 10 -> 11, or `/prep` runtime/UI release
 - **Slice 3 Production safeguard:** no blind backfill; pre-rollout `booking_preparations` anomaly check is mandatory and any unmatched existing preparation row places rollout on HOLD
-- **Slice 3 Production state:** implementation commit remains local-only; latest Production DB migration remains `20260814172955_sprint10_pre_shoot_preparation_foundation.sql`
-- **Next action:** inspect and approve the Slice 3 checkpoint commit, then perform a separate branch-push / Production-rollout preflight; do not migrate Production before the mandatory read-only `booking_preparations` anomaly check and linked migration dry-run.
+- **Slice 3 Production state:** migration applied; Local = Remote through `20260814191047`; linked lint PASS; post-rollout dry run reports remote database up to date
+- **Slice 3 Production static security:** exact 16-column table surface PASS; forced RLS PASS; authenticated SELECT-only table ACL PASS; anon denial PASS; exact preparation permission grants PASS; guard-trigger/integrity boundary PASS; RPC SECURITY DEFINER / empty search_path / authenticated-only execution PASS
+- **Slice 3 Production runtime mutation:** intentionally not exercised because `booking_preparations` and `booking_preparation_items` both contained zero rows at static validation time
+- **Slice 3 Vercel deployment:** `dpl_Fv9XHo9N7Yo1YWRyxHaitsSSUiGi` READY at exact branch checkpoint SHA `63ef223263b29bafb281d02ec3efaf7b6a33c463`
+- **Next action:** record and push the Slice 3 Production checkpoint, then select and freeze the next bounded Sprint 10 implementation slice separately; do not introduce team assignment, safety-signoff behavior or Stage 9 -> 10 advancement without its approved bounded design.
