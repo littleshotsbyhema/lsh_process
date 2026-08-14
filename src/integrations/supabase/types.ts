@@ -216,6 +216,213 @@ export type Database = {
           },
         ];
       };
+      booking_payment_requirements: {
+        Row: {
+          accepted_quotation_total_inr: number;
+          advance_percentage: number;
+          booking_id: string;
+          calculation_rule: string;
+          created_at: string;
+          created_by: string;
+          currency: string;
+          id: string;
+          organization_id: string;
+          required_advance_inr: number;
+          source_quotation_id: string;
+        };
+        Insert: {
+          accepted_quotation_total_inr: number;
+          advance_percentage?: number;
+          booking_id: string;
+          calculation_rule?: string;
+          created_at?: string;
+          created_by: string;
+          currency?: string;
+          id?: string;
+          organization_id: string;
+          required_advance_inr: number;
+          source_quotation_id: string;
+        };
+        Update: {
+          accepted_quotation_total_inr?: number;
+          advance_percentage?: number;
+          booking_id?: string;
+          calculation_rule?: string;
+          created_at?: string;
+          created_by?: string;
+          currency?: string;
+          id?: string;
+          organization_id?: string;
+          required_advance_inr?: number;
+          source_quotation_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_payment_requirements_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_payment_requirements_created_by_fkey";
+            columns: ["created_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_payment_requirements_org_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_payment_requirements_quote_fkey";
+            columns: ["organization_id", "source_quotation_id"];
+            isOneToOne: false;
+            referencedRelation: "quotations";
+            referencedColumns: ["organization_id", "id"];
+          },
+        ];
+      };
+      booking_payment_reversals: {
+        Row: {
+          booking_id: string;
+          id: string;
+          organization_id: string;
+          payment_id: string;
+          reason: string;
+          reversed_at: string;
+          reversed_by: string;
+        };
+        Insert: {
+          booking_id: string;
+          id?: string;
+          organization_id: string;
+          payment_id: string;
+          reason: string;
+          reversed_at?: string;
+          reversed_by: string;
+        };
+        Update: {
+          booking_id?: string;
+          id?: string;
+          organization_id?: string;
+          payment_id?: string;
+          reason?: string;
+          reversed_at?: string;
+          reversed_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_payment_reversals_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_payment_reversals_org_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_payment_reversals_payment_fkey";
+            columns: ["organization_id", "booking_id", "payment_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_payments";
+            referencedColumns: ["organization_id", "booking_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_payment_reversals_reversed_by_fkey";
+            columns: ["reversed_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
+      booking_payments: {
+        Row: {
+          amount_inr: number;
+          booking_id: string;
+          branch_id: string | null;
+          currency: string;
+          external_reference: string | null;
+          id: string;
+          note: string | null;
+          organization_id: string;
+          payment_method: Database["public"]["Enums"]["booking_payment_method"];
+          payment_reference: string;
+          received_at: string;
+          recorded_at: string;
+          recorded_by: string;
+        };
+        Insert: {
+          amount_inr: number;
+          booking_id: string;
+          branch_id?: string | null;
+          currency?: string;
+          external_reference?: string | null;
+          id?: string;
+          note?: string | null;
+          organization_id: string;
+          payment_method: Database["public"]["Enums"]["booking_payment_method"];
+          payment_reference: string;
+          received_at: string;
+          recorded_at?: string;
+          recorded_by: string;
+        };
+        Update: {
+          amount_inr?: number;
+          booking_id?: string;
+          branch_id?: string | null;
+          currency?: string;
+          external_reference?: string | null;
+          id?: string;
+          note?: string | null;
+          organization_id?: string;
+          payment_method?: Database["public"]["Enums"]["booking_payment_method"];
+          payment_reference?: string;
+          received_at?: string;
+          recorded_at?: string;
+          recorded_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_payments_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_payments_branch_fkey";
+            columns: ["branch_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_payments_org_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_payments_recorded_by_fkey";
+            columns: ["recorded_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
       booking_stage_transitions: {
         Row: {
           booking_id: string;
@@ -4372,6 +4579,28 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      confirm_booking_after_advance: {
+        Args: { p_booking_id: string };
+        Returns: {
+          booking_reference: string;
+          branch_id: string | null;
+          created_at: string;
+          created_by: string;
+          family_id: string | null;
+          id: string;
+          lead_id: string | null;
+          organization_id: string;
+          source_quotation_id: string;
+          updated_at: string;
+          updated_by: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "bookings";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       convert_lead_to_family: {
         Args: {
           p_family_display_name?: string;
@@ -4705,6 +4934,21 @@ export type Database = {
         Args: { p_branch_id?: string; p_organization_id: string };
         Returns: string[];
       };
+      get_booking_payment_summary: {
+        Args: { p_booking_id: string };
+        Returns: {
+          accepted_quotation_total_inr: number;
+          advance_outstanding_inr: number;
+          advance_satisfied: boolean;
+          booking_id: string;
+          confirmed_with_advance_shortfall: boolean;
+          payment_count: number;
+          required_advance_inr: number;
+          reversal_count: number;
+          source_quotation_id: string;
+          valid_collected_inr: number;
+        }[];
+      };
       get_consultation_private_notes: {
         Args: { p_consultation_id: string };
         Returns: {
@@ -4713,6 +4957,57 @@ export type Database = {
           created_by: string;
           id: string;
           note_text: string;
+        }[];
+      };
+      get_founder_booking_stage_kpis: {
+        Args: {
+          p_as_of: string;
+          p_branch_id?: string;
+          p_organization_id: string;
+        };
+        Returns: {
+          average_stage_age_seconds: number;
+          booking_count: number;
+          oldest_stage_age_seconds: number;
+          stage_key: string;
+          stage_order: number;
+        }[];
+      };
+      get_founder_kpi_summary: {
+        Args: {
+          p_branch_id?: string;
+          p_organization_id: string;
+          p_period_end: string;
+          p_period_start: string;
+        };
+        Returns: {
+          accepted_quote_cohort_booked_count: number;
+          accepted_quote_to_booking_rate_pct: number;
+          accepted_value_inr: number;
+          advance_outstanding_as_of_end_inr: number;
+          advance_pending_stage_as_of_end_count: number;
+          advance_satisfied_bookings_as_of_end_count: number;
+          booking_cohort_confirmed_count: number;
+          booking_confirmed_stage_as_of_end_count: number;
+          booking_to_confirmed_rate_pct: number;
+          bookings_confirmed_count: number;
+          bookings_created_count: number;
+          branch_id: string;
+          confirmed_with_advance_shortfall_as_of_end_count: number;
+          inquiry_cohort_accepted_count: number;
+          inquiry_to_accepted_quote_rate_pct: number;
+          new_inquiries_count: number;
+          organization_id: string;
+          payments_collected_inr: number;
+          period_end: string;
+          period_start: string;
+          quotations_accepted_count: number;
+          quotations_sent_count: number;
+          quoted_value_inr: number;
+          required_advance_as_of_end_inr: number;
+          sent_quote_acceptance_rate_pct: number;
+          sent_quote_cohort_accepted_count: number;
+          valid_collected_as_of_end_inr: number;
         }[];
       };
       get_memory_guide_sensitive_answers: {
@@ -4956,6 +5251,37 @@ export type Database = {
         Args: { p_access_token: string; p_expected_version: number };
         Returns: Json;
       };
+      record_booking_payment: {
+        Args: {
+          p_amount_inr: number;
+          p_booking_id: string;
+          p_external_reference?: string;
+          p_note?: string;
+          p_payment_method: Database["public"]["Enums"]["booking_payment_method"];
+          p_received_at?: string;
+        };
+        Returns: {
+          amount_inr: number;
+          booking_id: string;
+          branch_id: string | null;
+          currency: string;
+          external_reference: string | null;
+          id: string;
+          note: string | null;
+          organization_id: string;
+          payment_method: Database["public"]["Enums"]["booking_payment_method"];
+          payment_reference: string;
+          received_at: string;
+          recorded_at: string;
+          recorded_by: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_payments";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       record_lead_communication: {
         Args: {
           p_business_purpose: string;
@@ -5087,6 +5413,24 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "notification_outbox";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      reverse_booking_payment: {
+        Args: { p_payment_id: string; p_reason: string };
+        Returns: {
+          booking_id: string;
+          id: string;
+          organization_id: string;
+          payment_id: string;
+          reason: string;
+          reversed_at: string;
+          reversed_by: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_payment_reversals";
           isOneToOne: true;
           isSetofReturn: false;
         };
@@ -5562,6 +5906,7 @@ export type Database = {
       };
     };
     Enums: {
+      booking_payment_method: "cash" | "upi" | "bank_transfer" | "card" | "other";
       branch_status: "active" | "inactive" | "archived";
       child_stage: "expected" | "newborn" | "baby" | "sitter" | "toddler" | "child";
       child_status: "active" | "archived";
@@ -5766,6 +6111,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      booking_payment_method: ["cash", "upi", "bank_transfer", "card", "other"],
       branch_status: ["active", "inactive", "archived"],
       child_stage: ["expected", "newborn", "baby", "sitter", "toddler", "child"],
       child_status: ["active", "archived"],
