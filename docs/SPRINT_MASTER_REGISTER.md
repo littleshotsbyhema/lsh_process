@@ -1388,6 +1388,59 @@ Additional Slice 2 authorization decision approved on 2026-08-14:
 
 Initial `prep.read` and `prep.write` grants are limited to Founder, Studio Manager and Client Coordinator. `start_pre_shoot_preparation(...)` additionally requires the existing `booking.stage.advance` permission. No other role receives either preparation permission in the initial Slice 2 grant set.
 
+Additional Slice 3 preparation-checklist decision approved on 2026-08-15:
+
+The canonical pre-shoot preparation taxonomy is founder-approved as follows.
+
+Common to all supported service categories:
+
+| Item key | Label | Requirement |
+| --- | --- | --- |
+| `session_brief_reviewed` | Session brief reviewed | Required |
+| `preparation_guidance_shared` | Client preparation guidance shared | Required |
+| `participant_plan_confirmed` | Participant plan confirmed | Required |
+| `wardrobe_styling_plan_confirmed` | Wardrobe and styling plan confirmed | Required |
+| `set_prop_plan_confirmed` | Set / prop plan confirmed | Required |
+| `location_arrival_plan_confirmed` | Location and arrival plan confirmed | Required |
+| `inspiration_references_reviewed` | Inspiration / reference preferences reviewed | Optional |
+| `special_requests_reviewed` | Non-safety special requests reviewed | Optional |
+
+Maternity-specific:
+
+| Item key | Label | Requirement |
+| --- | --- | --- |
+| `maternity_wardrobe_selection_confirmed` | Maternity wardrobe selection confirmed | Required |
+| `maternity_session_style_confirmed` | Maternity session style / mood confirmed | Required |
+| `maternity_partner_family_plan_reviewed` | Partner / family participation plan reviewed | Optional |
+
+Newborn-specific:
+
+| Item key | Label | Requirement |
+| --- | --- | --- |
+| `newborn_styling_palette_confirmed` | Newborn styling / colour palette confirmed | Required |
+| `newborn_family_inclusion_plan_confirmed` | Parent / sibling inclusion plan confirmed | Required |
+| `newborn_keepsake_prop_requests_reviewed` | Keepsake / personal prop requests reviewed | Optional |
+
+Sitter-specific:
+
+| Item key | Label | Requirement |
+| --- | --- | --- |
+| `sitter_outfit_plan_confirmed` | Sitter outfit plan confirmed | Required |
+| `sitter_set_style_confirmed` | Sitter set / styling direction confirmed | Required |
+| `sitter_theme_palette_reviewed` | Theme / colour palette reviewed | Optional |
+| `sitter_cake_smash_plan_reviewed` | Cake-smash plan reviewed, when relevant | Optional |
+
+Checklist scope rules:
+
+- this taxonomy contains operational preparation evidence only;
+- it must not contain medical, feeding, sleep, temperature, handling, posing-safety, health, comfort-readiness or formal safety-signoff data;
+- Newborn formal safety readiness/sign-off remains a separate restricted safety concern;
+- optional preparation items do not become Stage 9 -> 10 blockers merely because they are unsatisfied;
+- future service categories without an explicitly approved preparation taxonomy must not silently inherit category-specific requirements;
+- Stage 9 -> 10 behavior is not implemented merely by approving this checklist.
+
+This approval freezes the business taxonomy and required/optional classifications only. The Slice 3 storage model, item-instantiation semantics, mutation/audit contract, authorization details and RPC behavior remain subject to a separate implementation-design freeze before coding.
+
 ## Implementation state
 
 Sprint 10 implementation preflight is complete.
@@ -1612,7 +1665,7 @@ For every future sprint:
 
 # Current Release Marker
 
-As of 2026-08-14:
+As of 2026-08-15:
 
 - **Latest closed Production sprint:** Sprint 9 — Advance Payment, Booking Confirmation & KPI Foundation
 - **Sprint 9 Production application release SHA:** `633c318baf0a1985c17d364f3ab043f442b69332`
@@ -1641,4 +1694,6 @@ As of 2026-08-14:
 - **Slice 2 Production database state:** migration applied; Local = Remote through `20260814172955`; linked lint PASS; post-rollout dry run reports remote database up to date
 - **Slice 2 Production static security:** forced RLS PASS; authenticated SELECT-only table ACL PASS; anon denial PASS; exact preparation permission grants PASS; immutable guard boundary PASS; RPC SECURITY DEFINER / empty search_path / authenticated-only execution PASS
 - **Slice 2 Production runtime mutation:** intentionally not exercised against a real booking; `booking_preparations` contained zero rows at static validation time
-- **Next action:** record and commit this Production checkpoint, then freeze the next bounded Sprint 10 slice before implementation; preparation items, Stage 9 -> 10, team assignment and safety readiness require their own approved slice boundary.
+- **Sprint 10 Slice 3 checklist:** founder-approved on 2026-08-15 — canonical common, Maternity, Newborn and Sitter preparation taxonomy with required/optional classifications frozen
+- **Slice 3 checklist boundary:** operational preparation evidence only; no restricted safety/medical/comfort data and no Stage 9 -> 10 implementation
+- **Next action:** freeze the remaining Slice 3 implementation design — storage shape, item instantiation, satisfaction/audit semantics, authorization/RPC contract and pgTAP boundary — before implementation; no team-assignment, safety, Stage 9 -> 10, UI or Production changes.
