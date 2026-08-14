@@ -2592,6 +2592,218 @@ Slice 4 Production remains contained. This checkpoint does not release or implem
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
 
+### Slice 5 founder decision checkpoint — Restricted Safety/Comfort Readiness + Newborn Formal Sign-off Foundation
+
+Founder decisions approved on 2026-08-15.
+
+Slice 5 is a separately bounded evidence foundation. These business decisions are frozen before technical design.
+
+#### 1. Evidence-only Slice 5 boundary
+
+Slice 5 may introduce canonical restricted safety/comfort readiness evidence, immutable formal sign-off evidence, and the already-approved Photographer `safety.signoff` grant.
+
+Slice 5 does not implement or release:
+
+- Stage 9 -> 10 advancement;
+- Stage 10 -> 11 advancement;
+- `/safety` runtime/UI;
+- shoot-day safety evidence;
+- capacity, overlap or availability logic.
+
+#### 2. Safety/comfort readiness is booking-scoped restricted evidence
+
+Safety/comfort readiness is canonical booking-scoped restricted evidence.
+
+It remains separate from ordinary preparation checklist evidence and must not be copied into broad booking, CRM, KPI, reporting or other unrestricted operational surfaces.
+
+#### 3. Readiness remains structured and operational
+
+Slice 5 readiness evidence records controlled operational readiness states only.
+
+It must not become:
+
+- medical history;
+- diagnosis;
+- treatment advice;
+- feeding or sleep records;
+- temperature records;
+- posing logs;
+- shoot-day incident records;
+- arbitrary free-form medical or safety notes.
+
+#### 4. Applicability follows the authoritative booking service category
+
+Category behavior is frozen as follows:
+
+- **Newborn:** applicable safety/comfort readiness must be complete and formal sign-off is required;
+- **Maternity:** applicable comfort readiness must be complete; no separate formal sign-off;
+- **Sitter / Baby / Child:** applicable safety/comfort readiness must be complete; no separate formal sign-off;
+- unsupported or unmapped categories fail closed rather than being inferred.
+
+#### 5. Readiness mutation is exact Stage 9 only
+
+`record_booking_safety_readiness(...)` may mutate canonical pre-shoot readiness only while the booking is exactly:
+
+- Stage 9;
+- `pre_shoot_preparation`.
+
+Stage 8 is too early for canonical readiness mutation.
+
+Stage 10 is beyond the pre-shoot readiness-preparation mutation boundary.
+
+The readiness RPC does not move the booking journey.
+
+#### 6. `safety.write` is the readiness-recording authority
+
+An active organization member with:
+
+- `safety.write`; and
+- valid booking-derived branch scope
+
+may record readiness.
+
+A booking-team assignment is not additionally required merely to record readiness.
+
+Existing `safety.write` role grants remain unchanged.
+
+#### 7. Formal sign-off is Newborn-only
+
+`signoff_booking_safety_readiness(...)` is valid only for a booking category that requires formal Newborn safety sign-off.
+
+A formal sign-off attempt for a category that does not require separate formal sign-off must fail closed.
+
+#### 8. Sign-off requires complete current readiness
+
+A Newborn formal sign-off may occur only after the currently applicable readiness evidence is complete and ready.
+
+Missing, pending, explicitly not-ready, malformed or unsupported readiness evidence cannot be formally signed.
+
+#### 9. Formal sign-off authority
+
+Formal sign-off authorization is exactly:
+
+- Founder;
+- Studio Manager;
+- Photographer only when that Photographer is the booking's current canonical Lead Photographer.
+
+Client Coordinator, Assistant and Stylist do not receive `safety.signoff`.
+
+The existing Founder and Studio Manager `safety.signoff` grants remain.
+
+Slice 5 adds `safety.signoff` to Photographer, with server-side Lead Photographer enforcement.
+
+#### 10. Photographer eligibility is checked at sign-off time
+
+For an ordinary Photographer to sign Newborn readiness, the signer must at sign-off time:
+
+- be an active organization member;
+- retain an active, unrevoked qualifying Photographer role grant for the booking scope;
+- be the booking's current canonical `lead_photographer` assignment.
+
+A historical or ended Lead Photographer assignment is insufficient.
+
+#### 11. Readiness revisions preserve history
+
+A real readiness change after formal sign-off creates new readiness revision/current evidence.
+
+Existing formal sign-offs remain immutable historical evidence but do not satisfy the new current readiness revision.
+
+The current Newborn readiness revision must be formally signed again.
+
+#### 12. Lead replacement and Photographer sign-off validity
+
+If the current qualifying Newborn sign-off was made by an ordinary Photographer and that Photographer is later replaced as Lead before Stage 9 -> 10:
+
+- the sign-off remains immutable historical evidence;
+- that Photographer sign-off no longer satisfies the future advancement gate;
+- the new current Lead Photographer or Founder / Studio Manager must sign the current readiness.
+
+A valid Founder or Studio Manager administrative sign-off is not invalidated merely because the Lead Photographer changes.
+
+#### 13. Later suspension or role loss does not rewrite history
+
+A signer who was authorized at signing time remains recorded as the historical signer.
+
+Later member suspension, role revocation or assignment change does not mutate or delete the historical sign-off.
+
+Current assignment and operational eligibility are separately revalidated by later journey-gate logic where required.
+
+#### 14. Multiple immutable sign-offs and replay semantics
+
+Multiple immutable sign-offs may exist for one readiness revision.
+
+Each signer may sign a readiness revision at most once.
+
+An exact same-signer replay is idempotent and creates:
+
+- no duplicate sign-off;
+- no duplicate audit event.
+
+The future Stage 9 -> 10 gate will require at least one currently valid qualifying Newborn sign-off.
+
+#### 15. Readiness replay and revision semantics
+
+Re-recording exactly the same controlled readiness state is an idempotent no-op.
+
+It creates:
+
+- no new readiness revision;
+- no duplicate audit event.
+
+A real readiness-state change creates new historical/current evidence rather than silently rewriting previously signed evidence in place.
+
+#### 16. Restricted audit boundary
+
+Audit events may contain structural evidence only, including:
+
+- booking identifier;
+- readiness revision identifier;
+- controlled readiness state transition;
+- signer identifier;
+- sign-off authorization type.
+
+Audit payloads must not contain private safety/comfort details, medical content or arbitrary sensitive free text.
+
+#### 17. No blind backfill
+
+Slice 5 must not infer safety/comfort readiness or formal sign-off from:
+
+- preparation instances;
+- preparation checklist items;
+- booking owner fields;
+- Lead records;
+- organization roles alone;
+- booking-team history alone;
+- legacy or mock safety values.
+
+Any future Production rollout requires a fresh read-only anomaly/collision preflight immediately before migration.
+
+At this founder-decision checkpoint, Production prerequisite evidence remains intentionally unmodified.
+
+#### Public mutation concepts retained
+
+The approved public mutation concepts remain:
+
+- `record_booking_safety_readiness(...)`;
+- `signoff_booking_safety_readiness(...)`.
+
+Exact signatures, table shapes, revision mechanics, locking order, RLS policy definitions, audit event names and pgTAP implementation details remain subject to a separate Slice 5 technical design freeze.
+
+#### Slice 5 containment
+
+This founder-decision checkpoint does not authorize:
+
+- creation of `booking_safety_readiness`;
+- creation of `booking_safety_signoffs`;
+- modification of `safety.signoff`;
+- implementation of either safety mutation RPC;
+- Stage 9 -> 10 implementation;
+- Stage 10 -> 11 implementation;
+- `/safety` runtime/UI work;
+- Production migration.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
 ---
 
 # Cross-Sprint Architecture Rules
@@ -2697,4 +2909,12 @@ As of 2026-08-15:
 - **Slice 4 Production static security:** exact 10-column table surface PASS; forced RLS PASS; authenticated SELECT-only table ACL PASS; anon denial PASS; exact `booking.team.assign` grants PASS; lifecycle/uniqueness/integrity boundary PASS; RPC SECURITY DEFINER / empty search_path / authenticated-only execution PASS
 - **Slice 4 Production runtime mutation:** intentionally not exercised because `booking_team_assignments` contained zero rows at static validation time
 - **Slice 4 containment:** no safety-readiness/sign-off, `safety.signoff` grant change, Stage 9 -> 10, Stage 10 -> 11, category-specific required-team gate, capacity/availability logic or `/bookings`/`/prep`/`/safety` UI release
-- **Next action:** continue Sprint 10 with the separately bounded safety-readiness foundation; Slice 4 does not authorize Stage 9 -> 10 or Sprint 10 release.
+- **Sprint 10 Slice 5:** Restricted Safety/Comfort Readiness + Newborn Formal Sign-off Foundation — founder decisions approved on 2026-08-15; technical design not yet frozen
+- **Slice 5 evidence boundary:** booking-scoped restricted readiness evidence plus immutable Newborn formal sign-off evidence; no broad CRM/KPI leakage
+- **Slice 5 category rule:** Newborn requires complete readiness plus formal sign-off; Maternity and Sitter/Baby/Child require applicable readiness without separate formal sign-off; unsupported categories fail closed
+- **Slice 5 readiness mutation:** exact Stage 9 only via the approved `record_booking_safety_readiness(...)` concept; `safety.write` + booking-derived branch scope; no journey movement
+- **Slice 5 sign-off authority:** Founder and Studio Manager administratively; ordinary Photographer only while active, operationally eligible and assigned as the booking's current canonical Lead Photographer
+- **Slice 5 sign-off permission decision:** add `safety.signoff` to Photographer with server-side current-Lead enforcement; Client Coordinator, Assistant and Stylist remain without `safety.signoff`
+- **Slice 5 history rule:** readiness changes create new current/revision evidence; sign-offs are immutable historical evidence; exact replays are idempotent
+- **Slice 5 containment:** no Stage 9 -> 10, Stage 10 -> 11, `/safety` runtime/UI, shoot-day safety evidence, capacity/availability engine or Production migration
+- **Next action:** freeze the Slice 5 technical design for canonical readiness/sign-off tables, RPC signatures, locking, RLS, audit and pgTAP boundaries before implementation.
