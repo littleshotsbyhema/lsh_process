@@ -1441,6 +1441,260 @@ Checklist scope rules:
 
 This approval freezes the business taxonomy and required/optional classifications only. The Slice 3 storage model, item-instantiation semantics, mutation/audit contract, authorization details and RPC behavior remain subject to a separate implementation-design freeze before coding.
 
+Additional Slice 3 technical design freeze approved on 2026-08-15:
+
+Slice 3 is named **Preparation Checklist Foundation**.
+
+The Slice 3 implementation boundary is limited to:
+
+- canonical `booking_preparation_items`;
+- approved checklist instantiation inside the existing `start_pre_shoot_preparation(uuid)` operation;
+- controlled `update_pre_shoot_preparation_item(...)` mutation;
+- preparation-item RLS, ACL, integrity guards, audit evidence and pgTAP coverage.
+
+Slice 3 explicitly does not implement:
+
+- booking team assignments;
+- safety/comfort readiness;
+- Newborn formal safety sign-off;
+- any `safety.signoff` role change;
+- Stage 9 -> 10;
+- Stage 10 -> 11;
+- `/prep` UI release or canonical application integration;
+- Production migration or runtime rollout.
+
+The canonical `booking_preparation_items` row shape is frozen as:
+
+- generated item ID;
+- organization ID;
+- preparation ID;
+- snapshotted `service_category`;
+- `taxonomy_version`;
+- `item_key`;
+- `item_label`;
+- `is_required`;
+- `sort_order`;
+- current `is_satisfied`;
+- `satisfied_at`;
+- `satisfied_by`;
+- `created_at`;
+- `created_by`;
+- `updated_at`;
+- `updated_by`.
+
+The table must not duplicate `booking_id` or `branch_id`. Booking and branch scope are derived through the authoritative preparation and booking relationship.
+
+The table must not contain free-form notes, generic JSON, arbitrary checklist text, medical content, safety content, comfort-readiness content or formal sign-off content.
+
+The following fields are immutable taxonomy/identity evidence after row creation:
+
+- organization ID;
+- preparation ID;
+- snapshotted service category;
+- taxonomy version;
+- item key;
+- item label;
+- required/optional classification;
+- sort order;
+- creation actor/time.
+
+Only current satisfaction state and update attribution may change through the controlled RPC.
+
+Tenant/integrity requirements are frozen as follows:
+
+- tenant-safe uniqueness for `(organization_id, id)`;
+- exactly one row per `(organization_id, preparation_id, item_key)`;
+- preparation membership must be organization-safe;
+- actor references must be organization-safe;
+- item keys use the canonical lowercase key format;
+- item labels are nonblank and bounded;
+- sort order is positive;
+- `is_satisfied = true` requires both `satisfied_at` and `satisfied_by`;
+- `is_satisfied = false` requires both `satisfied_at` and `satisfied_by` to be NULL.
+
+Taxonomy version 1 is the founder-approved checklist recorded above.
+
+For taxonomy version 1:
+
+- Maternity instantiates exactly 11 preparation items;
+- Newborn instantiates exactly 11 preparation items;
+- Sitter instantiates exactly 12 preparation items;
+- each supported category has exactly 8 required items;
+- the eight common items use stable sort orders 10 through 80;
+- category-specific items begin at sort order 110 and retain their approved order;
+- no staff-created or ad-hoc checklist item is permitted.
+
+Preparation applicability is derived from the authoritative commercial chain:
+
+`booking -> source quotation -> single package line -> commercial package version -> commercial package.service_category`.
+
+The category is not duplicated onto `bookings` or `booking_preparations`.
+
+Taxonomy version 1 supports exactly:
+
+- `maternity`;
+- `newborn`;
+- `sitter`.
+
+If the authoritative accepted package resolves to any service category without an approved preparation taxonomy, preparation start must fail closed before creating preparation evidence, preparation items, journey transition evidence or audit evidence.
+
+The existing `start_pre_shoot_preparation(uuid)` operation is extended within Slice 3 while retaining all Slice 2 authorization and lifecycle gates.
+
+First-time execution must continue to require:
+
+- authenticated active organization membership;
+- `prep.write`;
+- `booking.stage.advance`;
+- current stage exactly Booking Confirmed / Stage 8;
+- latest authoritative shoot schedule state `reserved`.
+
+After those existing gates pass, first-time execution must:
+
+1. derive the authoritative service category from the accepted quotation package;
+2. validate that an approved taxonomy exists for that category;
+3. create the one canonical preparation instance;
+4. insert the exact taxonomy-version-1 preparation-item snapshot for that category;
+5. append the existing dedicated Stage 8 -> 9 transition;
+6. update the journey state using the existing optimistic-version/concurrency guard;
+7. append the preparation-start audit event;
+8. return the authoritative preparation instance.
+
+Preparation creation, checklist instantiation, transition evidence, journey update and audit evidence remain one atomic transaction.
+
+The preparation-start audit may additionally record:
+
+- service category;
+- taxonomy version;
+- preparation-item count.
+
+Checklist instantiation does not append one audit event per individual item.
+
+Exact Stage 9 replay remains authorization-first and idempotent.
+
+An authorized exact Stage 9 replay must:
+
+- return the same authoritative preparation instance;
+- create no additional preparation;
+- create no additional preparation items;
+- create no additional journey transition;
+- create no additional audit event;
+- leave the journey version unchanged.
+
+Replay must also verify that the existing preparation contains the exact taxonomy-version-1 structural snapshot expected for its snapshotted category. Missing, duplicate or structurally mismatched checklist evidence is an integrity failure and must not be silently repaired.
+
+Existing satisfaction values do not make replay structurally invalid because checklist work may legitimately have progressed after preparation start.
+
+The only new public mutation RPC in Slice 3 is:
+
+`update_pre_shoot_preparation_item(p_preparation_item_id uuid, p_satisfied boolean)`
+
+The RPC returns the authoritative `booking_preparation_items` row.
+
+The RPC must be:
+
+- `SECURITY DEFINER`;
+- configured with empty `search_path`;
+- executable by `authenticated`;
+- unavailable to `anon`.
+
+A checklist-item mutation requires:
+
+- authenticated active organization membership;
+- `prep.write` for the derived booking organization/branch;
+- the booking journey to be exactly `pre_shoot_preparation` / Stage 9.
+
+`booking.stage.advance` is not required for checklist-item mutation because this RPC does not move the booking journey.
+
+The mutation must use the authoritative booking/journey/item locking order needed to serialize safely with the later Stage 9 -> 10 gate.
+
+No Slice 3 checklist mutation may advance or regress the journey.
+
+Satisfaction mutation semantics are frozen as follows:
+
+- unsatisfied -> satisfied sets `is_satisfied = true`;
+- it records one operation timestamp in `satisfied_at`;
+- it records the authenticated organization member in `satisfied_by`;
+- it updates normal update actor/time attribution;
+- satisfied -> unsatisfied sets `is_satisfied = false`;
+- clearing satisfaction sets both `satisfied_at` and `satisfied_by` to NULL;
+- it updates normal update actor/time attribution.
+
+An authorized request asking for the item's already-current boolean state is an idempotent replay:
+
+- return the same authoritative row;
+- do not perform an UPDATE;
+- do not change timestamps or actors;
+- do not append another audit event.
+
+Every real satisfaction-state change appends exactly one non-sensitive audit event with action:
+
+`booking.preparation_item_updated`
+
+The audit must record the old and new satisfaction state and metadata sufficient to identify:
+
+- booking;
+- preparation;
+- preparation item key;
+- service category;
+- taxonomy version;
+- required/optional classification.
+
+The preparation-item table must enable and force RLS.
+
+Authenticated reads require `prep.read` using booking-derived organization and branch scope.
+
+Authenticated direct INSERT, UPDATE and DELETE remain revoked. Mutations occur only through the approved RPC.
+
+`anon` receives no table access.
+
+A database guard must prevent deletion and prevent mutation of taxonomy/identity fields outside the controlled contract.
+
+The initial Slice 3 role grants remain unchanged:
+
+- Founder: `prep.read`, `prep.write`;
+- Studio Manager: `prep.read`, `prep.write`;
+- Client Coordinator: `prep.read`, `prep.write`.
+
+No Photographer, Assistant, Stylist or other role receives preparation permission in Slice 3.
+
+Slice 3 pgTAP coverage must prove at minimum:
+
+1. exact table surface and tenant-safe constraints;
+2. forced RLS;
+3. authenticated SELECT-only direct table access;
+4. anon denial;
+5. exact taxonomy-version-1 item keys, labels, sort order and required flags;
+6. exact 11-item Maternity snapshot;
+7. exact 11-item Newborn snapshot;
+8. exact 12-item Sitter snapshot;
+9. exactly 8 required items for each supported category;
+10. unsupported service category fails closed;
+11. first preparation start atomically creates the preparation and exact checklist snapshot;
+12. failure during checklist instantiation leaves no preparation, items, transition, journey movement or audit evidence;
+13. exact Stage 9 replay creates no duplicate checklist evidence;
+14. structurally incomplete or mismatched Stage 9 checklist evidence is an integrity failure rather than an implicit repair;
+15. item update requires `prep.write`;
+16. item mutation is permitted only at exact Stage 9;
+17. item mutation does not move the journey;
+18. false -> true records the current actor/time;
+19. true -> false clears satisfaction attribution;
+20. same-state retry is idempotent with no timestamp churn or audit duplication;
+21. real state changes append exactly one preparation-item audit event;
+22. direct authenticated mutation is denied;
+23. organization and branch isolation are enforced;
+24. no safety-sensitive payload exists in the preparation-item surface;
+25. no Slice 3 operation creates Stage 10 or Stage 10 -> 11;
+26. the existing Slice 2 71/71 regression remains green;
+27. the complete database regression remains green.
+
+Slice 3 does not introduce a blind backfill for preparation rows that may already exist before Production rollout.
+
+Before any eventual Production migration, `booking_preparations` must be checked read-only. If any preparation row exists without canonical checklist evidence, Production rollout is HOLD until an explicit controlled migration/backfill design is approved.
+
+The last Slice 2 Production static validation observed zero `booking_preparations` rows, but that fact must be re-verified immediately before any Slice 3 Production migration.
+
+This technical freeze intentionally does not implement or freeze the later Stage 9 -> 10 RPC. A future Stage 9 -> 10 gate may consume the canonical preparation evidence by requiring every applicable `is_required = true` preparation item to be currently satisfied, together with the separately implemented team-assignment and safety-readiness invariants.
+
 ## Implementation state
 
 Sprint 10 implementation preflight is complete.
@@ -1695,5 +1949,11 @@ As of 2026-08-15:
 - **Slice 2 Production static security:** forced RLS PASS; authenticated SELECT-only table ACL PASS; anon denial PASS; exact preparation permission grants PASS; immutable guard boundary PASS; RPC SECURITY DEFINER / empty search_path / authenticated-only execution PASS
 - **Slice 2 Production runtime mutation:** intentionally not exercised against a real booking; `booking_preparations` contained zero rows at static validation time
 - **Sprint 10 Slice 3 checklist:** founder-approved on 2026-08-15 — canonical common, Maternity, Newborn and Sitter preparation taxonomy with required/optional classifications frozen
-- **Slice 3 checklist boundary:** operational preparation evidence only; no restricted safety/medical/comfort data and no Stage 9 -> 10 implementation
-- **Next action:** freeze the remaining Slice 3 implementation design — storage shape, item instantiation, satisfaction/audit semantics, authorization/RPC contract and pgTAP boundary — before implementation; no team-assignment, safety, Stage 9 -> 10, UI or Production changes.
+- **Sprint 10 Slice 3 technical design:** frozen on 2026-08-15 — Preparation Checklist Foundation
+- **Slice 3 data boundary:** `booking_preparation_items` plus taxonomy-v1 instantiation inside `start_pre_shoot_preparation(uuid)`
+- **Slice 3 mutation boundary:** `update_pre_shoot_preparation_item(uuid, boolean)`; `prep.write` required; exact Stage 9 only; no journey movement
+- **Slice 3 taxonomy boundary:** Maternity 11 items / Newborn 11 items / Sitter 12 items; exactly 8 required items per supported category; unsupported categories fail closed
+- **Slice 3 authorization:** existing Founder, Studio Manager and Client Coordinator `prep.read` / `prep.write` grants remain unchanged
+- **Slice 3 containment:** no team assignment, safety readiness/sign-off, Stage 9 -> 10, Stage 10 -> 11, UI release or Production rollout
+- **Slice 3 Production safeguard:** no blind backfill; pre-rollout `booking_preparations` anomaly check is mandatory and any unmatched existing preparation row places rollout on HOLD
+- **Next action:** implement the bounded Slice 3 database migration and dedicated pgTAP coverage locally; preserve the existing Slice 2 regression, do not implement Stage 9 -> 10 or later Sprint 10 domains, and do not make Production changes.
