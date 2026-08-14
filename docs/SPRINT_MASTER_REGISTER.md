@@ -33,18 +33,18 @@ Sprint 6 and Sprint 7 have stronger explicit sprint/release boundaries in the im
 
 ## 2. Sprint Register — Executive View
 
-| Sprint    | Normalized title                                                      | Current status | Production status |
-| --------- | --------------------------------------------------------------------- | -------------- | ----------------- |
-| Sprint 1  | Core Platform, Organization & Security                                | Complete       | Released          |
-| Sprint 2  | Families Foundation & Audit                                           | Complete       | Released          |
-| Sprint 3  | Family Contacts & Communication Controls                              | Complete       | Released          |
-| Sprint 4  | Children & Memory Profiles                                            | Complete       | Released          |
-| Sprint 5  | Leads & CRM Foundation                                                | Complete       | Released          |
-| Sprint 6  | Lead Workspace & Sales Operations                                     | Complete       | Released          |
-| Sprint 7  | AI Memory Guide Core Flow & Recommendation Engine                     | Complete       | Released          |
-| Sprint 8  | Packages, Quotations & Booking Conversion Foundation                  | Complete       | Released          |
-| Sprint 9  | Advance Payment, Booking Confirmation & KPI Foundation                | Complete       | Released          |
-| Sprint 10 | Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation | Scope frozen   | Not released      |
+| Sprint    | Normalized title                                                      | Current status             | Production status |
+| --------- | --------------------------------------------------------------------- | -------------------------- | ----------------- |
+| Sprint 1  | Core Platform, Organization & Security                                | Complete                   | Released          |
+| Sprint 2  | Families Foundation & Audit                                           | Complete                   | Released          |
+| Sprint 3  | Family Contacts & Communication Controls                              | Complete                   | Released          |
+| Sprint 4  | Children & Memory Profiles                                            | Complete                   | Released          |
+| Sprint 5  | Leads & CRM Foundation                                                | Complete                   | Released          |
+| Sprint 6  | Lead Workspace & Sales Operations                                     | Complete                   | Released          |
+| Sprint 7  | AI Memory Guide Core Flow & Recommendation Engine                     | Complete                   | Released          |
+| Sprint 8  | Packages, Quotations & Booking Conversion Foundation                  | Complete                   | Released          |
+| Sprint 9  | Advance Payment, Booking Confirmation & KPI Foundation                | Complete                   | Released          |
+| Sprint 10 | Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation | Implementation in progress | Not released      |
 
 Current position: **Sprint 9 remains the latest closed Production sprint. Sprint 10 scope is frozen for pre-shoot preparation, safety readiness and shoot scheduling; implementation has not started and nothing from Sprint 10 is released.**
 
@@ -1115,7 +1115,7 @@ Sprint 9 is therefore accepted as **Complete / Released**.
 
 ## Status
 
-**SCOPE FROZEN / IMPLEMENTATION NOT STARTED / NOT RELEASED**
+**SCOPE FROZEN / IMPLEMENTATION IN PROGRESS / NOT RELEASED**
 
 ## Objective
 
@@ -1378,9 +1378,15 @@ This decision is part of the frozen Sprint 10 authorization boundary.
 
 ## Implementation state
 
-No Sprint 10 migration or application implementation exists at scope freeze.
+Sprint 10 implementation preflight is complete.
 
-The next permitted step is implementation preflight and database design against this frozen contract.
+**Approved Slice 1:** Shoot Scheduling Evidence + Confirmation Reservation Gate.
+
+Slice 1 will introduce authoritative append-only shoot-schedule evidence, the `shoot.schedule` permission, controlled proposal/reschedule RPCs, and the proposed-plan reservation requirement inside the existing `confirm_booking_after_advance(uuid)` transaction.
+
+No Sprint 10 migration has been created at this implementation-start marker.
+
+The next permitted step is local Slice 1 migration and pgTAP implementation. Production remains unchanged.
 
 ---
 
@@ -1442,7 +1448,7 @@ As of 2026-08-14:
 - **Latest Production DB migration:** `20260813170101_sprint9_kpi_read_model_foundation.sql`
 - **Sprint 9 Production state:** Released / Closed
 - **Current sprint:** Sprint 10 — Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation
-- **Sprint 10 state:** Scope frozen / implementation not started / not released
+- **Sprint 10 state:** Scope frozen / implementation in progress / not released
 - **Sprint 10 journey boundary:** extend the authoritative Stage 7 -> 8 confirmation gate with proposed-shoot-plan reservation, then implement dedicated Stage 8 -> 9 and Stage 9 -> 10 transitions; no Stage 10 -> 11
 - **Sprint 10 Newborn safety rule:** formal readiness sign-off is required before Stage 10
 - **Sprint 10 Photographer sign-off rule:** an ordinary Photographer may sign Newborn readiness only when assigned as that booking's Lead Photographer; Founder and Studio Manager retain administrative sign-off authority
@@ -1453,4 +1459,4 @@ As of 2026-08-14:
 - **Sprint 9 Production authenticated KPI smoke:** PASS
 - **Sprint 9 Production authenticated browser smoke:** PASS
 - **Legacy `/kpi` and `/reports` containment:** preserved
-- **Next action:** perform Sprint 10 implementation preflight and database design against the frozen contract; do not make Production changes.
+- **Next action:** implement Sprint 10 Slice 1 locally — Shoot Scheduling Evidence + Confirmation Reservation Gate — with pgTAP coverage; do not make Production changes.
