@@ -46,7 +46,7 @@ Sprint 6 and Sprint 7 have stronger explicit sprint/release boundaries in the im
 | Sprint 9  | Advance Payment, Booking Confirmation & KPI Foundation                | Complete                   | Released          |
 | Sprint 10 | Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation | Implementation in progress | Not released      |
 
-Current position: **Sprint 9 remains the latest closed Production sprint. Sprint 10 scope is frozen for pre-shoot preparation, safety readiness and shoot scheduling; implementation has not started and nothing from Sprint 10 is released.**
+Current position: **Sprint 9 remains the latest closed Production sprint. Sprint 10 scope is frozen and implementation is in progress. Slice 1 — Shoot Scheduling Evidence + Confirmation Reservation Gate — has been implemented, locally validated, committed, pushed and migrated to the Production database, but Sprint 10 as a whole is not released.**
 
 ---
 
@@ -1380,13 +1380,43 @@ This decision is part of the frozen Sprint 10 authorization boundary.
 
 Sprint 10 implementation preflight is complete.
 
-**Approved Slice 1:** Shoot Scheduling Evidence + Confirmation Reservation Gate.
+**Slice 1 complete at database foundation checkpoint:** Shoot Scheduling Evidence + Confirmation Reservation Gate.
 
-Slice 1 will introduce authoritative append-only shoot-schedule evidence, the `shoot.schedule` permission, controlled proposal/reschedule RPCs, and the proposed-plan reservation requirement inside the existing `confirm_booking_after_advance(uuid)` transaction.
+Slice 1 introduced authoritative append-only shoot-schedule evidence, the `shoot.schedule` permission, controlled proposal/reschedule RPCs, and the proposed-plan reservation requirement inside the existing `confirm_booking_after_advance(uuid)` transaction.
 
-No Sprint 10 migration has been created at this implementation-start marker.
+Primary migration:
 
-The next permitted step is local Slice 1 migration and pgTAP implementation. Production remains unchanged.
+- `20260814120719_sprint10_shoot_schedule_foundation.sql`
+
+Implementation commit:
+
+- `5cfbf36` — `feat: add sprint 10 shoot scheduling foundation`
+
+Local validation evidence:
+
+- clean local database reset through the Sprint 10 migration;
+- database lint PASS with no schema errors;
+- Sprint 9 booking-confirmation regression: 65/65 PASS;
+- Sprint 9 KPI regression: 68/68 PASS;
+- Sprint 10 shoot-scheduling suite: 111/111 PASS;
+- complete local pgTAP regression: 472/472 PASS across 8 files;
+- local schema drift: none;
+- `git diff --check`: PASS.
+
+Production database rollout evidence:
+
+- linked Production project verified as `fqsdmurrzlqtkfzbwszp`;
+- migration history aligned through Sprint 9 before rollout;
+- Production dry run contained only `20260814120719_sprint10_shoot_schedule_foundation.sql`;
+- Production migration applied successfully;
+- post-rollout migration history Local = Remote through `20260814120719`;
+- post-rollout dry run reported the remote database up to date;
+- linked Production database lint PASS;
+- Production schema dump verified forced/enabled RLS, authenticated SELECT-only table access, no authenticated direct schedule mutation grants, and `SECURITY DEFINER` plus empty `search_path` on the proposal, reschedule and confirmation RPCs.
+
+Slice 1 does not complete Sprint 10. Pre-shoot preparation, preparation items, team assignment, restricted safety readiness/sign-off, dedicated Stage 8 -> 9 and Stage 9 -> 10 operations, application/runtime integration and remaining authenticated Production validation are still outstanding.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
 
 ---
 
@@ -1445,7 +1475,7 @@ As of 2026-08-14:
 - **Sprint 9 Production application release SHA:** `633c318baf0a1985c17d364f3ab043f442b69332`
 - **Sprint 9 Production closeout commit:** `eb784f4bfe7606e13d20e36ad6bb4e9338ef81db`
 - **Sprint 9 application implementation head:** `89956ae`
-- **Latest Production DB migration:** `20260813170101_sprint9_kpi_read_model_foundation.sql`
+- **Latest Production DB migration:** `20260814120719_sprint10_shoot_schedule_foundation.sql` (Sprint 10 Slice 1 database foundation; Sprint 10 not released)
 - **Sprint 9 Production state:** Released / Closed
 - **Current sprint:** Sprint 10 — Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation
 - **Sprint 10 state:** Scope frozen / implementation in progress / not released
@@ -1459,4 +1489,4 @@ As of 2026-08-14:
 - **Sprint 9 Production authenticated KPI smoke:** PASS
 - **Sprint 9 Production authenticated browser smoke:** PASS
 - **Legacy `/kpi` and `/reports` containment:** preserved
-- **Next action:** implement Sprint 10 Slice 1 locally — Shoot Scheduling Evidence + Confirmation Reservation Gate — with pgTAP coverage; do not make Production changes.
+- **Next action:** begin the next bounded Sprint 10 implementation slice for canonical pre-shoot preparation / controlled Stage 8 -> 9 progression; do not implement Stage 9 -> 10 safety/team readiness until its own bounded design and validation gate is complete.
