@@ -4,7 +4,7 @@
 **Repository:** `Little-Shots-by-Hema-OS/memory-keeper-os`
 **Primary release branch:** `architecture-rebuild`
 **Register version:** 1.0
-**Last updated:** 2026-08-12
+**Last updated:** 2026-08-14
 
 ---
 
@@ -33,19 +33,19 @@ Sprint 6 and Sprint 7 have stronger explicit sprint/release boundaries in the im
 
 ## 2. Sprint Register — Executive View
 
-| Sprint | Normalized title | Current status | Production status |
-|---|---|---|---|
-| Sprint 1 | Core Platform, Organization & Security | Complete | Released |
-| Sprint 2 | Families Foundation & Audit | Complete | Released |
-| Sprint 3 | Family Contacts & Communication Controls | Complete | Released |
-| Sprint 4 | Children & Memory Profiles | Complete | Released |
-| Sprint 5 | Leads & CRM Foundation | Complete | Released |
-| Sprint 6 | Lead Workspace & Sales Operations | Complete | Released |
-| Sprint 7 | AI Memory Guide Core Flow & Recommendation Engine | Complete | Released |
-| Sprint 8 | Packages, Quotations & Booking Conversion Foundation | Complete | Released |
-| Sprint 9 | Advance Payment, Booking Confirmation & KPI Foundation | In progress | Not released |
+| Sprint   | Normalized title                                       | Current status    | Production status |
+| -------- | ------------------------------------------------------ | ----------------- | ----------------- |
+| Sprint 1 | Core Platform, Organization & Security                 | Complete          | Released          |
+| Sprint 2 | Families Foundation & Audit                            | Complete          | Released          |
+| Sprint 3 | Family Contacts & Communication Controls               | Complete          | Released          |
+| Sprint 4 | Children & Memory Profiles                             | Complete          | Released          |
+| Sprint 5 | Leads & CRM Foundation                                 | Complete          | Released          |
+| Sprint 6 | Lead Workspace & Sales Operations                      | Complete          | Released          |
+| Sprint 7 | AI Memory Guide Core Flow & Recommendation Engine      | Complete          | Released          |
+| Sprint 8 | Packages, Quotations & Booking Conversion Foundation   | Complete          | Released          |
+| Sprint 9 | Advance Payment, Booking Confirmation & KPI Foundation | Release candidate | Not released      |
 
-Current position: **Sprint 8 is closed in Production. Sprint 9 finance/KPI design is frozen and implementation is now in progress.**
+Current position: **Sprint 8 remains the latest closed Production sprint. Sprint 9 implementation is complete locally, its release-candidate technical gate has passed, and Production rollout has not started.**
 
 ---
 
@@ -638,7 +638,7 @@ The Quote Builder subject selector exposed two historical test/demo-named CRM re
 
 ## Status
 
-**IN PROGRESS / DESIGN FROZEN / NOT RELEASED**
+**IMPLEMENTATION COMPLETE / LOCAL RELEASE CANDIDATE / NOT RELEASED**
 
 ## Objective
 
@@ -888,6 +888,176 @@ The completed gate required:
 7. confirm no legacy financial values are promoted to canonical truth;
 8. confirm no Production write occurs before local validation passes.
 
+## Local release-candidate implementation evidence
+
+Sprint 9 implementation is complete locally and is ready for Production rollout review. It is not yet a Production release.
+
+### Primary migrations
+
+- `20260813160413_sprint9_advance_payment_evidence_foundation.sql`
+- `20260813164041_sprint9_booking_confirmation_foundation.sql`
+- `20260813170101_sprint9_kpi_read_model_foundation.sql`
+
+### Advance-payment evidence foundation
+
+Implemented authoritative append-only concepts:
+
+- `booking_payment_requirements`;
+- `booking_payments`;
+- `booking_payment_reversals`;
+- derived valid collected amount;
+- derived outstanding advance;
+- derived advance-satisfied state.
+
+The required advance is snapshotted from the immutable accepted quotation total and remains **50% of final accepted `quoted_total_inr`**, using whole INR with an odd-rupee half rounded upward.
+
+Partial payments, cumulative payments and overpayment are supported.
+
+Corrections do not rewrite payment history. They are represented by immutable reversal evidence followed by corrected payment evidence where required.
+
+Privacy preference, image-use consent, contact permission and marketing consent do not affect package pricing, quotation value or required advance.
+
+### Booking-confirmation gate
+
+Implemented the controlled `confirm_booking_after_advance(uuid)` boundary.
+
+`Booking Confirmed` is permitted only when:
+
+- the booking is at canonical Stage 7 `Advance Pending`;
+- the accepted quotation linkage is authoritative;
+- the required advance exists;
+- valid non-reversed collections meet or exceed the required advance;
+- the actor has the required organization membership and permission.
+
+Successful confirmation performs the exact canonical Stage 7 -> Stage 8 transition and preserves append-only transition/audit evidence.
+
+Recording a payment does not itself confirm the booking.
+
+A payment reversal after historical confirmation does not rewrite the journey backward. The derived payment summary instead exposes `confirmed_with_advance_shortfall` when current valid collections fall below the required advance.
+
+### Permissions
+
+Sprint 9 established the narrow permission vocabulary:
+
+- `payment.read`
+- `payment.record`
+- `payment.reverse`
+- `booking.confirm`
+- `kpi.read`
+
+Founder receives the initial grants. Server-side permission enforcement remains authoritative.
+
+### Founder KPI read model
+
+Implemented permission-aware aggregate RPCs:
+
+- `get_founder_kpi_summary(uuid,timestamptz,timestamptz,uuid)`
+- `get_founder_booking_stage_kpis(uuid,timestamptz,uuid)`
+
+The KPI source chain is authoritative PostgreSQL domain data -> permission-aware aggregate RPC -> authenticated user-scoped Supabase client -> TanStack server function -> Founder Studio Control Room.
+
+No raw browser-table aggregation is used for canonical Founder KPIs.
+
+Sprint 9 exposes only metrics backed by authoritative Leads, Quotations, Bookings, booking journey state/history and Sprint 9 payment evidence.
+
+Unsupported later domains remain unavailable rather than being represented with legacy demonstration metrics.
+
+Accepted quotation value, payments collected and accounting revenue remain distinct concepts. Sprint 9 does not introduce a revenue-recognition rule.
+
+### Application integration
+
+Implemented typed authenticated TanStack server functions in `src/lib/kpi.functions.ts`.
+
+The normal KPI path uses `requireSupabaseAuth` and the request-scoped user Supabase client. It does not use the service-role client.
+
+The existing Studio Control Room at `/` now contains the canonical Founder KPI surface.
+
+The legacy `/kpi` and `/reports` routes remain temporarily unavailable and are not treated as authoritative reporting systems.
+
+The Founder Control Room presents:
+
+- 30-day inquiry, quotation and booking event metrics;
+- quoted and accepted values;
+- payments collected;
+- required, valid-collected and outstanding advance;
+- conversion rates with `—` when the denominator is zero;
+- all 21 canonical booking stages;
+- current stage counts and stage aging where evidence exists;
+- confirmed-booking advance-shortfall attention when applicable.
+
+### Authenticated local runtime validation
+
+A disposable local-only Founder identity was used to validate the complete authenticated runtime boundary.
+
+Founder validation passed through:
+
+`browser session -> TanStack server function -> bearer-token auth middleware -> user-scoped Supabase client -> permission-aware KPI RPC -> Studio Control Room`
+
+With an empty canonical data surface:
+
+- KPI summary RPC returned HTTP 200 and exactly one aggregate row;
+- count and monetary metrics correctly returned zero;
+- undefined conversion rates correctly returned `null` and displayed as `—`;
+- booking-stage RPC returned all 21 canonical stages;
+- all empty-stage counts returned zero;
+- empty-stage age values returned `null` and displayed as `—`;
+- no fallback demonstration KPI values were shown.
+
+A separate active Photographer identity verified the negative UI boundary:
+
+- the Studio Control Room remained available;
+- the Founder KPI section was not rendered;
+- Founder KPI React Query reads were disabled for the non-Founder role.
+
+Manual `/kpi` and `/reports` access continued to return the temporary-rebuild containment screen.
+
+The disposable local runtime identities were removed by the subsequent authoritative local database reset.
+
+### Release-candidate technical validation
+
+Final local release-candidate gate completed on 2026-08-14:
+
+- local database reset: PASS;
+- database lint: PASS, no schema errors;
+- full pgTAP regression: **361/361 PASS** across 7 test files;
+- local migration/schema drift: **none**;
+- Production application build: PASS;
+- post-build TypeScript: PASS;
+- targeted Sprint 9 ESLint: PASS;
+- targeted Sprint 9 Prettier: PASS;
+- Git diff check: PASS;
+- service-role / legacy KPI-source safety check: clean;
+- canonical KPI financial-terminology safety check: clean;
+- legacy `/kpi` and `/reports` containment: preserved.
+
+Existing TanStack `inputValidator()` deprecation notices, bundle-size warnings and Nitro/Rollup warnings remain non-blocking baseline warnings because the Production build completes successfully.
+
+### Local Sprint 9 implementation commit stack
+
+- `5a461df` — `feat: add sprint 9 advance payment foundation`
+- `f160e5a` — `feat: add sprint 9 advance-gated booking confirmation`
+- `6633fc0` — `feat: add sprint 9 founder kpi read model`
+- `3d0a9eb` — `feat: add sprint 9 authenticated founder kpi server functions`
+- `89956ae` — `feat: add sprint 9 founder control room kpis`
+
+Supporting scope/design commits:
+
+- `5110afd` — `docs: freeze sprint 9 scope`
+- `8829496` — `docs: start sprint 9 implementation`
+
+Current Sprint 9 application/implementation head before this register update: `89956ae`.
+
+### Production state
+
+**NOT RELEASED**
+
+As of 2026-08-14:
+
+- no Sprint 9 migration has been applied to the linked Production database;
+- no Sprint 9 application commit has been pushed as the Production release;
+- Sprint 8 remains the latest closed Production sprint;
+- the latest Production database migration remains `20260812131648_sprint8_booking_conversion_foundation.sql`;
+- Production rollout must be separately validated and recorded before Sprint 9 can be marked Complete / Released.
 
 ---
 
@@ -940,14 +1110,16 @@ For every future sprint:
 
 # Current Release Marker
 
-As of 2026-08-13:
+As of 2026-08-14:
 
 - **Latest closed Production sprint:** Sprint 8 — Packages, Quotations & Booking Conversion Foundation
 - **Sprint 8 Production application release commit:** `73d12bf070a3148f624598b1c124f1b33f700da4`
 - **Latest Production DB migration:** `20260812131648_sprint8_booking_conversion_foundation.sql`
 - **Sprint 8 Production state:** Released / Closed
 - **Current sprint:** Sprint 9 — Advance Payment, Booking Confirmation & KPI Foundation
-- **Sprint 9 state:** In progress / finance and KPI design frozen
+- **Sprint 9 state:** Implementation complete / local release candidate validated
+- **Sprint 9 local implementation head before RC documentation:** `89956ae`
 - **Sprint 9 advance rule:** 50% of final accepted quotation value, whole-INR, half-rupee rounded upward
+- **Sprint 9 local regression:** 361/361 pgTAP PASS; DB lint PASS; schema drift none; build/typecheck/targeted lint/format PASS
 - **Sprint 9 Production state:** Not released
-- **Next action:** Slice 1 — Advance Payment Evidence Foundation
+- **Next action:** commit the Sprint 9 release-candidate register update, then perform a separate Production rollout preflight before any linked database write or application push.
