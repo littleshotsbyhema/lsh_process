@@ -2523,9 +2523,72 @@ Slice 4 remains contained. This checkpoint does not include or authorize:
 - `/safety` runtime/UI release;
 - any Production database migration.
 
-Production remains unchanged by Slice 4 at this checkpoint.
+### Slice 4 Production checkpoint
 
-Before any Production migration, a separate read-only Production preflight is mandatory. It must verify migration history and confirm there is no unexpected pre-existing `booking_team_assignments` relation, `assign_booking_team_member(uuid,text,uuid,boolean,text)` RPC or `booking.team.assign` permission. Any unexpected collision or pre-existing canonical staffing evidence places rollout on HOLD. No legacy mock photographer value, booking owner, organization role or other existing field may be inferred or backfilled into canonical booking-team assignments.
+Slice 4 database migration `20260814214746_sprint10_booking_team_assignment_foundation.sql` has been applied to Production.
+
+Production rollout evidence:
+
+- pre-rollout Local / Remote migration history aligned through `20260814191047`;
+- exactly one migration was pending before rollout: `20260814214746_sprint10_booking_team_assignment_foundation.sql`;
+- pre-rollout linked DB lint: PASS with `No schema errors found`;
+- pre-rollout migration dry run: exactly the approved Slice 4 migration;
+- Production migration push: PASS;
+- post-rollout Local / Remote migration history aligned through `20260814214746`;
+- post-rollout linked DB lint: PASS with `No schema errors found`;
+- post-rollout migration dry run: remote database up to date.
+
+Production collision / no-backfill evidence:
+
+- no pre-existing `public.booking_team_assignments` relation was present before rollout;
+- no pre-existing `assign_booking_team_member(uuid,text,uuid,boolean,text)` RPC was present before rollout;
+- no pre-existing `booking.team.assign` permission was present before rollout;
+- no legacy mock photographer value, booking owner, organization role or other existing field was inferred or backfilled;
+- `booking_team_assignments` contains zero rows at the Production static-validation checkpoint.
+
+Production static security / invariant evidence:
+
+- `public.booking_team_assignments` has exactly the frozen 10-column surface;
+- RLS enabled: PASS;
+- FORCE RLS enabled: PASS;
+- exactly one authenticated SELECT policy: PASS;
+- authenticated table access is SELECT-only;
+- anon table access denied;
+- trusted `service_role` table privileges preserved;
+- `booking.team.assign` exists exactly once;
+- `booking.team.assign` grants are exactly Founder, Studio Manager and Client Coordinator;
+- current Lead Photographer uniqueness index present;
+- current member-role uniqueness index present;
+- lifecycle guard trigger present;
+- tenant-safe booking/member/actor foreign keys present;
+- assignment-role, lifecycle, end-reason and end-time constraints present;
+- `assign_booking_team_member(uuid,text,uuid,boolean,text)` is `SECURITY DEFINER`;
+- assignment RPC has empty `search_path`;
+- assignment RPC is authenticated-executable and anon-denied;
+- lifecycle guard is not `SECURITY DEFINER`, has empty `search_path`, and is not authenticated/anon executable;
+- function invariants retain the exact Stage 8 / Stage 9 / Stage 10 mutation boundary;
+- function invariants require `booking.team.assign`;
+- function invariants do not require `booking.stage.advance`, `booking.write` or `team.role.assign`;
+- function invariants retain Lead Photographer / Photographer / Assistant / Stylist eligibility semantics;
+- assignment, replacement and unassignment audit-event paths are present;
+- locking path is present;
+- no booking-journey mutation is performed;
+- no assignment DELETE path is performed.
+
+No artificial Production assignment mutation was exercised because the canonical booking-team assignment table contained zero rows at static validation time.
+
+Slice 4 Production remains contained. This checkpoint does not release or implement:
+
+- safety-readiness or comfort-readiness evidence;
+- any `safety.signoff` role-grant change;
+- Newborn formal safety sign-off;
+- Stage 9 -> 10 advancement;
+- Stage 10 -> 11 advancement;
+- category-specific required-team Stage 9 -> 10 rules;
+- capacity, overlap or availability logic;
+- `/bookings` team-assignment UI;
+- `/prep` runtime/UI release;
+- `/safety` runtime/UI release.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
 
@@ -2586,7 +2649,7 @@ As of 2026-08-15:
 - **Sprint 9 Production application release SHA:** `633c318baf0a1985c17d364f3ab043f442b69332`
 - **Sprint 9 Production closeout commit:** `eb784f4bfe7606e13d20e36ad6bb4e9338ef81db`
 - **Sprint 9 application implementation head:** `89956ae`
-- **Latest Production DB migration:** `20260814191047_sprint10_preparation_checklist_foundation.sql` (Sprint 10 Slice 3 database foundation; Sprint 10 not released)
+- **Latest Production DB migration:** `20260814214746_sprint10_booking_team_assignment_foundation.sql` (Sprint 10 Slice 4 database foundation; Sprint 10 not released)
 - **Sprint 9 Production state:** Released / Closed
 - **Current sprint:** Sprint 10 — Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation
 - **Sprint 10 state:** Scope frozen / implementation in progress / not released
@@ -2627,8 +2690,11 @@ As of 2026-08-15:
 - **Slice 3 Vercel deployment:** `dpl_Fv9XHo9N7Yo1YWRyxHaitsSSUiGi` READY at exact branch checkpoint SHA `63ef223263b29bafb281d02ec3efaf7b6a33c463`
 - **Slice 4:** Booking Team Assignment Foundation — founder decisions approved; technical design frozen; database foundation implemented, fully validated locally and pushed
 - **Slice 4 implementation commit:** `b579635e1bdd23264c5c9f400892b837761b7abd`
-- **Slice 4 migration:** `20260814214746_sprint10_booking_team_assignment_foundation.sql`; not yet applied to Production
+- **Slice 4 migration:** `20260814214746_sprint10_booking_team_assignment_foundation.sql`; applied to Production
 - **Slice 4 technical boundary:** `booking_team_assignments` lifecycle evidence + controlled `assign_booking_team_member(uuid,text,uuid,boolean,text)` RPC + dedicated `booking.team.assign` permission; no journey movement
 - **Slice 4 local validation:** clean DB reset PASS; DB lint PASS with no schema errors; dedicated pgTAP 75/75 PASS; complete regression 701/701 PASS across 11 files; schema drift none
+- **Slice 4 Production database state:** migration applied; Local = Remote through `20260814214746`; linked lint PASS; post-rollout dry run reports remote database up to date
+- **Slice 4 Production static security:** exact 10-column table surface PASS; forced RLS PASS; authenticated SELECT-only table ACL PASS; anon denial PASS; exact `booking.team.assign` grants PASS; lifecycle/uniqueness/integrity boundary PASS; RPC SECURITY DEFINER / empty search_path / authenticated-only execution PASS
+- **Slice 4 Production runtime mutation:** intentionally not exercised because `booking_team_assignments` contained zero rows at static validation time
 - **Slice 4 containment:** no safety-readiness/sign-off, `safety.signoff` grant change, Stage 9 -> 10, Stage 10 -> 11, category-specific required-team gate, capacity/availability logic or `/bookings`/`/prep`/`/safety` UI release
-- **Next action:** perform a read-only Slice 4 Production preflight and anomaly/collision gate before considering the Production database migration; no Production write is authorized by this checkpoint.
+- **Next action:** continue Sprint 10 with the separately bounded safety-readiness foundation; Slice 4 does not authorize Stage 9 -> 10 or Sprint 10 release.
