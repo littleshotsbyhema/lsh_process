@@ -46,7 +46,7 @@ Sprint 6 and Sprint 7 have stronger explicit sprint/release boundaries in the im
 | Sprint 9  | Advance Payment, Booking Confirmation & KPI Foundation                | Complete                   | Released          |
 | Sprint 10 | Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation | Implementation in progress | Not released      |
 
-Current position: **Sprint 9 remains the latest closed Production sprint. Sprint 10 scope is frozen and implementation is in progress. Slice 1 — Shoot Scheduling Evidence + Confirmation Reservation Gate — has been implemented, locally validated, committed, pushed and migrated to the Production database, but Sprint 10 as a whole is not released.**
+Current position: **Sprint 9 remains the latest closed Production sprint. Sprint 10 scope is frozen and implementation is in progress. Slice 1 — Shoot Scheduling Evidence + Confirmation Reservation Gate — has been implemented, validated, pushed and migrated to the Production database. Slice 2 — Pre-Shoot Preparation Instance + Controlled Stage 8 -> 9 Gate — has been implemented, committed and fully validated locally, but has not yet been pushed or migrated to Production. Sprint 10 as a whole is not released.**
 
 ---
 
@@ -1502,6 +1502,40 @@ Slice 2 explicitly does not implement:
 
 Those concerns remain for later bounded Sprint 10 slices.
 
+### Slice 2 implementation checkpoint — local validation complete
+
+Slice 2 has now been implemented locally within the frozen boundary.
+
+Implementation evidence:
+
+- migration: `20260814172955_sprint10_pre_shoot_preparation_foundation.sql`;
+- dedicated pgTAP suite: `sprint10_pre_shoot_preparation_test.sql`;
+- implementation commit: `69aa978` (`feat: add sprint 10 pre-shoot preparation foundation`);
+- canonical immutable `booking_preparations` evidence implemented;
+- `prep.read` and `prep.write` granted exactly to Founder, Studio Manager and Client Coordinator;
+- `start_pre_shoot_preparation(uuid)` implemented as `SECURITY DEFINER` with empty `search_path`;
+- first execution requires both `prep.write` and `booking.stage.advance`;
+- Stage 8 -> 9 requires the latest authoritative shoot schedule to be `reserved`;
+- exact authorized Stage 9 replay returns the same preparation instance without duplicate preparation, transition or audit evidence;
+- Stage 8 with pre-existing preparation evidence is rejected as an integrity failure;
+- Stage 10 is not treated as replay;
+- journey advancement retains the optimistic version/concurrency guard;
+- authenticated direct writes to `booking_preparations` remain revoked and RLS is enabled and forced.
+
+Local validation evidence:
+
+- clean local database reset: PASS;
+- database lint: PASS with no schema errors;
+- dedicated Slice 2 pgTAP: 71/71 PASS;
+- complete local pgTAP regression: 543/543 PASS across 9 files;
+- local schema drift: none;
+- `git diff --check`: PASS;
+- no preparation-item, team-assignment, safety-readiness/sign-off, Stage 9 -> 10 or Stage 10 -> 11 production objects were introduced.
+
+Slice 2 implementation commit `69aa978` remains local at this checkpoint. It has not yet been pushed to `origin/architecture-rebuild`, and migration `20260814172955_sprint10_pre_shoot_preparation_foundation.sql` has not been applied to the Production database.
+
+Slice 2 does not complete Sprint 10. Preparation-item workflow, team assignment, safety readiness/sign-off, the dedicated Stage 9 -> 10 gate, application/runtime integration and remaining Production validation are still outstanding.
+
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
 
 ---
@@ -1575,7 +1609,11 @@ As of 2026-08-14:
 - **Sprint 9 Production authenticated KPI smoke:** PASS
 - **Sprint 9 Production authenticated browser smoke:** PASS
 - **Legacy `/kpi` and `/reports` containment:** preserved
-- **Sprint 10 Slice 2:** design frozen — Pre-Shoot Preparation Instance + Controlled Stage 8 -> 9 Gate
+- **Sprint 10 Slice 2:** implemented and fully validated locally — Pre-Shoot Preparation Instance + Controlled Stage 8 -> 9 Gate
+- **Slice 2 migration:** `20260814172955_sprint10_pre_shoot_preparation_foundation.sql`
+- **Slice 2 implementation commit:** `69aa978` (local only at this checkpoint)
+- **Slice 2 local validation:** clean DB reset PASS; DB lint PASS; dedicated pgTAP 71/71 PASS; complete regression 543/543 PASS across 9 files; schema drift none
 - **Slice 2 preparation permission grants:** `prep.read` and `prep.write` -> Founder, Studio Manager, Client Coordinator only
 - **Slice 2 stage authorization:** `start_pre_shoot_preparation(...)` requires both `prep.write` and `booking.stage.advance`
-- **Next action:** implement the bounded Slice 2 database migration and pgTAP coverage locally; do not implement preparation items, Stage 9 -> 10, team assignment or safety readiness in this slice, and do not make Production changes.
+- **Slice 2 Production state:** not yet pushed or migrated; latest Production DB migration remains `20260814120719_sprint10_shoot_schedule_foundation.sql`
+- **Next action:** complete the explicit pre-push gate for the validated local commit stack; any Production Supabase migration remains separately gated, and preparation items, Stage 9 -> 10, team assignment and safety readiness remain outside Slice 2.
