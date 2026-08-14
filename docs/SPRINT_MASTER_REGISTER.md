@@ -1240,6 +1240,14 @@ Restricted safety/comfort information requires `safety.read` and must not leak i
 
 Exact least-privilege initial role grants for the new non-safety permission keys must be documented and tested during implementation preflight.
 
+For Slice 2, the approved initial grants for both `prep.read` and `prep.write` are exactly:
+
+- Founder (`founder`);
+- Studio Manager (`studio_manager`);
+- Client Coordinator (`client_coordinator`).
+
+No other role receives either preparation permission in the initial Slice 2 grant set. Broader operational access is deferred until a later preparation-item workflow establishes an approved need.
+
 ## Frozen public RPC boundary
 
 The intended public mutation boundary is:
@@ -1376,6 +1384,10 @@ Grant `safety.signoff` to the Photographer role, but permit an ordinary Photogra
 
 This decision is part of the frozen Sprint 10 authorization boundary.
 
+Additional Slice 2 authorization decision approved on 2026-08-14:
+
+Initial `prep.read` and `prep.write` grants are limited to Founder, Studio Manager and Client Coordinator. `start_pre_shoot_preparation(...)` additionally requires the existing `booking.stage.advance` permission. No other role receives either preparation permission in the initial Slice 2 grant set.
+
 ## Implementation state
 
 Sprint 10 implementation preflight is complete.
@@ -1415,6 +1427,80 @@ Production database rollout evidence:
 - Production schema dump verified forced/enabled RLS, authenticated SELECT-only table access, no authenticated direct schedule mutation grants, and `SECURITY DEFINER` plus empty `search_path` on the proposal, reschedule and confirmation RPCs.
 
 Slice 1 does not complete Sprint 10. Pre-shoot preparation, preparation items, team assignment, restricted safety readiness/sign-off, dedicated Stage 8 -> 9 and Stage 9 -> 10 operations, application/runtime integration and remaining authenticated Production validation are still outstanding.
+
+### Approved Slice 2 freeze — Pre-Shoot Preparation Instance + Controlled Stage 8 -> 9 Gate
+
+Approved on 2026-08-14.
+
+Slice 2 is limited to the authoritative preparation instance and the dedicated transition from `Booking Confirmed` to `Pre-Shoot Preparation`.
+
+The canonical data boundary for this slice is one new `booking_preparations` table with:
+
+- generated preparation ID;
+- organization ID;
+- booking ID;
+- `started_at`;
+- `started_by`;
+- exactly one authoritative preparation row per booking;
+- tenant-safe uniqueness for `(organization_id, id)` and `(organization_id, booking_id)`.
+
+`branch_id` is not duplicated on the preparation row. Branch scope is derived from the authoritative booking.
+
+The preparation instance is immutable evidence that canonical pre-shoot preparation has started. Slice 2 does not add a mutable preparation status, generic preparation JSON, checklist payload, safety payload or team-assignment payload.
+
+The table must enable and force RLS. `anon` receives no access. Authenticated users may read through `prep.read` with booking-derived organization and branch scope. Authenticated direct INSERT, UPDATE and DELETE remain revoked.
+
+The only new public mutation RPC in this slice is:
+
+- `start_pre_shoot_preparation(p_booking_id uuid)`
+
+The RPC must be `SECURITY DEFINER` with an empty `search_path`.
+
+A first-time Stage 8 -> 9 execution requires:
+
+- an authenticated active organization member;
+- `prep.write` for the booking organization/branch;
+- `booking.stage.advance` for the booking organization/branch;
+- exactly one canonical current journey state;
+- current stage exactly `booking_confirmed` / stage order 8;
+- the latest authoritative shoot-schedule version to be `reserved`.
+
+`prep.write` does not substitute for `booking.stage.advance`, and `booking.stage.advance` does not substitute for `prep.write`.
+
+The first successful transaction must:
+
+1. lock the authoritative booking and journey state using existing concurrency conventions;
+2. validate actor and both required permissions;
+3. validate Stage 8;
+4. validate the latest authoritative reserved shoot schedule;
+5. create the one canonical preparation instance;
+6. append one Stage 8 -> 9 transition with transition key `pre_shoot_preparation_started`;
+7. advance the current journey state to `pre_shoot_preparation` with exactly one version increment;
+8. append audit action `booking.pre_shoot_preparation_started`;
+9. return the authoritative preparation instance.
+
+The journey update must retain the existing optimistic version check. If the captured journey state changes concurrently, the operation must fail using the existing serialization/concurrency failure pattern rather than silently retrying a different state.
+
+Retry behavior is frozen as follows:
+
+- an authorized retry when the booking is already exactly at Stage 9 and the one authoritative preparation instance exists returns that same instance;
+- replay must not append another preparation row, transition row or audit event;
+- Stage 8 with a pre-existing preparation instance is an integrity failure rather than a successful replay;
+- Stage 10 or any other stage is not treated as a Stage 8 -> 9 replay.
+
+Slice 2 explicitly does not implement:
+
+- `booking_preparation_items`;
+- `update_pre_shoot_preparation_item(...)`;
+- preparation checklist taxonomy or completion semantics;
+- team assignment;
+- safety/comfort readiness;
+- Newborn safety sign-off;
+- Stage 9 -> 10;
+- Stage 10 -> 11;
+- `/prep` release or canonical UI integration.
+
+Those concerns remain for later bounded Sprint 10 slices.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
 
@@ -1489,4 +1575,7 @@ As of 2026-08-14:
 - **Sprint 9 Production authenticated KPI smoke:** PASS
 - **Sprint 9 Production authenticated browser smoke:** PASS
 - **Legacy `/kpi` and `/reports` containment:** preserved
-- **Next action:** begin the next bounded Sprint 10 implementation slice for canonical pre-shoot preparation / controlled Stage 8 -> 9 progression; do not implement Stage 9 -> 10 safety/team readiness until its own bounded design and validation gate is complete.
+- **Sprint 10 Slice 2:** design frozen — Pre-Shoot Preparation Instance + Controlled Stage 8 -> 9 Gate
+- **Slice 2 preparation permission grants:** `prep.read` and `prep.write` -> Founder, Studio Manager, Client Coordinator only
+- **Slice 2 stage authorization:** `start_pre_shoot_preparation(...)` requires both `prep.write` and `booking.stage.advance`
+- **Next action:** implement the bounded Slice 2 database migration and pgTAP coverage locally; do not implement preparation items, Stage 9 -> 10, team assignment or safety readiness in this slice, and do not make Production changes.
