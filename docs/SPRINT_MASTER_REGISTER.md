@@ -2061,7 +2061,383 @@ Approved founder decisions:
 
 The approved business source remains aligned with the studio operating model: booking confirmation includes team assignment, while shoot responsibilities are booking/session-specific, including Lead Photographer + Assistant / Baby Care Support for Newborn work and Lead Photographer + Stylist / Makeup Artist for Maternity work.
 
-This founder freeze approves the operational semantics only. Database shape, assignment-history model, RPC contract, locking order, security policies, direct-write denial, audit payloads, exact idempotency mechanics and pgTAP coverage must be frozen separately before implementation.
+This founder freeze approves the operational semantics only. Database shape, assignment-history model, RPC contract, locking order, security policies, direct-write denial, audit payloads, exact idempotency mechanics and pgTAP coverage are frozen below before implementation.
+
+### Slice 4 technical design freeze — Booking Team Assignment Foundation
+
+Technical design approved on 2026-08-15.
+
+The Slice 4 implementation must remain bounded to canonical booking-scoped operational assignment evidence and its controlled mutation boundary.
+
+#### Canonical table and lifecycle model
+
+The canonical table is:
+
+- `public.booking_team_assignments`
+
+The table uses a controlled lifecycle-row model rather than a booking-wide immutable version chain.
+
+Each row represents one historical period during which one organization member held one booking assignment.
+
+A row:
+
+- is inserted as active;
+- may later be closed exactly once;
+- must never be deleted through the normal domain path;
+- must never be reopened;
+- must never be reassigned to another member;
+- must never have its original booking, assignment role, assignment timestamp or assigning actor rewritten.
+
+This lifecycle model deliberately mirrors the active/revoked historical pattern already used by organization role grants while supporting multiple simultaneous Assistants and Stylists.
+
+#### Exact table surface
+
+`booking_team_assignments` contains exactly these domain columns:
+
+1. `id uuid`
+2. `organization_id uuid`
+3. `booking_id uuid`
+4. `assignment_role text`
+5. `assigned_member_id uuid`
+6. `assigned_at timestamptz`
+7. `assigned_by uuid`
+8. `ended_at timestamptz NULL`
+9. `ended_by uuid NULL`
+10. `end_reason text NULL`
+
+Slice 4 must not add redundant booking branch, service category, organization-role ID, journey-stage snapshot, safety-readiness data or general metadata JSON to this table.
+
+#### Assignment-role taxonomy
+
+`assignment_role` is constrained text, not a PostgreSQL enum.
+
+Allowed values are exactly:
+
+- `lead_photographer`
+- `assistant`
+- `stylist`
+
+No additional assignment role is introduced by Slice 4.
+
+#### Referential and state integrity
+
+The table must use tenant-safe foreign keys to:
+
+- the authoritative booking;
+- the assigned organization member;
+- the assigning organization member;
+- the ending organization member when a row is closed.
+
+The table must expose tenant-safe composite assignment identity sufficient for later booking-specific references.
+
+Ending state is all-or-nothing:
+
+- active row: `ended_at`, `ended_by` and `end_reason` are all NULL;
+- closed row: `ended_at`, `ended_by` and nonblank `end_reason` are all present.
+
+`ended_at` must not precede `assigned_at`.
+
+#### Current-assignment uniqueness
+
+Current assignments are rows where `ended_at IS NULL`.
+
+Partial uniqueness must enforce:
+
+1. exactly one current `lead_photographer` per booking;
+
+2. no duplicate current assignment of the same member to the same booking assignment role.
+
+The second invariant must still permit multiple distinct current Assistants and multiple distinct current Stylists for one booking.
+
+#### Controlled row guard
+
+A dedicated normal trigger function:
+
+- `public.lsh_booking_team_assignment_guard()`
+
+must use an empty `search_path`.
+
+Its domain rules are:
+
+- DELETE is rejected;
+- INSERT must create an active assignment;
+- UPDATE may only close one previously active row;
+- immutable identity and original assignment evidence may not change;
+- a closed row may not be modified again;
+- authenticated actor attribution must resolve to the current active organization member.
+
+The guard itself is not a client mutation API.
+
+#### Permission boundary
+
+Slice 4 introduces exactly:
+
+- `booking.team.assign`
+
+with domain `bookings` and server-side enforcement required.
+
+Its initial grants are exactly:
+
+- `founder`
+- `studio_manager`
+- `client_coordinator`
+
+There must be exactly three role grants for this permission.
+
+It is not granted to:
+
+- `photographer`
+- `assistant`
+- `stylist`
+
+and `team.role.assign` is not reused as a booking-staffing permission.
+
+#### RLS and table ACL boundary
+
+`booking_team_assignments` must have:
+
+- RLS enabled;
+- FORCE RLS enabled;
+- exactly the intended authenticated SELECT policy for the Slice 4 table.
+
+Authenticated read access derives through the authoritative booking and requires:
+
+- `booking.read`;
+- booking-derived branch scope when the booking has a branch.
+
+`team.role.assign` is not required to read booking staffing.
+
+Table privileges must preserve the Sprint 10 pattern:
+
+- `anon`: no table access;
+- `authenticated`: SELECT only;
+- no authenticated direct INSERT;
+- no authenticated direct UPDATE;
+- no authenticated direct DELETE;
+- trusted `service_role` administration remains outside the normal domain path.
+
+#### Public mutation RPC
+
+The frozen public mutation boundary is:
+
+`assign_booking_team_member(uuid,text,uuid,boolean,text)`
+
+with the logical signature:
+
+- `p_booking_id uuid`
+- `p_assignment_role text`
+- `p_member_id uuid`
+- `p_is_assigned boolean`
+- `p_change_reason text DEFAULT NULL`
+
+and return type:
+
+- `public.booking_team_assignments`
+
+The function must be:
+
+- `SECURITY DEFINER`;
+- `SET search_path = ''`;
+- executable by `authenticated`;
+- inaccessible to `anon`.
+
+It requires:
+
+- authenticated user identity;
+- active organization membership;
+- `booking.team.assign`;
+- booking-derived branch scope.
+
+It does not require:
+
+- `team.role.assign`;
+- `booking.write`;
+- `booking.stage.advance`.
+
+#### Canonical locking order
+
+Booking-team mutation uses the canonical booking serialization boundary:
+
+1. authoritative booking;
+2. authoritative current booking journey state;
+3. relevant current `booking_team_assignments` evidence.
+
+For assignment creation or replacement, the implementation must additionally lock or otherwise serialize the target organization-member and qualifying live role-grant eligibility sufficiently to prevent a concurrent suspension or role revocation from invalidating the assignment during creation.
+
+Unassignment must remain possible when a previously assigned member has subsequently become suspended or has lost the qualifying operational role.
+
+#### Journey-stage boundary
+
+Exactly one canonical booking journey state must exist.
+
+The active current stage must be exactly one of:
+
+- Stage 8 — `booking_confirmed`;
+- Stage 9 — `pre_shoot_preparation`;
+- Stage 10 — `shoot_scheduled`.
+
+The assignment RPC must not:
+
+- insert booking journey transitions;
+- update `booking_journey_states`;
+- advance the journey;
+- rewind the journey.
+
+#### Assignment eligibility
+
+When `p_is_assigned = true`, the target organization member must currently be active and have an unrevoked qualifying organization role:
+
+- `lead_photographer` -> `photographer`
+- `assistant` -> `assistant`
+- `stylist` -> `stylist`
+
+For a branch-scoped booking:
+
+- an organization-wide qualifying grant is valid;
+- a qualifying grant for the same booking branch is valid;
+- a qualifying grant only for another branch is invalid.
+
+For a branchless booking:
+
+- only an organization-wide qualifying role grant is valid.
+
+Assignment evidence does not permanently guarantee future operational eligibility. Later safety and Stage 9 -> 10 logic must independently verify whatever eligibility remains required at that later boundary.
+
+#### Mutation semantics and idempotency
+
+First assignment:
+
+- inserts one active assignment row;
+- does not require a change reason.
+
+Exact current-state assignment replay:
+
+- is a true no-op;
+- returns existing authoritative evidence;
+- creates no new assignment history;
+- creates no audit event.
+
+Lead Photographer replacement:
+
+- requires a nonblank change reason;
+- atomically closes the current Lead Photographer row;
+- inserts the replacement active Lead Photographer row;
+- must roll back completely if replacement creation fails.
+
+Assistant and Stylist assignment:
+
+- may add another distinct eligible current member;
+- does not replace other current members;
+- does not require a change reason when adding a new member.
+
+Unassignment:
+
+- closes the exact current assignment row;
+- requires a nonblank change reason;
+- does not delete history.
+
+Successful unassignment replay:
+
+- may return the latest already-closed matching assignment evidence;
+- must not create another mutation;
+- must not create another audit event.
+
+Attempting to unassign a member who has never held that assignment role for the booking must fail rather than silently succeed.
+
+#### Audit contract
+
+Each real RPC state change creates exactly one non-sensitive audit event.
+
+Frozen action keys are:
+
+- `booking.team_member_assigned`
+- `booking.team_member_replaced`
+- `booking.team_member_unassigned`
+
+Entity type is:
+
+- `booking_team_assignment`
+
+Lead Photographer replacement produces one replacement audit event rather than separate unassignment and assignment audit events.
+
+Exact idempotent replay produces zero additional audit events.
+
+Audit values contain structural assignment identifiers, role and state information only. The canonical free-text replacement/removal reason remains on the assignment evidence rather than being unnecessarily duplicated into broad audit payloads.
+
+#### Dedicated pgTAP acceptance matrix
+
+The Slice 4 dedicated pgTAP suite must prove at minimum:
+
+- exact table surface;
+- tenant-safe foreign keys;
+- role and lifecycle checks;
+- current Lead Photographer singularity;
+- duplicate-current-member prevention;
+- multiple distinct Assistants;
+- multiple distinct Stylists;
+- exact `booking.team.assign` permission creation;
+- exact three permission grants;
+- FORCE RLS;
+- authenticated SELECT-only table access;
+- anon denial;
+- direct authenticated INSERT denial;
+- direct authenticated UPDATE denial;
+- direct authenticated DELETE denial;
+- RPC SECURITY DEFINER state;
+- RPC empty `search_path`;
+- authenticated-only RPC execution;
+- Stage 8 assignment;
+- Stage 9 assignment;
+- Stage 10 assignment;
+- wrong-stage denial;
+- Founder assignment authority;
+- Studio Manager assignment authority;
+- Client Coordinator assignment authority;
+- Photographer self-assignment denial without `booking.team.assign`;
+- Lead Photographer eligibility mapping;
+- Assistant eligibility mapping;
+- Stylist eligibility mapping;
+- suspended-member assignment denial;
+- revoked-role assignment denial;
+- organization-wide role eligibility;
+- same-branch role eligibility;
+- wrong-branch role denial;
+- branchless-booking organization-wide requirement;
+- first assignment;
+- exact assignment replay;
+- Lead Photographer replacement;
+- Lead replacement reason requirement;
+- atomic rollback on failed Lead replacement;
+- Assistant addition without replacement;
+- Stylist addition without replacement;
+- unassignment;
+- unassignment reason requirement;
+- unassignment idempotent replay;
+- never-assigned unassignment failure;
+- one audit event per real state change;
+- zero duplicate audit events for replay;
+- no booking journey movement;
+- cross-organization isolation.
+
+#### Slice 4 implementation containment
+
+Slice 4 technical approval does not authorize:
+
+- any `safety.signoff` role-grant change;
+- safety-readiness data;
+- Newborn formal safety sign-off;
+- Stage 9 -> 10 advancement;
+- Stage 10 -> 11 advancement;
+- photographer-capacity rules;
+- studio-capacity rules;
+- scheduling-overlap rules;
+- availability optimization;
+- `/bookings` team-assignment UI;
+- `/prep` runtime/UI release;
+- `/safety` runtime/UI release;
+- Production rollout.
+
+The next implementation slice is limited to the Slice 4 database foundation and dedicated local pgTAP coverage defined by this technical freeze.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
 
@@ -2161,5 +2537,6 @@ As of 2026-08-15:
 - **Slice 3 Production static security:** exact 16-column table surface PASS; forced RLS PASS; authenticated SELECT-only table ACL PASS; anon denial PASS; exact preparation permission grants PASS; guard-trigger/integrity boundary PASS; RPC SECURITY DEFINER / empty search_path / authenticated-only execution PASS
 - **Slice 3 Production runtime mutation:** intentionally not exercised because `booking_preparations` and `booking_preparation_items` both contained zero rows at static validation time
 - **Slice 3 Vercel deployment:** `dpl_Fv9XHo9N7Yo1YWRyxHaitsSSUiGi` READY at exact branch checkpoint SHA `63ef223263b29bafb281d02ec3efaf7b6a33c463`
-- **Slice 4:** Booking Team Assignment Foundation — founder business decisions approved; technical design not yet frozen; no implementation started
-- **Next action:** perform and approve the Slice 4 technical design freeze for canonical booking-scoped team-assignment evidence before creating any migration, test or application code.
+- **Slice 4:** Booking Team Assignment Foundation — founder business decisions approved; technical design frozen; implementation not started
+- **Slice 4 technical boundary:** `booking_team_assignments` lifecycle evidence + controlled `assign_booking_team_member(uuid,text,uuid,boolean,text)` RPC + dedicated `booking.team.assign` permission; no journey movement
+- **Next action:** implement the frozen Slice 4 database foundation and dedicated pgTAP coverage locally only; no Production rollout until the implementation passes its independent local validation and release gates.
