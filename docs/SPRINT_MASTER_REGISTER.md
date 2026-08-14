@@ -46,7 +46,7 @@ Sprint 6 and Sprint 7 have stronger explicit sprint/release boundaries in the im
 | Sprint 9  | Advance Payment, Booking Confirmation & KPI Foundation                | Complete                   | Released          |
 | Sprint 10 | Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation | Implementation in progress | Not released      |
 
-Current position: **Sprint 9 remains the latest closed Production sprint. Sprint 10 scope is frozen and implementation is in progress. Slice 1 — Shoot Scheduling Evidence + Confirmation Reservation Gate — has been implemented, validated, pushed and migrated to the Production database. Slice 2 — Pre-Shoot Preparation Instance + Controlled Stage 8 -> 9 Gate — has been implemented, committed and fully validated locally, but has not yet been pushed or migrated to Production. Sprint 10 as a whole is not released.**
+Current position: **Sprint 9 remains the latest closed Production sprint. Sprint 10 scope is frozen and implementation is in progress. Slice 1 — Shoot Scheduling Evidence + Confirmation Reservation Gate — has been implemented, validated, pushed and migrated to the Production database. Slice 2 — Pre-Shoot Preparation Instance + Controlled Stage 8 -> 9 Gate — has been implemented, fully validated locally, pushed and migrated to the Production database, with post-rollout static security/invariant validation complete. Sprint 10 as a whole is not released.**
 
 ---
 
@@ -1532,9 +1532,32 @@ Local validation evidence:
 - `git diff --check`: PASS;
 - no preparation-item, team-assignment, safety-readiness/sign-off, Stage 9 -> 10 or Stage 10 -> 11 production objects were introduced.
 
-Slice 2 implementation commit `69aa978` remains local at this checkpoint. It has not yet been pushed to `origin/architecture-rebuild`, and migration `20260814172955_sprint10_pre_shoot_preparation_foundation.sql` has not been applied to the Production database.
+Slice 2 implementation commit `69aa978` and its checkpoint stack through `195fc2b` were pushed to `origin/architecture-rebuild`. Migration `20260814172955_sprint10_pre_shoot_preparation_foundation.sql` has been applied to the Production database.
 
-Slice 2 does not complete Sprint 10. Preparation-item workflow, team assignment, safety readiness/sign-off, the dedicated Stage 9 -> 10 gate, application/runtime integration and remaining Production validation are still outstanding.
+Production rollout and static-validation evidence:
+
+- linked Production project identity `fqsdmurrzlqtkfzbwszp`: PASS;
+- pre-rollout migration history showed only `20260814172955_sprint10_pre_shoot_preparation_foundation.sql` pending;
+- pre-rollout Production schema contained no Slice 2 preparation table or start-preparation RPC;
+- pre-rollout linked database lint: PASS;
+- pre-rollout `db push --dry-run` proposed exactly the Slice 2 migration;
+- Production migration rollout: PASS;
+- post-rollout migration history Local = Remote through `20260814172955`;
+- post-rollout `db push --dry-run`: remote database up to date;
+- post-rollout linked database lint: PASS with no schema errors;
+- Production `booking_preparations` has exactly `id`, `organization_id`, `booking_id`, `started_at`, `started_by`;
+- Production `booking_preparations` has RLS enabled and forced;
+- authenticated access is SELECT-only and direct INSERT, UPDATE and DELETE remain denied;
+- `anon` has no table read access;
+- immutable preparation guard exists and is not directly executable by `anon` or `authenticated`;
+- `prep.read` and `prep.write` each remain granted exactly to Founder, Studio Manager and Client Coordinator and require server enforcement;
+- authenticated SELECT policy uses `prep.read` with booking-derived permission and branch scope;
+- `start_pre_shoot_preparation(uuid)` is `SECURITY DEFINER` with empty `search_path`;
+- authenticated may execute `start_pre_shoot_preparation(uuid)` and `anon` may not;
+- deployed RPC retains the dual permission checks, reserved-schedule gate, booking/journey locking, dedicated transition/audit evidence and `40001` concurrency protection;
+- Production `booking_preparations` contained zero rows at static validation time, so no real Production Stage 8 -> 9 preparation mutation was performed as part of rollout validation.
+
+Slice 2 does not complete Sprint 10. Preparation-item workflow, team assignment, safety readiness/sign-off, the dedicated Stage 9 -> 10 gate, application/runtime integration and later Production/runtime validation remain outstanding.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
 
@@ -1595,7 +1618,7 @@ As of 2026-08-14:
 - **Sprint 9 Production application release SHA:** `633c318baf0a1985c17d364f3ab043f442b69332`
 - **Sprint 9 Production closeout commit:** `eb784f4bfe7606e13d20e36ad6bb4e9338ef81db`
 - **Sprint 9 application implementation head:** `89956ae`
-- **Latest Production DB migration:** `20260814120719_sprint10_shoot_schedule_foundation.sql` (Sprint 10 Slice 1 database foundation; Sprint 10 not released)
+- **Latest Production DB migration:** `20260814172955_sprint10_pre_shoot_preparation_foundation.sql` (Sprint 10 Slice 2 database foundation; Sprint 10 not released)
 - **Sprint 9 Production state:** Released / Closed
 - **Current sprint:** Sprint 10 — Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation
 - **Sprint 10 state:** Scope frozen / implementation in progress / not released
@@ -1609,11 +1632,13 @@ As of 2026-08-14:
 - **Sprint 9 Production authenticated KPI smoke:** PASS
 - **Sprint 9 Production authenticated browser smoke:** PASS
 - **Legacy `/kpi` and `/reports` containment:** preserved
-- **Sprint 10 Slice 2:** implemented and fully validated locally — Pre-Shoot Preparation Instance + Controlled Stage 8 -> 9 Gate
+- **Sprint 10 Slice 2:** Production DB + static security validated — Pre-Shoot Preparation Instance + Controlled Stage 8 -> 9 Gate
 - **Slice 2 migration:** `20260814172955_sprint10_pre_shoot_preparation_foundation.sql`
-- **Slice 2 implementation commit:** `69aa978` (local only at this checkpoint)
+- **Slice 2 implementation commit:** `69aa978`; pushed in the branch stack through `195fc2b`
 - **Slice 2 local validation:** clean DB reset PASS; DB lint PASS; dedicated pgTAP 71/71 PASS; complete regression 543/543 PASS across 9 files; schema drift none
 - **Slice 2 preparation permission grants:** `prep.read` and `prep.write` -> Founder, Studio Manager, Client Coordinator only
 - **Slice 2 stage authorization:** `start_pre_shoot_preparation(...)` requires both `prep.write` and `booking.stage.advance`
-- **Slice 2 Production state:** not yet pushed or migrated; latest Production DB migration remains `20260814120719_sprint10_shoot_schedule_foundation.sql`
-- **Next action:** complete the explicit pre-push gate for the validated local commit stack; any Production Supabase migration remains separately gated, and preparation items, Stage 9 -> 10, team assignment and safety readiness remain outside Slice 2.
+- **Slice 2 Production database state:** migration applied; Local = Remote through `20260814172955`; linked lint PASS; post-rollout dry run reports remote database up to date
+- **Slice 2 Production static security:** forced RLS PASS; authenticated SELECT-only table ACL PASS; anon denial PASS; exact preparation permission grants PASS; immutable guard boundary PASS; RPC SECURITY DEFINER / empty search_path / authenticated-only execution PASS
+- **Slice 2 Production runtime mutation:** intentionally not exercised against a real booking; `booking_preparations` contained zero rows at static validation time
+- **Next action:** record and commit this Production checkpoint, then freeze the next bounded Sprint 10 slice before implementation; preparation items, Stage 9 -> 10, team assignment and safety readiness require their own approved slice boundary.
