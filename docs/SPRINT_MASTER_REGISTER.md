@@ -3323,6 +3323,129 @@ Slice 5 implementation must not include:
 
 The next implementation slice is limited to this frozen Slice 5 database foundation and dedicated pgTAP coverage.
 
+### Slice 5 implementation and Production checkpoint
+
+Slice 5 database foundation implementation is complete in commit `443c0a22fe5ba96fc84f7cfe0e23b84650d0cfe9` (`feat: add sprint 10 safety readiness foundation`).
+
+Primary migration:
+
+`20260814223449_sprint10_safety_readiness_foundation.sql`
+
+Local validation evidence:
+
+- clean local migration/reset execution: PASS;
+- local DB lint: PASS with `No schema errors found`;
+- dedicated Slice 5 pgTAP: 142/142 PASS;
+- complete local pgTAP regression: 843/843 PASS across 12 files;
+- local schema drift against migrations: none;
+- committed migration contains exactly the two frozen evidence tables, two public mutation RPCs and two lifecycle guards;
+- committed Slice 5 implementation boundary: exactly the migration and dedicated pgTAP file;
+- committed patch hygiene: PASS;
+- implementation commit pushed to `origin/architecture-rebuild`;
+- local / remote branch divergence after implementation push: 0 / 0.
+
+Validated readiness boundaries include:
+
+- exact Stage 9 readiness mutation boundary;
+- supported Newborn, Maternity, Sitter, Baby and Child applicability behavior;
+- unsupported categories fail closed;
+- first readiness revision, exact replay and real revision semantics;
+- failed revision replacement rolls back atomically;
+- `safety.write`, booking-derived branch scope and organization isolation are enforced;
+- readiness recording does not require a booking-team assignment;
+- readiness recording never moves the booking journey.
+
+Validated formal sign-off boundaries include:
+
+- formal sign-off is Newborn-only;
+- current readiness must exist and be complete / ready;
+- Founder administrative sign-off;
+- Studio Manager administrative sign-off;
+- current canonical Lead Photographer sign-off;
+- non-Lead, ended-Lead, suspended, revoked-role and wrong-branch Photographer denial;
+- deterministic Founder -> Studio Manager -> Lead Photographer authority priority;
+- exact Lead-assignment snapshot persisted for Photographer sign-off;
+- multiple qualifying signers may sign one readiness revision;
+- same-signer replay is idempotent;
+- readiness revisions do not rewrite historical sign-offs;
+- old sign-offs do not sign a later readiness revision;
+- authenticated direct DML is denied;
+- trusted direct mutation remains constrained by lifecycle guards;
+- formal sign-off audit cardinality and restricted-content boundaries are enforced;
+- sign-off operations never move the booking journey.
+
+Validated restricted-read boundaries include:
+
+- both safety evidence tables use FORCE RLS;
+- same-branch `safety.read` access succeeds;
+- wrong-branch access is hidden;
+- branch-scoped readers cannot read branchless safety evidence;
+- ordinary `booking.read` without `safety.read` exposes no readiness or sign-off evidence;
+- cross-organization reads are hidden;
+- organization-wide authorized readers retain permitted visibility.
+
+### Slice 5 Production checkpoint
+
+Slice 5 database migration `20260814223449_sprint10_safety_readiness_foundation.sql` has been applied to Production.
+
+Production rollout evidence:
+
+- pre-rollout Local / Remote migration history aligned through `20260814214746`;
+- exactly one migration was pending before rollout: `20260814223449_sprint10_safety_readiness_foundation.sql`;
+- pre-rollout linked DB lint: PASS with `No schema errors found`;
+- pre-rollout migration dry run identified exactly the approved Slice 5 migration;
+- Production migration push: PASS;
+- post-rollout Local / Remote migration history aligned through `20260814223449`;
+- post-rollout linked DB lint: PASS with `No schema errors found`;
+- post-rollout migration dry run reports the remote database up to date.
+
+Production collision / no-backfill evidence:
+
+- `public.booking_team_assignments` existed as the required Slice 4 dependency before rollout;
+- no pre-existing `public.booking_safety_readiness` relation was present before rollout;
+- no pre-existing `public.booking_safety_signoffs` relation was present before rollout;
+- no pre-existing `record_booking_safety_readiness(uuid,text,text)` RPC was present before rollout;
+- no pre-existing `signoff_booking_safety_readiness(uuid)` RPC was present before rollout;
+- pre-rollout `safety.signoff` grants were exactly Founder and Studio Manager;
+- no readiness or formal sign-off evidence was inferred or blindly backfilled.
+
+Production static security / invariant evidence:
+
+- `public.booking_safety_readiness` has exactly the frozen 11-column domain surface;
+- `public.booking_safety_signoffs` has exactly the frozen 8-column domain surface;
+- RLS enabled on both tables: PASS;
+- FORCE RLS enabled on both tables: PASS;
+- exactly one authenticated SELECT policy exists on each evidence table;
+- restricted reads require `safety.read` plus booking-derived branch scope;
+- authenticated table access is SELECT-only;
+- anon table access is denied;
+- trusted `service_role` privileges remain subject to lifecycle guards;
+- `record_booking_safety_readiness(uuid,text,text)` is `SECURITY DEFINER`, has empty `search_path` and authenticated-only EXECUTE;
+- `signoff_booking_safety_readiness(uuid)` is `SECURITY DEFINER`, has empty `search_path` and authenticated-only EXECUTE;
+- both lifecycle guards have empty `search_path` and are not authenticated/anon public mutation APIs;
+- post-migration `safety.signoff` grants are exactly Founder, Studio Manager and Photographer;
+- Photographer sign-off retains server-side current-Lead and live-role eligibility enforcement;
+- no booking-journey mutation is introduced by either Slice 5 RPC.
+
+Production data state at static validation:
+
+- `booking_safety_readiness`: zero rows;
+- `booking_safety_signoffs`: zero rows.
+
+No artificial Production readiness or formal-sign-off mutation was exercised because both canonical Slice 5 evidence tables contained zero rows at the Production static-validation checkpoint.
+
+Slice 5 Production remains contained. This checkpoint does not release or implement:
+
+- Stage 9 -> 10 advancement;
+- Stage 10 -> 11 advancement;
+- category-specific required-team Stage 9 -> 10 rules;
+- `/safety` runtime/UI release;
+- `/prep` runtime/UI release;
+- shoot-day safety evidence;
+- medical or unrestricted sensitive free text;
+- capacity, overlap or availability logic;
+- Sprint 10 application release.
+
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
 
 ---
@@ -3382,7 +3505,7 @@ As of 2026-08-15:
 - **Sprint 9 Production application release SHA:** `633c318baf0a1985c17d364f3ab043f442b69332`
 - **Sprint 9 Production closeout commit:** `eb784f4bfe7606e13d20e36ad6bb4e9338ef81db`
 - **Sprint 9 application implementation head:** `89956ae`
-- **Latest Production DB migration:** `20260814214746_sprint10_booking_team_assignment_foundation.sql` (Sprint 10 Slice 4 database foundation; Sprint 10 not released)
+- **Latest Production DB migration:** `20260814223449_sprint10_safety_readiness_foundation.sql` (Sprint 10 Slice 5 database foundation; Sprint 10 not released)
 - **Sprint 9 Production state:** Released / Closed
 - **Current sprint:** Sprint 10 — Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation
 - **Sprint 10 state:** Scope frozen / implementation in progress / not released
@@ -3430,17 +3553,23 @@ As of 2026-08-15:
 - **Slice 4 Production static security:** exact 10-column table surface PASS; forced RLS PASS; authenticated SELECT-only table ACL PASS; anon denial PASS; exact `booking.team.assign` grants PASS; lifecycle/uniqueness/integrity boundary PASS; RPC SECURITY DEFINER / empty search_path / authenticated-only execution PASS
 - **Slice 4 Production runtime mutation:** intentionally not exercised because `booking_team_assignments` contained zero rows at static validation time
 - **Slice 4 containment:** no safety-readiness/sign-off, `safety.signoff` grant change, Stage 9 -> 10, Stage 10 -> 11, category-specific required-team gate, capacity/availability logic or `/bookings`/`/prep`/`/safety` UI release
-- **Sprint 10 Slice 5:** Restricted Safety/Comfort Readiness + Newborn Formal Sign-off Foundation — founder decisions approved; technical design frozen on 2026-08-15; implementation not started
+- **Sprint 10 Slice 5:** Restricted Safety/Comfort Readiness + Newborn Formal Sign-off Foundation — founder decisions approved; technical design frozen; database foundation implemented, fully validated locally, pushed and applied to Production
+- **Slice 5 implementation commit:** `443c0a22fe5ba96fc84f7cfe0e23b84650d0cfe9` (`feat: add sprint 10 safety readiness foundation`)
+- **Slice 5 migration:** `20260814223449_sprint10_safety_readiness_foundation.sql`; applied to Production
 - **Slice 5 readiness table:** `booking_safety_readiness` — exactly 11 domain columns; controlled revision lifecycle; one current revision per booking
 - **Slice 5 sign-off table:** `booking_safety_signoffs` — exactly 8 domain columns; immutable append-only formal Newborn sign-off evidence
 - **Slice 5 controlled states:** `pending`, `ready`, `not_ready`, `not_applicable`; no unrestricted safety/medical free text
 - **Slice 5 category rule:** Newborn safety+comfort; Maternity comfort with safety not applicable; Sitter/Baby/Child safety+comfort; unsupported categories fail closed
 - **Slice 5 readiness RPC:** `record_booking_safety_readiness(uuid,text,text)`; `safety.write`; exact Stage 9; no booking-team requirement; no journey movement
 - **Slice 5 sign-off RPC:** `signoff_booking_safety_readiness(uuid)`; Newborn-only; current readiness must be complete and ready
-- **Slice 5 sign-off grants:** `safety.signoff` exactly Founder, Studio Manager and Photographer after implementation; Photographer use requires current canonical Lead assignment and live Photographer eligibility
+- **Slice 5 sign-off grants:** `safety.signoff` exactly Founder, Studio Manager and Photographer; Photographer use requires current canonical Lead assignment and live Photographer eligibility
 - **Slice 5 sign-off snapshot:** Lead Photographer sign-offs persist the exact `lead_assignment_id`; Founder/Studio Manager sign-offs remain administrative
 - **Slice 5 history rule:** readiness revisions preserve history; sign-offs bind to exact readiness revisions and remain immutable; exact replays create no duplicate evidence or audit
 - **Slice 5 security:** FORCE RLS; restricted reads require `safety.read` plus booking-derived branch scope; authenticated table access SELECT-only; mutation through authenticated SECURITY DEFINER RPCs only
+- **Slice 5 local validation:** local DB lint PASS; dedicated pgTAP 142/142 PASS; complete regression 843/843 PASS across 12 files; schema drift none
+- **Slice 5 Production database state:** migration applied; Local = Remote through `20260814223449`; linked lint PASS; post-rollout dry run reports remote database up to date
+- **Slice 5 Production static security:** exact 11/8-column table surfaces PASS; forced RLS PASS; authenticated SELECT-only ACL PASS; anon denial PASS; exact `safety.signoff` grants PASS; RPC SECURITY DEFINER / empty search_path / authenticated-only execution PASS; lifecycle-guard boundary PASS
+- **Slice 5 Production runtime mutation:** intentionally not exercised because `booking_safety_readiness` and `booking_safety_signoffs` both contained zero rows at static validation time
 - **Slice 5 implementation test boundary:** dedicated `supabase/tests/sprint10_safety_readiness_test.sql`
-- **Slice 5 containment:** no Stage 9 -> 10, Stage 10 -> 11, `/safety` or `/prep` runtime/UI release, shoot-day safety evidence, sensitive free text, capacity/availability logic or Production rollout
-- **Next action:** implement the frozen Slice 5 database foundation and dedicated pgTAP coverage locally only; no Production rollout until independent local validation and release gates pass.
+- **Slice 5 containment:** no Stage 9 -> 10, Stage 10 -> 11, `/safety` or `/prep` runtime/UI release, shoot-day safety evidence, sensitive free text, capacity/availability logic or Sprint 10 release
+- **Next action:** separately freeze and validate the next Sprint 10 boundary before any Stage 9 -> 10 implementation; Slice 5 does not authorize journey advancement or Sprint 10 release.
