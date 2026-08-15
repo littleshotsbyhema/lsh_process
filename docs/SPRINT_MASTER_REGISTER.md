@@ -3573,3 +3573,192 @@ As of 2026-08-15:
 - **Slice 5 implementation test boundary:** dedicated `supabase/tests/sprint10_safety_readiness_test.sql`
 - **Slice 5 containment:** no Stage 9 -> 10, Stage 10 -> 11, `/safety` or `/prep` runtime/UI release, shoot-day safety evidence, sensitive free text, capacity/availability logic or Sprint 10 release
 - **Next action:** separately freeze and validate the next Sprint 10 boundary before any Stage 9 -> 10 implementation; Slice 5 does not authorize journey advancement or Sprint 10 release.
+
+### Slice 6 founder decision checkpoint — Stage 9 -> 10 Journey Advancement Gate
+
+Founder decisions approved on 2026-08-15.
+
+Slice 6 is the dedicated Stage 9 -> 10 gate that turns a booking in `Pre-Shoot Preparation` into `Shoot Scheduled` only after all required Sprint 10 operational evidence is complete.
+
+This checkpoint freezes founder-level business behavior only. Exact SQL shape, canonical freelancer representation, quotation-line detection, role-validation helpers, locking implementation, return shape, audit event name and pgTAP structure remain subject to the separate Slice 6 technical design freeze.
+
+#### 1. Gate-only boundary
+
+Stage 9 -> 10 requires all of the following:
+
+- current journey stage exactly `Pre-Shoot Preparation`;
+- current authoritative shoot schedule reserved;
+- every applicable required preparation item satisfied;
+- required booking-team composition present for the accepted booking scope;
+- applicable safety/comfort readiness complete;
+- qualifying formal Newborn sign-off when the booking is Newborn;
+- permitted actor holds the existing `booking.stage.advance` authority for the booking scope.
+
+Slice 6 does not authorize Stage 10 -> 11, shoot completion, UI/runtime release, capacity/availability logic or unrelated workflow changes.
+
+#### 2. Reserved schedule requirement
+
+The current authoritative shoot-schedule tip must be in `reserved` state.
+
+Cancelled, superseded, missing or otherwise non-reserved schedule evidence does not satisfy Stage 9 -> 10.
+
+No additional capacity, overlap, future-time or external-calendar checks are introduced by this gate.
+
+#### 3. Preparation completeness
+
+Every applicable preparation item where `is_required = true` must currently be satisfied.
+
+Optional preparation items remain non-blocking.
+
+Missing, malformed or unsupported preparation structure fails closed.
+
+#### 4. Mandatory photography/styling composition for every service category
+
+Every supported service category requires:
+
+- one current Lead Photographer;
+- one current Stylist.
+
+These two roles are mandatory for Stage 9 -> 10 for all supported booking categories.
+
+Additional photography, styling or general assistants may be assigned when operationally needed but are optional and do not independently block Stage 9 -> 10.
+
+#### 5. Video / Reels assignment rule
+
+When the accepted quotation includes a client-facing Reels or Video deliverable:
+
+- one Lead Videographer is required before Stage 9 -> 10;
+- Supporting Videographer assignment is optional.
+
+When Video/Reels is not included in the client quotation, Lead and/or Supporting Videographers may still be assigned optionally for studio promotional, behind-the-scenes or marketing coverage.
+
+Promotional-only video coverage does not make videographer assignment mandatory for Stage 9 -> 10.
+
+#### 6. Internal and freelance creatives
+
+A booking may assign internal organization creatives or approved freelancers/contractors, including freelance photographers and videographers.
+
+A freelancer does not need an OS account or organization-membership record merely to be assigned operationally to a booking.
+
+Freelancer assignment does not grant application access, permissions, branch scope or organization roles.
+
+If a freelancer later requires OS access, that access must be onboarded separately through the normal organization-member and permission model.
+
+The later technical design must represent freelancer identity and booking-specific approval without falsely treating every freelancer as an internal organization member.
+
+#### 7. Required-assignment operational validity
+
+A required assignment must be operationally valid at Stage 9 -> 10.
+
+For an internal assignee, the later gate must confirm the assignee remains active and retains the live, unrevoked qualifying operational role needed for that assignment.
+
+For a freelancer/contractor, the later gate must confirm the booking-specific freelance assignment remains current and approved.
+
+Historical, ended, superseded or otherwise inactive assignments do not satisfy the gate.
+
+#### 8. Supported-category and quotation scope
+
+The accepted booking/quotation remains the authoritative source for determining the service category and whether a client Video/Reels deliverable has actually been booked.
+
+Unsupported, unmapped or structurally ambiguous categories fail closed.
+
+Video/Reels must not be inferred merely because a videographer happens to be assigned for promotional coverage.
+
+#### 9. Safety / comfort readiness
+
+Readiness remains category-specific:
+
+- Newborn: safety `ready` and comfort `ready`;
+- Maternity: safety `not_applicable` and comfort `ready`;
+- Sitter / Baby / Child: safety `ready` and comfort `ready`.
+
+Missing, pending, not-ready, malformed or category-mismatched current readiness evidence blocks Stage 9 -> 10.
+
+#### 10. Newborn formal sign-off
+
+Newborn requires at least one qualifying sign-off bound to the current readiness revision.
+
+A sign-off on a superseded readiness revision never satisfies the current gate.
+
+Photographer and administrative sign-offs have different current-qualification rules.
+
+#### 11. Photographer sign-off current qualification
+
+A Newborn sign-off made by an ordinary Photographer qualifies at Stage 9 -> 10 only while that signer:
+
+- remains the booking's current Lead Photographer;
+- remains operationally eligible as a Photographer for that booking scope.
+
+If that Photographer is replaced as Lead before Stage 9 -> 10, the historical sign-off remains immutable evidence but no longer satisfies the advancement gate.
+
+The new current Lead Photographer, Founder or Studio Manager must then provide a qualifying sign-off on the current readiness revision.
+
+#### 12. Founder / Studio Manager administrative sign-off persistence
+
+A Founder or Studio Manager sign-off that was validly authorized when created remains qualifying historical approval for that readiness revision.
+
+It is not invalidated merely because:
+
+- the Lead Photographer later changes;
+- the Founder or Studio Manager later loses that administrative role;
+- the signer later leaves or loses active organization membership.
+
+The historical sign-off remains immutable and continues to satisfy the current readiness revision unless that readiness revision itself is superseded.
+
+This administrative persistence rule does not apply to ordinary Photographer sign-offs, whose current Lead Photographer qualification must be revalidated at Stage 9 -> 10.
+
+#### 13. Advancement permission
+
+The actor invoking Stage 9 -> 10 requires the existing `booking.stage.advance` permission and booking-derived branch scope.
+
+The actor does not additionally need `prep.write`, `safety.write`, `safety.signoff` or `booking.team.assign` merely to evaluate and consume evidence created under those permissions.
+
+No new Stage 9 -> 10 permission key is introduced.
+
+#### 14. Transition-only mutation
+
+The public Stage 9 -> 10 operation remains conceptually `mark_booking_shoot_scheduled(uuid)`.
+
+It may:
+
+- evaluate the frozen gate;
+- append exactly one Stage 9 -> 10 transition;
+- update the authoritative current journey state;
+- write structural audit evidence.
+
+It must not create, modify, repair or backfill preparation, schedule, team, freelancer, readiness or sign-off evidence as a side effect.
+
+#### 15. Replay semantics
+
+An authorized replay against the exact already-reached `Shoot Scheduled` state is idempotent only when the canonical Stage 9 -> 10 transition already exists.
+
+Replay creates no duplicate stage transition, journey-version increment or audit event.
+
+Any other journey stage fails closed.
+
+#### 16. Structural audit boundary
+
+Audit evidence may record structural transition outcomes only.
+
+It must not expose:
+
+- preparation-item content;
+- detailed team/freelancer personal information;
+- restricted safety/comfort content;
+- medical or unrestricted sensitive free text.
+
+#### 17. Slice 6 containment
+
+This founder checkpoint does not authorize:
+
+- Slice 6 SQL implementation;
+- modification of existing Slice 4 team-assignment schema;
+- creation of freelancer or videographer schema;
+- execution of Stage 9 -> 10;
+- Production database migration;
+- Stage 10 -> 11;
+- `/bookings`, `/prep` or `/safety` runtime/UI release;
+- capacity/availability/calendar-provider work;
+- Sprint 10 release.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
