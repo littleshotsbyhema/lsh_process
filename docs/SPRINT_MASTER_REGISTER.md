@@ -5062,4 +5062,203 @@ This Production checkpoint does not authorize or include:
 
 Sprint 10 remains an implementation programme with later separately governed slices still required.
 
+### Slice 7A technical design freeze — Runtime Contract Reconciliation
+
+Slice 7A is the first post-Slice-6 application/runtime reconciliation slice.
+
+Its purpose is to align the TypeScript application contract with the canonical Sprint 10 database contract before any `/bookings`, `/prep` or `/safety` runtime expansion.
+
+#### 1. Discovery basis
+
+Read-only application and local-database discovery established that:
+
+- `/bookings` already reads canonical Supabase booking, quotation and journey records;
+- `/prep` still reads the legacy Zustand booking store;
+- `/safety` still reads legacy mock/Zustand state and uses the legacy `submitSafety` mutation;
+- `/prep` and `/safety` remain correctly blocked by `temporarilyUnavailablePaths`;
+- all required Sprint 10 database tables and public RPCs exist locally;
+- local Sprint 10 operational evidence tables are currently empty;
+- generated `src/integrations/supabase/types.ts` does not yet contain the Sprint 10 tables or RPCs;
+- the frontend role catalogue does not match the canonical database role-key vocabulary.
+
+No Production query or database write was required for this discovery.
+
+#### 2. Canonical role-key authority
+
+`public.roles.key` is the sole authoritative application role vocabulary.
+
+`public.my_membership(uuid)` returns assigned role keys directly from the canonical `public.roles` catalogue. The frontend must consume those keys without inventing a second naming system.
+
+The canonical Slice 7A role vocabulary is exactly:
+
+- `founder`;
+- `studio_manager`;
+- `client_coordinator`;
+- `sales`;
+- `photographer`;
+- `assistant`;
+- `stylist`;
+- `editor`;
+- `album_coordinator`;
+- `marketing`;
+- `accounts`;
+- `videographer`.
+
+Legacy frontend aliases including:
+
+- `coordinator`;
+- `album`;
+
+must not remain application role identities after Slice 7A.
+
+No compatibility alias mapper is introduced. Maintaining two role vocabularies would preserve an avoidable authorization ambiguity and could silently discard canonical membership roles.
+
+#### 3. Frontend role reconciliation
+
+Slice 7A may update only the application role contract required to consume canonical database role keys.
+
+The intended implementation files are:
+
+- `src/lib/session.ts`;
+- `src/lib/access.ts`;
+- `src/lib/invites.functions.ts`;
+- `src/lib/team.functions.ts`;
+- `src/integrations/supabase/types.ts`.
+
+The generated type file is regenerated from the local Supabase database rather than hand-edited.
+
+`src/routeTree.gen.ts` may be regenerated temporarily by the normal build process but is not part of the Slice 7A authored implementation and must be restored unless a genuine route-definition change unexpectedly requires it. Slice 7A does not authorize a route-definition change.
+
+#### 4. Session role contract
+
+`AppRole` must represent the canonical database role keys exactly.
+
+`useSession()` continues to obtain membership through the authenticated `my_membership(uuid)` RPC.
+
+`assigned_role_keys` must be filtered only against the canonical twelve-role frontend catalogue.
+
+The session layer must therefore recognize:
+
+- Studio Manager;
+- Client Coordinator;
+- Album Coordinator;
+- Videographer;
+
+using their canonical database keys.
+
+No role may gain a database permission merely because the frontend displays or recognizes that role.
+
+Database permission checks and permission-aware RPCs remain authoritative for domain mutations.
+
+#### 5. Access-layer reconciliation
+
+`src/lib/access.ts` must use canonical role keys.
+
+Existing navigation and action intent may be translated to canonical names where equivalent, but Slice 7A must not widen a route or mutation beyond the authoritative database permission model.
+
+In particular:
+
+- legacy `coordinator` references become `client_coordinator` where they represent the existing Client Coordinator role;
+- legacy `album` references become `album_coordinator`;
+- `studio_manager` is recognized as a first-class application role;
+- `videographer` is recognized as a first-class application role;
+- Founder behavior remains unchanged;
+- route containment remains unchanged in Slice 7A.
+
+`/prep` and `/safety` remain in `temporarilyUnavailablePaths`.
+
+Slice 7A does not release either route.
+
+#### 6. Invite and team role reconciliation
+
+Application-side invite and team role catalogues must use the canonical database role keys.
+
+No new database role is created by Slice 7A.
+
+No role grant, permission grant, organization-member record or invitation is created as part of technical reconciliation itself.
+
+Any future runtime action remains subject to the existing database role-assignment and authorization RPC boundaries.
+
+#### 7. Generated Supabase type reconciliation
+
+`src/integrations/supabase/types.ts` must be regenerated from the local database with the supported Supabase CLI type-generation path.
+
+The generated contract must include the current public-schema representations for at least:
+
+Tables:
+
+- `booking_shoot_schedules`;
+- `booking_preparations`;
+- `booking_preparation_items`;
+- `booking_team_assignments`;
+- `external_creatives`;
+- `commercial_operational_requirements`;
+- `booking_safety_readiness`;
+- `booking_safety_signoffs`.
+
+RPCs:
+
+- `propose_booking_shoot_schedule`;
+- `reschedule_booking_shoot`;
+- `start_pre_shoot_preparation`;
+- `update_pre_shoot_preparation_item`;
+- `assign_booking_team_member`;
+- `create_external_creative`;
+- `assign_booking_external_creative`;
+- `record_booking_safety_readiness`;
+- `signoff_booking_safety_readiness`;
+- `mark_booking_shoot_scheduled`.
+
+Type generation must use the local development database for Slice 7A. No linked Production type generation is required.
+
+#### 8. Validation boundary
+
+Slice 7A implementation is complete only when all of the following are proven:
+
+- canonical twelve-role frontend vocabulary is present exactly once;
+- legacy application role identities `coordinator` and `album` are absent from role catalogues and authorization arrays;
+- unrelated domain text such as the keepsake value `album` is not incorrectly treated as a role defect;
+- `my_membership` remains the authenticated membership source;
+- generated Supabase types contain every frozen Sprint 10 table marker;
+- generated Supabase types contain every frozen Sprint 10 RPC marker;
+- `/prep` remains contained;
+- `/safety` remains contained;
+- no legacy route is released;
+- targeted Prettier passes;
+- targeted ESLint passes;
+- TypeScript passes after normal route generation;
+- production build passes;
+- `git diff --check` passes;
+- local database schema is unchanged;
+- no migration file is created or modified;
+- final worktree contains only the explicitly authorized Slice 7A application/type files before commit.
+
+#### 9. Explicit containment
+
+Slice 7A does not authorize:
+
+- `/bookings` scheduling/team/safety mutation UI;
+- `/prep` runtime cutover;
+- `/safety` runtime cutover;
+- removal of `/prep` containment;
+- removal of `/safety` containment;
+- Stage 10 -> 11 / `Shoot Completed`;
+- shoot-day safety-event evidence;
+- privacy, editing, delivery, Pixieset or heirloom runtime release;
+- new database tables;
+- new database RPCs;
+- new permissions;
+- new roles;
+- changed role-permission mappings;
+- a Supabase migration;
+- Production database queries or writes;
+- Production rollout;
+- Sprint 10 release.
+
+#### 10. Next implementation boundary
+
+After this technical freeze is committed and pushed, the next implementation gate is restricted to the five authorized Slice 7A application/type paths.
+
+Only after Slice 7A is independently validated and checkpointed may Sprint 10 proceed to the separately governed `/bookings` operational runtime slice.
+
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
