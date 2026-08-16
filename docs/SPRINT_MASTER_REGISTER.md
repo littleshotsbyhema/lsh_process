@@ -3576,7 +3576,7 @@ As of 2026-08-15:
 
 ### Slice 6 founder decision checkpoint — Stage 9 -> 10 Journey Advancement Gate
 
-Founder decisions approved on 2026-08-15.
+Founder decisions approved on 2026-08-16.
 
 Slice 6 is the dedicated Stage 9 -> 10 gate that turns a booking in `Pre-Shoot Preparation` into `Shoot Scheduled` only after all required Sprint 10 operational evidence is complete.
 
@@ -3760,5 +3760,461 @@ This founder checkpoint does not authorize:
 - `/bookings`, `/prep` or `/safety` runtime/UI release;
 - capacity/availability/calendar-provider work;
 - Sprint 10 release.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+### Slice 6A technical design freeze — Extended Creative Assignment Foundation
+
+Technical design frozen on 2026-08-16.
+
+Slice 6A is a prerequisite foundation required by the corrected Slice 6 Stage 9 -> 10 founder decisions.
+
+It extends the existing Slice 4 booking-team model only as far as necessary to represent:
+
+- internal Videographers;
+- Lead and Supporting Videographer booking assignments;
+- booking-scoped freelance / external creative assignments without requiring an OS account;
+- structured commercial evidence that an accepted quotation includes a client Video/Reels deliverable.
+
+Slice 6A does not implement Stage 9 -> 10 itself.
+
+#### 1. Existing Slice 4 assignment history remains canonical
+
+`public.booking_team_assignments` remains the single canonical booking-scoped assignment lifecycle table.
+
+Slice 6A must not create a second parallel team-assignment truth.
+
+Existing assignment history remains valid and must not be rewritten or backfilled destructively.
+
+#### 2. Expanded assignment-role vocabulary
+
+`booking_team_assignments.assignment_role` expands from:
+
+- `lead_photographer`;
+- `assistant`;
+- `stylist`;
+
+to exactly:
+
+- `lead_photographer`;
+- `assistant`;
+- `stylist`;
+- `lead_videographer`;
+- `supporting_videographer`.
+
+Existing role meanings remain unchanged.
+
+#### 3. Lead-role cardinality
+
+Current assignment cardinality is:
+
+- at most one current `lead_photographer` per booking;
+- at most one current `lead_videographer` per booking;
+- multiple current `assistant` assignments permitted;
+- multiple current `stylist` assignments permitted;
+- multiple current `supporting_videographer` assignments permitted.
+
+The existing partial singular-current-Lead-Photographer invariant remains.
+
+A parallel singular-current-Lead-Videographer invariant is added.
+
+#### 4. Internal and external assignment subjects
+
+An assignment may represent exactly one of:
+
+- an internal `organization_member`; or
+- an external/freelance creative.
+
+`assigned_member_id` therefore becomes nullable.
+
+Slice 6A adds:
+
+- `assigned_external_creative_id uuid`.
+
+Exactly one assignment subject must be present:
+
+- internal assignment -> `assigned_member_id IS NOT NULL` and `assigned_external_creative_id IS NULL`;
+- external assignment -> `assigned_member_id IS NULL` and `assigned_external_creative_id IS NOT NULL`.
+
+An assignment may never contain both subject forms and may never contain neither.
+
+Current duplicate-subject protection must operate independently for internal and external subjects so exact assignment replay remains idempotent while distinct freelancers with identical display names remain representable.
+
+#### 5. External creative identity boundary
+
+Slice 6A introduces a minimal organization-scoped identity registry:
+
+`public.external_creatives`
+
+Its purpose is only to provide stable operational identity for a freelancer/contractor who may be assigned to bookings without receiving an OS account.
+
+Minimum canonical fields:
+
+- `id uuid`;
+- `organization_id uuid`;
+- `display_name text`;
+- `created_at timestamptz`;
+- `created_by uuid`.
+
+The identity row is immutable and undeletable after creation.
+
+`display_name` must be nonblank and bounded to the normal practical person-display-name limit.
+
+Two external creatives may legitimately have the same display name. Identity is determined by UUID, never name matching.
+
+The table does not create or imply:
+
+- an auth user;
+- an organization membership;
+- a role grant;
+- application permissions;
+- branch permissions;
+- contact CRM;
+- payroll/employment status.
+
+The current booking assignment remains the booking-specific operational approval.
+
+A minimal controlled creation RPC is permitted so an authorized booking-team manager can register an external creative before assignment.
+
+This registry is not a broad freelancer CRM or staffing directory.
+
+#### 6. Assignment subject immutability
+
+For every assignment row, the following original evidence remains immutable after insert:
+
+- organization;
+- booking;
+- assignment role;
+- internal member identifier when present;
+- external creative identifier when present;
+- original assignment timestamp;
+- assigning actor.
+
+An active assignment may only transition to the existing complete ended lifecycle state.
+
+Closed historical assignment evidence remains immutable and undeletable.
+
+Changing subject identity or assignment role requires ending the old assignment and creating new assignment evidence.
+
+#### 7. Internal-member assignment RPC compatibility
+
+Existing:
+
+`assign_booking_team_member(uuid,text,uuid,boolean,text)`
+
+remains the canonical internal-member assignment RPC.
+
+Its accepted assignment roles expand to all five Slice 6A roles.
+
+Operational-role mapping becomes:
+
+- `lead_photographer` -> `photographer`;
+- `assistant` -> `assistant`;
+- `stylist` -> `stylist`;
+- `lead_videographer` -> `videographer`;
+- `supporting_videographer` -> `videographer`.
+
+Existing authorization, branch scope, Stage 8/9/10 mutation boundary, lifecycle, replay and audit behavior remain.
+
+Lead Videographer replacement mirrors Lead Photographer replacement:
+
+- replacement requires a nonblank reason;
+- current Lead Videographer closes atomically;
+- replacement assignment inserts atomically;
+- failure rolls the complete replacement back.
+
+#### 8. External/freelance identity and assignment RPCs
+
+Slice 6A adds:
+
+`create_external_creative(uuid,text)`
+
+with parameters conceptually:
+
+- booking id, used to resolve organization and authorization scope;
+- external creative display name.
+
+It returns `external_creatives`.
+
+The actor must:
+
+- be authenticated;
+- resolve to a current active organization member;
+- hold `booking.team.assign`;
+- have booking-derived branch scope.
+
+Creation grants the external creative no OS access or permissions.
+
+Slice 6A also adds:
+
+`assign_booking_external_creative(uuid,text,uuid,boolean,text)`
+
+with parameters conceptually:
+
+- booking id;
+- assignment role;
+- external creative id;
+- assigned/unassigned state;
+- optional change reason.
+
+It returns `booking_team_assignments`.
+
+The external creative must belong to the booking organization.
+
+Assignment uses stable external creative UUID identity, never display-name matching.
+
+The existing Stage 8/9/10 assignment boundary, authorization, lifecycle and replay semantics remain.
+
+Exact current assignment replay is idempotent.
+
+Unassignment requires the existing complete ending evidence.
+
+Lead Photographer and Lead Videographer replacement semantics apply across internal and external subjects.
+
+#### 9. External Lead Photographer and Newborn sign-off
+
+A freelance/external Lead Photographer may satisfy the Stage 9 -> 10 staffing requirement when the booking assignment is current.
+
+A freelance Lead Photographer without an OS account cannot execute `signoff_booking_safety_readiness(...)`.
+
+That external Lead Photographer therefore cannot create a database Photographer Newborn sign-off merely from the external assignment.
+
+For such a Newborn booking, qualifying formal sign-off must be supplied by:
+
+- Founder; or
+- Studio Manager;
+
+unless the freelancer is separately onboarded as an organization member with valid Photographer eligibility and subsequently assigned through the internal-member path.
+
+#### 10. Internal Videographer organization role
+
+Slice 6A adds the canonical organization role:
+
+`videographer`
+
+The role is eligible for both:
+
+- `lead_videographer`;
+- `supporting_videographer`.
+
+Initial permissions are exactly:
+
+- `org.read`;
+- `booking.read`.
+
+Videographer does not receive merely by virtue of that role:
+
+- `safety.read`;
+- `safety.write`;
+- `safety.signoff`;
+- `booking.team.assign`;
+- `booking.stage.advance`;
+- finance permissions;
+- organization administration permissions.
+
+A person performing both photography and videography may hold both `photographer` and `videographer` role grants.
+
+After Slice 6A, the canonical access-control catalogue becomes 12 roles and 141 role-permission mappings.
+
+#### 11. Current operational eligibility remains a later gate concern
+
+Assignment-time validation is not permanent proof of later eligibility.
+
+At Stage 9 -> 10:
+
+For an internal required assignment:
+
+- member must still be active;
+- qualifying role grant must still be live and unrevoked for the booking scope;
+- assignment itself must still be current.
+
+For an external required assignment:
+
+- assignment itself must still be current;
+- `assigned_external_creative_id` must still resolve to the immutable external identity in the same organization.
+
+The external identity row itself grants no operational permission; the current booking assignment is the booking-specific approval.
+
+Ending a freelancer assignment withdraws that booking-specific operational approval.
+
+#### 12. Structured Video/Reels commercial requirement
+
+Runtime Stage 9 -> 10 logic must never determine a client Video/Reels obligation using:
+
+- package-inclusion label text;
+- quotation item name;
+- quotation description;
+- substring matching for `video`, `reel` or similar words;
+- presence of a Videographer assignment.
+
+The existing `commercial_package_inclusions.inclusion_key` values are ordinal keys such as `item_01` and are not semantically sufficient for this purpose.
+
+Slice 6A therefore introduces structured commercial operational-requirement evidence tied to exact commercial catalogue versions.
+
+#### 13. Commercial operational-requirement table
+
+Slice 6A introduces:
+
+`public.commercial_operational_requirements`
+
+Each row binds exactly one immutable commercial source version to one controlled operational requirement.
+
+The source is exactly one of:
+
+- `commercial_package_versions`;
+- `commercial_addon_versions`.
+
+The initial controlled requirement key is:
+
+`lead_videographer`
+
+The table must enforce:
+
+- organization-scoped foreign keys;
+- exactly one package-version or add-on-version source;
+- nonblank controlled requirement key;
+- uniqueness of requirement per exact source version;
+- append-only/immutable requirement identity;
+- no unrestricted free-text operational condition.
+
+Stage 9 -> 10 will later query this structured table through the accepted quotation's snapshotted `source_package_version_id` and `source_addon_version_id`.
+
+#### 14. Initial Lead Videographer commercial mappings
+
+Slice 6A seeds `lead_videographer` requirement evidence for the existing version-1 package versions whose founder-approved inclusions contain client Video/Reels deliverables:
+
+- `maternity_diamond`;
+- `maternity_emerald`;
+- `newborn_emerald`;
+- `sitter_diamond`;
+- `sitter_emerald`.
+
+Slice 6A also seeds the same requirement for the existing version-1 add-on:
+
+- `cinematic_reel`.
+
+The migration resolves these rows structurally through package/add-on keys plus exact version number when inserting the new requirement evidence.
+
+Runtime journey logic does not use those package names as a hard-coded gate; it consumes the resulting version-bound requirement rows.
+
+Future commercial versions must explicitly receive their own operational-requirement evidence when applicable.
+
+#### 15. Quotation interpretation
+
+The accepted quotation remains immutable and authoritative.
+
+Lead Videographer becomes mandatory when any accepted quotation line references a package or add-on version carrying the structured `lead_videographer` requirement.
+
+A Videographer assigned only for promotional, BTS or studio-marketing coverage does not create a client commercial requirement.
+
+Free-form custom quotation text does not create a Video/Reels requirement in Slice 6A.
+
+Video/Reels sold to a client within the current supported catalogue must use structured package or canonical `cinematic_reel` add-on evidence.
+
+Slice 6A introduces no free-text inference fallback.
+
+#### 16. RLS and ACL boundary
+
+`booking_team_assignments` retains its existing forced-RLS and authenticated SELECT-only table boundary.
+
+Direct authenticated INSERT/UPDATE/DELETE remains prohibited.
+
+Mutation remains RPC-only.
+
+`external_creatives` is operational identity data.
+
+It must use forced RLS and expose no direct authenticated mutation path.
+
+Creation occurs only through the controlled RPC authorized through `booking.team.assign` plus booking-derived branch scope.
+
+No external creative receives application permissions merely because an identity row exists.
+
+`commercial_operational_requirements` is structural catalogue evidence.
+
+Normal authenticated clients receive no direct mutation authority over it.
+
+#### 17. Audit boundary
+
+Assignment audit remains structural.
+
+For external assignments, broad audit payloads may include:
+
+- assignment id;
+- assignment role;
+- internal/external subject type;
+- external creative id when applicable;
+- current/ended state;
+- booking id.
+
+Broad audit payloads must not copy external creative display names or other freelancer personal information unnecessarily.
+
+External-identity creation audit may identify the external creative id structurally but must not propagate display names into unrelated broad audit surfaces.
+
+Commercial operational-requirement seed evidence requires no sensitive audit payload.
+
+#### 18. Existing Slice 4 test evolution
+
+The existing Slice 4 test file currently freezes:
+
+- exactly 10 `booking_team_assignments` columns;
+- exactly three assignment roles;
+- mandatory `assigned_member_id`.
+
+Those assertions become intentionally outdated after the approved Slice 6A schema extension.
+
+The canonical assignment table adds `assigned_external_creative_id`, making the subject model internal-or-external rather than internal-only.
+
+Slice 6A implementation must update the existing booking-team test expectations while preserving every still-valid Slice 4 lifecycle, authorization, branch-isolation, replay and history invariant.
+
+Historical Git evidence remains the record of the original Slice 4 schema.
+
+Tests must validate the current canonical schema rather than obsolete column-count assertions.
+
+#### 19. Dedicated Slice 6A pgTAP boundary
+
+Slice 6A adds dedicated coverage for at least:
+
+- five-role assignment vocabulary;
+- singular current Lead Photographer across internal/external subjects;
+- singular current Lead Videographer across internal/external subjects;
+- multiple Supporting Videographers;
+- internal/external subject XOR;
+- stable external creative UUID identity;
+- duplicate external display names permitted;
+- external identity immutability;
+- controlled external identity creation authorization;
+- internal Videographer role eligibility;
+- internal Lead/Supporting Videographer assignment;
+- external Lead Photographer assignment;
+- external Lead Videographer assignment;
+- external Supporting Videographer assignment;
+- external assignment/unassignment/replay;
+- external subject receives no organization membership or application permission;
+- exact Videographer permission grants;
+- commercial operational-requirement table integrity;
+- exact initial package-version requirement seed;
+- exact `cinematic_reel` add-on requirement seed;
+- no free-text Video/Reels inference;
+- direct-write denial;
+- organization/branch isolation;
+- lifecycle guard integrity.
+
+#### 20. Slice 6A containment
+
+Slice 6A does not authorize:
+
+- Stage 9 -> 10 implementation;
+- Stage 10 -> 11 implementation;
+- Newborn sign-off by unauthenticated freelancers;
+- application access for freelancers;
+- generic freelancer account creation;
+- a broad freelancer CRM/directory;
+- free-text Video/Reels detection;
+- shoot-day runtime/UI;
+- capacity/availability/calendar-provider logic;
+- Production migration;
+- Sprint 10 release.
+
+After Slice 6A technical implementation and validation, the dedicated Slice 6 Stage 9 -> 10 technical design must consume this extended canonical evidence.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
