@@ -4953,4 +4953,113 @@ Before any Production rollout, a separate read-only Production preflight is mand
 
 No Production migration is authorized by this checkpoint.
 
+### Slice 6 Production rollout checkpoint — Stage 9 -> 10 Journey Advancement Gate
+
+Sprint 10 Slice 6 Production database rollout completed and was independently post-validated on 2026-08-17.
+
+Production target:
+
+- Supabase project: `memory-keeper-os`;
+- approved Production project ref: `fqsdmurrzlqtkfzbwszp`;
+- deployment was performed only after a read-only Production preflight proved the expected pre-Slice-6 baseline and exact migration dependency order.
+
+Production migrations applied, in canonical order:
+
+1. `20260816113000_sprint10_extended_creative_assignment_foundation.sql`;
+2. `20260816161000_sprint10_stage9_10_gate_foundation.sql`.
+
+Migration identity:
+
+- Slice 6A SHA-256: `84576bd1663f3facefbe84cb6980f690bc477b0fe94f7db374680fddb61a69e6`;
+- Stage 9 -> 10 SHA-256: `cace5e812835d3449c000a3d1719feff801bd582f8a1d7879e0cb64cfec8a187`;
+- dedicated Stage 9 -> 10 pgTAP SHA-256: `c793c60a0f0455260d1fff2c5cacb4a55716f21d8b913f5a8e5e44840e5d2173`.
+
+Pre-rollout Production evidence:
+
+- remote migration history ended at `20260814223449`;
+- exactly `20260816113000` and `20260816161000` were pending;
+- Production access-control baseline was exactly 11 roles / 228 role-permission mappings;
+- `videographer` was absent;
+- Slice 6A tables, external-assignment column and RPCs were absent;
+- `mark_booking_shoot_scheduled(uuid)` was absent;
+- existing internal booking-team RPC had not already evolved to Slice 6A semantics;
+- booking-team, safety-readiness, safety-sign-off, `shoot_scheduled` transition and `booking.shoot_scheduled` audit evidence counts were zero;
+- decisive pre-rollout collision verdict was fully green.
+
+Production deployment evidence:
+
+- `supabase db push --linked --dry-run` identified exactly the two approved migrations and no seed data;
+- dry-run ordering was Slice 6A first, then Stage 9 -> 10;
+- the explicit Production write boundary was confirmed before deployment;
+- both approved migrations applied successfully;
+- no migration repair, linked reset or seed push was used.
+
+Post-rollout Production canonical state:
+
+- Production migration history records both `20260816113000` and `20260816161000`;
+- role count is exactly 12;
+- role-permission mapping count is exactly 230;
+- exactly one `videographer` role exists;
+- Videographer receives exactly `booking.read` and `org.read`;
+- `external_creatives` exists with the intended hardened access model;
+- `commercial_operational_requirements` exists with the intended hardened access model;
+- exactly six structured `lead_videographer` operational requirements exist;
+- `booking_team_assignments.assigned_external_creative_id` exists;
+- internal and external booking-team subjects use the frozen subject-XOR model;
+- the five-role booking-team assignment vocabulary is active;
+- `create_external_creative(uuid,text)` exists;
+- `assign_booking_external_creative(uuid,text,uuid,boolean,text)` exists;
+- both external-creative RPCs are `SECURITY DEFINER`, use empty `search_path`, deny `anon`, and allow the committed `authenticated` plus `service_role` execution boundary;
+- `mark_booking_shoot_scheduled(uuid)` exists with the validated authenticated-only application contract and direct `service_role` execution denied;
+- Stage 9 -> 10 remains the sole implemented journey advancement in Slice 6;
+- no Stage 10 -> 11 behavior was introduced.
+
+A first post-rollout validator incorrectly expected `service_role` to lack `EXECUTE` on the two Slice 6A external-creative RPCs. That assertion was rejected after read-only diagnosis demonstrated that:
+
+- the committed Slice 6A migration explicitly grants those two RPCs to `authenticated, service_role`;
+- the dedicated Slice 6A pgTAP contract permits that boundary;
+- local and Production ACL state matched exactly;
+- both RPCs continue to enforce authenticated actor identity, active organization membership, `booking.team.assign`, booking branch scope and organization-safe resource checks internally.
+
+No Production ACL hotfix, rollback, migration repair or repeat deployment was performed. The validator was corrected instead.
+
+Corrected post-rollout verification:
+
+- both Production migrations recorded remotely: PASS;
+- corrected static Production contract: PASS;
+- Production database lint: PASS with `No schema errors found`;
+- remote database dry-run reports `upToDate: true`;
+- no migrations remain pending;
+- no seed data is pending;
+- booking-team assignment rows: 0;
+- external-creative rows: 0;
+- safety-readiness rows: 0;
+- safety-sign-off rows: 0;
+- `shoot_scheduled` transition rows: 0;
+- `booking.shoot_scheduled` audit rows: 0;
+- corrected validation continuation was read-only and executed no Production DDL/DML.
+
+Repository state remained unchanged throughout Production verification:
+
+- pre-checkpoint Git HEAD: `6dc9ae3e3fde1d4b0b3183473dd40432deaa90b9`;
+- local and `origin/architecture-rebuild` remained reconciled at `0 / 0`;
+- validated migration and test files remained byte-identical.
+
+Slice 6 Production rollout is therefore technically complete.
+
+This Production checkpoint does not authorize or include:
+
+- Stage 10 -> 11 / `Shoot Completed`;
+- shoot-completion evidence;
+- shoot-day safety-event workflow;
+- `/bookings`, `/prep` or `/safety` runtime/UI release;
+- application/runtime integration for the new Stage 9 -> 10 RPC;
+- capacity, overlap or advanced availability logic;
+- external calendar-provider integration;
+- freelancer CRM/payroll or freelancer application accounts;
+- additional role or permission expansion;
+- Sprint 10 release.
+
+Sprint 10 remains an implementation programme with later separately governed slices still required.
+
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
