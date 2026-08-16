@@ -4855,4 +4855,102 @@ This technical freeze does not authorize:
 - Production migration;
 - Sprint 10 release.
 
+### Slice 6 implementation checkpoint — Stage 9 -> 10 Journey Advancement Gate
+
+Slice 6 Stage 9 -> 10 database implementation completed, fully validated and pushed to `origin/architecture-rebuild` on 2026-08-17.
+
+Implementation evidence:
+
+- migration: `20260816161000_sprint10_stage9_10_gate_foundation.sql`;
+- dedicated pgTAP: `supabase/tests/sprint10_stage9_10_gate_test.sql`;
+- implementation commit: `e0e9ff9e7ccd2bcaa983af8ddbae1f4e674f8d4b` (`feat: add sprint 10 stage 9->10 gate foundation`);
+- implementation parent / frozen technical-design checkpoint: `2cac45c358adf16cf396e535d2c30237f44dd564`;
+- implementation boundary is exactly the one new migration and one dedicated pgTAP file frozen by Slice 6;
+- no Slice 6A migration, application/runtime/UI file or unrelated canonical evidence file was modified;
+- migration SHA-256: `cace5e812835d3449c000a3d1719feff801bd582f8a1d7879e0cb64cfec8a187`;
+- dedicated pgTAP SHA-256: `c793c60a0f0455260d1fff2c5cacb4a55716f21d8b913f5a8e5e44840e5d2173`;
+- implementation commit pushed to `origin/architecture-rebuild`;
+- local, tracking and actual remote branch refs were reconciled to the exact implementation commit with final divergence `0 / 0`.
+
+Canonical Stage 9 -> 10 behavior implemented:
+
+- public `mark_booking_shoot_scheduled(uuid)` is the sole Stage 9 -> 10 operation;
+- RPC is `SECURITY DEFINER`, uses empty `search_path`, is executable by `authenticated`, and denies `anon` and direct `service_role` execution;
+- authorization requires authenticated actor, active organization membership, existing `booking.stage.advance` and booking-derived branch scope;
+- normal advancement is restricted to exact active Stage 9 / `pre_shoot_preparation`;
+- exact authorized Stage 10 / `shoot_scheduled` replay is idempotent only when the one canonical historical `shoot_scheduled` Stage 9 -> 10 transition already exists;
+- malformed Stage 10 replay history fails closed rather than repairing history;
+- authoritative service category is resolved only from accepted-quotation structured source package-version evidence;
+- the authoritative latest shoot-schedule tip must be `reserved`;
+- exactly one canonical preparation instance and structurally valid Slice 3 checklist snapshot are required;
+- every required preparation item must be satisfied while optional items remain non-blocking;
+- exactly one current Lead Photographer and at least one current Stylist are mandatory;
+- Assistant remains optional;
+- Lead Videographer is mandatory only when immutable accepted-quotation package/add-on source-version evidence maps to `lead_videographer` in `commercial_operational_requirements`;
+- Supporting Videographer remains optional and promotional/BTS staffing does not itself create a client Video/Reels requirement;
+- required internal Lead Photographer, Stylist and Lead Videographer assignments are revalidated against current active membership, live unrevoked qualifying role and booking scope;
+- current same-organization external creative assignments may satisfy required staffing without receiving authentication users, organization membership or application permissions;
+- current safety-readiness evidence must match the authoritative booking category and frozen readiness matrix;
+- Newborn requires a qualifying current formal sign-off;
+- Founder and Studio Manager administrative Newborn sign-offs remain qualifying for the same readiness revision after later signer role/member loss;
+- ordinary Photographer Newborn sign-off remains qualifying only while bound to the exact current internal Lead Photographer assignment and current operational Photographer eligibility;
+- an external Lead Photographer can satisfy staffing but cannot by itself satisfy the database Photographer formal-sign-off path;
+- successful advancement writes only the canonical Stage 9 -> 10 transition, the authoritative journey-state mutation and one structural `booking.shoot_scheduled` audit event;
+- schedule, preparation, checklist, team, external-creative, readiness, sign-off and commercial-requirement evidence remain read-only to the advancement operation;
+- audit evidence excludes restricted safety content and external-creative personal content.
+
+Local validation evidence:
+
+- clean local reset applied all migrations through `20260816161000_sprint10_stage9_10_gate_foundation.sql`: PASS;
+- database lint: PASS with `No schema errors found`;
+- dedicated Stage 9 -> 10 pgTAP: 92 / 92 PASS;
+- complete local pgTAP regression: 1020 / 1020 PASS across 14 files;
+- post-rollback canonical state: 12 roles / 230 role-permission mappings / 6 `lead_videographer` operational-requirement rows / zero booking-stage-transition rows / zero booking-team rows / zero external-creative rows / zero safety-readiness rows / zero safety-sign-off rows / zero `booking.shoot_scheduled` audit rows;
+- authorization, permission, branch and tenant isolation paths fail closed without advancement mutation;
+- latest non-reserved schedule evidence blocks advancement;
+- invalid Stage 10 replay history fails closed without repair;
+- live internal Photographer, Stylist and Videographer role eligibility is revalidated at advancement time;
+- direct authenticated writes to journey-state, transition and audit evidence remain denied;
+- migration remained byte-identical throughout all behavioral validation.
+
+Native two-session serialization evidence:
+
+- two independent PostgreSQL sessions invoked `mark_booking_shoot_scheduled(uuid)` against the same ready Stage 9 booking;
+- Session A held the canonical booking-row lock while Session B invoked the same RPC;
+- PostgreSQL reported Session B actively waiting with `wait_event_type = 'Lock'` and Session A as its blocker;
+- both callers completed successfully after serialization;
+- final journey state was exactly `shoot_scheduled`;
+- journey version incremented exactly once from `3` to `4`;
+- exactly one `shoot_scheduled` transition existed;
+- exactly one `booking.shoot_scheduled` audit event existed;
+- the second caller resolved through the exact Stage 10 replay path without a duplicate transition, version increment or audit event;
+- the committed local-only concurrency fixture was fully removed by a clean local database reset;
+- post-reset dedicated pgTAP remained 92 / 92 PASS;
+- post-reset complete regression remained 1020 / 1020 PASS;
+- post-reset database lint remained clean;
+- post-reset canonical operational evidence returned to zero rows.
+
+Slice 6 remains contained. This checkpoint does not include or authorize:
+
+- Stage 10 -> 11 / `Shoot Completed`;
+- shoot-completion evidence or shoot-day safety-event workflow;
+- `/bookings`, `/prep` or `/safety` runtime/UI release;
+- application/runtime integration;
+- capacity, availability or overlap logic;
+- external calendar-provider integration;
+- freelancer CRM, payroll or generic freelancer account creation;
+- any new role, permission key or role-permission expansion;
+- free-text Video/Reels requirement inference;
+- mutation or redesign of existing Slice 6A canonical evidence;
+- any Production database migration;
+- Sprint 10 release.
+
+Production remains unchanged by this implementation checkpoint.
+
+This checkpoint does not apply either `20260816113000_sprint10_extended_creative_assignment_foundation.sql` or `20260816161000_sprint10_stage9_10_gate_foundation.sql` to Production.
+
+Before any Production rollout, a separate read-only Production preflight is mandatory. That preflight must reconcile actual Production migration history and schema state, verify the prerequisite Slice 6A dependency order before the Stage 9 -> 10 migration, confirm the expected access-control and canonical-evidence baseline, and place rollout on HOLD for any unexpected collision or drift.
+
+No Production migration is authorized by this checkpoint.
+
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
