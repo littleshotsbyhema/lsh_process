@@ -4319,4 +4319,540 @@ Before any Slice 6A Production migration, a separate read-only Production prefli
 
 The next technical step after this checkpoint is the dedicated Slice 6 Stage 9 -> 10 technical design. That design must consume the canonical Slice 6A internal/external staffing evidence and structured commercial operational requirements rather than introducing another staffing representation or free-text Video/Reels inference. Neither this checkpoint nor that future design authorizes Production rollout or Sprint 10 release.
 
+### Slice 6 technical design freeze — Stage 9 -> 10 Journey Advancement Gate
+
+Technical design frozen on 2026-08-16.
+
+This freeze translates the corrected Slice 6 founder decisions and completed Slice 6A foundation into the exact implementation contract for the sole Stage 9 -> 10 operation.
+
+Implementation remains unauthorized until this technical-design checkpoint is independently reviewed, committed and pushed.
+
+#### 1. Transition-only implementation boundary
+
+Slice 6 introduces no new:
+
+- canonical evidence table;
+- canonical evidence column;
+- organization role;
+- permission key;
+- role-permission grant;
+- freelancer representation;
+- commercial requirement representation.
+
+The gate consumes existing canonical evidence from:
+
+- `public.bookings`;
+- `public.booking_journey_states`;
+- `public.booking_journey_stages`;
+- `public.booking_stage_transitions`;
+- `public.booking_shoot_schedules`;
+- `public.booking_preparations`;
+- `public.booking_preparation_items`;
+- `public.booking_team_assignments`;
+- `public.external_creatives`;
+- `public.booking_safety_readiness`;
+- `public.booking_safety_signoffs`;
+- `public.quotation_line_items`;
+- `public.commercial_operational_requirements`;
+- existing organization membership / role-grant evidence.
+
+The operation writes only:
+
+- one canonical Stage 9 -> 10 `booking_stage_transitions` row;
+- the one authoritative `booking_journey_states` row;
+- one structural audit event.
+
+It must never repair, backfill, create, revise, end or otherwise mutate schedule, preparation, team, external-creative, readiness, sign-off or commercial-requirement evidence.
+
+#### 2. Exact public RPC contract
+
+The public operation is frozen exactly as:
+
+`mark_booking_shoot_scheduled(p_booking_id uuid) RETURNS public.bookings`
+
+It is:
+
+- `LANGUAGE plpgsql`;
+- `SECURITY DEFINER`;
+- `SET search_path = ''`;
+- executable by `authenticated`;
+- not executable by `anon`;
+- not a service-role-only administrative path.
+
+The booking identifier is the only caller-supplied domain input.
+
+The function returns the canonical booking row, following the existing controlled booking-transition convention used by `confirm_booking_after_advance(uuid)`.
+
+#### 3. Actor and authorization boundary
+
+Authorization occurs before any advancement.
+
+The function requires:
+
+- authenticated `auth.uid()`;
+- active current organization membership for the booking organization;
+- existing `booking.stage.advance` permission for the booking scope;
+- booking-derived branch scope when the booking is branch-scoped.
+
+The invoking actor does not additionally require:
+
+- `prep.read`;
+- `prep.write`;
+- `safety.read`;
+- `safety.write`;
+- `safety.signoff`;
+- `booking.team.assign`;
+- `shoot.schedule`.
+
+Those permissions govern creation or visibility of their own evidence domains; they do not substitute for or supplement `booking.stage.advance` at this transition boundary.
+
+No new Stage 9 -> 10 permission is introduced.
+
+#### 4. Transaction synchronization and lock order
+
+The booking row is the synchronization root.
+
+The transaction must lock in deterministic order:
+
+1. target `bookings` row `FOR UPDATE`;
+2. the one canonical `booking_journey_states` row `FOR UPDATE`;
+3. current authoritative shoot-schedule tip;
+4. canonical preparation instance and its preparation-item rows;
+5. current booking-team assignment rows, ordered deterministically;
+6. current safety-readiness revision;
+7. required current internal-assignee membership / qualifying role-grant rows when internal staffing eligibility must be revalidated.
+
+Existing schedule, preparation, team, readiness and sign-off mutation RPCs already serialize their booking-scoped mutations through the booking boundary. Slice 6 must preserve that ordering rather than introducing a conflicting lock hierarchy.
+
+Sign-off rows are append-only. External creative identity rows are immutable.
+
+The gate must evaluate one transactionally coherent booking snapshot and must never perform evidence repair while holding these locks.
+
+#### 5. Journey-state and replay integrity
+
+Normal advancement is legal only from:
+
+- `stage_order = 9`;
+- `stage_key = 'pre_shoot_preparation'`;
+- active canonical Stage 9.
+
+Canonical destination is exactly:
+
+- `stage_order = 10`;
+- `stage_key = 'shoot_scheduled'`;
+- active canonical Stage 10.
+
+An authorized Stage 10 replay is idempotent only when exactly one canonical historical Stage 9 -> 10 transition already exists for that booking with:
+
+- source Stage 9;
+- destination Stage 10;
+- transition key `shoot_scheduled`.
+
+A Stage 10 state without the matching canonical historical transition is an integrity failure, not a replay.
+
+Replay does not re-evaluate staffing or other mutable Stage 9 evidence after the booking has already reached Stage 10.
+
+Replay creates:
+
+- no transition;
+- no journey-version increment;
+- no audit event.
+
+Every journey stage other than valid Stage 9 or valid canonical Stage 10 replay fails closed.
+
+#### 6. Authoritative service-category resolution
+
+The booking's immutable `source_quotation_id` is authoritative.
+
+The service category is resolved from the accepted quotation's structured package line through:
+
+`quotation_line_items.source_package_version_id`
+-> `commercial_package_versions`
+-> `commercial_packages.service_category`.
+
+The gate must resolve one structurally unambiguous authoritative package category.
+
+Missing, ambiguous or unsupported category evidence fails closed.
+
+Slice 6 does not expand the existing Slice 3 preparation taxonomy.
+
+A category must therefore also have a valid existing canonical preparation taxonomy/snapshot capable of reaching Stage 9.
+
+At the current Slice 6 boundary this means the advancement path remains operationally supported only where the existing preparation foundation can produce and validate the Stage 9 checklist.
+
+Baby / Child safety-readiness support does not by itself authorize Slice 6 to invent or backfill Baby / Child preparation taxonomy.
+
+#### 7. Reserved shoot-schedule gate
+
+The authoritative shoot schedule is the latest schedule tip by canonical `schedule_version`.
+
+It must exist and have:
+
+`schedule_state = 'reserved'`.
+
+A missing, proposed, cancelled, superseded or otherwise non-reserved authoritative tip blocks advancement.
+
+Slice 6 adds no:
+
+- capacity calculation;
+- overlap detection;
+- availability check;
+- future-time validation;
+- calendar-provider validation.
+
+#### 8. Preparation structural-validity gate
+
+Exactly one canonical preparation instance must exist for the booking.
+
+The existing checklist must match the canonical Slice 3 structural snapshot for the authoritative service category.
+
+Slice 6 reuses the structural contract already enforced by Stage 9 replay, including:
+
+- canonical category;
+- taxonomy version;
+- expected item keys;
+- expected labels;
+- required/optional classification;
+- sort-order structure;
+- exact expected item cardinality.
+
+The gate must not merely count satisfied rows while ignoring malformed checklist structure.
+
+Missing, extra, duplicated, category-mismatched or structurally damaged preparation evidence fails closed.
+
+Slice 6 performs no checklist repair.
+
+#### 9. Required preparation satisfaction
+
+After structural validation, every current checklist row with:
+
+`is_required = true`
+
+must have:
+
+`is_satisfied = true`.
+
+Optional checklist rows do not block advancement.
+
+The gate does not modify preparation-item satisfaction state.
+
+#### 10. Structured client Video/Reels requirement
+
+Whether a Lead Videographer is required is derived only from immutable accepted-quotation source-version evidence.
+
+`lead_videographer` is required when at least one accepted quotation line references either:
+
+- `source_package_version_id`; or
+- `source_addon_version_id`;
+
+that is mapped by `public.commercial_operational_requirements` to:
+
+`requirement_key = 'lead_videographer'`.
+
+The gate must not infer a client Video/Reels requirement from:
+
+- package labels;
+- quotation labels;
+- quotation descriptions;
+- custom/free-form text;
+- substring matching;
+- inclusion ordinal keys;
+- presence of a Lead or Supporting Videographer assignment.
+
+Promotional or BTS video staffing therefore remains non-blocking when no structured client requirement exists.
+
+#### 11. Mandatory staffing composition
+
+For every booking that can validly reach this gate, staffing requires:
+
+- exactly one current `lead_photographer` assignment, using the existing singular-current invariant;
+- at least one current `stylist` assignment.
+
+Assistant assignments are optional and never independently block Stage 9 -> 10.
+
+If the accepted quotation structurally requires `lead_videographer`, the gate additionally requires:
+
+- exactly one current `lead_videographer` assignment, using the existing singular-current invariant.
+
+`supporting_videographer` remains optional.
+
+The presence of optional Assistants or Supporting Videographers neither creates nor removes any gate requirement.
+
+#### 12. Required internal-assignment eligibility
+
+For a required current assignment whose subject is internal:
+
+- `assigned_member_id IS NOT NULL`;
+- `assigned_external_creative_id IS NULL`;
+- assignment `ended_at IS NULL`;
+- organization member must still be active;
+- qualifying operational role grant must still be live and unrevoked;
+- qualifying role grant must be valid for the booking scope.
+
+Required role mapping is exactly:
+
+- `lead_photographer` -> `photographer`;
+- `stylist` -> `stylist`;
+- `lead_videographer` -> `videographer`.
+
+Assignment-time eligibility is not permanent proof of Stage 9 -> 10 eligibility.
+
+A later suspension, role revocation or wrong-scope state blocks the gate without rewriting assignment history.
+
+#### 13. Required external-assignment eligibility
+
+For a required current assignment whose subject is external:
+
+- `assigned_member_id IS NULL`;
+- `assigned_external_creative_id IS NOT NULL`;
+- assignment `ended_at IS NULL`;
+- referenced `external_creatives` identity must still exist;
+- external identity must belong to the same organization;
+- the canonical current booking assignment itself is the booking-specific operational approval.
+
+External creatives do not require:
+
+- auth users;
+- organization membership;
+- organization roles;
+- branch grants;
+- application permissions.
+
+Ended external assignments do not satisfy the gate.
+
+Duplicate display names are irrelevant to qualification because stable UUID identity is authoritative.
+
+#### 14. Current safety-readiness gate
+
+Exactly one current readiness revision must exist:
+
+`superseded_at IS NULL`.
+
+Its:
+
+- booking;
+- organization;
+- service category;
+
+must match the authoritative booking/category context.
+
+Current readiness must satisfy the exact Slice 5 applicability matrix:
+
+- Newborn: `safety_state = 'ready'` and `comfort_state = 'ready'`;
+- Maternity: `safety_state = 'not_applicable'` and `comfort_state = 'ready'`;
+- Sitter: `safety_state = 'ready'` and `comfort_state = 'ready'`.
+
+Baby / Child readiness semantics remain historically valid Slice 5 evidence but do not cause Slice 6 to broaden the current preparation taxonomy.
+
+Missing, pending, `not_ready`, malformed or category-mismatched current readiness blocks advancement.
+
+#### 15. Newborn current-readiness sign-off gate
+
+Only Newborn requires formal sign-off.
+
+At least one qualifying immutable sign-off must bind to the exact current readiness ID.
+
+A sign-off attached to a superseded readiness revision never qualifies.
+
+Administrative and Photographer sign-offs have deliberately different current-qualification rules.
+
+A sign-off with authority:
+
+- `founder`; or
+- `studio_manager`
+
+continues to qualify for that same current readiness revision if it was validly created under the Slice 5 RPC, even if the signer later:
+
+- loses that role;
+- loses membership;
+- leaves the organization;
+- or the Lead Photographer changes.
+
+The gate does not re-authorize administrative sign-offs retrospectively.
+
+A sign-off with authority:
+
+`lead_photographer`
+
+qualifies only when all of the following remain true at Stage 9 -> 10:
+
+- sign-off `readiness_id` is the exact current readiness ID;
+- sign-off `lead_assignment_id` equals the exact current canonical Lead Photographer assignment ID;
+- that Lead assignment is still current;
+- that Lead assignment is internal;
+- `signed_by` equals that assignment's `assigned_member_id`;
+- signer remains an active organization member;
+- signer still has a live, unrevoked Photographer role grant valid for the booking scope.
+
+A historical Photographer sign-off never becomes valid again merely because the same member is later reassigned as Lead under a different assignment interval.
+
+If the current Lead Photographer is external, that external staffing assignment may satisfy staffing but cannot itself create or satisfy a Photographer-authority database sign-off. A qualifying Founder or Studio Manager sign-off is therefore required unless the person was separately onboarded and signed through the internal-member path.
+
+#### 16. Stage 9 -> 10 transition mutation
+
+After every gate passes, the function:
+
+1. resolves the canonical active Stage 10 ID;
+2. inserts exactly one `booking_stage_transitions` row with:
+   - source = current Stage 9;
+   - destination = canonical Stage 10;
+   - `transition_key = 'shoot_scheduled'`;
+   - current authenticated actor;
+   - one transition timestamp;
+3. updates the one `booking_journey_states` row:
+   - `current_stage_id = Stage 10`;
+   - `stage_entered_at = transition timestamp`;
+   - `version = previous version + 1`;
+   - `updated_by = actor`;
+4. includes the captured previous journey `version` in the UPDATE predicate.
+
+If the optimistic version UPDATE affects no row, the transaction raises a `40001` concurrency failure.
+
+Transition insert, state update and audit append are one transaction. Failure of any step rolls the entire advancement back.
+
+#### 17. Structural audit contract
+
+A successful real advancement appends exactly one audit event:
+
+`booking.shoot_scheduled`
+
+Audit entity:
+
+`booking`
+
+The event is non-sensitive structural workflow evidence.
+
+`old_values` and `new_values` are limited to structural journey state, such as:
+
+- stage key;
+- journey version.
+
+Metadata may include structural identifiers or controlled booleans such as:
+
+- booking ID;
+- `transition_key`;
+- source quotation ID;
+- authoritative schedule version;
+- authoritative service category;
+- whether structured Lead Videographer requirement applied.
+
+The audit must not contain:
+
+- preparation-item labels/content;
+- external creative display names;
+- detailed assignment/member data;
+- readiness states beyond what is required for structural workflow evidence;
+- unrestricted safety/comfort content;
+- medical information;
+- sensitive free text.
+
+Failed gate evaluations create no audit event.
+
+#### 18. Exception and fail-closed convention
+
+The RPC uses distinct structural failure messages prefixed:
+
+`mark_booking_shoot_scheduled:`
+
+Error classes follow existing conventions:
+
+- `42501` for authentication / membership / permission / branch authorization failures;
+- `22023` for unmet controlled business-gate conditions or unsupported transition state;
+- `P0001` for malformed / contradictory canonical evidence and integrity failures;
+- `40001` for optimistic journey-state concurrency failure.
+
+The operation returns the first structural failure and performs no partial advancement.
+
+Restricted safety detail must never be embedded in error text.
+
+#### 19. Dedicated pgTAP implementation boundary
+
+Slice 6 implementation adds one dedicated test file:
+
+`supabase/tests/sprint10_stage9_10_gate_test.sql`
+
+The implementation must cover at least:
+
+- RPC existence, return type, `SECURITY DEFINER`, empty `search_path`, authenticated execution and anon denial;
+- exact Stage 9 -> 10 success;
+- exactly one transition row with `shoot_scheduled`;
+- exactly one journey-version increment;
+- exactly one structural audit event;
+- valid Stage 10 replay with no new transition/version/audit;
+- Stage 10 without canonical transition history fails as integrity corruption;
+- every other journey stage fails closed;
+- missing/non-reserved schedule blocks;
+- missing/malformed preparation instance or checklist blocks;
+- unsatisfied required preparation item blocks;
+- optional preparation item remains non-blocking;
+- missing Lead Photographer blocks;
+- missing Stylist blocks;
+- missing Assistant does not block;
+- internal Lead Photographer live Photographer-role eligibility is revalidated;
+- internal Stylist live Stylist-role eligibility is revalidated;
+- conditional internal Lead Videographer live Videographer-role eligibility is revalidated;
+- suspended/revoked/wrong-branch required internal creative blocks;
+- current external Lead Photographer satisfies staffing;
+- current external Stylist satisfies staffing;
+- conditional current external Lead Videographer satisfies staffing;
+- ended external required assignment blocks;
+- external identity organization mismatch fails closed;
+- duplicate external display names have no semantic effect;
+- no video requirement means Videographer staffing is optional;
+- package-version `lead_videographer` requirement makes Lead Videographer mandatory;
+- add-on-version `lead_videographer` requirement makes Lead Videographer mandatory;
+- promotional Videographer assignment alone never creates the commercial requirement;
+- free-form quotation text never creates the commercial requirement;
+- missing/current-readiness mismatch blocks;
+- Newborn exact ready readiness requires qualifying current-revision sign-off;
+- Maternity requires exact `not_applicable` safety + ready comfort and no formal sign-off;
+- Sitter requires ready safety + ready comfort and no formal sign-off;
+- superseded-readiness sign-off never qualifies;
+- Founder administrative sign-off persists for the same readiness revision after later role/member loss;
+- Studio Manager administrative sign-off persists for the same readiness revision after later role/member loss;
+- Photographer sign-off becomes non-qualifying after Lead replacement;
+- Photographer sign-off becomes non-qualifying after member suspension;
+- Photographer sign-off becomes non-qualifying after Photographer-role revocation;
+- old Photographer sign-off does not regain validity after later reassignment under a different Lead assignment ID;
+- external Lead Photographer requires Founder/Studio Manager formal sign-off for Newborn unless separately onboarded and signed through the internal path;
+- `booking.stage.advance` is required;
+- `prep.write`, `safety.write`, `safety.signoff` and `booking.team.assign` do not substitute for `booking.stage.advance`;
+- organization isolation;
+- branch isolation;
+- forced transition-insert or journey-update failure rolls back the complete advancement;
+- successful advancement mutates no schedule, preparation, team, external-creative, readiness, sign-off or commercial requirement evidence;
+- audit payload contains no restricted safety or external-creative personal content.
+
+The existing 928-test regression remains the pre-Slice-6 baseline and must remain green when the new dedicated suite is added.
+
+#### 20. Implementation file boundary
+
+The later Slice 6 implementation is limited to exactly:
+
+- one new Stage 9 -> 10 migration;
+- `supabase/tests/sprint10_stage9_10_gate_test.sql`.
+
+No existing Slice 6A schema migration is rewritten.
+
+No existing canonical evidence table is redesigned.
+
+Any required correction outside this two-file boundary requires a new explicit design gate before implementation continues.
+
+#### 21. Slice 6 containment
+
+This technical freeze does not authorize:
+
+- writing or executing the Stage 9 -> 10 migration yet;
+- Stage 10 -> 11;
+- shoot-completion workflow;
+- shoot-day safety evidence;
+- UI/runtime release;
+- `/bookings`, `/prep` or `/safety` application changes;
+- capacity/availability/overlap logic;
+- external calendar-provider integration;
+- freelancer CRM/payroll functionality;
+- permission or role-grant expansion;
+- Production migration;
+- Sprint 10 release.
+
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
