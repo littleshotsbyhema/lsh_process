@@ -28,8 +28,8 @@ SELECT is(
       AND attribute.attnum > 0
       AND NOT attribute.attisdropped
   ),
-  10::bigint,
-  'booking_team_assignments has exactly 10 columns'
+  11::bigint,
+  'booking_team_assignments has exactly 11 current canonical columns'
 );
 
 -- 3
@@ -50,6 +50,7 @@ SELECT is(
           'booking_id',
           'assignment_role',
           'assigned_member_id',
+          'assigned_external_creative_id',
           'assigned_at',
           'assigned_by',
           'ended_at',
@@ -58,8 +59,8 @@ SELECT is(
         ]::name[]
       )
   ),
-  10::bigint,
-  'booking_team_assignments exposes exactly the frozen column names'
+  11::bigint,
+  'booking_team_assignments exposes exactly the current canonical column names'
 );
 
 -- 4
@@ -220,8 +221,14 @@ SELECT ok(
       AND pg_get_constraintdef(
             constraint_row.oid
           ) LIKE '%stylist%'
+      AND pg_get_constraintdef(
+            constraint_row.oid
+          ) LIKE '%lead_videographer%'
+      AND pg_get_constraintdef(
+            constraint_row.oid
+          ) LIKE '%supporting_videographer%'
   ),
-  'assignment-role check contains exactly the frozen operational taxonomy'
+  'assignment-role check contains the current five-role operational taxonomy'
 );
 
 -- 13
