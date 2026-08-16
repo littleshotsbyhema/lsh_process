@@ -4014,7 +4014,7 @@ Videographer does not receive merely by virtue of that role:
 
 A person performing both photography and videography may hold both `photographer` and `videographer` role grants.
 
-After Slice 6A, the canonical access-control catalogue becomes 12 roles and 141 role-permission mappings.
+At the Slice 6A application boundary, the canonical access-control catalogue moves from the current 11 roles / 228 role-permission mappings to 12 roles / 230 role-permission mappings by adding only the `videographer` role with `org.read` and `booking.read`.
 
 #### 11. Current operational eligibility remains a later gate concern
 
