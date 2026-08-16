@@ -4217,4 +4217,106 @@ Slice 6A does not authorize:
 
 After Slice 6A technical implementation and validation, the dedicated Slice 6 Stage 9 -> 10 technical design must consume this extended canonical evidence.
 
+### Slice 6A implementation checkpoint — Extended Creative Assignment Foundation
+
+Slice 6A database-foundation implementation completed, fully validated and pushed to `origin/architecture-rebuild` on 2026-08-16.
+
+Implementation evidence:
+
+- migration: `20260816113000_sprint10_extended_creative_assignment_foundation.sql`;
+- dedicated pgTAP: `supabase/tests/sprint10_extended_creative_assignments_test.sql`;
+- existing canonical booking-team pgTAP evolved in `supabase/tests/sprint10_booking_team_assignments_test.sql`;
+- implementation commit: `e45662c7a59eaef865b80b0738cde39386271105` (`feat: implement sprint 10 slice 6a creative assignment foundation`);
+- implementation commit pushed to `origin/architecture-rebuild`;
+- implementation boundary is exactly one migration plus the two approved pgTAP files;
+- no application/runtime/UI file is included.
+
+Canonical database evidence implemented:
+
+- stable organization-scoped `public.external_creatives` identity registry;
+- immutable and undeletable external creative identity rows;
+- duplicate external creative display names permitted while UUID remains canonical identity;
+- external creatives receive no authentication user, organization membership, role grant or application permission merely from registration;
+- `booking_team_assignments` extended with nullable `assigned_external_creative_id`;
+- assignment subject is exactly one of internal organization member or external creative;
+- canonical assignment vocabulary expanded to `lead_photographer`, `assistant`, `stylist`, `lead_videographer` and `supporting_videographer`;
+- singular current Lead Photographer remains enforced across internal and external subjects;
+- singular current Lead Videographer enforced across internal and external subjects;
+- multiple Assistants, Stylists and Supporting Videographers remain permitted subject to current-assignment uniqueness rules;
+- internal-member assignment RPC evolved without creating a parallel staffing truth;
+- controlled `create_external_creative(uuid,text)` RPC added;
+- controlled `assign_booking_external_creative(uuid,text,uuid,boolean,text)` RPC added;
+- cross-subject Lead replacement retains atomic close-and-replace semantics;
+- new canonical organization role `videographer`;
+- Videographer receives exactly `org.read` and `booking.read`;
+- application access-control catalogue is now exactly 12 roles / 230 role-permission mappings;
+- new immutable `public.commercial_operational_requirements` structured evidence;
+- exact `lead_videographer` requirement mapping seeded for version-1 `maternity_diamond`, `maternity_emerald`, `newborn_emerald`, `sitter_diamond`, `sitter_emerald` and version-1 `cinematic_reel`;
+- no package-label, description, free-text or assigned-videographer inference is introduced.
+
+Security and authorization evidence:
+
+- `external_creatives` uses forced RLS with no authenticated direct table mutation path;
+- `commercial_operational_requirements` uses forced RLS and authenticated read-only access under the existing organization-read boundary;
+- authenticated direct INSERT, UPDATE and DELETE remain denied where required;
+- trusted-role mutation remains constrained by immutable/lifecycle guards;
+- `assign_booking_team_member(...)`, `create_external_creative(...)` and `assign_booking_external_creative(...)` are authenticated-executable, anon-denied `SECURITY DEFINER` RPCs with empty `search_path`;
+- external creative creation and assignment require active organization membership, `booking.team.assign` and booking-derived branch scope;
+- internal Videographer assignment requires live operational Videographer eligibility;
+- foreign-organization external creative identities cannot cross tenant boundaries;
+- branch-scoped Client Coordinator access cannot cross booking branches;
+- broad assignment audit payloads use structural identity and do not propagate external creative display names.
+
+Local validation evidence:
+
+- clean local database reset through migration `20260816113000`: PASS;
+- database lint before and after complete regression: PASS with `No schema errors found`;
+- dedicated Slice 6A pgTAP: 85 / 85 PASS;
+- evolved existing booking-team pgTAP: 75 / 75 PASS;
+- complete local pgTAP regression: 928 / 928 PASS across 13 files;
+- migration-to-schema diff: `No schema changes found`;
+- post-reset canonical database state: 12 roles / 230 role-permission mappings / 6 `lead_videographer` requirement rows / zero booking-team rows / zero external-creative rows;
+- exact Videographer permission boundary: `booking.read` + `org.read`;
+- implementation file fingerprints reconciled before commit and before push;
+- local, tracking and actual GitHub branch heads reconciled to implementation commit `e45662c7a59eaef865b80b0738cde39386271105`;
+- final implementation-push divergence: 0 / 0.
+
+Validated behavioral and integrity boundaries include:
+
+- internal Videographer may become Lead or Supporting Videographer only with valid operational-role eligibility;
+- ordinary Photographer cannot satisfy Videographer assignment eligibility merely through Photographer role;
+- external creatives may satisfy Lead Photographer, Lead Videographer and Supporting Videographer staffing assignments without gaining application access;
+- Lead replacement across internal/external subjects requires a nonblank change reason;
+- exact assignment replay returns existing evidence without duplicate assignment or audit rows;
+- unassignment replay remains idempotent;
+- duplicate-name external creative identities remain distinct UUID subjects;
+- external identity mutation and deletion are blocked even through trusted direct database access;
+- booking-team historical subject identity cannot be rewritten;
+- commercial operational requirement evidence is append-only and immutable;
+- forced cross-subject Lead replacement failure rolls back closure, replacement insertion and audit atomically;
+- branch authorization and cross-organization isolation fail closed;
+- all Slice 6A staffing operations leave booking journey stage, version and transition evidence unchanged.
+
+Slice 6A remains contained. This checkpoint does not include or authorize:
+
+- Stage 9 -> 10 implementation;
+- Stage 10 -> 11 implementation;
+- Newborn formal safety sign-off by unauthenticated freelancers;
+- application access or organization membership for external creatives;
+- generic freelancer account creation;
+- a broad freelancer CRM or payroll directory;
+- free-text Video/Reels requirement inference;
+- shoot-day runtime/UI;
+- capacity, overlap, availability or calendar-provider logic;
+- any Production database migration;
+- Sprint 10 release.
+
+Production remains unchanged by Slice 6A at this checkpoint.
+
+The latest Production database migration remains `20260814223449_sprint10_safety_readiness_foundation.sql`. Migration `20260816113000_sprint10_extended_creative_assignment_foundation.sql` has not been applied to Production.
+
+Before any Slice 6A Production migration, a separate read-only Production preflight is mandatory. It must reconcile migration history and verify the expected pre-Slice-6A canonical baseline, including absence of `external_creatives`, absence of `commercial_operational_requirements`, absence of the `videographer` role, the existing internal-only booking-team assignment shape and the current 11-role / 228-role-permission application boundary. Any unexpected collision, drift or pre-existing canonical external staffing evidence places rollout on HOLD.
+
+The next technical step after this checkpoint is the dedicated Slice 6 Stage 9 -> 10 technical design. That design must consume the canonical Slice 6A internal/external staffing evidence and structured commercial operational requirements rather than introducing another staffing representation or free-text Video/Reels inference. Neither this checkpoint nor that future design authorizes Production rollout or Sprint 10 release.
+
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
