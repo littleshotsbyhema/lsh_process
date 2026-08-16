@@ -423,6 +423,330 @@ export type Database = {
           },
         ];
       };
+      booking_preparation_items: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          id: string;
+          is_required: boolean;
+          is_satisfied: boolean;
+          item_key: string;
+          item_label: string;
+          organization_id: string;
+          preparation_id: string;
+          satisfied_at: string | null;
+          satisfied_by: string | null;
+          service_category: string;
+          sort_order: number;
+          taxonomy_version: number;
+          updated_at: string;
+          updated_by: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          is_required: boolean;
+          is_satisfied?: boolean;
+          item_key: string;
+          item_label: string;
+          organization_id: string;
+          preparation_id: string;
+          satisfied_at?: string | null;
+          satisfied_by?: string | null;
+          service_category: string;
+          sort_order: number;
+          taxonomy_version: number;
+          updated_at?: string;
+          updated_by: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          is_required?: boolean;
+          is_satisfied?: boolean;
+          item_key?: string;
+          item_label?: string;
+          organization_id?: string;
+          preparation_id?: string;
+          satisfied_at?: string | null;
+          satisfied_by?: string | null;
+          service_category?: string;
+          sort_order?: number;
+          taxonomy_version?: number;
+          updated_at?: string;
+          updated_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_preparation_items_created_by_fkey";
+            columns: ["created_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_preparation_items_preparation_fkey";
+            columns: ["organization_id", "preparation_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_preparations";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_preparation_items_satisfied_by_fkey";
+            columns: ["satisfied_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_preparation_items_updated_by_fkey";
+            columns: ["updated_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
+      booking_preparations: {
+        Row: {
+          booking_id: string;
+          id: string;
+          organization_id: string;
+          started_at: string;
+          started_by: string;
+        };
+        Insert: {
+          booking_id: string;
+          id?: string;
+          organization_id: string;
+          started_at?: string;
+          started_by: string;
+        };
+        Update: {
+          booking_id?: string;
+          id?: string;
+          organization_id?: string;
+          started_at?: string;
+          started_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_preparations_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_preparations_started_by_fkey";
+            columns: ["started_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
+      booking_safety_readiness: {
+        Row: {
+          booking_id: string;
+          comfort_state: string;
+          id: string;
+          organization_id: string;
+          recorded_at: string;
+          recorded_by: string;
+          revision_number: number;
+          safety_state: string;
+          service_category: string;
+          superseded_at: string | null;
+          superseded_by: string | null;
+        };
+        Insert: {
+          booking_id: string;
+          comfort_state: string;
+          id?: string;
+          organization_id: string;
+          recorded_at?: string;
+          recorded_by: string;
+          revision_number: number;
+          safety_state: string;
+          service_category: string;
+          superseded_at?: string | null;
+          superseded_by?: string | null;
+        };
+        Update: {
+          booking_id?: string;
+          comfort_state?: string;
+          id?: string;
+          organization_id?: string;
+          recorded_at?: string;
+          recorded_by?: string;
+          revision_number?: number;
+          safety_state?: string;
+          service_category?: string;
+          superseded_at?: string | null;
+          superseded_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_safety_readiness_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_safety_readiness_recorded_by_fkey";
+            columns: ["recorded_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_safety_readiness_superseded_by_fkey";
+            columns: ["superseded_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
+      booking_safety_signoffs: {
+        Row: {
+          booking_id: string;
+          id: string;
+          lead_assignment_id: string | null;
+          organization_id: string;
+          readiness_id: string;
+          signed_at: string;
+          signed_by: string;
+          signoff_authority: string;
+        };
+        Insert: {
+          booking_id: string;
+          id?: string;
+          lead_assignment_id?: string | null;
+          organization_id: string;
+          readiness_id: string;
+          signed_at?: string;
+          signed_by: string;
+          signoff_authority: string;
+        };
+        Update: {
+          booking_id?: string;
+          id?: string;
+          lead_assignment_id?: string | null;
+          organization_id?: string;
+          readiness_id?: string;
+          signed_at?: string;
+          signed_by?: string;
+          signoff_authority?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_safety_signoffs_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_safety_signoffs_lead_assignment_fkey";
+            columns: ["lead_assignment_id", "organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_team_assignments";
+            referencedColumns: ["id", "organization_id", "booking_id"];
+          },
+          {
+            foreignKeyName: "booking_safety_signoffs_readiness_fkey";
+            columns: ["readiness_id", "organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_safety_readiness";
+            referencedColumns: ["id", "organization_id", "booking_id"];
+          },
+          {
+            foreignKeyName: "booking_safety_signoffs_signed_by_fkey";
+            columns: ["signed_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
+      booking_shoot_schedules: {
+        Row: {
+          booking_id: string;
+          id: string;
+          location_details: string | null;
+          location_type: string;
+          organization_id: string;
+          predecessor_schedule_id: string | null;
+          recorded_at: string;
+          recorded_by: string;
+          reschedule_reason: string | null;
+          schedule_state: string;
+          schedule_version: number;
+          scheduled_end_at: string;
+          scheduled_start_at: string;
+          timezone: string;
+        };
+        Insert: {
+          booking_id: string;
+          id?: string;
+          location_details?: string | null;
+          location_type: string;
+          organization_id: string;
+          predecessor_schedule_id?: string | null;
+          recorded_at?: string;
+          recorded_by: string;
+          reschedule_reason?: string | null;
+          schedule_state: string;
+          schedule_version: number;
+          scheduled_end_at: string;
+          scheduled_start_at: string;
+          timezone: string;
+        };
+        Update: {
+          booking_id?: string;
+          id?: string;
+          location_details?: string | null;
+          location_type?: string;
+          organization_id?: string;
+          predecessor_schedule_id?: string | null;
+          recorded_at?: string;
+          recorded_by?: string;
+          reschedule_reason?: string | null;
+          schedule_state?: string;
+          schedule_version?: number;
+          scheduled_end_at?: string;
+          scheduled_start_at?: string;
+          timezone?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_shoot_schedules_booking_fkey";
+            columns: ["booking_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_shoot_schedules_predecessor_fkey";
+            columns: ["predecessor_schedule_id", "organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_shoot_schedules";
+            referencedColumns: ["id", "organization_id", "booking_id"];
+          },
+          {
+            foreignKeyName: "booking_shoot_schedules_recorded_by_fkey";
+            columns: ["recorded_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
       booking_stage_transitions: {
         Row: {
           booking_id: string;
@@ -482,6 +806,84 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "booking_journey_stages";
             referencedColumns: ["organization_id", "id"];
+          },
+        ];
+      };
+      booking_team_assignments: {
+        Row: {
+          assigned_at: string;
+          assigned_by: string;
+          assigned_external_creative_id: string | null;
+          assigned_member_id: string | null;
+          assignment_role: string;
+          booking_id: string;
+          end_reason: string | null;
+          ended_at: string | null;
+          ended_by: string | null;
+          id: string;
+          organization_id: string;
+        };
+        Insert: {
+          assigned_at?: string;
+          assigned_by: string;
+          assigned_external_creative_id?: string | null;
+          assigned_member_id?: string | null;
+          assignment_role: string;
+          booking_id: string;
+          end_reason?: string | null;
+          ended_at?: string | null;
+          ended_by?: string | null;
+          id?: string;
+          organization_id: string;
+        };
+        Update: {
+          assigned_at?: string;
+          assigned_by?: string;
+          assigned_external_creative_id?: string | null;
+          assigned_member_id?: string | null;
+          assignment_role?: string;
+          booking_id?: string;
+          end_reason?: string | null;
+          ended_at?: string | null;
+          ended_by?: string | null;
+          id?: string;
+          organization_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_team_assignments_assigned_by_fkey";
+            columns: ["assigned_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_team_assignments_assigned_external_fkey";
+            columns: ["assigned_external_creative_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "external_creatives";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_team_assignments_assigned_member_fkey";
+            columns: ["assigned_member_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_team_assignments_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_team_assignments_ended_by_fkey";
+            columns: ["ended_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
           },
         ];
       };
@@ -916,6 +1318,55 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "organizations";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      commercial_operational_requirements: {
+        Row: {
+          addon_version_id: string | null;
+          created_at: string;
+          id: string;
+          organization_id: string;
+          package_version_id: string | null;
+          requirement_key: string;
+        };
+        Insert: {
+          addon_version_id?: string | null;
+          created_at?: string;
+          id?: string;
+          organization_id: string;
+          package_version_id?: string | null;
+          requirement_key: string;
+        };
+        Update: {
+          addon_version_id?: string | null;
+          created_at?: string;
+          id?: string;
+          organization_id?: string;
+          package_version_id?: string | null;
+          requirement_key?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "commercial_operational_requirements_addon_fkey";
+            columns: ["organization_id", "addon_version_id"];
+            isOneToOne: false;
+            referencedRelation: "commercial_addon_versions";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "commercial_operational_requirements_organization_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "commercial_operational_requirements_package_fkey";
+            columns: ["organization_id", "package_version_id"];
+            isOneToOne: false;
+            referencedRelation: "commercial_package_versions";
+            referencedColumns: ["organization_id", "id"];
           },
         ];
       };
@@ -1511,6 +1962,45 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "organization_members";
             referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
+      external_creatives: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          display_name: string;
+          id: string;
+          organization_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          display_name: string;
+          id?: string;
+          organization_id: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          display_name?: string;
+          id?: string;
+          organization_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "external_creatives_created_by_fkey";
+            columns: ["created_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "external_creatives_organization_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -3754,6 +4244,148 @@ export type Database = {
           },
         ];
       };
+      organization_invitation_roles: {
+        Row: {
+          assigned_at: string;
+          assigned_by: string;
+          branch_id: string | null;
+          id: string;
+          invitation_id: string;
+          organization_id: string;
+          role_id: string;
+        };
+        Insert: {
+          assigned_at?: string;
+          assigned_by: string;
+          branch_id?: string | null;
+          id?: string;
+          invitation_id: string;
+          organization_id: string;
+          role_id: string;
+        };
+        Update: {
+          assigned_at?: string;
+          assigned_by?: string;
+          branch_id?: string | null;
+          id?: string;
+          invitation_id?: string;
+          organization_id?: string;
+          role_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "organization_invitation_roles_assigned_by_fkey";
+            columns: ["assigned_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "organization_invitation_roles_branch_fkey";
+            columns: ["branch_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "organization_invitation_roles_invitation_fkey";
+            columns: ["invitation_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_invitations";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "organization_invitation_roles_role_fkey";
+            columns: ["role_id"];
+            isOneToOne: false;
+            referencedRelation: "roles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      organization_invitations: {
+        Row: {
+          accepted_at: string | null;
+          accepted_by: string | null;
+          created_at: string;
+          email: string;
+          expires_at: string;
+          full_name: string | null;
+          id: string;
+          invited_by: string;
+          organization_id: string;
+          revocation_reason: string | null;
+          revoked_at: string | null;
+          revoked_by: string | null;
+          status: Database["public"]["Enums"]["organization_invitation_status"];
+          token_hash: string;
+          updated_at: string;
+        };
+        Insert: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+          created_at?: string;
+          email: string;
+          expires_at: string;
+          full_name?: string | null;
+          id?: string;
+          invited_by: string;
+          organization_id: string;
+          revocation_reason?: string | null;
+          revoked_at?: string | null;
+          revoked_by?: string | null;
+          status?: Database["public"]["Enums"]["organization_invitation_status"];
+          token_hash: string;
+          updated_at?: string;
+        };
+        Update: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+          created_at?: string;
+          email?: string;
+          expires_at?: string;
+          full_name?: string | null;
+          id?: string;
+          invited_by?: string;
+          organization_id?: string;
+          revocation_reason?: string | null;
+          revoked_at?: string | null;
+          revoked_by?: string | null;
+          status?: Database["public"]["Enums"]["organization_invitation_status"];
+          token_hash?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "organization_invitations_accepted_by_fkey";
+            columns: ["accepted_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "organization_invitations_invited_by_fkey";
+            columns: ["invited_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "organization_invitations_organization_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "organization_invitations_revoked_by_fkey";
+            columns: ["revoked_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
       organization_members: {
         Row: {
           created_at: string;
@@ -4281,6 +4913,13 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_organization_invitation: {
+        Args: { p_token: string };
+        Returns: {
+          assigned_role_keys: string[];
+          member_id: string;
+        }[];
+      };
       accept_quotation: {
         Args: { p_quotation_id: string };
         Returns: {
@@ -4470,6 +5109,62 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "audit_events";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      assign_booking_external_creative: {
+        Args: {
+          p_assignment_role: string;
+          p_booking_id: string;
+          p_change_reason?: string;
+          p_external_creative_id: string;
+          p_is_assigned: boolean;
+        };
+        Returns: {
+          assigned_at: string;
+          assigned_by: string;
+          assigned_external_creative_id: string | null;
+          assigned_member_id: string | null;
+          assignment_role: string;
+          booking_id: string;
+          end_reason: string | null;
+          ended_at: string | null;
+          ended_by: string | null;
+          id: string;
+          organization_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_team_assignments";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      assign_booking_team_member: {
+        Args: {
+          p_assignment_role: string;
+          p_booking_id: string;
+          p_change_reason?: string;
+          p_is_assigned: boolean;
+          p_member_id: string;
+        };
+        Returns: {
+          assigned_at: string;
+          assigned_by: string;
+          assigned_external_creative_id: string | null;
+          assigned_member_id: string | null;
+          assignment_role: string;
+          booking_id: string;
+          end_reason: string | null;
+          ended_at: string | null;
+          ended_by: string | null;
+          id: string;
+          organization_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_team_assignments";
           isOneToOne: true;
           isSetofReturn: false;
         };
@@ -4686,6 +5381,22 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      create_external_creative: {
+        Args: { p_booking_id: string; p_display_name: string };
+        Returns: {
+          created_at: string;
+          created_by: string;
+          display_name: string;
+          id: string;
+          organization_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "external_creatives";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       create_family: {
         Args: {
           p_assigned_owner_member_id?: string;
@@ -4884,6 +5595,23 @@ export type Database = {
           resume_token: string;
         }[];
       };
+      create_organization_invitation: {
+        Args: {
+          p_email: string;
+          p_expires_in_hours?: number;
+          p_full_name?: string;
+          p_organization_id: string;
+          p_role_keys?: string[];
+        };
+        Returns: {
+          email: string;
+          expires_at: string;
+          full_name: string;
+          invitation_id: string;
+          invite_token: string;
+          role_keys: string[];
+        }[];
+      };
       create_quotation: {
         Args: {
           p_branch_id?: string;
@@ -5018,6 +5746,15 @@ export type Database = {
         Args: { p_access_token: string };
         Returns: Json;
       };
+      grant_organization_member_role: {
+        Args: {
+          p_branch_id?: string;
+          p_member_id: string;
+          p_organization_id: string;
+          p_role_key: string;
+        };
+        Returns: string;
+      };
       has_branch_scope: {
         Args: { p_branch_id: string; p_organization_id: string };
         Returns: boolean;
@@ -5145,6 +5882,15 @@ export type Database = {
         };
         Returns: undefined;
       };
+      lsh_preparation_taxonomy_v1: {
+        Args: { p_service_category: string };
+        Returns: {
+          is_required: boolean;
+          item_key: string;
+          item_label: string;
+          sort_order: number;
+        }[];
+      };
       lsh_queue_consultation_notifications: {
         Args: { p_actor: string; p_consultation_id: string };
         Returns: undefined;
@@ -5187,6 +5933,28 @@ export type Database = {
           p_organization_id: string;
         };
         Returns: undefined;
+      };
+      mark_booking_shoot_scheduled: {
+        Args: { p_booking_id: string };
+        Returns: {
+          booking_reference: string;
+          branch_id: string | null;
+          created_at: string;
+          created_by: string;
+          family_id: string | null;
+          id: string;
+          lead_id: string | null;
+          organization_id: string;
+          source_quotation_id: string;
+          updated_at: string;
+          updated_by: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "bookings";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       mark_consultation_missed: {
         Args: { p_consultation_id: string };
@@ -5247,9 +6015,52 @@ export type Database = {
           phone: string;
         }[];
       };
+      preview_organization_invitation: {
+        Args: { p_token: string };
+        Returns: {
+          email: string;
+          expires_at: string;
+          full_name: string;
+          organization_name: string;
+          role_keys: string[];
+          role_labels: string[];
+        }[];
+      };
       process_memory_guide_decision: {
         Args: { p_access_token: string; p_expected_version: number };
         Returns: Json;
+      };
+      propose_booking_shoot_schedule: {
+        Args: {
+          p_booking_id: string;
+          p_location_details?: string;
+          p_location_type: string;
+          p_scheduled_end_at: string;
+          p_scheduled_start_at: string;
+          p_timezone: string;
+        };
+        Returns: {
+          booking_id: string;
+          id: string;
+          location_details: string | null;
+          location_type: string;
+          organization_id: string;
+          predecessor_schedule_id: string | null;
+          recorded_at: string;
+          recorded_by: string;
+          reschedule_reason: string | null;
+          schedule_state: string;
+          schedule_version: number;
+          scheduled_end_at: string;
+          scheduled_start_at: string;
+          timezone: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_shoot_schedules";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       record_booking_payment: {
         Args: {
@@ -5278,6 +6089,32 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "booking_payments";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      record_booking_safety_readiness: {
+        Args: {
+          p_booking_id: string;
+          p_comfort_state: string;
+          p_safety_state: string;
+        };
+        Returns: {
+          booking_id: string;
+          comfort_state: string;
+          id: string;
+          organization_id: string;
+          recorded_at: string;
+          recorded_by: string;
+          revision_number: number;
+          safety_state: string;
+          service_category: string;
+          superseded_at: string | null;
+          superseded_by: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_safety_readiness";
           isOneToOne: true;
           isSetofReturn: false;
         };
@@ -5329,6 +6166,39 @@ export type Database = {
       remove_quotation_line: {
         Args: { p_line_item_id: string };
         Returns: undefined;
+      };
+      reschedule_booking_shoot: {
+        Args: {
+          p_booking_id: string;
+          p_location_details?: string;
+          p_location_type: string;
+          p_reschedule_reason: string;
+          p_scheduled_end_at: string;
+          p_scheduled_start_at: string;
+          p_timezone: string;
+        };
+        Returns: {
+          booking_id: string;
+          id: string;
+          location_details: string | null;
+          location_type: string;
+          organization_id: string;
+          predecessor_schedule_id: string | null;
+          recorded_at: string;
+          recorded_by: string;
+          reschedule_reason: string | null;
+          schedule_state: string;
+          schedule_version: number;
+          scheduled_end_at: string;
+          scheduled_start_at: string;
+          timezone: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_shoot_schedules";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       reschedule_consultation: {
         Args: {
@@ -5434,6 +6304,24 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      revoke_organization_invitation: {
+        Args: {
+          p_invitation_id: string;
+          p_organization_id: string;
+          p_reason?: string;
+        };
+        Returns: boolean;
+      };
+      revoke_organization_member_role: {
+        Args: {
+          p_branch_id?: string;
+          p_member_id: string;
+          p_organization_id: string;
+          p_reason?: string;
+          p_role_key: string;
+        };
+        Returns: boolean;
       };
       role_catalogue: {
         Args: never;
@@ -5581,6 +6469,25 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      signoff_booking_safety_readiness: {
+        Args: { p_booking_id: string };
+        Returns: {
+          booking_id: string;
+          id: string;
+          lead_assignment_id: string | null;
+          organization_id: string;
+          readiness_id: string;
+          signed_at: string;
+          signed_by: string;
+          signoff_authority: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_safety_signoffs";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       start_memory_guide: {
         Args: {
           p_campaign_id?: string;
@@ -5598,9 +6505,40 @@ export type Database = {
           session_version: number;
         }[];
       };
+      start_pre_shoot_preparation: {
+        Args: { p_booking_id: string };
+        Returns: {
+          booking_id: string;
+          id: string;
+          organization_id: string;
+          started_at: string;
+          started_by: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_preparations";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       sync_memory_guide_to_crm: {
         Args: { p_session_id: string };
         Returns: Json;
+      };
+      team_access_directory: {
+        Args: { p_organization_id: string };
+        Returns: {
+          assigned_branch_names: string[];
+          assigned_role_keys: string[];
+          assigned_role_labels: string[];
+          display_name: string;
+          email: string;
+          joined_at: string;
+          member_id: string;
+          member_status: Database["public"]["Enums"]["member_status"];
+          organization_wide: boolean;
+          phone: string;
+        }[];
       };
       team_directory: {
         Args: { p_organization_id: string };
@@ -5614,6 +6552,19 @@ export type Database = {
           member_status: Database["public"]["Enums"]["member_status"];
           organization_wide: boolean;
           phone: string;
+        }[];
+      };
+      team_invitation_directory: {
+        Args: { p_organization_id: string };
+        Returns: {
+          created_at: string;
+          email: string;
+          expires_at: string;
+          full_name: string;
+          invitation_id: string;
+          invitation_status: string;
+          role_keys: string[];
+          role_labels: string[];
         }[];
       };
       transition_quotation: {
@@ -5828,6 +6779,33 @@ export type Database = {
         Args: { p_review_id: string; p_status: string };
         Returns: Json;
       };
+      update_pre_shoot_preparation_item: {
+        Args: { p_preparation_item_id: string; p_satisfied: boolean };
+        Returns: {
+          created_at: string;
+          created_by: string;
+          id: string;
+          is_required: boolean;
+          is_satisfied: boolean;
+          item_key: string;
+          item_label: string;
+          organization_id: string;
+          preparation_id: string;
+          satisfied_at: string | null;
+          satisfied_by: string | null;
+          service_category: string;
+          sort_order: number;
+          taxonomy_version: number;
+          updated_at: string;
+          updated_by: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_preparation_items";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       upsert_consultation_availability: {
         Args: {
           p_booking_horizon_days?: number;
@@ -5976,6 +6954,7 @@ export type Database = {
         | "internal_upcoming";
       notification_status:
         "queued" | "processing" | "sent" | "failed" | "superseded" | "manual_action_required";
+      organization_invitation_status: "pending" | "accepted" | "revoked";
       organization_status: "active" | "suspended" | "archived";
       privacy_preference_type:
         | "full_privacy"
@@ -6198,6 +7177,7 @@ export const Constants = {
         "superseded",
         "manual_action_required",
       ],
+      organization_invitation_status: ["pending", "accepted", "revoked"],
       organization_status: ["active", "suspended", "archived"],
       privacy_preference_type: [
         "full_privacy",

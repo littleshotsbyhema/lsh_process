@@ -4,7 +4,7 @@
 **Repository:** `Little-Shots-by-Hema-OS/memory-keeper-os`
 **Primary release branch:** `architecture-rebuild`
 **Register version:** 1.0
-**Last updated:** 2026-08-14
+**Last updated:** 2026-08-17
 
 ---
 
@@ -5260,5 +5260,237 @@ Slice 7A does not authorize:
 After this technical freeze is committed and pushed, the next implementation gate is restricted to the five authorized Slice 7A application/type paths.
 
 Only after Slice 7A is independently validated and checkpointed may Sprint 10 proceed to the separately governed `/bookings` operational runtime slice.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+### Slice 7B implementation checkpoint — Canonical Team Access Mutation Foundation
+
+Sprint 10 Slice 7B canonical Team access database foundation was implemented and fully validated locally on 2026-08-17.
+
+Slice 7B establishes the authoritative organization-invitation and role-mutation boundary required before any Team UI migration.
+
+#### Implementation boundary
+
+Implementation is limited to:
+
+- migration `20260816221825_sprint10_canonical_team_access_foundation.sql`;
+- dedicated pgTAP `supabase/tests/sprint10_canonical_team_access_test.sql`;
+- regenerated `src/integrations/supabase/types.ts`.
+
+No Team UI, Team server-function cutover, legacy Team deletion, Stage 10 -> 11 implementation, or Production database mutation is included.
+
+#### Canonical invitation foundation
+
+Implemented:
+
+- `organization_invitations`;
+- `organization_invitation_roles`;
+- invitation lifecycle `pending`, `accepted`, `revoked`;
+- expiry derived from pending status plus `expires_at`;
+- normalized invitation email;
+- SHA-256 token-hash persistence only;
+- raw bearer invitation tokens are never stored;
+- accepted/revoked invitation states are terminal;
+- invitation identity evidence is immutable;
+- historical revoked invitations are preserved;
+- invitation-role evidence is controlled and organization-safe;
+- Founder invitation roles remain organization-wide only.
+
+Both canonical invitation tables:
+
+- enable RLS;
+- force RLS;
+- expose no authenticated direct INSERT, UPDATE or DELETE path;
+- expose no anonymous table access;
+- retain trusted service-role administration outside the normal application boundary.
+
+#### Canonical invitation RPC boundary
+
+Implemented:
+
+- `create_organization_invitation(uuid,text,text,text[],integer)`;
+- `revoke_organization_invitation(uuid,uuid,text)`;
+- `preview_organization_invitation(text)`;
+- `accept_organization_invitation(text)`.
+
+Creation requires:
+
+- current active organization membership;
+- `team.invite`;
+- `team.role.assign` when invitation roles are preassigned.
+
+Studio Manager may therefore create a role-less invitation under `team.invite`, but may not preassign roles without `team.role.assign`.
+
+Invitation preview:
+
+- is bearer-token gated;
+- exposes only the safe invitation projection needed before authentication;
+- does not expose invitation IDs, token hashes or internal role/member identifiers;
+- returns only pending, unexpired invitations for active organizations.
+
+Invitation acceptance:
+
+- requires authenticated `auth.uid()`;
+- requires confirmed authenticated email;
+- requires exact case-insensitive match to the invited email;
+- creates or resolves the canonical active `organization_members` membership;
+- rejects existing non-active membership state;
+- creates canonical live role grants from invitation-role evidence;
+- marks the invitation accepted atomically;
+- rejects replay after acceptance.
+
+Authorization does not rely on user-editable `user_metadata`.
+
+#### Canonical Team read and role-mutation boundary
+
+Implemented:
+
+- `team_access_directory(uuid)`;
+- `team_invitation_directory(uuid)`;
+- `grant_organization_member_role(uuid,uuid,text,uuid)`;
+- `revoke_organization_member_role(uuid,uuid,text,uuid,text)`.
+
+Role grant/revoke requires:
+
+- current active organization membership;
+- `team.role.assign`;
+- target membership in the same organization;
+- valid canonical role;
+- valid branch scope where applicable.
+
+Role revocation preserves historical grant evidence rather than deleting it.
+
+The existing deferred Founder-coverage protections remain authoritative, including protection against removal of the final active organization-wide Founder.
+
+#### Permission behavior frozen by implementation
+
+The locally verified Team permission matrix remains:
+
+- Founder: `team.invite`, `team.read`, `team.role.assign`, `team.suspend`;
+- Studio Manager: `team.invite`, `team.read`, `team.suspend`;
+- Client Coordinator: `team.read`.
+
+Studio Manager does not receive `team.role.assign`.
+
+Client Coordinator does not receive `team.invite`, `team.role.assign` or `team.suspend`.
+
+#### Security boundary
+
+All ten Slice 7B SECURITY DEFINER/read-boundary functions were verified with an empty `search_path`.
+
+Sensitive Team invitation and role mutations append sensitive audit evidence.
+
+Raw invitation bearer tokens are excluded from persistent invitation storage and audit payloads.
+
+Authenticated direct writes to canonical membership/grant tables remain blocked.
+
+No legacy browser direct-write path becomes authoritative through Slice 7B.
+
+#### Local database validation
+
+Validation evidence:
+
+- migration dry-run inside rollback transaction: PASS;
+- local migration application: PASS;
+- `supabase db lint --local`: PASS with no schema errors;
+- Supabase security advisor WARN/ERROR findings attributable to Slice 7B: 0;
+- Supabase performance advisor WARN/ERROR findings: 0;
+- dedicated Slice 7B pgTAP: 42 / 42 PASS;
+- complete local regression before clean rebuild: 1062 / 1062 PASS across 15 files;
+- clean `supabase db reset --local --no-seed`: PASS;
+- complete post-reset regression: 1062 / 1062 PASS across 15 files;
+- post-reset canonical contract: both invitation tables present;
+- post-reset canonical contract: all eight public Slice 7B read/mutation functions present;
+- post-reset migration history contains `20260816221825`.
+
+Behavioral validation includes:
+
+- Client Coordinator Team read access;
+- Client Coordinator invite/role-mutation denial;
+- Studio Manager role-less invitation creation;
+- Studio Manager role-bearing invitation denial;
+- invitation revoke and revoke replay;
+- safe token preview;
+- invitation supersession;
+- invalid-token denial;
+- unconfirmed-email acceptance denial;
+- wrong-email acceptance denial;
+- successful confirmed-email acceptance;
+- canonical membership creation;
+- invitation-role assignment;
+- acceptance replay denial;
+- role grant idempotency;
+- role revoke/history preservation;
+- regrant with new historical evidence;
+- cross-organization mutation denial;
+- sensitive Team audit enforcement;
+- raw bearer-token audit exclusion;
+- final-Founder revocation protection and rollback.
+
+#### Generated Supabase type synchronization
+
+Generated TypeScript was produced from the clean rebuilt local database using the canonical `public,graphql_public` schema set and normalized with the repository Prettier configuration before replacement.
+
+The generated refresh includes:
+
+- `organization_invitations`;
+- `organization_invitation_roles`;
+- `organization_invitation_status`;
+- all eight Slice 7B public functions;
+- previously stale generated Sprint 10 schema/RPC definitions.
+
+The apparent `notification_outbox` deletion diff was audited against the rebuilt database and proved to be diff alignment only; its 19-column schema and foreign-key type contract remain preserved.
+
+Final generated-type SHA-256:
+
+`dd271203855aa94aca197184b7b45c055714eb440fefa51f14f68a2b2bbb6c73`
+
+Migration SHA-256:
+
+`8726d585268c9254f13d553f90a2772c259b36bf3dbdf5c6a58fb60e7bd216f4`
+
+Dedicated pgTAP SHA-256:
+
+`5005a34b1aa06f158bc8251c6cf2c184d3f316804fb20831afd70dd7158525db`
+
+#### Application / repository validation
+
+Application validation:
+
+- Production build: PASS;
+- targeted ESLint for refreshed Supabase types: PASS;
+- generated Supabase types Prettier: PASS;
+- `git diff --check`: PASS;
+- generated type file exactly matches the audited temporary artifact.
+
+Repository-wide TypeScript remains on the pre-existing stale TanStack route-tree baseline:
+
+- pre-Slice-7B generated Supabase types: `tsc` exit 2;
+- Slice 7B generated Supabase types: `tsc` exit 2;
+- exact TypeScript error-set comparison: identical;
+- Slice 7B introduces zero TypeScript error-set changes.
+
+Repository-wide ESLint remains known pre-existing baseline debt and is not introduced by Slice 7B. Targeted lint for the only modified application/type file passes.
+
+Existing non-blocking build warnings remain unchanged, including legacy `inputValidator()` deprecations, bundle-size warnings, dependency-level `"use client"` notices, Nitro/Rollup warnings and Wrangler configuration notices.
+
+#### Slice 7B containment
+
+Slice 7B does not authorize:
+
+- Team UI cutover;
+- replacement of legacy `team.functions.ts`;
+- replacement of legacy `invites.functions.ts`;
+- legacy `studio_invites` deletion;
+- legacy `user_roles` deletion;
+- direct browser writes to canonical access-control tables;
+- `/prep` or `/safety` release;
+- `/bookings` Team mutation UI;
+- Stage 10 -> 11 / `Shoot Completed`;
+- new payment, KPI, privacy, consent or marketing behavior;
+- Production database migration;
+- Sprint 10 release.
+
+The next Team-access implementation boundary must consume these canonical invitation, membership and role-mutation RPCs rather than adding another authorization source of truth.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
