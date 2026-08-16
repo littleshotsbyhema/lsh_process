@@ -5494,3 +5494,479 @@ Slice 7B does not authorize:
 The next Team-access implementation boundary must consume these canonical invitation, membership and role-mutation RPCs rather than adding another authorization source of truth.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+### Slice 7C technical design freeze — Canonical Team Runtime Cutover
+
+Sprint 10 Slice 7C is the application/runtime cutover from the legacy Team and invitation authority paths to the canonical access-control foundation established by Slice 7B.
+
+This technical freeze was approved for implementation on 2026-08-17.
+
+Slice 7C deliberately separates canonical Team runtime cutover from canonical role-administration UI. Current canonical role assignments will be visible but read-only in this slice because the Slice 7B Team directory exposes aggregate role and branch information rather than the exact scope of each individual role grant.
+
+#### 1. Relationship to Slice 7A and Slice 7B
+
+The historical Slice 7A Runtime Contract Reconciliation freeze remains part of the project record.
+
+Its unexecuted application implementation boundary is superseded by this narrower and safer runtime cutover because Slice 7B now provides the canonical Team invitation, membership and role-mutation database foundation.
+
+Slice 7C consumes Slice 7B rather than creating a second Team authority model.
+
+Slice 7C does not modify the Slice 7B database migration or pgTAP suite.
+
+#### 2. Exact authored file boundary
+
+Slice 7C implementation may modify exactly:
+
+- `src/lib/session.ts`;
+- `src/lib/access.ts`;
+- `src/lib/team.functions.ts`;
+- `src/lib/invites.functions.ts`;
+- `src/routes/_authenticated/team.tsx`;
+- `src/routes/auth.tsx`.
+
+`src/routeTree.gen.ts` may be regenerated temporarily by the normal TanStack build process but is not an authored Slice 7C file and must be restored before the final implementation commit because Slice 7C does not change route definitions.
+
+No Supabase migration is authorized.
+
+No generated Supabase type change is expected because Slice 7B already synchronized the required canonical RPC contracts.
+
+Any required file outside this six-file boundary requires a new explicit design decision before implementation continues.
+
+#### 3. Canonical application role vocabulary
+
+`public.roles.key` remains the authoritative role-key vocabulary.
+
+The application role vocabulary must be exactly:
+
+- `founder`;
+- `studio_manager`;
+- `client_coordinator`;
+- `sales`;
+- `photographer`;
+- `assistant`;
+- `stylist`;
+- `editor`;
+- `album_coordinator`;
+- `marketing`;
+- `accounts`;
+- `videographer`.
+
+Legacy application identities:
+
+- `coordinator`;
+- `album`;
+
+must be removed from role catalogues and authorization arrays.
+
+No compatibility alias layer is introduced.
+
+`useSession()` continues to obtain authoritative membership and assigned role keys through `my_membership(uuid)`.
+
+User-editable auth metadata must not be used for authorization.
+
+Profile/name metadata may remain display fallback only.
+
+#### 4. Access-layer reconciliation
+
+`src/lib/access.ts` must use canonical role keys.
+
+Existing route intent may be translated to canonical names where equivalent without widening database authority.
+
+At minimum:
+
+- `coordinator` becomes `client_coordinator`;
+- `album` becomes `album_coordinator`;
+- `studio_manager` is recognized as a first-class application role;
+- `videographer` is recognized as a first-class application role.
+
+The Team route may be visible to the canonical roles that currently hold `team.read`:
+
+- Founder;
+- Studio Manager;
+- Client Coordinator.
+
+Server-side permission-aware RPCs remain authoritative even when route visibility is role-based for navigation convenience.
+
+`/prep` and `/safety` remain contained.
+
+No currently contained legacy route is released.
+
+#### 5. Team capability source
+
+The Team page must not infer mutation authority merely from `roles.includes("founder")` or another frontend role test.
+
+A Team capability server function must resolve the authenticated actor's effective canonical permissions using the existing permission-aware database contract.
+
+The UI may derive controlled capability booleans from canonical effective permissions such as:
+
+- `team.read`;
+- `team.invite`;
+- `team.role.assign`;
+- `team.suspend`.
+
+Those capability values are for presentation and control availability only.
+
+Every database operation remains independently authorized by its canonical RPC.
+
+#### 6. Canonical Team directory
+
+Legacy reads from:
+
+- `profiles`;
+- `user_roles`;
+
+must be removed from the live Team runtime.
+
+The Team member directory must use:
+
+`team_access_directory(uuid)`
+
+through the authenticated request-scoped Supabase client.
+
+The Team UI may display canonical information returned by that RPC, including:
+
+- member ID;
+- member status;
+- display name;
+- email;
+- phone where present;
+- joined timestamp;
+- assigned canonical role keys and labels;
+- active assigned branch names;
+- whether at least one organization-wide grant exists.
+
+Canonical organization-member IDs, not auth user IDs, are the Team domain identity.
+
+#### 7. Role administration containment
+
+Slice 7C does not expose role grant or revoke controls in the Team UI.
+
+Current role assignments are read-only.
+
+The existing legacy `setTeamRole` path must be removed from the live runtime.
+
+No normal Team runtime path may write:
+
+- `user_roles`;
+- `member_role_grants`;
+- `organization_members`.
+
+The Slice 7B RPCs:
+
+- `grant_organization_member_role(...)`;
+- `revoke_organization_member_role(...)`;
+
+remain the future canonical mutation boundary but are not surfaced through the Slice 7C UI.
+
+Reason:
+
+`team_access_directory(uuid)` exposes aggregate `assigned_role_keys`, aggregate active `assigned_branch_names`, and a general `organization_wide` flag. It does not expose an exact role-key -> branch-scope mapping.
+
+Slice 7C must therefore not infer that a displayed role is organization-wide merely because some organization-wide grant exists.
+
+A later separately governed role-administration slice must expose or otherwise resolve exact current grant scope before interactive role toggles are released.
+
+#### 8. Canonical invitation directory
+
+Legacy reads from and writes to:
+
+`studio_invites`
+
+must be removed from the live Team/invite runtime.
+
+Authenticated invitation history must use:
+
+`team_invitation_directory(uuid)`.
+
+The directory may display:
+
+- invitation email;
+- invited full name;
+- invitation status;
+- expiry;
+- creation timestamp;
+- canonical role keys and labels.
+
+The derived `expired` invitation state must be presented as returned by the canonical RPC.
+
+Invitation history must never expose or attempt to reconstruct a raw invitation token.
+
+#### 9. Canonical invitation creation
+
+Invitation creation must use:
+
+`create_organization_invitation(...)`
+
+through the authenticated request-scoped Supabase client.
+
+The server/runtime contract must allow an empty role array.
+
+Canonical permission behavior remains:
+
+- `team.invite` is required to create an invitation;
+- any supplied role assignment additionally requires `team.role.assign`.
+
+Therefore:
+
+- Founder may create role-bearing or role-less invitations;
+- Studio Manager may create role-less invitations;
+- Studio Manager may not create role-bearing invitations;
+- Client Coordinator may not create invitations.
+
+These rules are database-enforced and must not be weakened by frontend controls.
+
+The Team UI should show role selection only when the authenticated actor has `team.role.assign`.
+
+When the actor has `team.invite` but not `team.role.assign`, invitation creation remains available without preassigned roles.
+
+#### 10. One-time invitation token handling
+
+The raw invitation token returned by `create_organization_invitation(...)` exists only in that successful creation response.
+
+The Team UI may build and copy:
+
+`/auth?invite=<raw token>`
+
+immediately after successful invitation creation.
+
+The raw token must not be stored in application state longer than required for that response interaction.
+
+The raw token must not be persisted to another application table, local storage, audit payload or invitation-history record.
+
+Invitation history must not offer a later "Copy link" action because canonical storage retains only the SHA-256 token hash.
+
+If a pending link is lost, staff must create a fresh invitation; the canonical creation operation controls supersession of the prior pending invitation.
+
+#### 11. Canonical invitation revocation
+
+Invitation revocation must use:
+
+`revoke_organization_invitation(...)`
+
+through the authenticated request-scoped Supabase client.
+
+No direct table update is permitted.
+
+Only pending invitations should expose the revoke control.
+
+Expired, accepted or revoked invitation history remains non-mutable from the UI except through behavior explicitly permitted by the canonical RPC.
+
+#### 12. Public invitation preview
+
+The public invitation preview must use:
+
+`preview_organization_invitation(text)`.
+
+The preview path must not use:
+
+- `supabaseAdmin`;
+- service-role table reads;
+- direct `studio_invites` access;
+- direct canonical invitation-table access.
+
+The public preview is bearer-token gated and consumes only the safe canonical projection returned by the Slice 7B RPC.
+
+The auth screen may display:
+
+- invited email;
+- invited full name;
+- organization name;
+- canonical role keys and labels;
+- invitation expiry where useful.
+
+It must not expose invitation IDs, token hashes, internal member IDs or other hidden access-control evidence.
+
+A role-less invitation is valid and must render correctly without claiming that roles are already assigned.
+
+#### 13. Authenticated invitation acceptance
+
+Invitation acceptance must use:
+
+`accept_organization_invitation(text)`
+
+through the authenticated request-scoped Supabase client.
+
+The application must not:
+
+- write `user_roles`;
+- write `organization_members`;
+- write `member_role_grants`;
+- update invitation state directly;
+- use service-role bypass;
+- decide acceptance from user-editable metadata.
+
+The database remains authoritative for:
+
+- authenticated user identity;
+- confirmed email requirement;
+- invited-email match;
+- organization state;
+- existing membership state;
+- canonical membership creation;
+- canonical invitation role grants;
+- invitation acceptance state;
+- audit evidence.
+
+The auth flow must navigate into the application only after successful canonical invite acceptance.
+
+If acceptance fails, the user remains on the auth/invitation surface and sees the failure instead of being navigated into an apparently successful state.
+
+When signup requires email confirmation and no authenticated session exists yet, the user is instructed to confirm the email and reopen the invitation link.
+
+#### 14. Legacy authority removal from live runtime
+
+After Slice 7C, the six authored runtime files must contain no live Team/invitation authority path using:
+
+- `profiles` for Team membership;
+- `user_roles`;
+- `studio_invites`;
+- `has_role`;
+- `supabaseAdmin`.
+
+The legacy database objects themselves are not deleted by Slice 7C.
+
+They remain historical/contained infrastructure until a separate cleanup decision confirms no remaining runtime dependency.
+
+#### 15. Team page presentation boundary
+
+The Team page becomes a canonical access-management surface rather than a hybrid legacy/mock workspace.
+
+The page must remove the legacy/mock Team-role task cards that derive from the Zustand/mock task store.
+
+The canonical Team page may contain:
+
+- Team member directory;
+- current canonical role labels;
+- branch-scope summary;
+- member status;
+- invitation creation when `team.invite` is available;
+- invitation history when `team.invite` is available;
+- invitation revocation when permitted.
+
+Role changes remain visibly read-only in this slice.
+
+The page must not imply that absence of an editable role toggle means the user lacks a canonical role.
+
+#### 16. No database or Production mutation
+
+Slice 7C is application/runtime reconciliation only.
+
+It must not:
+
+- create a migration;
+- alter an existing migration;
+- alter role-permission mappings;
+- write local database fixtures merely to complete the source-code cutover;
+- query Production;
+- write Production;
+- deploy a Production database migration.
+
+Local authenticated runtime fixtures may be used later only under an explicit validation plan and must be disposable.
+
+#### 17. Static acceptance checks
+
+Implementation validation must prove:
+
+- canonical twelve-role `AppRole` vocabulary;
+- no role identity `coordinator`;
+- no role identity `album`;
+- `my_membership` remains the session membership source;
+- `/prep` remains contained;
+- `/safety` remains contained;
+- Team route visibility uses canonical roles;
+- Team capability presentation derives from canonical effective permissions;
+- Team directory uses `team_access_directory`;
+- invitation history uses `team_invitation_directory`;
+- invitation creation uses `create_organization_invitation`;
+- invitation revocation uses `revoke_organization_invitation`;
+- public preview uses `preview_organization_invitation`;
+- acceptance uses `accept_organization_invitation`;
+- no live runtime reference to `studio_invites`;
+- no live runtime reference to `user_roles`;
+- no live Team membership read from `profiles`;
+- no live Team/invitation `supabaseAdmin`;
+- no live Team/invitation `has_role`;
+- no Team role-grant toggle UI;
+- no invitation-history raw-token copy action;
+- no legacy/mock Team-role task cards.
+
+Unrelated domain uses of words such as "album" must not be treated as role-identity defects.
+
+#### 18. Application validation gate
+
+Before Slice 7C may be checkpointed:
+
+- targeted Prettier on the six authored files: PASS;
+- targeted ESLint on the six authored files: PASS;
+- Production build: PASS;
+- TypeScript after normal TanStack route generation: PASS or proven non-regression against the exact pre-Slice-7C baseline if unrelated pre-existing route-generation debt still exists;
+- `git diff --check`: PASS;
+- authored implementation diff contains only the six approved files;
+- `src/routeTree.gen.ts` is restored before commit;
+- no migration file is added or modified;
+- local database migration history is unchanged.
+
+#### 19. Runtime acceptance gate
+
+Before Slice 7C may be considered fully validated locally, authenticated local runtime behavior should prove the canonical capability boundary where practical.
+
+At minimum:
+
+Founder:
+
+- can read Team directory;
+- can read invitation history;
+- can create a role-bearing invitation;
+- receives the raw token only from successful creation;
+- can revoke a pending invitation.
+
+Studio Manager:
+
+- can read Team directory;
+- can read invitation history;
+- can create a role-less invitation;
+- role-bearing invitation attempt remains database-denied;
+- no role administration controls are exposed.
+
+Client Coordinator:
+
+- can read Team directory;
+- cannot create or revoke invitations;
+- no role administration controls are exposed.
+
+Invitation/auth flow:
+
+- valid public token preview succeeds;
+- invalid/revoked/accepted/expired token does not produce a valid preview;
+- confirmed matching authenticated user can accept;
+- wrong/unconfirmed user cannot accept;
+- successful acceptance resolves canonical membership;
+- no legacy role/invite table mutation occurs.
+
+Disposable local validation evidence must be removed or reset after the runtime smoke.
+
+#### 20. Explicit containment
+
+Slice 7C does not authorize:
+
+- canonical role grant/revoke UI;
+- per-role branch-scope editor;
+- member suspension/reinstatement UI;
+- legacy table deletion;
+- `/bookings` scheduling/team/safety mutation UI;
+- `/prep` runtime release;
+- `/safety` runtime release;
+- Stage 10 -> 11 / `Shoot Completed`;
+- shoot-day safety evidence;
+- payment/KPI changes;
+- privacy/consent changes;
+- Production database rollout;
+- Sprint 10 release.
+
+#### 21. Next boundary
+
+After Slice 7C is implemented, validated and checkpointed, the next Team-access slice may address canonical role administration only after exact role-grant scope can be represented safely.
+
+That later boundary must not infer per-role grant scope from the aggregate Slice 7B Team directory.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
