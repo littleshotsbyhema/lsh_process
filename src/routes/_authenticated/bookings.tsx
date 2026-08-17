@@ -6,6 +6,7 @@ import { AppShell, Card, PageHeader } from "@/components/AppShell";
 import {
   listBookingWorkspace,
   type BookingJourneyStageRow,
+  type BookingShootScheduleRow,
   type BookingStageTransitionRow,
 } from "@/lib/booking.functions";
 
@@ -17,7 +18,8 @@ export const Route = createFileRoute("/_authenticated/bookings")({
       },
       {
         name: "description",
-        content: "Canonical booking records and their authoritative client journey state.",
+        content:
+          "Canonical booking records, authoritative client journey state and immutable shoot schedule evidence.",
       },
       {
         property: "og:title",
@@ -25,7 +27,8 @@ export const Route = createFileRoute("/_authenticated/bookings")({
       },
       {
         property: "og:description",
-        content: "Canonical booking records and their authoritative client journey state.",
+        content:
+          "Canonical booking records, authoritative client journey state and immutable shoot schedule evidence.",
       },
       {
         property: "og:type",
@@ -65,6 +68,76 @@ function stageById(stages: BookingJourneyStageRow[], id: string | null) {
   }
 
   return stages.find((stage) => stage.id === id) ?? null;
+}
+
+function formatScheduleDateTime(value: string, timeZone: string) {
+  try {
+    return new Intl.DateTimeFormat("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone,
+    }).format(new Date(value));
+  } catch {
+    return `${new Date(value).toISOString()} (${timeZone})`;
+  }
+}
+
+function scheduleStateLabel(state: BookingShootScheduleRow["schedule_state"]) {
+  return state === "reserved" ? "Reserved" : "Proposed · not reserved";
+}
+
+function ScheduleHistory({ schedules }: { schedules: BookingShootScheduleRow[] }) {
+  if (schedules.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-3">
+      {schedules.map((schedule) => (
+        <div key={schedule.id} className="rounded-lg border border-border bg-card px-4 py-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-sm font-medium text-primary">
+                Version {schedule.schedule_version} · {scheduleStateLabel(schedule.schedule_state)}
+              </div>
+
+              <div className="mt-1 text-xs text-muted-foreground">
+                {formatScheduleDateTime(schedule.scheduled_start_at, schedule.timezone)} →{" "}
+                {formatScheduleDateTime(schedule.scheduled_end_at, schedule.timezone)}
+              </div>
+            </div>
+
+            <div className="text-xs text-muted-foreground">
+              Recorded {formatDateTime(schedule.recorded_at)}
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-2">
+            <div>
+              Location: {schedule.location_type}
+              {schedule.location_details ? ` · ${schedule.location_details}` : ""}
+            </div>
+
+            <div>Timezone: {schedule.timezone}</div>
+
+            <div className="break-all">
+              {schedule.predecessor_schedule_id
+                ? `Predecessor: ${schedule.predecessor_schedule_id}`
+                : "Initial schedule evidence"}
+            </div>
+
+            <div className="break-all">Recorded by: {schedule.recorded_by}</div>
+          </div>
+
+          {schedule.reschedule_reason ? (
+            <div className="mt-3 rounded-md border border-border bg-muted px-3 py-2 text-xs text-primary">
+              Reschedule reason: {schedule.reschedule_reason}
+            </div>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function TransitionHistory({
@@ -123,7 +196,7 @@ function BookingsPage() {
       <PageHeader
         eyebrow="Canonical bookings"
         title="Bookings"
-        subtitle="Booking identity and client journey state come from the authoritative Sprint 8 records."
+        subtitle="Booking identity, client journey state and recorded shoot plans come from canonical studio records."
         quote="A booking begins with trust. Confirmation comes only when its real conditions are met."
       />
 
@@ -178,6 +251,12 @@ function BookingsPage() {
             const transitions = data.transitions.filter(
               (transition) => transition.booking_id === booking.id,
             );
+
+            const scheduleHistory = data.schedules
+              .filter((schedule) => schedule.booking_id === booking.id)
+              .sort((left, right) => left.schedule_version - right.schedule_version);
+
+            const currentSchedule = scheduleHistory[scheduleHistory.length - 1] ?? null;
 
             const currentOrder = currentStage?.stage_order ?? 0;
 
@@ -262,6 +341,108 @@ function BookingsPage() {
                 </div>
 
                 <div className="mt-7 border-t border-border pt-6">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                        Canonical shoot schedule
+                      </div>
+                      <h3 className="mt-1 font-serif text-xl text-primary">Shoot plan</h3>
+                    </div>
+
+                    {currentSchedule ? (
+                      <span className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] uppercase tracking-wider text-primary">
+                        {scheduleStateLabel(currentSchedule.schedule_state)}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {!currentSchedule ? (
+                    <Card className="mt-5 p-5">
+                      <p className="text-sm font-medium text-primary">
+                        No canonical shoot plan recorded
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                        No date is inferred from legacy booking state. Shoot timing appears here
+                        only when authoritative schedule evidence exists.
+                      </p>
+                    </Card>
+                  ) : (
+                    <>
+                      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Scheduled start
+                          </div>
+                          <div className="mt-1 text-sm font-medium text-primary">
+                            {formatScheduleDateTime(
+                              currentSchedule.scheduled_start_at,
+                              currentSchedule.timezone,
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Scheduled end
+                          </div>
+                          <div className="mt-1 text-sm font-medium text-primary">
+                            {formatScheduleDateTime(
+                              currentSchedule.scheduled_end_at,
+                              currentSchedule.timezone,
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Location
+                          </div>
+                          <div className="mt-1 text-sm font-medium text-primary">
+                            {currentSchedule.location_type}
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {currentSchedule.location_details ?? "No additional location details"}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Schedule version
+                          </div>
+                          <div className="mt-1 font-serif text-xl text-primary">
+                            {currentSchedule.schedule_version}
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {currentSchedule.timezone}
+                          </div>
+                        </div>
+                      </div>
+
+                      <Card className="mt-5 p-4">
+                        <p className="text-xs leading-5 text-muted-foreground">
+                          {currentSchedule.schedule_state === "proposed"
+                            ? "This shoot plan is proposed only. It does not reserve or confirm the date."
+                            : "This is the current authoritative reserved shoot schedule."}
+                        </p>
+                      </Card>
+
+                      <div className="mt-6">
+                        <div className="mb-4">
+                          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                            Immutable schedule history
+                          </div>
+                          <h4 className="mt-1 font-serif text-lg text-primary">
+                            Recorded schedule lineage
+                          </h4>
+                        </div>
+
+                        <ScheduleHistory schedules={scheduleHistory} />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="mt-7 border-t border-border pt-6">
                   <div className="flex flex-wrap items-end justify-between gap-4">
                     <div>
                       <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -279,8 +460,8 @@ function BookingsPage() {
                     </div>
 
                     <p className="max-w-xl text-xs leading-5 text-muted-foreground">
-                      Journey advancement is read-only here. Sprint 8 does not yet expose a general
-                      authoritative stage-transition RPC, so this screen does not invent one.
+                      Journey advancement remains controlled by dedicated server-enforced
+                      operations. This screen does not expose a general stage-transition control.
                     </p>
                   </div>
 
@@ -331,10 +512,10 @@ function BookingsPage() {
 
                 <Card className="mt-6 p-5">
                   <p className="text-xs leading-5 text-muted-foreground">
-                    Advance Pending is a workflow state, not proof of payment. Sprint 8 does not
-                    maintain a payment ledger, balance, receipt, refund, or date-reservation state
-                    on this booking shell. Booking Confirmed requires a separate authoritative
-                    advance condition.
+                    Advance Pending is a workflow state, not proof of payment. A proposed shoot plan
+                    is not a reservation. Booking confirmation and later journey advancement remain
+                    controlled by authoritative server-enforced gates; this Slice 7F view exposes no
+                    schedule or journey mutation.
                   </p>
                 </Card>
               </Card>

@@ -13,6 +13,9 @@ export type BookingJourneyStageRow = Database["public"]["Tables"]["booking_journ
 export type BookingStageTransitionRow =
   Database["public"]["Tables"]["booking_stage_transitions"]["Row"];
 
+export type BookingShootScheduleRow =
+  Database["public"]["Tables"]["booking_shoot_schedules"]["Row"];
+
 export type BookingQuotationSummary = {
   id: string;
   quotation_reference: string;
@@ -51,6 +54,7 @@ export type BookingWorkspaceData = {
   journeyStates: BookingJourneyStateRow[];
   journeyStages: BookingJourneyStageRow[];
   transitions: BookingStageTransitionRow[];
+  schedules: BookingShootScheduleRow[];
   leads: BookingLeadSummary[];
   families: BookingFamilySummary[];
 };
@@ -98,6 +102,7 @@ export const listBookingWorkspace = createServerFn({
         journeyStates: [],
         journeyStages: stagesResult.data ?? [],
         transitions: [],
+        schedules: [],
         leads: [],
         families: [],
       };
@@ -116,53 +121,69 @@ export const listBookingWorkspace = createServerFn({
       ),
     );
 
-    const [quotationsResult, quotationLinesResult, statesResult, stagesResult, transitionsResult] =
-      await Promise.all([
-        context.supabase
-          .from("quotations")
-          .select("id, quotation_reference, status, currency, quoted_total_inr, accepted_at")
-          .eq("organization_id", ORGANIZATION_ID)
-          .in("id", quotationIds),
+    const [
+      quotationsResult,
+      quotationLinesResult,
+      statesResult,
+      stagesResult,
+      transitionsResult,
+      schedulesResult,
+    ] = await Promise.all([
+      context.supabase
+        .from("quotations")
+        .select("id, quotation_reference, status, currency, quoted_total_inr, accepted_at")
+        .eq("organization_id", ORGANIZATION_ID)
+        .in("id", quotationIds),
 
-        context.supabase
-          .from("quotation_line_items")
-          .select("quotation_id, line_type, item_name, line_total_inr, pricing_source, sort_order")
-          .eq("organization_id", ORGANIZATION_ID)
-          .in("quotation_id", quotationIds)
-          .order("sort_order", {
-            ascending: true,
-          }),
+      context.supabase
+        .from("quotation_line_items")
+        .select("quotation_id, line_type, item_name, line_total_inr, pricing_source, sort_order")
+        .eq("organization_id", ORGANIZATION_ID)
+        .in("quotation_id", quotationIds)
+        .order("sort_order", {
+          ascending: true,
+        }),
 
-        context.supabase
-          .from("booking_journey_states")
-          .select("*")
-          .eq("organization_id", ORGANIZATION_ID)
-          .in("booking_id", bookingIds),
+      context.supabase
+        .from("booking_journey_states")
+        .select("*")
+        .eq("organization_id", ORGANIZATION_ID)
+        .in("booking_id", bookingIds),
 
-        context.supabase
-          .from("booking_journey_stages")
-          .select("*")
-          .eq("organization_id", ORGANIZATION_ID)
-          .eq("is_active", true)
-          .order("stage_order", {
-            ascending: true,
-          }),
+      context.supabase
+        .from("booking_journey_stages")
+        .select("*")
+        .eq("organization_id", ORGANIZATION_ID)
+        .eq("is_active", true)
+        .order("stage_order", {
+          ascending: true,
+        }),
 
-        context.supabase
-          .from("booking_stage_transitions")
-          .select("*")
-          .eq("organization_id", ORGANIZATION_ID)
-          .in("booking_id", bookingIds)
-          .order("transitioned_at", {
-            ascending: true,
-          }),
-      ]);
+      context.supabase
+        .from("booking_stage_transitions")
+        .select("*")
+        .eq("organization_id", ORGANIZATION_ID)
+        .in("booking_id", bookingIds)
+        .order("transitioned_at", {
+          ascending: true,
+        }),
+
+      context.supabase
+        .from("booking_shoot_schedules")
+        .select("*")
+        .eq("organization_id", ORGANIZATION_ID)
+        .in("booking_id", bookingIds)
+        .order("schedule_version", {
+          ascending: true,
+        }),
+    ]);
 
     throwIfError(quotationsResult.error);
     throwIfError(quotationLinesResult.error);
     throwIfError(statesResult.error);
     throwIfError(stagesResult.error);
     throwIfError(transitionsResult.error);
+    throwIfError(schedulesResult.error);
 
     let leads: BookingLeadSummary[] = [];
 
@@ -199,6 +220,7 @@ export const listBookingWorkspace = createServerFn({
       journeyStates: statesResult.data ?? [],
       journeyStages: stagesResult.data ?? [],
       transitions: transitionsResult.data ?? [],
+      schedules: schedulesResult.data ?? [],
       leads,
       families,
     };
