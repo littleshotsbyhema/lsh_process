@@ -8289,3 +8289,40 @@ This checkpoint does not authorize or record a Production deployment.
 No Production database read, write, migration or role mutation was performed as part of Slice 7E acceptance.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+### Governance correction — Slice 7E deployment containment
+
+This append-only correction was recorded on 2026-08-17 after deployment-containment reconciliation.
+
+The earlier Slice 7E checkpoint correctly states that Slice 7E did not authorize a Production application release and that no Production database read, write, migration or role mutation was performed as part of Slice 7E acceptance.
+
+However, subsequent infrastructure audit established that Git pushes from `architecture-rebuild`, including the Slice 7E commit stack, were automatically deployed by Vercel as Production application deployments because the Vercel project's Production Branch Tracking was configured to `architecture-rebuild` at that time.
+
+No manual `vercel --prod` deployment command was performed as part of Slice 7E acceptance.
+
+The latest automatically created Production deployment from that stack was associated with checkpoint commit:
+
+`e570da0b7715f992edd4cd870437d3dbbaf7324a`
+
+Vercel deployment:
+
+`dpl_varrdvzMrBSfnNVjhwNnF4mrSzAL`
+
+This automatic Vercel application deployment did not constitute approval or closure of Sprint 10 and did not authorize a Production Supabase migration for the later Team-access database work.
+
+Containment was corrected on 2026-08-17:
+
+- Vercel Production Branch Tracking was changed from `architecture-rebuild` to `main`;
+- the corrected Production Branch value `main` was independently verified through the Vercel project API;
+- `architecture-rebuild` received branch-specific Vercel Preview environment overrides for `SUPABASE_PROJECT_ID`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`;
+- those branch-specific Preview variables target the isolated Supabase `architecture-rebuild` Preview project `hincwmxebwfpoijzwyfz`;
+- the Vercel configuration correction itself triggered no deployment;
+- the existing Vercel Production deployment was not redeployed or replaced as part of containment;
+- Git `main` was not merged or modified;
+- Supabase Production was not merged or mutated as part of this containment work.
+
+The isolated Supabase Preview branch was independently reconciled for the Team-access database foundation before application Preview deployment testing. Production Supabase remained separately contained.
+
+This correction supersedes only the earlier deployment-occurrence wording. It does not change the Slice 7E implementation acceptance result, does not convert Sprint 10 into a Production release, and does not authorize a Git-main or Supabase-main merge.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
