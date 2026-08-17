@@ -7969,3 +7969,323 @@ Slice 7E is complete only when:
 Slice 7E does not itself release Sprint 10.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+### Slice 7E implementation checkpoint — Canonical Role Administration Runtime
+
+Sprint 10 Slice 7E canonical role-administration runtime implementation completed locally and was pushed/reconciled on 2026-08-17.
+
+Implementation commit:
+
+`7384f923e17c918ed6328914ff38bec86434522f`
+
+Commit message:
+
+`feat: add canonical role administration runtime`
+
+The implementation commit directly follows the Slice 7E technical design freeze:
+
+`b7cda8da91ce08b93d5cf12fdd23efba87c5f025`
+
+#### Checkpoint implementation boundary
+
+The runtime implementation modified exactly:
+
+- `src/lib/team.functions.ts`;
+- `src/routes/_authenticated/team.tsx`.
+
+Implementation diff:
+
+- `src/lib/team.functions.ts`: 172 additions / 6 deletions;
+- `src/routes/_authenticated/team.tsx`: 341 additions / 5 deletions;
+- total: 513 additions / 11 deletions.
+
+The reviewed implementation patch SHA-256 was:
+
+`e9c6bd3f8767ab4fea21554c8c6cc780013cae32a86f60aa7b7968197f159539`
+
+The staged implementation patch matched that reviewed patch exactly before commit.
+
+No Slice 7E implementation change was made to:
+
+- `src/lib/session.ts`;
+- `src/lib/access.ts`;
+- `src/lib/invites.functions.ts`;
+- Supabase migrations;
+- generated Supabase types;
+- database authorization contracts;
+- `src/routeTree.gen.ts`.
+
+#### Implemented canonical Team capability extension
+
+`TeamCapabilities` now includes:
+
+`actorMemberId: string | null`
+
+`getTeamCapabilities` resolves the actor member ID through:
+
+`current_organization_member(ORGANIZATION_ID)`
+
+The value is used only for post-success self-role-mutation session coherence.
+
+Canonical permission evaluation remains sourced from:
+
+`effective_permissions(ORGANIZATION_ID)`
+
+No client-provided organization identifier or authorization claim was introduced.
+
+#### Implemented canonical role-administration read bundle
+
+The authenticated Team runtime now exposes:
+
+`getTeamRoleAdministration`
+
+It reads the existing canonical database contracts:
+
+- `role_catalogue()`;
+- `team_role_grant_directory(ORGANIZATION_ID)`;
+- `team_role_scope_catalogue(ORGANIZATION_ID)`.
+
+The runtime normalizes:
+
+- canonical role options;
+- exact live role grants;
+- currently assignable canonical scopes.
+
+Administrative reads fail as a complete bundle on an RPC error rather than returning partial role-administration state.
+
+#### Implemented exact role mutations
+
+The authenticated runtime now exposes:
+
+- `grantTeamRole`;
+- `revokeTeamRole`.
+
+Both functions use the current TanStack Start:
+
+`.validator(...)`
+
+API.
+
+No new Slice 7E `.inputValidator(...)` usage was introduced.
+
+The browser supplies only transport values:
+
+- member ID;
+- role key;
+- nullable branch ID.
+
+The server continues to own:
+
+`ORGANIZATION_ID`
+
+and canonical database RPCs remain authoritative for:
+
+- actor authorization;
+- organization containment;
+- target membership validity;
+- canonical role validity;
+- branch assignability;
+- Founder organization-wide scope;
+- final-Founder coverage protection.
+
+The revoke wrapper owns the audit reason:
+
+`Role removed from Team role administration`
+
+A stale exact revoke returns the controlled failure:
+
+`This role grant is no longer active.`
+
+#### Implemented Team role-administration query model
+
+The Team route now loads canonical administrative state through:
+
+`["team-role-admin"]`
+
+only when both:
+
+- Team read access exists; and
+- `canAssignRoles === true`.
+
+The ordinary aggregate Team directory remains:
+
+`["team"]`
+
+and remains available independently from the administrative read model.
+
+After a successful exact grant or revoke, authoritative invalidation covers:
+
+- `["team-role-admin"]`;
+- `["team"]`;
+- `["team-capabilities"]`.
+
+No optimistic canonical role mutation was introduced.
+
+#### Implemented exact-grant interaction semantics
+
+Authorized role administrators can now view each exact live grant independently.
+
+Each administrative grant row is keyed by its canonical:
+
+`grantId`
+
+and preserves its exact scope.
+
+Organization-wide and branch-scoped grants for the same member and role remain independent facts.
+
+The runtime does not introduce:
+
+- replace-all-role semantics;
+- synthetic scope conversion;
+- automatic branch-grant cleanup;
+- automatic organization-wide-grant cleanup;
+- bulk role grant or revoke.
+
+Exact duplicate assignment detection is presentation-only; canonical database uniqueness remains authoritative.
+
+The compact aggregate role badge display was deduplicated for presentation only and does not merge or alter exact administrative grant facts.
+
+#### Implemented Founder and membership lifecycle behavior
+
+Founder assignment is presented as organization-wide only.
+
+Selecting Founder constrains assignment to the synthetic organization-wide scope.
+
+The UI does not calculate final-Founder safety.
+
+Final-Founder revocation remains database-authoritative.
+
+Suspended members:
+
+- cannot receive new grants through the assignment controls;
+- retain visible exact live grants;
+- may have an existing exact grant revoked where the canonical database RPC permits it.
+
+#### Implemented active and historical branch behavior
+
+New branch assignment choices come only from:
+
+`team_role_scope_catalogue(...)`
+
+Inactive or otherwise non-assignable branches therefore do not appear as new assignment choices.
+
+An existing live grant referencing a branch that later becomes non-assignable remains visible from the exact grant directory.
+
+Such a grant is identified in the UI as:
+
+`historical / non-assignable scope`
+
+and remains independently removable through its exact canonical tuple.
+
+#### Invitation and non-administrator containment
+
+Invitation creation, revocation, one-time-link handling and existing invitation-role behavior remain a separate workflow.
+
+Studio Manager retains:
+
+- Team directory access;
+- existing invitation capability;
+- no role-administration controls.
+
+Client Coordinator retains:
+
+- Team directory access;
+- no role-administration controls.
+
+No role-administration authority was granted through static application roles or navigation logic.
+
+#### Local runtime acceptance evidence
+
+Controlled local browser acceptance passed for:
+
+- Founder canonical role and scope reads;
+- organization-wide role assignment;
+- branch-scoped role assignment;
+- same-role organization-wide and branch-scope coexistence;
+- exact branch-scope revocation without affecting organization-wide access;
+- historical/non-assignable branch-grant visibility and revocation;
+- suspended-member assignment containment and exact revoke;
+- Studio Manager role-control containment;
+- Client Coordinator role-control containment;
+- actor self-grant followed by full browser reload;
+- actor self-revoke followed by full browser reload;
+- successful removal of a non-final Founder;
+- database rejection of attempted final-Founder removal with no optimistic disappearance.
+
+The final-Founder rejection left the canonical Founder grant present and the organization valid.
+
+#### Database regression evidence
+
+The final Slice 7E database regression gate passed:
+
+- Slice 7D role-administration read-model pgTAP: 21 tests;
+- Slice 7B canonical Team-access pgTAP: 42 tests;
+- complete local database suite: 16 files / 1083 tests;
+- database lint at warning failure level: PASS.
+
+After regression testing, the local database was reset to the canonical baseline.
+
+The restored baseline contained:
+
+- organization status: `suspended`;
+- auth users: 0;
+- organization members: 0;
+- member-role-grant rows: 0;
+- live member-role grants: 0;
+- organization invitations: 0;
+- branches: 0.
+
+#### Application quality evidence
+
+The corrected final application gate passed:
+
+- targeted Prettier: PASS;
+- targeted ESLint: PASS;
+- production build: PASS;
+- TypeScript `--noEmit` against the build-generated current route tree: PASS;
+- no Slice 7E `.inputValidator(...)` usage;
+- exactly two Slice 7E `.validator(...)` mutation contracts;
+- semantic contract guards: PASS;
+- `git diff --check`: PASS;
+- exact two-file implementation boundary: PASS.
+
+The production build transiently regenerated:
+
+`src/routeTree.gen.ts`
+
+TypeScript validation passed against that generated route tree.
+
+The generated route tree was then restored exactly to the frozen SHA-256:
+
+`f47247f5c4e45f1ab228320898c49aa4952e8ee95044130baed6e7267b982302`
+
+before implementation commit creation.
+
+Existing unrelated TanStack `.inputValidator(...)`, Rollup/Nitro and chunk-size warnings remained non-blocking baseline warnings outside the Slice 7E implementation boundary.
+
+#### Git reconciliation evidence
+
+The implementation commit was pushed directly to:
+
+`origin/architecture-rebuild`
+
+Post-push reconciliation confirmed:
+
+- local HEAD: `7384f923e17c918ed6328914ff38bec86434522f`;
+- local tracking ref: `7384f923e17c918ed6328914ff38bec86434522f`;
+- remote branch ref: `7384f923e17c918ed6328914ff38bec86434522f`;
+- branch divergence: 0 / 0.
+
+The remote implementation commit contains exactly the two frozen runtime files.
+
+No pull request is required by the current `architecture-rebuild` workflow.
+
+#### Slice 7E checkpoint status
+
+Sprint 10 Slice 7E canonical role-administration runtime is now implemented, locally accepted, regression-tested, quality-gated, committed and remotely reconciled.
+
+This checkpoint does not authorize or record a Production deployment.
+
+No Production database read, write, migration or role mutation was performed as part of Slice 7E acceptance.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
