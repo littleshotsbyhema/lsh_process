@@ -6174,3 +6174,419 @@ Legacy database objects remain present and contained; Slice 7C removes them only
 Canonical role administration remains deferred until exact role-key-to-grant-scope representation can be exposed safely.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+### Slice 7D technical design freeze — Canonical Role Administration Read Model
+
+Sprint 10 Slice 7D establishes the exact canonical read contract required before interactive Team role administration may be released.
+
+This technical freeze was approved for implementation on 2026-08-17.
+
+Slice 7D is intentionally a database/read-model foundation slice.
+
+It does not release role-administration UI.
+
+#### 1. Relationship to Slice 7B and Slice 7C
+
+Slice 7B established the canonical membership, invitation and role-grant mutation foundation.
+
+Slice 7C cut the Team runtime over to that canonical foundation but deliberately left role assignments read-only because:
+
+`team_access_directory(uuid)`
+
+returns aggregate role keys, aggregate branch names and a general organization-wide indicator.
+
+That aggregate projection does not encode the exact relationship:
+
+`member -> role -> branch scope`.
+
+Slice 7D resolves that ambiguity before any interactive role editor is authorized.
+
+The existing canonical mutation RPCs remain authoritative:
+
+- `grant_organization_member_role(uuid, uuid, text, uuid)`;
+- `revoke_organization_member_role(uuid, uuid, text, uuid, text)`.
+
+Slice 7D does not replace or weaken them.
+
+#### 2. Discovery evidence
+
+Canonical `member_role_grants` already stores exact scope at the required grain:
+
+- grant ID;
+- organization ID;
+- organization-member ID;
+- role ID;
+- nullable branch ID;
+- grant timestamp and grant actor;
+- revocation timestamp, actor and reason.
+
+Exact scope semantics are:
+
+- `branch_id IS NULL` = organization-wide grant;
+- non-null `branch_id` = grant scoped to that exact branch.
+
+The existing live uniqueness contracts permit:
+
+- one live organization-wide grant for a member/role pair;
+- one live grant for each member/role/branch tuple.
+
+An organization-wide grant and branch-scoped grants for the same role may therefore coexist.
+
+Slice 7D must represent the database truth exactly and must not normalize, collapse or infer those grants into a different state.
+
+#### 3. Existing direct-table security boundary remains unchanged
+
+`member_role_grants` remains closed to direct authenticated access.
+
+It retains:
+
+- Row Level Security enabled;
+- FORCE ROW LEVEL SECURITY;
+- no authenticated table privileges;
+- service-role access only.
+
+Slice 7D must not grant authenticated users direct `SELECT`, `INSERT`, `UPDATE` or `DELETE` access to `member_role_grants`.
+
+All role-administration reads introduced by this slice must occur through permission-aware canonical RPCs.
+
+#### 4. Existing role mutation authority remains unchanged
+
+Both existing role-mutation RPCs are `SECURITY DEFINER` functions and independently enforce canonical authorization.
+
+`grant_organization_member_role(...)` already enforces:
+
+- active canonical organization membership;
+- `team.role.assign`;
+- target active membership in the same organization;
+- canonical role existence;
+- Founder grants must be organization-wide;
+- branch access when branch scoped;
+- active/non-deleted branch validity;
+- live-grant idempotency;
+- sensitive audit evidence.
+
+`revoke_organization_member_role(...)` already enforces:
+
+- active canonical organization membership;
+- `team.role.assign`;
+- target organization containment;
+- canonical role existence;
+- exact role/branch live-grant selection;
+- revocation reason validation;
+- historical grant preservation;
+- sensitive audit evidence.
+
+The existing deferred final-Founder protection remains the final database authority.
+
+Slice 7D does not alter these mutation semantics.
+
+#### 5. Current role-assignment permission boundary
+
+The canonical permission matrix currently grants:
+
+`team.role.assign`
+
+only to:
+
+- Founder.
+
+Studio Manager, Client Coordinator and all other canonical roles do not currently hold this permission.
+
+Slice 7D does not alter the role-permission matrix.
+
+No role receives new authority in this slice.
+
+#### 6. Exact live role-grant directory
+
+Slice 7D must introduce:
+
+`team_role_grant_directory(
+  p_organization_id uuid,
+  p_member_id uuid DEFAULT NULL
+)`
+
+The function must be `SECURITY DEFINER` with an empty controlled `search_path`.
+
+It must require:
+
+- an active canonical organization membership for the authenticated actor;
+- organization-wide `team.role.assign`.
+
+Failure to satisfy the administrative permission boundary must raise an authorization error rather than silently exposing grant detail.
+
+The function returns live grants only.
+
+Its canonical projection must contain:
+
+- `grant_id uuid`;
+- `member_id uuid`;
+- `role_key text`;
+- `role_label text`;
+- `branch_id uuid`;
+- `branch_name text`;
+- `branch_code text`;
+- `organization_wide boolean`;
+- `granted_at timestamptz`;
+- `granted_by_member_id uuid`.
+
+Projection rules:
+
+- `organization_wide` is true exactly when `branch_id IS NULL`;
+- `branch_name` and `branch_code` are null for organization-wide grants;
+- branch-scoped grants expose the exact active or historical branch identity referenced by that live grant;
+- each live grant is returned as its own row;
+- no aggregation of different scopes is permitted.
+
+When `p_member_id` is supplied, the target member must belong to `p_organization_id`.
+
+Cross-organization member IDs must not disclose grant information.
+
+When `p_member_id` is null, all live grant rows within the authorized organization may be returned.
+
+Revoked grants are not part of this operational directory.
+
+Historical role evidence remains available through canonical audit/history mechanisms and is not expanded by this slice.
+
+#### 7. Canonical role-assignment scope catalogue
+
+The existing `role_catalogue()` remains the canonical safe role vocabulary source and is not replaced.
+
+Slice 7D must introduce:
+
+`team_role_scope_catalogue(
+  p_organization_id uuid
+)`
+
+for the future role-administration UI.
+
+The function must be `SECURITY DEFINER` with an empty controlled `search_path`.
+
+It must require:
+
+- an active canonical organization membership;
+- organization-wide `team.role.assign`.
+
+The projection must contain:
+
+- `branch_id uuid`;
+- `branch_name text`;
+- `branch_code text`;
+- `organization_wide boolean`.
+
+The result must contain one synthetic organization-wide option:
+
+- `branch_id = NULL`;
+- `branch_name = 'Organization-wide'`;
+- `branch_code = NULL`;
+- `organization_wide = true`.
+
+It may additionally return only branches that:
+
+- belong to the requested organization;
+- are active;
+- are not deleted;
+- are within the actor's canonical branch scope.
+
+Branch rows use:
+
+- the exact branch ID;
+- canonical branch name;
+- canonical branch code;
+- `organization_wide = false`.
+
+The current canonical Little Shots by Hema local baseline contains zero branch rows.
+
+Slice 7D must not create persistent branches merely to populate this catalogue.
+
+Branch-scoped behavior must be validated using transaction-local test fixtures.
+
+#### 8. Existing branches table access is not widened
+
+The canonical `branches` table currently permits authenticated `SELECT` subject to:
+
+`has_branch_scope(organization_id, id)`.
+
+Slice 7D does not need to remove that existing access contract.
+
+However, future Team role-administration runtime must consume the new role-scope catalogue rather than constructing an administrative scope model from arbitrary direct branch-table reads.
+
+This gives role administration a stable permission-aware server contract without changing unrelated branch consumers.
+
+#### 9. Public RPC privileges
+
+Both new Slice 7D RPCs must explicitly:
+
+- revoke execution from `PUBLIC`;
+- revoke execution from `anon`;
+- revoke inherited/default authenticated execution before the explicit grant;
+- grant `EXECUTE` only to `authenticated` and `service_role`.
+
+Database authorization inside each RPC remains authoritative even though `authenticated` receives execute privilege.
+
+No service-role bypass may be introduced into application runtime code.
+
+#### 10. No schema-table redesign
+
+Slice 7D must not:
+
+- add columns to `member_role_grants`;
+- modify its unique indexes;
+- rewrite existing historical grants;
+- collapse organization-wide and branch grants;
+- modify the canonical role catalogue;
+- alter permission mappings;
+- change Founder coverage triggers;
+- modify invitation behavior;
+- modify Team membership lifecycle behavior.
+
+The existing exact grant rows remain the source of truth.
+
+#### 11. Migration implementation boundary
+
+Slice 7D may add exactly one new timestamped Supabase migration containing:
+
+- `team_role_grant_directory(...)`;
+- `team_role_scope_catalogue(...)`;
+- explicit function privileges;
+- migration-local validation guards.
+
+No existing migration may be edited.
+
+#### 12. pgTAP implementation boundary
+
+Slice 7D must add one dedicated pgTAP test file:
+
+`supabase/tests/sprint10_team_role_admin_read_model_test.sql`
+
+The dedicated suite must be transaction-local and roll back all fixtures.
+
+At minimum it must prove:
+
+- Founder can read the exact grant directory;
+- Founder can read the role-assignment scope catalogue;
+- Studio Manager cannot read exact role-grant administration detail;
+- Client Coordinator cannot read exact role-grant administration detail;
+- organization-wide grant projection is exact;
+- branch-scoped grant projection is exact;
+- two scopes of the same role remain two independent rows when both exist;
+- revoked grants are omitted;
+- member filtering returns only the requested same-organization member;
+- cross-organization member filtering does not leak grant data;
+- active branches are available as assignment scopes;
+- inactive/deleted branches are absent from assignment choices;
+- the organization-wide synthetic scope is always available to an authorized actor;
+- direct authenticated access to `member_role_grants` remains unavailable;
+- function execution privileges match the freeze;
+- no role-permission mapping changes occur.
+
+#### 13. Generated Supabase types
+
+After the clean local migration is validated, generated Supabase TypeScript must be refreshed.
+
+Expected generated additions are the two new RPC contracts only, subject to generator ordering and any pre-existing stale generated definitions.
+
+The generated file remains:
+
+`src/integrations/supabase/types.ts`.
+
+The generated artifact must be normalized with the repository formatting configuration and audited before replacement.
+
+#### 14. Exact authored implementation boundary
+
+Slice 7D implementation may modify exactly:
+
+- one new timestamped migration under `supabase/migrations/`;
+- `supabase/tests/sprint10_team_role_admin_read_model_test.sql`;
+- `src/integrations/supabase/types.ts`.
+
+The Sprint Master Register freeze/checkpoint documentation is committed separately from the implementation boundary.
+
+No application runtime file is authorized in Slice 7D.
+
+In particular, Slice 7D must not modify:
+
+- `src/lib/team.functions.ts`;
+- `src/routes/_authenticated/team.tsx`;
+- `src/lib/access.ts`;
+- `src/lib/session.ts`;
+- invitation runtime files.
+
+Any additional implementation file requires a new explicit design decision.
+
+#### 15. Validation gate
+
+Before Slice 7D may be checkpointed:
+
+- clean local migration application: PASS;
+- dedicated Slice 7D pgTAP: PASS;
+- existing Slice 7B canonical Team pgTAP: PASS;
+- complete local database regression: PASS;
+- `supabase db lint --local`: PASS;
+- relevant local security/performance advisor review: no new blocking issue;
+- clean `supabase db reset --local`: PASS;
+- post-reset dedicated Slice 7D pgTAP: PASS;
+- generated Supabase types synchronized from the rebuilt local database;
+- generated type formatting: PASS;
+- targeted generated-type lint: PASS;
+- Production build: PASS;
+- TypeScript: PASS or proven exact non-regression if unrelated baseline debt reappears;
+- `git diff --check`: PASS;
+- implementation diff restricted exactly to the authorized boundary.
+
+#### 16. Security invariants
+
+Slice 7D must preserve:
+
+- server-side permission enforcement;
+- organization containment;
+- branch containment;
+- direct-table denial for canonical role grants;
+- final-Founder protection;
+- sensitive role-change audit behavior;
+- invitation token secrecy;
+- no client-controlled authorization metadata;
+- no Production mutation.
+
+The new read functions must not return:
+
+- auth-user IDs unless separately authorized by an existing contract;
+- token material;
+- audit payloads;
+- revoked-grant reasons;
+- unrelated organization data.
+
+#### 17. Explicit containment
+
+Slice 7D does not authorize:
+
+- interactive role grant UI;
+- interactive role revoke UI;
+- role scope switching UI;
+- bulk role mutation;
+- member suspension/reinstatement UI;
+- permission-matrix editing;
+- branch creation/editing;
+- invitation changes;
+- legacy table deletion;
+- Production database migration;
+- Production application deployment;
+- Sprint 10 release.
+
+#### 18. Next boundary
+
+After Slice 7D is implemented, validated and checkpointed, a separately frozen Slice 7E may consume:
+
+- `team_access_directory(uuid)`;
+- `role_catalogue()`;
+- `team_role_grant_directory(...)`;
+- `team_role_scope_catalogue(...)`;
+- `grant_organization_member_role(...)`;
+- `revoke_organization_member_role(...)`
+
+to build the canonical role-administration runtime.
+
+Slice 7E must treat each exact live grant as an independent database fact.
+
+It must not infer role scope from the aggregate Team directory.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
