@@ -4,9 +4,19 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
-import { getTeamCapabilities, listTeam } from "@/lib/team.functions";
+import {
+  getTeamCapabilities,
+  getTeamRoleAdministration,
+  grantTeamRole,
+  listTeam,
+  revokeTeamRole,
+  type TeamRoleGrantRow,
+  type TeamRoleScopeRow,
+} from "@/lib/team.functions";
 import { createInvite, listInvites, revokeInvite } from "@/lib/invites.functions";
 import { appRoles, roleLabels, type AppRole } from "@/lib/session";
+
+const ORGANIZATION_WIDE_SCOPE = "__organization_wide__";
 
 export const Route = createFileRoute("/_authenticated/team")({
   head: () => ({
@@ -36,9 +46,32 @@ function displayRoleLabels(keys: string[], labels: string[]) {
   return keys.map((key) => roleLabels[key as AppRole] ?? key);
 }
 
+function scopeValue(scope: TeamRoleScopeRow) {
+  return scope.organizationWide ? ORGANIZATION_WIDE_SCOPE : (scope.branchId ?? "");
+}
+
+function grantScopeLabel(grant: TeamRoleGrantRow) {
+  if (grant.organizationWide || !grant.branchId) {
+    return "Organization-wide";
+  }
+
+  if (grant.branchName) {
+    return grant.branchCode ? `${grant.branchName} (${grant.branchCode})` : grant.branchName;
+  }
+
+  if (grant.branchCode) {
+    return grant.branchCode;
+  }
+
+  return `Branch ${grant.branchId.slice(0, 8)}`;
+}
+
 function TeamPage() {
   const fetchCapabilities = useServerFn(getTeamCapabilities);
   const fetchTeam = useServerFn(listTeam);
+  const fetchRoleAdministration = useServerFn(getTeamRoleAdministration);
+  const assignRole = useServerFn(grantTeamRole);
+  const removeRole = useServerFn(revokeTeamRole);
   const fetchInvites = useServerFn(listInvites);
   const sendInvite = useServerFn(createInvite);
   const cancelInvite = useServerFn(revokeInvite);
@@ -47,6 +80,8 @@ function TeamPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteRoles, setInviteRoles] = useState<AppRole[]>([]);
+  const [roleSelections, setRoleSelections] = useState<Record<string, string>>({});
+  const [scopeSelections, setScopeSelections] = useState<Record<string, string>>({});
 
   const capabilities = useQuery({
     queryKey: ["team-capabilities"],
@@ -63,10 +98,54 @@ function TeamPage() {
     queryFn: () => fetchTeam(),
   });
 
+  const roleAdministration = useQuery({
+    queryKey: ["team-role-admin"],
+    enabled: canRead && canAssignRoles,
+    queryFn: () => fetchRoleAdministration(),
+  });
+
   const invites = useQuery({
     queryKey: ["invites"],
     enabled: canInvite,
     queryFn: () => fetchInvites(),
+  });
+
+  const refreshRoleState = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["team-role-admin"] }),
+      queryClient.invalidateQueries({ queryKey: ["team"] }),
+      queryClient.invalidateQueries({ queryKey: ["team-capabilities"] }),
+    ]);
+  };
+
+  const grantMutation = useMutation({
+    mutationFn: (vars: { memberId: string; roleKey: string; branchId: string | null }) =>
+      assignRole({ data: vars }),
+    onSuccess: async (_grantId, vars) => {
+      toast.success("Role assigned.");
+      await refreshRoleState();
+
+      if (vars.memberId === capabilities.data?.actorMemberId) {
+        window.location.reload();
+      }
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not assign the role."),
+  });
+
+  const roleRevokeMutation = useMutation({
+    mutationFn: (vars: { memberId: string; roleKey: string; branchId: string | null }) =>
+      removeRole({ data: vars }),
+    onSuccess: async (_result, vars) => {
+      toast.success("Role removed.");
+      await refreshRoleState();
+
+      if (vars.memberId === capabilities.data?.actorMemberId) {
+        window.location.reload();
+      }
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not remove the role."),
   });
 
   const inviteMutation = useMutation({
@@ -341,12 +420,12 @@ function TeamPage() {
               <div>
                 <h2 className="font-serif text-lg text-primary">Studio access</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Current canonical roles are shown read-only in this slice.
+                  Canonical membership, role grants, and exact access scopes.
                 </p>
               </div>
 
-              {capabilities.data?.canAssignRoles && (
-                <StatusPill tone="neutral">Role editing intentionally contained</StatusPill>
+              {canAssignRoles && (
+                <StatusPill tone="good">Exact role administration enabled</StatusPill>
               )}
             </div>
 
@@ -363,7 +442,50 @@ function TeamPage() {
             ) : (
               <div className="mt-4 space-y-4">
                 {members.data.map((member) => {
-                  const labels = displayRoleLabels(member.roles, member.roleLabels);
+                  const labels = Array.from(
+                    new Set(displayRoleLabels(member.roles, member.roleLabels)),
+                  );
+                  const exactGrants =
+                    roleAdministration.data?.grants.filter(
+                      (grant) => grant.memberId === member.memberId,
+                    ) ?? [];
+
+                  const roleOptions = roleAdministration.data?.roles ?? [];
+                  const allScopes = roleAdministration.data?.scopes ?? [];
+
+                  const selectedRole = roleSelections[member.memberId] ?? "";
+
+                  const eligibleScopes =
+                    selectedRole === "founder"
+                      ? allScopes.filter((scope) => scope.organizationWide)
+                      : allScopes;
+
+                  const requestedScopeValue = scopeSelections[member.memberId] ?? "";
+
+                  const selectedScope = eligibleScopes.find(
+                    (scope) => scopeValue(scope) === requestedScopeValue,
+                  );
+
+                  const selectedScopeValue = selectedScope ? scopeValue(selectedScope) : "";
+                  const selectedBranchId = selectedScope?.branchId ?? null;
+
+                  const duplicateGrant =
+                    selectedRole.length > 0 &&
+                    Boolean(selectedScope) &&
+                    exactGrants.some(
+                      (grant) =>
+                        grant.roleKey === selectedRole &&
+                        (grant.branchId ?? null) === selectedBranchId,
+                    );
+
+                  const selectedRoleOption = roleOptions.find((role) => role.key === selectedRole);
+
+                  const assignmentDisabled =
+                    member.status !== "active" ||
+                    !selectedRole ||
+                    !selectedScope ||
+                    duplicateGrant ||
+                    grantMutation.isPending;
 
                   return (
                     <div key={member.memberId} className="rounded-xl border border-border p-4">
@@ -415,6 +537,220 @@ function TeamPage() {
 
                         <div>Joined {member.joinedAt.slice(0, 10)}</div>
                       </div>
+
+                      {canAssignRoles && (
+                        <div className="mt-5 border-t border-border pt-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <h3 className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                                Exact role grants
+                              </h3>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Each role and scope is an independent canonical grant.
+                              </p>
+                            </div>
+
+                            {member.memberId === capabilities.data?.actorMemberId && (
+                              <StatusPill tone="neutral">Your membership</StatusPill>
+                            )}
+                          </div>
+
+                          {roleAdministration.isLoading ? (
+                            <p className="mt-3 text-sm italic text-muted-foreground">
+                              Loading exact role grants…
+                            </p>
+                          ) : roleAdministration.isError ? (
+                            <div className="mt-3 rounded-xl border border-border bg-background/40 p-4">
+                              <p className="text-sm text-muted-foreground">
+                                Exact role-administration state could not be loaded. The ordinary
+                                Team directory remains available.
+                              </p>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="mt-3 space-y-2">
+                                {exactGrants.length ? (
+                                  exactGrants.map((grant) => {
+                                    const currentAssignmentScope =
+                                      grant.organizationWide ||
+                                      allScopes.some(
+                                        (scope) =>
+                                          !scope.organizationWide &&
+                                          scope.branchId === grant.branchId,
+                                      );
+
+                                    return (
+                                      <div
+                                        key={grant.grantId}
+                                        className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background/30 px-3 py-2.5"
+                                      >
+                                        <div className="min-w-0">
+                                          <div className="text-sm font-medium text-primary">
+                                            {grant.roleLabel}
+                                          </div>
+
+                                          <div className="text-xs text-muted-foreground">
+                                            {grantScopeLabel(grant)}
+                                            {!currentAssignmentScope &&
+                                              " · historical / non-assignable scope"}
+                                          </div>
+                                        </div>
+
+                                        <button
+                                          type="button"
+                                          disabled={roleRevokeMutation.isPending}
+                                          onClick={() =>
+                                            roleRevokeMutation.mutate({
+                                              memberId: grant.memberId,
+                                              roleKey: grant.roleKey,
+                                              branchId: grant.branchId,
+                                            })
+                                          }
+                                          className="rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground hover:bg-accent/50 disabled:opacity-60"
+                                        >
+                                          {roleRevokeMutation.isPending ? "Removing…" : "Remove"}
+                                        </button>
+                                      </div>
+                                    );
+                                  })
+                                ) : (
+                                  <p className="text-xs italic text-muted-foreground">
+                                    No exact live grants.
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="mt-4 rounded-xl border border-border bg-background/40 p-4">
+                                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                                  Assign exact access
+                                </div>
+
+                                {member.status !== "active" && (
+                                  <p className="mt-2 text-xs text-muted-foreground">
+                                    New role grants are disabled while this membership is{" "}
+                                    {member.status}. Existing grants remain individually removable.
+                                  </p>
+                                )}
+
+                                <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+                                  <label className="block">
+                                    <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                                      Role
+                                    </span>
+
+                                    <select
+                                      value={selectedRole}
+                                      disabled={
+                                        member.status !== "active" ||
+                                        grantMutation.isPending ||
+                                        roleOptions.length === 0
+                                      }
+                                      onChange={(event) => {
+                                        const nextRole = event.target.value;
+
+                                        setRoleSelections((current) => ({
+                                          ...current,
+                                          [member.memberId]: nextRole,
+                                        }));
+
+                                        setScopeSelections((current) => ({
+                                          ...current,
+                                          [member.memberId]:
+                                            nextRole === "founder" ? ORGANIZATION_WIDE_SCOPE : "",
+                                        }));
+                                      }}
+                                      className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+                                    >
+                                      <option value="" disabled>
+                                        Choose a role
+                                      </option>
+
+                                      {roleOptions.map((role) => (
+                                        <option key={role.key} value={role.key}>
+                                          {role.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+
+                                  <label className="block">
+                                    <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                                      Scope
+                                    </span>
+
+                                    <select
+                                      value={selectedScopeValue}
+                                      disabled={
+                                        member.status !== "active" ||
+                                        !selectedRole ||
+                                        grantMutation.isPending ||
+                                        eligibleScopes.length === 0
+                                      }
+                                      onChange={(event) =>
+                                        setScopeSelections((current) => ({
+                                          ...current,
+                                          [member.memberId]: event.target.value,
+                                        }))
+                                      }
+                                      className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+                                    >
+                                      <option value="" disabled>
+                                        Choose a scope
+                                      </option>
+
+                                      {eligibleScopes.map((scope) => (
+                                        <option key={scopeValue(scope)} value={scopeValue(scope)}>
+                                          {scope.organizationWide
+                                            ? "Organization-wide"
+                                            : scope.branchCode
+                                              ? `${scope.branchName} (${scope.branchCode})`
+                                              : scope.branchName}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+
+                                  <button
+                                    type="button"
+                                    disabled={assignmentDisabled}
+                                    onClick={() => {
+                                      if (!selectedScope) {
+                                        return;
+                                      }
+
+                                      grantMutation.mutate({
+                                        memberId: member.memberId,
+                                        roleKey: selectedRole,
+                                        branchId: selectedScope.branchId,
+                                      });
+                                    }}
+                                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+                                  >
+                                    {grantMutation.isPending
+                                      ? "Assigning…"
+                                      : duplicateGrant
+                                        ? "Already assigned"
+                                        : "Assign"}
+                                  </button>
+                                </div>
+
+                                {selectedRoleOption?.description && (
+                                  <p className="mt-2 text-xs text-muted-foreground">
+                                    {selectedRoleOption.description}
+                                  </p>
+                                )}
+
+                                {selectedRole === "founder" && (
+                                  <p className="mt-2 text-xs text-muted-foreground">
+                                    Founder access is organization-wide only. Final-Founder safety
+                                    remains enforced by the canonical database guard.
+                                  </p>
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
