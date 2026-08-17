@@ -1,52 +1,64 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { appRoles, ORGANIZATION_ID, type AppRole } from "@/lib/session";
 
-const roleEnum = z.enum([
-  "founder",
-  "coordinator",
-  "sales",
-  "photographer",
-  "assistant",
-  "stylist",
-  "editor",
-  "album",
-  "marketing",
-  "accounts",
-]);
+const inviteRoleEnum = z.enum(appRoles);
+
+const invitationTokenSchema = z
+  .string()
+  .trim()
+  .regex(/^[0-9a-f]{64}$/i, "Invalid invitation token.");
 
 export type StudioInvite = {
   id: string;
   email: string;
-  full_name: string | null;
+  fullName: string | null;
   roles: string[];
-  token: string;
+  roleLabels: string[];
   status: string;
-  expires_at: string;
-  created_at: string;
+  expiresAt: string;
+  createdAt: string;
 };
 
-async function assertFounder(context: { supabase: any; userId: string }) {
-  const { data: isFounder } = await context.supabase.rpc(
-    "has_role" as never,
-    {
-      _user_id: context.userId,
-      _role: "founder",
-    } as never,
-  );
-  if (!isFounder) throw new Error("Only a Founder can manage studio invitations.");
-}
+export type CreatedStudioInvite = {
+  email: string;
+  fullName: string | null;
+  roles: AppRole[];
+  expiresAt: string;
+  token: string;
+};
+
+export type InvitePreview = {
+  email: string;
+  fullName: string | null;
+  organizationName: string;
+  roles: string[];
+  roleLabels: string[];
+  expiresAt: string;
+};
 
 export const listInvites = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<StudioInvite[]> => {
-    await assertFounder(context as never);
-    const { data, error } = await context.supabase
-      .from("studio_invites" as never)
-      .select("id, email, full_name, roles, token, status, expires_at, created_at")
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return (data ?? []) as unknown as StudioInvite[];
+    const { data, error } = await context.supabase.rpc("team_invitation_directory", {
+      p_organization_id: ORGANIZATION_ID,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data ?? []).map((row) => ({
+      id: row.invitation_id,
+      email: row.email,
+      fullName: row.full_name ?? null,
+      roles: row.role_keys ?? [],
+      roleLabels: row.role_labels ?? [],
+      status: row.invitation_status,
+      expiresAt: row.expires_at,
+      createdAt: row.created_at,
+    }));
   });
 
 export const createInvite = createServerFn({ method: "POST" })
@@ -55,118 +67,129 @@ export const createInvite = createServerFn({ method: "POST" })
     z
       .object({
         email: z.string().trim().email().max(255),
-        fullName: z.string().trim().max(120).optional(),
-        roles: z.array(roleEnum).min(1, "Choose at least one role."),
+        fullName: z.string().trim().max(160).optional(),
+        roles: z.array(inviteRoleEnum).default([]),
       })
       .parse(input),
   )
-  .handler(async ({ data, context }): Promise<StudioInvite> => {
-    await assertFounder(context as never);
-    const email = data.email.toLowerCase();
+  .handler(async ({ data, context }): Promise<CreatedStudioInvite> => {
+    const { data: rows, error } = await context.supabase.rpc("create_organization_invitation", {
+      p_organization_id: ORGANIZATION_ID,
+      p_email: data.email.toLowerCase(),
+      p_full_name: data.fullName || undefined,
+      p_role_keys: data.roles,
+    });
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin
-      .from("studio_invites" as never)
-      .update({ status: "revoked" } as never)
-      .eq("status", "pending")
-      .ilike("email", email);
+    if (error) {
+      throw new Error(error.message);
+    }
 
-    const { data: row, error } = await supabaseAdmin
-      .from("studio_invites" as never)
-      .insert({
-        email,
-        full_name: data.fullName || null,
-        roles: data.roles,
-        invited_by: context.userId,
-      } as never)
-      .select("id, email, full_name, roles, token, status, expires_at, created_at")
-      .single();
-    if (error) throw new Error(error.message);
-    return row as unknown as StudioInvite;
+    const invitation = rows?.[0];
+
+    if (!invitation) {
+      throw new Error("The invitation could not be created.");
+    }
+
+    return {
+      email: invitation.email,
+      fullName: invitation.full_name ?? null,
+      roles: (invitation.role_keys ?? []) as AppRole[],
+      expiresAt: invitation.expires_at,
+      token: invitation.invite_token,
+    };
   });
 
 export const revokeInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .inputValidator((input) =>
+    z
+      .object({
+        id: z.string().uuid(),
+      })
+      .parse(input),
+  )
   .handler(async ({ data, context }) => {
-    await assertFounder(context as never);
-    const { error } = await context.supabase
-      .from("studio_invites" as never)
-      .update({ status: "revoked" } as never)
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
+    const { data: revoked, error } = await context.supabase.rpc("revoke_organization_invitation", {
+      p_organization_id: ORGANIZATION_ID,
+      p_invitation_id: data.id,
+      p_reason: "Invitation revoked from Team",
+    });
 
-export type InvitePreview = { email: string; fullName: string | null; roles: string[] };
-
-/** Public, token-gated preview so an invited teammate can create their account. */
-export const getInvite = createServerFn({ method: "GET" })
-  .inputValidator((input) => z.object({ token: z.string().min(10).max(200) }).parse(input))
-  .handler(async ({ data }): Promise<InvitePreview | null> => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: row } = await supabaseAdmin
-      .from("studio_invites" as never)
-      .select("email, full_name, roles, status, expires_at")
-      .eq("token", data.token)
-      .maybeSingle();
-    const invite = row as unknown as {
-      email: string;
-      full_name: string | null;
-      roles: string[];
-      status: string;
-      expires_at: string;
-    } | null;
-    if (!invite) return null;
-    if (invite.status !== "pending") return null;
-    if (new Date(invite.expires_at).getTime() < Date.now()) return null;
-    return { email: invite.email, fullName: invite.full_name, roles: invite.roles };
-  });
-
-/** Called right after the invited teammate signs in; grants the pre-assigned roles. */
-export const acceptInvite = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ token: z.string().min(10).max(200) }).parse(input))
-  .handler(async ({ data, context }) => {
-    const email = (context.claims as { email?: string } | undefined)?.email?.toLowerCase();
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { data: row } = await supabaseAdmin
-      .from("studio_invites" as never)
-      .select("id, email, roles, status, expires_at")
-      .eq("token", data.token)
-      .maybeSingle();
-    const invite = row as unknown as {
-      id: string;
-      email: string;
-      roles: string[];
-      status: string;
-      expires_at: string;
-    } | null;
-
-    if (!invite || invite.status !== "pending")
-      throw new Error("This invitation is no longer valid.");
-    if (new Date(invite.expires_at).getTime() < Date.now())
-      throw new Error("This invitation has expired.");
-    if (!email || email !== invite.email.toLowerCase()) {
-      throw new Error("This invitation was sent to a different email address.");
+    if (error) {
+      throw new Error(error.message);
     }
 
-    const { error: roleError } = await supabaseAdmin
-      .from("user_roles" as never)
-      .upsert(invite.roles.map((role) => ({ user_id: context.userId, role })) as never, {
-        onConflict: "user_id,role",
-      });
-    if (roleError) throw new Error(roleError.message);
+    return { ok: Boolean(revoked) };
+  });
 
-    await supabaseAdmin
-      .from("studio_invites" as never)
-      .update({
-        status: "accepted",
-        accepted_at: new Date().toISOString(),
-        accepted_by: context.userId,
-      } as never)
-      .eq("id", invite.id);
+/**
+ * Public bearer-token preview.
+ *
+ * This intentionally uses the publishable-key client without a service-role
+ * bypass. The canonical preview RPC owns the safe public projection.
+ */
+export const getInvite = createServerFn({ method: "GET" })
+  .inputValidator((input) =>
+    z
+      .object({
+        token: invitationTokenSchema,
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }): Promise<InvitePreview | null> => {
+    const { supabase } = await import("@/integrations/supabase/client");
 
-    return { ok: true, roles: invite.roles };
+    const { data: rows, error } = await supabase.rpc("preview_organization_invitation", {
+      p_token: data.token,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const invitation = rows?.[0];
+
+    if (!invitation) {
+      return null;
+    }
+
+    return {
+      email: invitation.email,
+      fullName: invitation.full_name ?? null,
+      organizationName: invitation.organization_name,
+      roles: invitation.role_keys ?? [],
+      roleLabels: invitation.role_labels ?? [],
+      expiresAt: invitation.expires_at,
+    };
+  });
+
+export const acceptInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        token: invitationTokenSchema,
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase.rpc("accept_organization_invitation", {
+      p_token: data.token,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const accepted = rows?.[0];
+
+    if (!accepted) {
+      throw new Error("The invitation could not be accepted.");
+    }
+
+    return {
+      ok: true,
+      memberId: accepted.member_id,
+      roles: accepted.assigned_role_keys ?? [],
+    };
   });

@@ -4,13 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const appRoles = [
   "founder",
-  "coordinator",
+  "studio_manager",
+  "client_coordinator",
   "sales",
   "photographer",
   "assistant",
   "stylist",
+  "videographer",
   "editor",
-  "album",
+  "album_coordinator",
   "marketing",
   "accounts",
 ] as const;
@@ -19,13 +21,15 @@ export type AppRole = (typeof appRoles)[number];
 
 export const roleLabels: Record<AppRole, string> = {
   founder: "Founder / Studio Head",
-  coordinator: "Client Coordinator",
+  studio_manager: "Studio Manager",
+  client_coordinator: "Client Coordinator",
   sales: "Sales",
   photographer: "Photographer",
   assistant: "Assistant",
   stylist: "Stylist",
+  videographer: "Videographer",
   editor: "Editor",
-  album: "Album Coordinator",
+  album_coordinator: "Album Coordinator",
   marketing: "Marketing",
   accounts: "Accounts",
 };
@@ -98,9 +102,7 @@ export function useSession(): SessionState {
         return;
       }
 
-      const resolvedRoles = (membership.assigned_role_keys ?? []).filter(
-        isAppRole,
-      );
+      const resolvedRoles = (membership.assigned_role_keys ?? []).filter(isAppRole);
 
       if (!active) return;
 
@@ -108,20 +110,18 @@ export function useSession(): SessionState {
       setMembershipName(membership.display_name);
     };
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, nextSession) => {
-        if (!active) return;
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!active) return;
 
-        setSession(nextSession);
-        setLoading(true);
+      setSession(nextSession);
+      setLoading(true);
 
-        void loadMembership(nextSession?.user?.id).finally(() => {
-          if (active) {
-            setLoading(false);
-          }
-        });
-      },
-    );
+      void loadMembership(nextSession?.user?.id).finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+    });
 
     void supabase.auth.getSession().then(async ({ data, error }) => {
       if (!active) return;

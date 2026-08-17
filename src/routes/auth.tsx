@@ -5,7 +5,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { acceptInvite, getInvite } from "@/lib/invites.functions";
-import { roleLabels, type AppRole } from "@/lib/session";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -44,69 +43,113 @@ function AuthPage() {
   const claimInvite = useServerFn(acceptInvite);
 
   const invite = useQuery({
-    queryKey: ["invite", token],
+    queryKey: ["invite-preview", token],
     enabled: Boolean(token),
     queryFn: () => fetchInvite({ data: { token: token as string } }),
+    retry: false,
   });
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [inviteMode, setInviteMode] = useState<"create" | "sign-in">("create");
 
   const invited = Boolean(token) && Boolean(invite.data);
 
   useEffect(() => {
     if (invite.data) {
       setEmail(invite.data.email);
-      setName((prev) => prev || invite.data?.fullName || "");
+      setName((current) => current || invite.data?.fullName || "");
     }
   }, [invite.data]);
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
-      if (data.session && !token) navigate({ to: safePath(search.redirect), replace: true });
+      if (data.session && !token) {
+        void navigate({
+          to: safePath(search.redirect),
+          replace: true,
+        });
+      }
     });
   }, [navigate, search.redirect, token]);
 
   const finish = async () => {
     if (token) {
       try {
-        await claimInvite({ data: { token } });
-        toast.success("Your studio role is ready. Welcome in.");
+        const accepted = await claimInvite({ data: { token } });
+
+        toast.success(
+          accepted.roles.length
+            ? "Your studio access is ready. Welcome in."
+            : "Your studio membership is ready. Welcome in.",
+        );
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Could not accept the invitation.");
+        return false;
       }
     }
-    navigate({ to: safePath(search.redirect), replace: true });
+
+    await navigate({
+      to: safePath(search.redirect),
+      replace: true,
+    });
+
+    return true;
   };
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setBusy(true);
+
     try {
-      if (invited) {
+      if (invited && inviteMode === "create") {
         const { error } = await supabase.auth.signUp({
           email: invite.data!.email,
           password,
-          options: { emailRedirectTo: window.location.href, data: { full_name: name } },
+          options: {
+            emailRedirectTo: window.location.href,
+            data: { full_name: name },
+          },
         });
-        if (error && !/already registered/i.test(error.message)) throw error;
+
         if (error) {
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: invite.data!.email,
-            password,
-          });
-          if (signInError) throw signInError;
+          throw error;
+        }
+      } else if (invited) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: invite.data!.email,
+          password,
+        });
+
+        if (error) {
+          throw error;
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          throw error;
+        }
       }
-      const { data } = await supabase.auth.getSession();
-      if (data.session) await finish();
-      else
-        toast.success("Check your inbox to confirm your email, then open your invite link again.");
+
+      const { data, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        throw sessionError;
+      }
+
+      if (data.session) {
+        await finish();
+      } else if (invited && inviteMode === "create") {
+        toast.success("Check your inbox to confirm your email, then reopen this invitation link.");
+      } else {
+        toast.error("A signed-in session could not be established.");
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong.");
     } finally {
@@ -114,7 +157,13 @@ function AuthPage() {
     }
   };
 
-  const inviteInvalid = Boolean(token) && !invite.isLoading && !invite.data;
+  const inviteInvalid = Boolean(token) && !invite.isLoading && (invite.isError || !invite.data);
+
+  const previewLabels = invite.data
+    ? invite.data.roleLabels.length === invite.data.roles.length
+      ? invite.data.roleLabels
+      : invite.data.roles
+    : [];
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
@@ -122,12 +171,14 @@ function AuthPage() {
         <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
           Little Shots by Hema
         </div>
+
         <div>
           <h1 className="font-serif text-5xl text-primary leading-tight">Little Moments OS</h1>
           <p className="mt-6 italic text-primary/80 max-w-md leading-relaxed">
             “Because these little moments become everything.”
           </p>
         </div>
+
         <p className="text-xs text-muted-foreground">
           Built to protect the memories that become everything.
         </p>
@@ -138,12 +189,16 @@ function AuthPage() {
           <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
             Studio access
           </div>
+
           <h2 className="mt-2 font-serif text-3xl text-primary">
             {invited ? "Accept your invitation" : "Welcome back"}
           </h2>
+
           <p className="mt-2 text-sm text-muted-foreground">
             {invited
-              ? "Set a password to open your studio account. Your roles are already waiting."
+              ? inviteMode === "create"
+                ? `Create your account to join ${invite.data!.organizationName}.`
+                : `Sign in to your existing account to join ${invite.data!.organizationName}.`
               : "Sign in to continue caring for our families."}
           </p>
 
@@ -153,45 +208,87 @@ function AuthPage() {
 
           {inviteInvalid && (
             <div className="mt-5 rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-              This invitation is no longer valid — it may have been used, revoked, or expired.
-              Please ask a Founder for a fresh link, or sign in below.
+              This invitation is no longer valid — it may have been used, revoked, expired, or
+              replaced. Ask the studio for a fresh invitation if you still need access.
             </div>
           )}
 
           {invited && (
             <div className="mt-5 rounded-xl border border-gold/60 bg-accent/50 p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Invited as
+                Invitation
               </div>
+
               <div className="mt-1 text-sm font-medium text-primary">{invite.data!.email}</div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {invite.data!.roles.map((role) => (
-                  <span
-                    key={role}
-                    className="rounded-full border border-gold bg-card px-2.5 py-1 text-[11px] text-primary"
-                  >
-                    {roleLabels[role as AppRole] ?? role}
-                  </span>
-                ))}
+
+              <div className="mt-1 text-xs text-muted-foreground">
+                {invite.data!.organizationName}
               </div>
+
+              {previewLabels.length ? (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {previewLabels.map((label, index) => (
+                    <span
+                      key={`${invite.data!.roles[index] ?? label}-${index}`}
+                      className="rounded-full border border-gold bg-card px-2.5 py-1 text-[11px] text-primary"
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                  No role is preassigned. Your studio membership can be assigned access separately
+                  after you join.
+                </p>
+              )}
+            </div>
+          )}
+
+          {invited && (
+            <div className="mt-6 grid grid-cols-2 gap-2 rounded-xl border border-border bg-card p-1.5">
+              <button
+                type="button"
+                onClick={() => setInviteMode("create")}
+                className={`rounded-lg px-3 py-2 text-xs font-medium transition ${
+                  inviteMode === "create"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent/50"
+                }`}
+              >
+                Create account
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setInviteMode("sign-in")}
+                className={`rounded-lg px-3 py-2 text-xs font-medium transition ${
+                  inviteMode === "sign-in"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent/50"
+                }`}
+              >
+                I already have an account
+              </button>
             </div>
           )}
 
           <form onSubmit={submit} className="mt-7 space-y-4">
-            {invited && (
+            {invited && inviteMode === "create" && (
               <label className="block">
                 <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
                   Full name
                 </span>
                 <input
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(event) => setName(event.target.value)}
                   required
-                  maxLength={120}
+                  maxLength={160}
                   className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
                 />
               </label>
             )}
+
             <label className="block">
               <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
                 Email
@@ -199,12 +296,13 @@ function AuthPage() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
                 required
                 readOnly={invited}
-                className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm disabled:opacity-70 read-only:text-muted-foreground"
+                className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm read-only:text-muted-foreground"
               />
             </label>
+
             <label className="block">
               <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
                 Password
@@ -212,24 +310,31 @@ function AuthPage() {
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(event) => setPassword(event.target.value)}
                 required
                 minLength={8}
                 className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
               />
             </label>
+
             <button
               type="submit"
               disabled={busy || invite.isLoading}
               className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
             >
-              {busy ? "Please wait…" : invited ? "Create my studio account" : "Sign in"}
+              {busy
+                ? "Please wait…"
+                : invited
+                  ? inviteMode === "create"
+                    ? "Create account & continue"
+                    : "Sign in & accept invitation"
+                  : "Sign in"}
             </button>
           </form>
 
           <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-            Little Moments OS is invitation-only. If you need access, ask a Founder to invite you
-            from the Team page.
+            Little Moments OS is invitation-only. If you need access, ask a teammate with invitation
+            permission to invite you from the Team page.
           </p>
         </div>
       </div>

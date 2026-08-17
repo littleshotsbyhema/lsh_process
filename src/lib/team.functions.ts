@@ -1,74 +1,70 @@
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
+import type { Database } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-const roleEnum = z.enum([
-  "founder",
-  "coordinator",
-  "sales",
-  "photographer",
-  "assistant",
-  "stylist",
-  "editor",
-  "album",
-  "marketing",
-  "accounts",
-]);
+import { ORGANIZATION_ID } from "@/lib/session";
 
 export type TeamMemberRow = {
-  id: string;
-  full_name: string | null;
+  memberId: string;
+  status: Database["public"]["Enums"]["member_status"];
+  displayName: string | null;
   email: string | null;
+  phone: string | null;
+  joinedAt: string;
   roles: string[];
+  roleLabels: string[];
+  branchNames: string[];
+  organizationWide: boolean;
 };
+
+export type TeamCapabilities = {
+  canRead: boolean;
+  canInvite: boolean;
+  canAssignRoles: boolean;
+  canSuspend: boolean;
+};
+
+export const getTeamCapabilities = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<TeamCapabilities> => {
+    const { data, error } = await context.supabase.rpc("effective_permissions", {
+      p_organization_id: ORGANIZATION_ID,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const permissions = new Set(data ?? []);
+
+    return {
+      canRead: permissions.has("team.read"),
+      canInvite: permissions.has("team.invite"),
+      canAssignRoles: permissions.has("team.role.assign"),
+      canSuspend: permissions.has("team.suspend"),
+    };
+  });
 
 export const listTeam = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<TeamMemberRow[]> => {
-    const [{ data: profiles }, { data: roles }] = await Promise.all([
-      context.supabase.from("profiles" as never).select("id, full_name, email"),
-      context.supabase.from("user_roles" as never).select("user_id, role"),
-    ]);
-    const byUser = new Map<string, string[]>();
-    for (const r of (roles ?? []) as unknown as { user_id: string; role: string }[]) {
-      byUser.set(r.user_id, [...(byUser.get(r.user_id) ?? []), r.role]);
+    const { data, error } = await context.supabase.rpc("team_access_directory", {
+      p_organization_id: ORGANIZATION_ID,
+    });
+
+    if (error) {
+      throw new Error(error.message);
     }
-    return ((profiles ?? []) as unknown as Omit<TeamMemberRow, "roles">[]).map((p) => ({
-      ...p,
-      roles: byUser.get(p.id) ?? [],
+
+    return (data ?? []).map((row) => ({
+      memberId: row.member_id,
+      status: row.member_status,
+      displayName: row.display_name ?? null,
+      email: row.email ?? null,
+      phone: row.phone ?? null,
+      joinedAt: row.joined_at,
+      roles: row.assigned_role_keys ?? [],
+      roleLabels: row.assigned_role_labels ?? [],
+      branchNames: row.assigned_branch_names ?? [],
+      organizationWide: row.organization_wide,
     }));
-  });
-
-export const setTeamRole = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
-    z.object({ userId: z.string().uuid(), role: roleEnum, grant: z.boolean() }).parse(input),
-  )
-  .handler(async ({ data, context }) => {
-    const { data: isFounder } = await context.supabase.rpc(
-      "has_role" as never,
-      {
-        _user_id: context.userId,
-        _role: "founder",
-      } as never,
-    );
-    if (!isFounder) throw new Error("Only a Founder can change studio roles.");
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    if (data.grant) {
-      const { error } = await supabaseAdmin
-        .from("user_roles" as never)
-        .upsert({ user_id: data.userId, role: data.role } as never, {
-          onConflict: "user_id,role",
-        });
-      if (error) throw new Error(error.message);
-    } else {
-      const { error } = await supabaseAdmin
-        .from("user_roles" as never)
-        .delete()
-        .eq("user_id", data.userId)
-        .eq("role", data.role);
-      if (error) throw new Error(error.message);
-    }
-    return { ok: true };
   });

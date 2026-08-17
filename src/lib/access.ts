@@ -36,14 +36,19 @@ export type NavItem = {
 
 export const nav: NavItem[] = [
   { to: "/", label: "Dashboard", icon: Home, roles: null },
-  { to: "/leads", label: "Leads", icon: Heart, roles: ["coordinator", "sales"] },
+  { to: "/leads", label: "Leads", icon: Heart, roles: ["client_coordinator", "sales"] },
   {
     to: "/guide-reviews",
     label: "Memory Guide Reviews",
     icon: BrainCircuit,
-    roles: ["coordinator", "sales"],
+    roles: ["client_coordinator", "sales"],
   },
-  { to: "/clients", label: "Clients", icon: Users, roles: ["coordinator", "sales", "accounts"] },
+  {
+    to: "/clients",
+    label: "Clients",
+    icon: Users,
+    roles: ["client_coordinator", "sales", "accounts"],
+  },
   { to: "/memory", label: "Memory Profiles", icon: BookHeart, roles: null },
   { to: "/bookings", label: "Bookings", icon: CalendarHeart, roles: null },
   { to: "/pipeline", label: "Pipeline", icon: GitBranch, roles: null },
@@ -51,54 +56,74 @@ export const nav: NavItem[] = [
     to: "/packages",
     label: "Packages",
     icon: Sparkles,
-    roles: ["coordinator", "sales", "accounts"],
+    roles: ["client_coordinator", "sales", "accounts"],
   },
   {
     to: "/quote",
     label: "Quote Builder",
     icon: FileText,
-    roles: ["coordinator", "sales", "accounts"],
+    roles: ["client_coordinator", "sales", "accounts"],
   },
   {
     to: "/whatsapp",
     label: "WhatsApp Follow-Ups",
     icon: MessageSquareHeart,
-    roles: ["coordinator", "sales"],
+    roles: ["client_coordinator", "sales"],
   },
   {
     to: "/prep",
     label: "Shoot Prep",
     icon: Clipboard,
-    roles: ["coordinator", "photographer", "assistant", "stylist"],
+    roles: ["client_coordinator", "photographer", "assistant", "stylist"],
   },
   {
     to: "/safety",
     label: "Safety & Comfort",
     icon: ClipboardCheck,
-    roles: ["coordinator", "photographer", "assistant"],
+    roles: ["client_coordinator", "photographer", "assistant"],
   },
   {
     to: "/privacy",
     label: "Privacy & Consent",
     icon: ShieldCheck,
-    roles: ["coordinator", "marketing"],
+    roles: ["client_coordinator", "marketing"],
   },
   {
     to: "/editing",
     label: "Editing & Delivery",
     icon: ImageIcon,
-    roles: ["editor", "coordinator"],
+    roles: ["editor", "client_coordinator"],
   },
-  { to: "/pixieset", label: "Pixieset Control", icon: Camera, roles: ["editor", "coordinator"] },
-  { to: "/heirloom", label: "Heirloom Production", icon: Frame, roles: ["album", "coordinator"] },
+  {
+    to: "/pixieset",
+    label: "Pixieset Control",
+    icon: Camera,
+    roles: ["editor", "client_coordinator"],
+  },
+  {
+    to: "/heirloom",
+    label: "Heirloom Production",
+    icon: Frame,
+    roles: ["album_coordinator", "client_coordinator"],
+  },
   { to: "/tasks", label: "Team Tasks", icon: ListChecks, roles: null },
   { to: "/sops", label: "SOP Center", icon: BookOpen, roles: null },
   { to: "/marketing", label: "Marketing Approvals", icon: Megaphone, roles: ["marketing"] },
-  { to: "/reviews", label: "Reviews & Aftercare", icon: Star, roles: ["coordinator", "marketing"] },
+  {
+    to: "/reviews",
+    label: "Reviews & Aftercare",
+    icon: Star,
+    roles: ["client_coordinator", "marketing"],
+  },
   { to: "/governance", label: "Governance", icon: Gauge, roles: [] },
   { to: "/reports", label: "Reports / KPIs", icon: LineChart, roles: ["accounts"] },
   { to: "/kpi", label: "KPI Detail", icon: LineChart, roles: ["accounts"] },
-  { to: "/team", label: "Team", icon: UsersRound, roles: [] },
+  {
+    to: "/team",
+    label: "Team",
+    icon: UsersRound,
+    roles: ["studio_manager", "client_coordinator"],
+  },
   { to: "/settings", label: "Settings", icon: SettingsIcon, roles: null },
 ];
 
@@ -173,41 +198,49 @@ export type Action =
   | "marketing.approve"
   | "reviews.write"
   | "governance.write"
-  | "links.share"
-  | "team.manage";
+  | "links.share";
 
 /** Founder always passes. Everyone else needs one of the listed roles. */
 export const permissions: Record<Action, { label: string; roles: AppRole[] }> = {
-  "leads.write": { label: "Add and update inquiries", roles: ["coordinator", "sales"] },
-  "clients.write": { label: "Edit family records", roles: ["coordinator", "sales"] },
-  "bookings.write": { label: "Create and edit bookings", roles: ["coordinator", "sales"] },
+  "leads.write": { label: "Add and update inquiries", roles: ["client_coordinator", "sales"] },
+  "clients.write": { label: "Edit family records", roles: ["client_coordinator", "sales"] },
+  "bookings.write": { label: "Create and edit bookings", roles: ["client_coordinator", "sales"] },
   "bookings.finance": {
     label: "Change money fields (price, advance, payment)",
     roles: ["accounts", "sales"],
   },
-  "pipeline.advance": { label: "Advance a family's journey stage", roles: ["coordinator"] },
+  "pipeline.advance": { label: "Advance a family's journey stage", roles: ["client_coordinator"] },
   "memory.write": {
     label: "Write memory profiles",
-    roles: ["coordinator", "sales", "photographer"],
+    roles: ["client_coordinator", "sales", "photographer"],
   },
   "safety.write": {
     label: "Complete safety & comfort checklists",
-    roles: ["coordinator", "photographer", "assistant"],
+    roles: ["client_coordinator", "photographer", "assistant"],
   },
-  "privacy.write": { label: "Record privacy & consent", roles: ["coordinator", "marketing"] },
-  "editing.write": { label: "Move editing & delivery status", roles: ["editor", "coordinator"] },
-  "pixieset.write": { label: "Manage Pixieset galleries", roles: ["editor", "coordinator"] },
-  "heirloom.write": { label: "Run heirloom production", roles: ["album", "coordinator"] },
+  "privacy.write": {
+    label: "Record privacy & consent",
+    roles: ["client_coordinator", "marketing"],
+  },
+  "editing.write": {
+    label: "Move editing & delivery status",
+    roles: ["editor", "client_coordinator"],
+  },
+  "pixieset.write": { label: "Manage Pixieset galleries", roles: ["editor", "client_coordinator"] },
+  "heirloom.write": {
+    label: "Run heirloom production",
+    roles: ["album_coordinator", "client_coordinator"],
+  },
   "tasks.write": {
     label: "Create and close team tasks",
     roles: [
-      "coordinator",
+      "client_coordinator",
       "sales",
       "photographer",
       "assistant",
       "stylist",
       "editor",
-      "album",
+      "album_coordinator",
       "marketing",
       "accounts",
     ],
@@ -215,11 +248,10 @@ export const permissions: Record<Action, { label: string; roles: AppRole[] }> = 
   "marketing.approve": { label: "Approve images for marketing", roles: ["marketing"] },
   "reviews.write": {
     label: "Request reviews and log aftercare",
-    roles: ["coordinator", "marketing"],
+    roles: ["client_coordinator", "marketing"],
   },
-  "governance.write": { label: "Score philosophy alignment", roles: ["coordinator"] },
-  "links.share": { label: "Create family share links", roles: ["coordinator", "sales"] },
-  "team.manage": { label: "Invite teammates and assign roles", roles: [] },
+  "governance.write": { label: "Score philosophy alignment", roles: ["client_coordinator"] },
+  "links.share": { label: "Create family share links", roles: ["client_coordinator", "sales"] },
 };
 
 export function can(action: Action, roles: AppRole[]) {
