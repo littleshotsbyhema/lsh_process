@@ -8830,3 +8830,201 @@ The existing containment gates therefore remain:
 **IMPLEMENTATION VALIDATED / PUSHED / PREVIEW VERIFIED / NOT PRODUCTION RELEASED**
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+---
+
+## Sprint 10 Slice 7G — Controlled Shoot Scheduling Mutations — Technical Design Freeze
+
+Governed base commit: `f787c5c427372885bc1165bc1922a667ef9edc0a` (Slice 7F checkpoint). Branch: `architecture-rebuild`. Preview-only; Production and `main` remain untouched by this freeze.
+
+#### 1. Discovery basis
+
+Slice 7F's own freeze (§9, "No scheduling mutations in Slice 7F") explicitly deferred exposing `propose_booking_shoot_schedule(...)` and `reschedule_booking_shoot(...)` to "a later separately frozen slice." Both RPCs, the `booking_shoot_schedules` table, and the `shoot.schedule` permission were introduced and frozen at the database layer in Slice 1 (migration `20260814120719_sprint10_shoot_schedule_foundation.sql`) and are covered by the existing `sprint10_shoot_schedule_test.sql` pgTAP suite (111/111 PASS as of the Slice 7F checkpoint). Both RPCs and the `booking_shoot_schedules` table are already present in generated Supabase types (`src/integrations/supabase/types.ts`). Slice 7G authors no SQL and requires no new migration or type regeneration.
+
+#### 2. Exact Slice 7G implementation boundary
+
+Implementation is restricted to exactly two files, extending the Slice 7F boundary:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+No other file may change in the implementation commit. No migration file is added or modified. No generated Supabase type file changes.
+
+#### 3. Existing database guarantees consumed as-is
+
+Slice 7G authorizes no new database behavior; it exposes exactly the following existing, already-tested guarantees:
+
+`propose_booking_shoot_schedule(p_booking_id, p_scheduled_start_at, p_scheduled_end_at, p_timezone, p_location_type, p_location_details DEFAULT NULL)`:
+
+- valid only when the booking's current journey stage is exactly Stage 7 / `advance_pending` (else `22023`);
+- valid only when the current schedule tip, if any, is `proposed` (rejects over a `reserved` tip);
+- requires `shoot.schedule` permission and branch scope, enforced inside the `SECURITY DEFINER` function (else `42501`);
+- exact-value replay is idempotent — returns the existing tip row, does not append a new version;
+- on a genuine change, appends a new row: `schedule_state = 'proposed'`, version = tip + 1, predecessor = tip.id, `reschedule_reason = NULL`.
+
+`reschedule_booking_shoot(p_booking_id, p_scheduled_start_at, p_scheduled_end_at, p_timezone, p_location_type, p_reschedule_reason, p_location_details DEFAULT NULL)`:
+
+- valid only when the booking's current journey stage is Stage 8, 9 or 10 (`booking_confirmed`, `pre_shoot_preparation`, `shoot_scheduled`) (else `22023`);
+- valid only when the current schedule tip is `reserved` (else `22023`);
+- `p_reschedule_reason` is mandatory and non-blank (else `22023`);
+- requires `shoot.schedule` permission and branch scope (else `42501`);
+- exact-value-and-reason replay is idempotent;
+- on a genuine change, appends a new row: `schedule_state = 'reserved'` (never reverts to proposed), version = tip + 1, predecessor = tip.id, reason recorded.
+
+The append-only guard trigger on `booking_shoot_schedules` makes direct UPDATE/DELETE impossible, and no INSERT/UPDATE/DELETE grant exists on the table for `authenticated` — the two RPCs are the sole write path. Authorization is enforced inside each RPC; a caller lacking `shoot.schedule` already receives a database-level `42501` regardless of any client-side state, independently proven by existing pgTAP coverage.
+
+#### 4. Authorization model
+
+Client-side authorization is limited to UX visibility only, using the existing authoritative capability-read pattern already established in `src/lib/team.functions.ts` (`getTeamCapabilities`), not a new or invented model. That function calls `context.supabase.rpc("effective_permissions", { p_organization_id: ORGANIZATION_ID })`, collects the returned permission keys into a `Set`, and derives boolean capability flags via `.has(...)`.
+
+Slice 7G reuses this exact pattern inside `src/lib/booking.functions.ts`: `listBookingWorkspace()` (or a narrowly scoped addition to its returned shape) calls the same `effective_permissions` RPC and exposes `canSchedule: permissions.has("shoot.schedule")` (or an equivalently narrow capability) to the client. No role name (`founder`, `studio_manager`, `client_coordinator`) is hard-coded in React, and `src/lib/access.ts`'s legacy role-array model is not extended or consulted for this feature.
+
+`canSchedule` is UX visibility only. It does not replace or weaken database enforcement: `propose_booking_shoot_schedule` and `reschedule_booking_shoot` remain the sole authorization boundary, independently re-checking `shoot.schedule` inside each `SECURITY DEFINER` function on every call. A caller whose `canSchedule` is stale or who reaches the RPC despite it being false still receives a database-level `42501`, surfaced as an error — never a silent failure or a fabricated success.
+
+#### 5. Stage/state eligibility and capability visibility (UI control visibility only, not security)
+
+A scheduling mutation control renders only when **both** of the following hold:
+
+- canonical stage/schedule-state eligibility passes:
+  - "Propose" — `currentStage.stage_order === 7` and (`currentSchedule` is absent or `currentSchedule.schedule_state === "proposed"`);
+  - "Reschedule" — `currentStage.stage_order` is 8, 9 or 10 and `currentSchedule?.schedule_state === "reserved"`;
+- **and** `canSchedule === true` (from §4).
+
+In every other combination, no scheduling mutation control renders at all. This is a UX/workflow gate; the RPC boundary in §3 remains the actual authorization enforcement regardless of what the UI shows.
+
+#### 6. Form/input validation
+
+- Timezone: **not editable**. Slice 7G constrains scheduling input to exactly the browser-resolved IANA timezone, read via `Intl.DateTimeFormat().resolvedOptions().timeZone` at form-open time, and displayed read-only in the form (not as an editable text input). If a usable IANA timezone cannot be resolved from the browser, the form refuses submission and shows an explicit error rather than guessing or falling back to a default. Arbitrary/cross-timezone scheduling input (an editable timezone selector) is explicitly deferred to a later, separately frozen slice. No timezone library is added; no change to `package.json` or lockfiles.
+- Start/end: paired `datetime-local` inputs. Because the browser's `datetime-local` value is inherently wall-clock-in-local-timezone, and the resolved timezone in this same form is that same browser timezone, the wall-clock value is interpreted in that timezone when converting to the ISO-8601-with-offset instant submitted as `p_scheduled_start_at`/`p_scheduled_end_at`, and the exact same resolved IANA string is submitted as `p_timezone` — so the submitted timezone always correctly describes the timezone used to interpret the submitted wall-clock input. Client-side check that end is after start, purely as UX to avoid an avoidable round trip — the database's `booking_shoot_schedules_time_range_chk` remains authoritative.
+- Location type: required non-blank text input. Location details: optional text input.
+- Reschedule reason: required non-blank textarea, present only on the reschedule form. Client-side non-blank check is UX only — the database rejects a blank reason with `22023` regardless.
+
+#### 7. Timezone behavior
+
+Scheduling input in Slice 7G is constrained to the single browser-resolved IANA timezone described in §6 — read-only in the form, not user-editable, and used consistently to interpret the wall-clock `datetime-local` input and as the `p_timezone` value submitted to the RPC. The proposed/reserved schedule is stored and displayed using that IANA timezone string (matching Slice 7F's existing `formatScheduleDateTime` rendering, unchanged). No timezone conversion, normalization, or arbitrary-timezone selection is performed by the application in this slice; that capability is explicitly deferred to a later, separately frozen slice.
+
+#### 8. Proposal semantics
+
+A proposal is explicitly not a reservation and does not confirm the booking. Existing copy and the `scheduleStateLabel()` helper (`"Reserved"` / `"Proposed · not reserved"`) are reused unchanged. Additional static copy adjacent to the propose control states plainly that proposing a schedule does not itself reserve a date or confirm the booking.
+
+#### 9. Reschedule semantics
+
+Reschedule is only offered once a reserved schedule tip exists (Stage 8–10), and it replaces that already-reserved canonical schedule with another reserved version — the resulting schedule remains `reserved`, never `proposed`. Rescheduling does not itself confirm the booking or advance the journey stage. Additional static copy adjacent to the reschedule control must not describe the outcome as "not reserved" — a successful reschedule keeps the schedule authoritative and reserved, it only changes which version is current. The reschedule reason is mandatory and is always displayed against its version in the existing `ScheduleHistory` component, unchanged from Slice 7F.
+
+#### 10. Immutable-history behavior
+
+No historical schedule row is ever mutated by the application. The existing `ScheduleHistory` component is reused as-is. After any successful mutation, the client invalidates the `["booking-workspace"]` query (`queryClient.invalidateQueries`) and refetches authoritative data from `listBookingWorkspace()` rather than performing any optimistic local update or array splicing. Predecessor lineage (`predecessor_schedule_id`) remains visible exactly as Slice 7F rendered it.
+
+#### 11. Empty/error/loading states
+
+- Loading: mutation buttons reflect `mutation.isPending` via a text swap (e.g. "Proposing…" / "Rescheduling…"), matching the existing convention in `src/routes/_authenticated/team.tsx`.
+- Error: all RPC/validation errors (`42501`, `22023`, `P0001`) are surfaced identically via `sonner` `toast.error(error instanceof Error ? error.message : "<fallback>")`, matching the existing convention. No error-code-specific UI branching.
+- Success: `toast.success(...)`, the active form closes, and authoritative data is refetched.
+- Empty state (no schedule yet): unchanged from Slice 7F — "No canonical shoot plan recorded" — with the propose control now available beneath it when both stage/state eligibility and `canSchedule` hold.
+- Timezone-unresolvable state: if the browser cannot resolve a usable IANA timezone (§6), the form shows an explicit error and refuses submission rather than guessing.
+
+#### 12. Runtime acceptance cases
+
+Controlled disposable local authenticated fixtures must prove:
+
+A. Stage 7 booking, no schedule: a user with `canSchedule = true` proposes; result renders as "Proposed · not reserved"; history contains canonical v1.
+B. Stage 7 booking, existing proposal: changed proposal appends v2 with predecessor v1; v1 remains immutable in history; exact-value replay does not duplicate.
+C. Reserved booking (Stage 8–10): a user with `canSchedule = true` reschedules, creating a new reserved version; predecessor lineage and reschedule reason are visible; prior reserved history remains immutable; the schedule remains reserved throughout, never rendered as unreserved.
+D. Unauthorized/ineligible cases: UI does not render a control when stage/schedule-state eligibility fails, or when `canSchedule` is false; where a control is technically reachable but the RPC rejects the call (e.g. a stale `canSchedule` or a direct/forced call), the UI surfaces the database error and never fabricates success; no direct-write fallback exists anywhere in the code.
+E. No preparation, safety, team-assignment or general journey-transition control is introduced anywhere on the page.
+
+After runtime acceptance: stop the dev server, run `npx supabase db reset --local --yes`, and confirm disposable evidence created by the canonical acceptance flow returns to zero, including as applicable:
+
+- `auth.users`;
+- `organization_members`;
+- `families`;
+- `quotations`;
+- `quotation_line_items`;
+- `bookings`;
+- `booking_payments`;
+- `booking_journey_states`;
+- `booking_stage_transitions`;
+- `booking_shoot_schedules`;
+- disposable audit evidence produced by the fixture flow.
+
+Seeded/static catalogue tables such as `booking_journey_stages` are not required to be zero — they hold reference data reapplied by the migration chain, not disposable fixtures.
+
+#### 13. Database regression gates
+
+Local only, `--local` explicit, no Production access. Three independent commands, recorded as separate gates:
+
+- targeted scheduling pgTAP: `npx supabase test db --local supabase/tests/sprint10_shoot_schedule_test.sql` — expected 111/111 PASS (unchanged, since no migration changes);
+- complete local database suite: `npx supabase test db --local supabase/tests` — expected 1083/1083 PASS across 16 files (unchanged);
+- lint: `npx supabase db lint --local` — expected clean, no schema errors.
+
+#### 14. Application validation gates
+
+- targeted Prettier on the two authored files;
+- targeted ESLint on the two authored files;
+- production build;
+- `tsc --noEmit`, after normal TanStack route generation, with generated `src/routeTree.gen.ts` restored before commit;
+- `git diff --check`;
+- exact implementation file-boundary verification (only the two frozen files changed);
+- confirmation generated Supabase types are unchanged;
+- confirmation no migration file is added or modified.
+
+#### 15. Preview-only deployment boundary
+
+After each of the three governed commits (freeze, implementation, checkpoint) is pushed to `architecture-rebuild`, the Preview verification gate is explicit and evidence-based, not assumed. Authenticated read-only Vercel verification must prove, for the exact pushed commit:
+
+- the deployment's Git commit SHA matches the exact pushed SHA;
+- the deployment's Git branch is `architecture-rebuild`;
+- deployment state is `READY`;
+- the deployment is Preview / non-Production (Vercel `target` is not `production`);
+- the deployment resolves under the expected `architecture-rebuild` branch alias/routing;
+- the latest deployment carrying Vercel `target: production` was NOT replaced or superseded by this push.
+
+If authenticated read-only Vercel access capable of proving all of the above is not available at push time, work stops immediately after Git push reconciliation and reports:
+
+`HOLD — EXTERNAL VERCEL VERIFICATION REQUIRED`
+
+Preview PASS is never assumed or declared without this evidence. In addition:
+
+- `architecture-rebuild` continues using its existing isolated Supabase Preview configuration;
+- no Vercel Production deployment is authorized;
+- no Production Supabase read, write or migration is authorized;
+- Git `main` is not modified;
+- Supabase `main` is not merged.
+
+#### 16. Explicit Slice 7G exclusions
+
+Slice 7G does not authorize:
+
+- booking confirmation UI;
+- payment mutation;
+- arbitrary or general journey advancement UI;
+- preparation runtime mutation;
+- safety runtime mutation;
+- booking-team mutation;
+- external-creative mutation;
+- capacity or overlap logic;
+- external calendar integration;
+- any database schema change or new migration;
+- unlocking `/prep` or `/safety`;
+- Sprint 10 release.
+
+The RPC contract for this slice is explicit:
+
+- the only scheduling **mutation** RPCs authorized by Slice 7G are `propose_booking_shoot_schedule` and `reschedule_booking_shoot`;
+- the existing read-only `effective_permissions` RPC is explicitly permitted, solely for deriving `canSchedule` / scheduling-control UX visibility per §4, and confers no additional mutation authorization;
+- no other mutation RPC is authorized by this slice;
+- `confirm_booking_after_advance` and `mark_booking_shoot_scheduled` remain explicitly excluded and untouched.
+
+If discovery during implementation proves any of the above is unavoidably required, implementation stops and the finding is reported rather than expanding scope.
+
+#### 17. Commit discipline
+
+Slice 7G follows the established three-stage discipline:
+
+1. technical design freeze documentation commit (this section);
+2. exact two-file implementation commit;
+3. implementation checkpoint documentation commit.
+
+Each commit is pushed and reconciled independently. Every `architecture-rebuild` push must be verified as a Vercel Preview deployment before proceeding to the next governed step.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
