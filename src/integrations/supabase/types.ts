@@ -6567,6 +6567,30 @@ export type Database = {
           role_labels: string[];
         }[];
       };
+      team_role_grant_directory: {
+        Args: { p_member_id?: string; p_organization_id: string };
+        Returns: {
+          branch_code: string;
+          branch_id: string;
+          branch_name: string;
+          grant_id: string;
+          granted_at: string;
+          granted_by_member_id: string;
+          member_id: string;
+          organization_wide: boolean;
+          role_key: string;
+          role_label: string;
+        }[];
+      };
+      team_role_scope_catalogue: {
+        Args: { p_organization_id: string };
+        Returns: {
+          branch_code: string;
+          branch_id: string;
+          branch_name: string;
+          organization_wide: boolean;
+        }[];
+      };
       transition_quotation: {
         Args: {
           p_quotation_id: string;
