@@ -8639,3 +8639,194 @@ Each commit is pushed and reconciled independently.
 Every `architecture-rebuild` push must be verified as a Vercel Preview deployment before proceeding to the next governed step.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+---
+
+## Sprint 10 Slice 7F — Canonical Booking Schedule Read Surface — Implementation Checkpoint
+
+### Implementation evidence
+
+Slice 7F implementation is complete and remains non-Production.
+
+- Freeze commit: `cf2f620875883131a94a0a5eef600bbf1c813386`
+- Implementation commit: `f834979359d16ae087c25ca29f8cba3fd3e021f4`
+- Implementation commit message: `feat: add canonical booking schedule read surface`
+- Implementation parent: `cf2f620875883131a94a0a5eef600bbf1c813386`
+- Branch: `architecture-rebuild`
+
+GitHub reconciliation confirmed the implementation is exactly one commit ahead of the Slice 7F freeze and contains only:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+No migration, generated Supabase type, access-control, preparation, safety, team-assignment or generated route-tree file is part of the implementation commit.
+
+### Delivered runtime scope
+
+`listBookingWorkspace()` now includes canonical `booking_shoot_schedules` rows for the visible canonical booking IDs.
+
+The authenticated `/bookings` surface now:
+
+- treats the highest canonical `schedule_version` as the current schedule tip;
+- renders `proposed` explicitly as proposed / not reserved;
+- renders `reserved` as authoritative reserved schedule evidence;
+- shows complete immutable schedule history ordered by canonical version;
+- preserves predecessor lineage;
+- preserves reschedule reason where present;
+- shows the explicit neutral empty state `No canonical shoot plan recorded`;
+- does not infer a shoot date from legacy booking state;
+- corrects stale Sprint 8 explanatory copy without introducing a new journey mutation model.
+
+Slice 7F adds no schedule proposal, reschedule, payment, booking-confirmation, journey-transition, preparation, safety, team-assignment or external-creative mutation UI.
+
+### Controlled authenticated runtime acceptance
+
+Disposable local authenticated fixtures covered all required schedule states.
+
+Acceptance proved:
+
+1. No-schedule booking:
+   - canonical booking and journey rendered;
+   - zero schedule rows;
+   - explicit `No canonical shoot plan recorded` state;
+   - no legacy date inference.
+
+2. Proposed-only booking:
+   - canonical proposal version 1 rendered;
+   - state displayed as proposed / not reserved;
+   - proposed state did not imply reservation or booking confirmation.
+
+3. Reserved/history booking:
+   - proposal v1 preserved;
+   - changed proposal v2 preserved with predecessor lineage to v1;
+   - booking confirmation appended reserved v3 with predecessor lineage to v2;
+   - reschedule appended reserved v4 with predecessor lineage to v3;
+   - current authoritative tip rendered as reserved v4;
+   - reschedule reason `Client requested date change` remained visible;
+   - earlier schedule evidence remained immutable.
+
+Authenticated visual acceptance also confirmed:
+
+- no schedule mutation control;
+- no general journey-transition control;
+- no preparation evidence leakage;
+- no restricted safety evidence leakage;
+- no booking-team or external-creative runtime leakage;
+- no legacy Zustand schedule promoted to canonical truth.
+
+Result: **PASS**
+
+### Disposable fixture cleanup
+
+After authenticated acceptance:
+
+- the Vite development process was stopped;
+- generated `src/routeTree.gen.ts` output was restored and excluded from authored changes;
+- local Supabase database reset completed successfully;
+- disposable fixture counts returned to zero for:
+  - `auth.users`;
+  - `organization_members`;
+  - `families`;
+  - `quotations`;
+  - `bookings`;
+  - `booking_shoot_schedules`.
+
+Result: **PASS**
+
+### Database regression gate
+
+Slice 7F authored no SQL.
+
+Validation against the unchanged local migration chain completed successfully:
+
+- dedicated `supabase/tests/sprint10_shoot_schedule_test.sql`: **111/111 PASS**;
+- complete local database suite: **1083/1083 PASS** across 16 files;
+- `npx supabase db lint --local`: **PASS — No schema errors found**;
+- local database reset reapplied the existing migration chain through `20260817042405_sprint10_team_role_admin_read_model.sql`;
+- no migration file was added or modified by Slice 7F.
+
+Result: **PASS**
+
+### Application validation gate
+
+Final application validation completed successfully:
+
+- targeted Prettier on the two authored files: PASS;
+- targeted ESLint on the two authored files: PASS;
+- production build: PASS;
+- TypeScript `--noEmit`: PASS after normal TanStack route generation;
+- generated `src/routeTree.gen.ts` restored before commit;
+- `git diff --check`: PASS;
+- implementation boundary restricted exactly to the two frozen authored files;
+- generated Supabase types unchanged;
+- migration files unchanged.
+
+Result: **PASS**
+
+### Git implementation reconciliation
+
+Controlled push of implementation commit `f834979359d16ae087c25ca29f8cba3fd3e021f4` completed as a fast-forward:
+
+- pre-push remote: `cf2f620875883131a94a0a5eef600bbf1c813386`;
+- post-push local HEAD: `f834979359d16ae087c25ca29f8cba3fd3e021f4`;
+- post-push tracking ref: `f834979359d16ae087c25ca29f8cba3fd3e021f4`;
+- post-push remote ref: `f834979359d16ae087c25ca29f8cba3fd3e021f4`;
+- post-push divergence: `0 / 0`;
+- post-push worktree: clean.
+
+GitHub independently confirmed the freeze-to-implementation comparison is one commit ahead, zero behind, with exactly the two frozen implementation files changed.
+
+Result: **PASS**
+
+### Vercel Preview reconciliation
+
+The implementation push produced the expected branch deployment:
+
+- deployment ID: `dpl_FqkhMumVjzUeKUqsURWNhUyUJGG8`;
+- deployment SHA: `f834979359d16ae087c25ca29f8cba3fd3e021f4`;
+- Git branch: `architecture-rebuild`;
+- state: `READY`;
+- Vercel target field: `null`;
+- branch alias: `memory-keeper-os-git-architecture-rebuild-team1996.vercel.app`;
+- build completed successfully.
+
+The `target: null` deployment together with the `architecture-rebuild` Git metadata and branch alias is the expected Preview/non-Production routing.
+
+No Production deployment was created by the Slice 7F implementation push.
+
+The latest deployment carrying Vercel `target: production` remains the previously recorded accidental architecture deployment:
+
+- deployment ID: `dpl_varrdvzMrBSfnNVjhwNnF4mrSzAL`;
+- SHA: `e570da0b7715f992edd4cd870437d3dbbaf7324a`.
+
+Slice 7F did not replace or redeploy Production.
+
+Result: **PASS**
+
+### Production and merge containment
+
+Slice 7F implementation performed no:
+
+- Production Supabase migration;
+- Production Supabase data mutation;
+- Production Vercel deployment;
+- Production environment-variable change;
+- Git merge into `main`;
+- Supabase branch merge;
+- schedule mutation UI release;
+- preparation or safety runtime release;
+- booking-team runtime release;
+- Sprint 10 release.
+
+The existing containment gates therefore remain:
+
+- Git `main` merge: **HOLD**
+- Supabase branch merge: **HOLD**
+- Production database mutation: **HOLD**
+- Production redeploy / restore: **HOLD pending separate release-source reconciliation**
+
+### Slice 7F checkpoint status
+
+**IMPLEMENTATION VALIDATED / PUSHED / PREVIEW VERIFIED / NOT PRODUCTION RELEASED**
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
