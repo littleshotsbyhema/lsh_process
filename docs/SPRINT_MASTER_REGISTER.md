@@ -6590,3 +6590,450 @@ Slice 7E must treat each exact live grant as an independent database fact.
 It must not infer role scope from the aggregate Team directory.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+
+### Slice 7D implementation checkpoint — Canonical Role Administration Read Model
+
+Sprint 10 Slice 7D is implemented, locally validated, committed and pushed.
+
+Implementation commit:
+
+`bd5bbcfd54abdb26072db5716d618a1576ada81f`
+
+Commit message:
+
+`feat: add canonical role admin read model`
+
+The implementation commit was independently resolved on GitHub after push reconciliation.
+
+#### 1. Scope delivered
+
+Slice 7D establishes the exact canonical read model required before interactive Team role administration may be implemented.
+
+The slice adds:
+
+- an exact live member-role-scope read RPC;
+- a permission-aware role-assignment scope catalogue;
+- dedicated transaction-local pgTAP coverage;
+- synchronized generated Supabase TypeScript definitions.
+
+Slice 7D does not add role-administration UI.
+
+The existing canonical role mutation RPCs remain authoritative and unchanged.
+
+#### 2. Exact implementation boundary
+
+The implementation commit contains exactly three authored files:
+
+- `supabase/migrations/20260817042405_sprint10_team_role_admin_read_model.sql`;
+- `supabase/tests/sprint10_team_role_admin_read_model_test.sql`;
+- `src/integrations/supabase/types.ts`.
+
+No Team runtime file was modified.
+
+In particular, Slice 7D did not modify:
+
+- `src/lib/team.functions.ts`;
+- `src/routes/_authenticated/team.tsx`;
+- `src/lib/access.ts`;
+- `src/lib/session.ts`;
+- invitation runtime files;
+- checked-in route-tree source.
+
+#### 3. Canonical exact live role-grant directory
+
+Slice 7D introduces:
+
+`team_role_grant_directory(
+  p_organization_id uuid,
+  p_member_id uuid DEFAULT NULL
+)`
+
+The RPC is:
+
+- `STABLE`;
+- `SECURITY DEFINER`;
+- configured with `search_path = ''`;
+- executable by `authenticated` and `service_role`;
+- not executable by `anon` or `PUBLIC`;
+- internally authorized using canonical active membership and `team.role.assign`.
+
+The exact live grant projection contains:
+
+- `grant_id`;
+- `member_id`;
+- `role_key`;
+- `role_label`;
+- `branch_id`;
+- `branch_name`;
+- `branch_code`;
+- `organization_wide`;
+- `granted_at`;
+- `granted_by_member_id`.
+
+The projection preserves exact database truth.
+
+Organization-wide and branch-scoped grants for the same role remain independent live rows.
+
+Revoked grants are excluded from the operational directory.
+
+Optional member filtering is organization-contained.
+
+A cross-organization member ID does not disclose grant information.
+
+#### 4. Canonical role-assignment scope catalogue
+
+Slice 7D introduces:
+
+`team_role_scope_catalogue(
+  p_organization_id uuid
+)`
+
+The RPC is:
+
+- `STABLE`;
+- `SECURITY DEFINER`;
+- configured with `search_path = ''`;
+- executable by `authenticated` and `service_role`;
+- not executable by `anon` or `PUBLIC`;
+- internally authorized using canonical active membership and `team.role.assign`.
+
+The catalogue returns one synthetic organization-wide scope:
+
+- `branch_id = NULL`;
+- `branch_name = 'Organization-wide'`;
+- `branch_code = NULL`;
+- `organization_wide = true`.
+
+It additionally exposes only assignment-eligible branch scopes that are:
+
+- in the requested organization;
+- active;
+- not deleted;
+- within canonical actor branch scope.
+
+The canonical local Little Shots by Hema baseline remains branchless.
+
+Branch behavior was proven using transaction-local fixtures rather than persistent local branch data.
+
+#### 5. Existing role authority preserved
+
+The canonical permission matrix remains unchanged.
+
+`team.role.assign` remains granted only to:
+
+- Founder.
+
+Studio Manager, Client Coordinator and all other canonical roles remain without role-assignment authority.
+
+Slice 7D introduces no permission widening.
+
+#### 6. Direct role-grant table containment preserved
+
+`member_role_grants` remains inaccessible to authenticated application users through direct table operations.
+
+Local security verification confirmed:
+
+- RLS enabled;
+- FORCE RLS enabled;
+- authenticated `SELECT` unavailable;
+- authenticated `INSERT` unavailable;
+- authenticated `UPDATE` unavailable;
+- authenticated `DELETE` unavailable.
+
+Role administration continues to cross canonical server-side function boundaries only.
+
+#### 7. Existing mutation semantics preserved
+
+Slice 7D does not alter:
+
+- `grant_organization_member_role(...)`;
+- `revoke_organization_member_role(...)`.
+
+Existing mutation semantics remain authoritative for:
+
+- active organization membership;
+- `team.role.assign`;
+- target organization containment;
+- exact branch scope;
+- Founder organization-wide constraints;
+- active branch validation;
+- historical grant retention;
+- sensitive audit evidence;
+- deferred final-Founder protection.
+
+#### 8. Dedicated Slice 7D pgTAP evidence
+
+Dedicated test file:
+
+`supabase/tests/sprint10_team_role_admin_read_model_test.sql`
+
+Final plan:
+
+`21`
+
+Final result:
+
+`Files=1, Tests=21, Result: PASS`
+
+The suite proves at minimum:
+
+- Founder can read exact live role grants;
+- Founder can read assignment scopes;
+- Studio Manager cannot read role-administration detail;
+- Client Coordinator cannot read role-administration detail;
+- organization-wide grant representation is exact;
+- branch-scoped grant representation is exact;
+- organization-wide and branch-scoped instances of the same role remain independent;
+- revoked grants are excluded;
+- same-organization member filtering is exact;
+- cross-organization member filtering does not leak;
+- active branches are eligible scopes;
+- inactive branches are excluded;
+- deleted branches are excluded;
+- the organization-wide synthetic scope is present;
+- authenticated direct grant-table reads remain unavailable;
+- RPC ACLs match the freeze;
+- both new functions remain `STABLE SECURITY DEFINER`;
+- `team.role.assign` remains Founder-only.
+
+All dedicated fixtures are transaction-local and roll back.
+
+#### 9. Existing canonical Team regression
+
+Existing canonical Team access suite:
+
+`supabase/tests/sprint10_canonical_team_access_test.sql`
+
+Final result:
+
+`Files=1, Tests=42, Result: PASS`
+
+Slice 7D therefore preserves the Slice 7B invitation, acceptance, role mutation and Founder safety contracts.
+
+#### 10. Complete database regression
+
+The full local database test suite completed successfully after Slice 7D:
+
+`Files=16, Tests=1083, Result: PASS`
+
+No local database regression was introduced.
+
+#### 11. Database lint
+
+Pre-reset local database lint:
+
+`PASS`
+
+Post-reset local database lint:
+
+`PASS`
+
+Observed result:
+
+`No schema errors found`
+
+No Slice 7D PL/pgSQL typing or parser error remains.
+
+#### 12. Local security and performance review
+
+Because Slice 7D explicitly prohibits Production database access, remote Supabase project advisors were not queried.
+
+Equivalent relevant checks were performed against the rebuilt local PostgreSQL schema.
+
+Security verification confirmed:
+
+- both RPCs are `SECURITY DEFINER`;
+- both RPCs are `STABLE`;
+- both RPCs use an empty controlled `search_path`;
+- `PUBLIC` execute is revoked;
+- `anon` execute is revoked;
+- `authenticated` execute is present;
+- `service_role` execute is present;
+- direct authenticated role-grant table mutation/read remains closed;
+- `team.role.assign` remains Founder-only.
+
+Supporting indexes remain present for:
+
+- live member grant lookup;
+- organization-wide live grant uniqueness;
+- branch-scoped live grant uniqueness;
+- grant primary-key lookup;
+- branch organization lookup;
+- branch primary-key lookup;
+- organization-member organization/status/user lookup.
+
+No new blocking local security or performance issue was identified.
+
+#### 13. Clean rebuild evidence
+
+A complete:
+
+`supabase db reset --local`
+
+successfully rebuilt the local database from zero through the Slice 7D migration.
+
+The only reset warning was the established missing optional:
+
+`supabase/seed.sql`
+
+warning.
+
+After the clean rebuild:
+
+- Slice 7D dedicated pgTAP: `21/21 PASS`;
+- Slice 7B canonical Team pgTAP: `42/42 PASS`;
+- database lint: `PASS`.
+
+The final canonical local baseline remained:
+
+- auth users: `0`;
+- organization members: `0`;
+- live role grants: `0`;
+- invitations: `0`;
+- canonical organization branches: `0`;
+- canonical organization status: `suspended`.
+
+#### 14. Generated Supabase TypeScript synchronization
+
+`src/integrations/supabase/types.ts`
+
+was regenerated from the rebuilt local Supabase database.
+
+A semantic comparison proved that the regenerated public function contract:
+
+- added `team_role_grant_directory`;
+- added `team_role_scope_catalogue`;
+- removed no existing public RPC;
+- changed no existing public RPC contract.
+
+The apparent whole-file generator formatting churn was audited and proven to be formatting-only.
+
+The final committed generated-type diff was deliberately reduced to the exact synchronized RPC additions:
+
+`24 insertions, 0 deletions`
+
+The final generated type SHA256 before commit was:
+
+`c331d8c9849f89730516574683d98fb222a69ad000c8985aa43f15b75100245c`
+
+#### 15. Application validation
+
+Targeted generated-type ESLint:
+
+`PASS`
+
+Production build:
+
+`PASS`
+
+TypeScript:
+
+`PASS`
+
+`git diff --check`:
+
+`PASS`
+
+Observed final status codes:
+
+- targeted ESLint: `0`;
+- Production build: `0`;
+- TypeScript: `0`;
+- diff integrity: `0`.
+
+The production build emitted existing TanStack/Nitro dependency and deprecation warnings, including existing `createServerFn().inputValidator()` deprecation notices.
+
+Those warnings were non-blocking and outside the Slice 7D authored boundary.
+
+The build completed successfully.
+
+#### 16. Route-tree containment
+
+The production build transiently regenerated:
+
+`src/routeTree.gen.ts`
+
+The generated route tree was not authored as part of Slice 7D.
+
+It was restored after TypeScript validation.
+
+Final frozen route-tree SHA256:
+
+`f47247f5c4e45f1ab228320898c49aa4952e8ee95044130baed6e7267b982302`
+
+The final Slice 7D implementation commit therefore contains no route-tree modification.
+
+#### 17. Git implementation checkpoint
+
+Technical freeze commit:
+
+`aaaa722fae9e93746dc87d2dd93a3509e5602148`
+
+`docs: freeze sprint 10 slice 7d`
+
+Implementation commit:
+
+`bd5bbcfd54abdb26072db5716d618a1576ada81f`
+
+`feat: add canonical role admin read model`
+
+Implementation push reconciliation proved:
+
+- expected SHA = implementation SHA;
+- local SHA = implementation SHA;
+- tracking SHA = implementation SHA;
+- actual remote SHA = implementation SHA;
+- divergence = `0 0`;
+- worktree clean.
+
+The implementation commit was independently resolved through the GitHub connector after push.
+
+#### 18. Production containment
+
+Slice 7D performed no:
+
+- Production Supabase migration;
+- Production database read;
+- Production database write;
+- Production advisor query;
+- Production application deployment;
+- service-role application bypass.
+
+All database implementation and acceptance evidence was local.
+
+#### 19. Slice 7D completion boundary
+
+Slice 7D establishes the exact role-administration read-model foundation only.
+
+It does not release:
+
+- interactive role grant controls;
+- interactive role revoke controls;
+- role-scope switching UI;
+- member suspension/reinstatement UI;
+- permission-matrix editing;
+- branch administration.
+
+The existing Team runtime remains read-only for canonical role assignment.
+
+#### 20. Next governed boundary
+
+A separately frozen Slice 7E may now consume:
+
+- `team_access_directory(uuid)`;
+- `role_catalogue()`;
+- `team_role_grant_directory(...)`;
+- `team_role_scope_catalogue(...)`;
+- `grant_organization_member_role(...)`;
+- `revoke_organization_member_role(...)`
+
+to implement canonical Team role administration.
+
+Slice 7E must continue to treat each live member-role-scope grant as an independent database fact.
+
+It must not infer exact role scope from aggregate Team-directory arrays.
+
+Founder safety, organization containment, branch containment, permission enforcement and audit invariants remain authoritative.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
