@@ -7037,3 +7037,935 @@ It must not infer exact role scope from aggregate Team-directory arrays.
 Founder safety, organization containment, branch containment, permission enforcement and audit invariants remain authoritative.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+
+### Slice 7E technical design freeze — Canonical Role Administration Runtime
+
+Sprint 10 Slice 7E releases the first governed interactive runtime for canonical Team role administration.
+
+This technical design was frozen on 2026-08-17.
+
+Slice 7E consumes the canonical database contracts established by Slice 7B and Slice 7D.
+
+It does not redesign role storage, permissions, membership lifecycle or invitation semantics.
+
+#### 1. Relationship to prior Team slices
+
+Slice 7B established:
+
+- canonical organization membership;
+- canonical invitation lifecycle;
+- exact member-role-grant storage;
+- role grant mutation;
+- role revoke mutation;
+- Founder coverage protection;
+- role-change audit evidence.
+
+Slice 7C cut the Team application runtime over to canonical membership and invitations.
+
+Slice 7C deliberately kept current role assignments read-only.
+
+Slice 7D then established the missing exact administrative read model:
+
+- `team_role_grant_directory(...)`;
+- `team_role_scope_catalogue(...)`.
+
+Slice 7E may now expose interactive grant and revoke controls because the runtime no longer needs to infer exact role scope from aggregate Team-directory arrays.
+
+#### 2. Discovery evidence
+
+The current Team server runtime exposes only:
+
+- `getTeamCapabilities`;
+- `listTeam`.
+
+`listTeam` consumes:
+
+`team_access_directory(uuid)`
+
+and therefore returns aggregate:
+
+- role keys;
+- role labels;
+- branch names;
+- organization-wide presence.
+
+The current Team route consumes that aggregate projection for read-only display.
+
+No application runtime currently invokes:
+
+- `team_role_grant_directory(...)`;
+- `team_role_scope_catalogue(...)`;
+- `grant_organization_member_role(...)`;
+- `revoke_organization_member_role(...)`.
+
+The current Team route explicitly labels role editing as contained.
+
+Slice 7E removes that intentional UI containment only for an actor who possesses canonical:
+
+`team.role.assign`.
+
+#### 3. Database authority remains unchanged
+
+Slice 7E introduces no new database authorization rule.
+
+The following existing RPCs remain authoritative:
+
+`team_role_grant_directory(
+  p_organization_id uuid,
+  p_member_id uuid DEFAULT NULL
+)`
+
+`team_role_scope_catalogue(
+  p_organization_id uuid
+)`
+
+`grant_organization_member_role(
+  p_organization_id uuid,
+  p_member_id uuid,
+  p_role_key text,
+  p_branch_id uuid DEFAULT NULL
+)`
+
+`revoke_organization_member_role(
+  p_organization_id uuid,
+  p_member_id uuid,
+  p_role_key text,
+  p_branch_id uuid DEFAULT NULL,
+  p_reason text DEFAULT 'Role removed'
+)`
+
+The application must not duplicate these RPCs' security decisions as trusted client authorization.
+
+Client-side capability checks are presentation controls only.
+
+Database authorization remains final.
+
+#### 4. Existing role-assignment authority remains unchanged
+
+The canonical permission matrix currently grants:
+
+`team.role.assign`
+
+only to:
+
+- Founder.
+
+Slice 7E does not grant Studio Manager, Client Coordinator or any other role new role-administration authority.
+
+The Team route may show role-administration controls only when:
+
+`getTeamCapabilities().canAssignRoles === true`.
+
+A client-side control being hidden or visible is not itself authorization.
+
+Every administrative database read and mutation remains protected independently by the canonical RPC.
+
+#### 5. Existing authenticated server boundary remains authoritative
+
+All new Slice 7E Team server functions must continue to use:
+
+`requireSupabaseAuth`
+
+and the request-scoped authenticated Supabase client.
+
+They must continue to use the configured publishable key plus the authenticated user's bearer token.
+
+Slice 7E must not introduce:
+
+- a service-role application client;
+- a secret-key browser client;
+- direct Postgres credentials;
+- client-controlled authorization metadata.
+
+The organization identifier remains server-owned:
+
+`ORGANIZATION_ID`.
+
+No Slice 7E server function may accept an organization ID from browser input.
+
+#### 6. Team capability contract extension
+
+Slice 7E may extend:
+
+`TeamCapabilities`
+
+with:
+
+`actorMemberId: string | null`
+
+The existing booleans remain unchanged:
+
+- `canRead`;
+- `canInvite`;
+- `canAssignRoles`;
+- `canSuspend`.
+
+`getTeamCapabilities` may resolve the actor's canonical member ID through:
+
+`current_organization_member(ORGANIZATION_ID)`.
+
+This value exists only to keep the current browser session coherent when an authorized Founder modifies their own role grants.
+
+It is not used to authorize role mutation.
+
+#### 7. Canonical role-administration read bundle
+
+`src/lib/team.functions.ts`
+
+must introduce one authenticated GET server function:
+
+`getTeamRoleAdministration`
+
+It returns one normalized object containing:
+
+- canonical role vocabulary;
+- exact live role grants;
+- currently assignable scopes.
+
+The server function must consume:
+
+`role_catalogue()`
+
+`team_role_grant_directory(ORGANIZATION_ID)`
+
+`team_role_scope_catalogue(ORGANIZATION_ID)`
+
+The two administrative read RPCs remain responsible for enforcing `team.role.assign`.
+
+If the actor is not authorized, the server function must fail rather than return partial administrative state.
+
+#### 8. Runtime role vocabulary type
+
+Slice 7E must define a runtime role option projection equivalent to:
+
+`TeamRoleOption`
+
+with:
+
+- `key: string`;
+- `label: string`;
+- `description: string | null`;
+- `sortOrder: number`.
+
+The role-administration editor must consume this canonical `role_catalogue()` projection.
+
+It must not derive its editable role vocabulary from:
+
+- aggregate member role arrays;
+- `roleLabels`;
+- `appRoles`;
+- hard-coded UI role lists.
+
+The existing invitation UI may continue using its existing role vocabulary in this slice.
+
+Invitation behavior is not part of Slice 7E.
+
+#### 9. Exact live grant runtime type
+
+Slice 7E must define a normalized exact grant projection equivalent to:
+
+`TeamRoleGrantRow`
+
+with:
+
+- `grantId: string`;
+- `memberId: string`;
+- `roleKey: string`;
+- `roleLabel: string`;
+- `branchId: string | null`;
+- `branchName: string | null`;
+- `branchCode: string | null`;
+- `organizationWide: boolean`;
+- `grantedAt: string`;
+- `grantedByMemberId: string | null`.
+
+The runtime must normalize nullable database values defensively.
+
+Each returned row is one independent live grant fact.
+
+No grouping may convert several exact grants into one mutation target.
+
+#### 10. Assignment-scope runtime type
+
+Slice 7E must define a normalized scope projection equivalent to:
+
+`TeamRoleScopeRow`
+
+with:
+
+- `branchId: string | null`;
+- `branchName: string`;
+- `branchCode: string | null`;
+- `organizationWide: boolean`.
+
+The assignment UI must consume this projection directly.
+
+It must not construct administrative scope choices from:
+
+- `member.branchNames`;
+- aggregate Team-directory state;
+- arbitrary client branch assumptions.
+
+#### 11. Grant server function
+
+`src/lib/team.functions.ts`
+
+must introduce one authenticated POST server function:
+
+`grantTeamRole`
+
+Its browser input contract is:
+
+- `memberId: uuid`;
+- `roleKey: canonical-format role key`;
+- `branchId: uuid | null`.
+
+The server function must use the current TanStack Start:
+
+`.validator(...)`
+
+API.
+
+It must not introduce new `.inputValidator(...)` usage.
+
+The validator may reject malformed transport input.
+
+It must not decide whether:
+
+- the actor is allowed to assign roles;
+- the target member belongs to the organization;
+- the target member is active;
+- the role exists canonically;
+- the requested branch is assignable;
+- Founder may receive the requested scope.
+
+Those decisions remain database-authoritative.
+
+The handler calls:
+
+`grant_organization_member_role(...)`.
+
+For organization-wide assignment:
+
+`p_branch_id`
+
+must resolve to SQL `NULL` / the existing default-null contract.
+
+The handler returns the canonical grant ID.
+
+#### 12. Revoke server function
+
+`src/lib/team.functions.ts`
+
+must introduce one authenticated POST server function:
+
+`revokeTeamRole`.
+
+It uses the same exact mutation identity:
+
+- member ID;
+- role key;
+- nullable branch ID.
+
+It must use:
+
+`.validator(...)`.
+
+The handler calls:
+
+`revoke_organization_member_role(...)`.
+
+The revocation reason must be server-owned rather than browser-controlled.
+
+Slice 7E freezes the application reason as:
+
+`Role removed from Team role administration`
+
+If the canonical revoke RPC returns false because the exact live grant no longer exists, the server wrapper must return a controlled failure such as:
+
+`This role grant is no longer active.`
+
+The application must not silently report success for a stale revoke.
+
+#### 13. No optimistic authorization state
+
+Role grant and revoke mutations must not optimistically rewrite canonical role state in the browser.
+
+After successful mutation, the runtime must refetch authoritative server state.
+
+This prevents the UI from temporarily representing a grant state that:
+
+- failed database validation;
+- violated Founder protection;
+- raced another administrator action;
+- referenced a stale exact scope.
+
+Canonical database state wins.
+
+#### 14. Query model
+
+Slice 7E may add a React Query entry:
+
+`["team-role-admin"]`
+
+enabled only when:
+
+- Team read access is present; and
+- `canAssignRoles === true`.
+
+The query consumes:
+
+`getTeamRoleAdministration`.
+
+The existing:
+
+`["team"]`
+
+query remains the normal aggregate Team directory.
+
+The aggregate directory remains useful for compact member summaries.
+
+It must not be used as the mutation source of truth.
+
+#### 15. Post-mutation invalidation
+
+After a successful role grant or revoke, the client must invalidate at least:
+
+- `["team-role-admin"]`;
+- `["team"]`;
+- `["team-capabilities"]`.
+
+This ensures:
+
+- exact live grants refresh;
+- aggregate role/branch summary refreshes;
+- actor permissions refresh if the current actor changed their own role.
+
+No invitation query invalidation is required solely because a member role grant changed.
+
+#### 16. Self-role mutation coherence
+
+When the mutation target:
+
+`memberId`
+
+equals:
+
+`actorMemberId`
+
+the client must refresh the browser session after the successful authoritative mutation.
+
+A full page reload is authorized for this narrow case.
+
+The purpose is to refresh application-level role-derived navigation and session presentation that otherwise may remain stale until the next authentication state transition.
+
+This reload is a consistency mechanism.
+
+It is not an authorization mechanism.
+
+#### 17. Team route placement
+
+Slice 7E must modify only the existing:
+
+`Studio access`
+
+member area for role administration.
+
+The existing invitation section remains structurally separate.
+
+The existing aggregate member summary remains visible.
+
+For an authorized role administrator, each member card may additionally render an exact role-administration section.
+
+For actors without `canAssignRoles`, the member cards remain read-only.
+
+#### 18. Exact-grant display rule
+
+The administrative section must render live grants from:
+
+`team_role_grant_directory(...)`.
+
+It must not create revoke buttons from:
+
+`member.roles`
+
+or:
+
+`member.branchNames`.
+
+Each grant row must have a stable key:
+
+`grantId`.
+
+Each row must display:
+
+- canonical role label;
+- exact scope;
+- an explicit remove action.
+
+Organization-wide scope must display as:
+
+`Organization-wide`.
+
+A branch grant should display canonical branch name and code when available.
+
+#### 19. Independent-scope invariant
+
+An organization-wide grant and a branch-scoped grant for the same member and role are independent facts.
+
+Slice 7E must therefore allow the UI to display both simultaneously.
+
+Adding organization-wide access must not automatically delete branch grants.
+
+Adding branch access must not automatically replace organization-wide access.
+
+Removing one scope must not remove another.
+
+There is no synthetic:
+
+`change scope`
+
+mutation in Slice 7E.
+
+Changing scope is represented by explicit canonical grant/revoke operations.
+
+#### 20. Assignment interaction
+
+For an active target member, the role-administration section may expose:
+
+- one role selector;
+- one scope selector;
+- one Assign action.
+
+The role selector must use the canonical role catalogue.
+
+The scope selector must use the canonical role-scope catalogue.
+
+The scope selector must preserve the distinction between:
+
+- organization-wide;
+- exact branch ID.
+
+The browser may use an internal non-UUID sentinel to represent the synthetic organization-wide select value.
+
+That sentinel must be converted to:
+
+`branchId: null`
+
+before crossing the server-function boundary.
+
+#### 21. Exact duplicate handling
+
+Before submitting an assignment, the client may detect whether the exact tuple already exists:
+
+`memberId + roleKey + branchId`.
+
+If the exact live tuple already exists, the Assign control may be disabled and labelled as already assigned.
+
+This is a user-experience optimization only.
+
+The database's live unique indexes and grant RPC remain authoritative for concurrency and idempotency.
+
+A different scope for the same role must not be treated as a duplicate.
+
+#### 22. Founder assignment scope
+
+The canonical Founder role is organization-wide only.
+
+When:
+
+`roleKey === 'founder'`
+
+the UI must offer only the synthetic organization-wide assignment scope.
+
+The client may automatically reset a previously selected branch scope to organization-wide when Founder is chosen.
+
+The canonical grant RPC remains the final enforcement authority.
+
+No client behavior may weaken or replace the Founder database guard.
+
+#### 23. Final-Founder revoke protection
+
+The UI must not attempt to calculate whether a Founder grant is the last live Founder grant.
+
+The deferred database Founder-coverage guard remains authoritative.
+
+If an authorized user attempts to revoke the final Founder grant:
+
+- the database must reject it;
+- the client must show the returned error;
+- no optimistic grant removal may occur;
+- authoritative role state must remain visible after refetch.
+
+This preserves the existing safety invariant without duplicating it in client state.
+
+#### 24. Suspended membership behavior
+
+Canonical new role grants require an active target membership.
+
+The UI must therefore disable new assignment controls when:
+
+`member.status !== 'active'`.
+
+The UI may explain that suspended memberships cannot receive new grants.
+
+Existing exact live grants for a suspended member must still be displayed.
+
+Exact existing grants may still expose their revoke action because canonical revoke semantics operate on the exact same-organization grant record rather than requiring an active target.
+
+Database authority remains final.
+
+#### 25. Active and historical branch behavior
+
+New assignment choices come only from:
+
+`team_role_scope_catalogue(...)`.
+
+Therefore inactive or deleted branches must not appear as assignable choices.
+
+Existing exact live grants may reference a branch that later became inactive or logically deleted.
+
+Those grants remain valid database facts until explicitly revoked.
+
+The UI must still display the exact branch identity returned by:
+
+`team_role_grant_directory(...)`.
+
+If an existing branch-scoped grant's branch ID is absent from the current assignment-scope catalogue, the UI may identify it as a historical/non-assignable branch scope.
+
+It must not silently discard the grant.
+
+#### 26. Role-administration loading and error containment
+
+Failure to load role-administration state must not hide the ordinary Team directory from an actor who still possesses `team.read`.
+
+The normal Team directory and invitation sections retain their existing error boundaries.
+
+The role-administration subsection may show its own localized loading or error state.
+
+Administrative mutation controls must not render against unknown exact grant state.
+
+#### 27. Mutation feedback
+
+Successful grant:
+
+- show a concise success toast;
+- refresh authoritative queries.
+
+Successful revoke:
+
+- show a concise success toast;
+- refresh authoritative queries.
+
+Failed grant or revoke:
+
+- show the server/database error in the existing controlled toast pattern;
+- retain the previously confirmed canonical UI state;
+- do not synthesize success.
+
+#### 28. Invitation containment
+
+Slice 7E must not alter:
+
+- invitation creation;
+- invitation revocation;
+- invitation acceptance;
+- invitation token handling;
+- invitation one-time link behavior;
+- preassigned invitation role behavior.
+
+The existing invitation runtime remains a separate canonical workflow.
+
+No role-administration mutation may be implemented by rewriting invitation records.
+
+#### 29. Static application-role containment
+
+Slice 7E does not redesign:
+
+`src/lib/session.ts`
+
+or the application-wide `AppRole` union.
+
+Existing session/navigation role state remains as-is.
+
+The role editor itself must use canonical role-catalogue data rather than treating the static `AppRole` list as its database authority.
+
+No global role/navigation refactor is authorized in this slice.
+
+#### 30. Access navigation containment
+
+Slice 7E does not modify:
+
+`src/lib/access.ts`.
+
+Existing Team navigation visibility remains unchanged.
+
+Founder retains the existing Founder bypass.
+
+Studio Manager and Client Coordinator retain their existing Team route visibility.
+
+Role-administration controls are independently gated by canonical `team.role.assign`.
+
+#### 31. Exact implementation boundary
+
+After the Slice 7E technical freeze is committed separately, the runtime implementation may modify exactly:
+
+- `src/lib/team.functions.ts`;
+- `src/routes/_authenticated/team.tsx`.
+
+No new migration is authorized.
+
+No generated Supabase type change is authorized.
+
+No test file is authorized as an authored implementation file unless a later explicit design decision expands this boundary.
+
+No change is authorized to:
+
+- `src/lib/access.ts`;
+- `src/lib/session.ts`;
+- `src/lib/invites.functions.ts`;
+- `src/routes/auth.tsx`;
+- `src/integrations/supabase/auth-middleware.ts`;
+- `src/integrations/supabase/types.ts`;
+- existing migrations;
+- database permission mappings.
+
+`src/routeTree.gen.ts` may be transiently regenerated by the production build but must not remain in the implementation commit unless an explicit route change is separately approved.
+
+#### 32. No database migration or generated-type work
+
+Slice 7E consumes existing database contracts only.
+
+Therefore implementation must not:
+
+- create a Supabase migration;
+- edit a Supabase migration;
+- regenerate `src/integrations/supabase/types.ts`;
+- modify role tables;
+- modify member-role-grant tables;
+- modify function ACLs;
+- alter RLS;
+- alter Founder triggers.
+
+Any need for a database change stops Slice 7E and requires a new technical decision.
+
+#### 33. TanStack server-function convention
+
+New Slice 7E server functions must use the current:
+
+`.validator(...)`
+
+server-function validation API.
+
+Slice 7E must not add new:
+
+`.inputValidator(...)`
+
+usage.
+
+Existing deprecated `.inputValidator(...)` calls elsewhere in the application are unrelated baseline debt and are not refactored in this slice.
+
+#### 34. Local runtime acceptance — Founder
+
+With controlled local canonical fixtures, Founder acceptance must prove:
+
+- Team directory loads;
+- role administration is visible;
+- canonical role options load from `role_catalogue()`;
+- canonical scope choices load;
+- current exact live grants load;
+- one active member can receive an organization-wide role;
+- the exact new grant appears after authoritative refetch;
+- the aggregate Team summary also reflects the successful grant;
+- the exact grant can be revoked;
+- the revoked grant disappears after authoritative refetch.
+
+The canonical branchless baseline should expose only:
+
+`Organization-wide`
+
+until branch fixtures are deliberately introduced.
+
+#### 35. Local runtime acceptance — exact branch scope
+
+Using controlled local branch fixtures, acceptance must prove:
+
+- an active, non-deleted branch appears as an assignment choice;
+- a branch-scoped role can be granted;
+- the exact branch name/code appears on the live grant;
+- the same role may coexist organization-wide and branch-scoped;
+- both rows remain separately visible;
+- revoking the branch-scoped tuple leaves the organization-wide tuple intact.
+
+#### 36. Local runtime acceptance — branch lifecycle
+
+Controlled local acceptance must additionally prove:
+
+- inactive branch choices are not offered for new assignment;
+- deleted branch choices are not offered for new assignment;
+- an existing live grant referencing a now non-assignable branch remains visible until explicitly revoked.
+
+The runtime must not infer historical grant deletion from scope-catalogue absence.
+
+#### 37. Local runtime acceptance — permission boundaries
+
+Acceptance must prove:
+
+Founder:
+
+- can read exact grants;
+- can assign;
+- can revoke.
+
+Studio Manager:
+
+- retains ordinary Team directory access;
+- retains existing invitation capability;
+- does not receive role-administration controls.
+
+Client Coordinator:
+
+- retains ordinary Team directory access;
+- does not receive role-administration controls.
+
+A non-Team role must not gain role-administration authority through Slice 7E.
+
+Direct server-function invocation remains protected by the database even if a client attempts to bypass presentation gating.
+
+#### 38. Local runtime acceptance — suspended member
+
+Acceptance must prove for a suspended Team member:
+
+- current exact live grants remain visible to Founder;
+- new assignment control is disabled;
+- existing live grant removal remains possible where the canonical revoke RPC permits it.
+
+#### 39. Local runtime acceptance — Founder safety
+
+Acceptance must prove:
+
+- Founder role assignment is organization-wide only in the UI;
+- a branch-scoped Founder assignment is not offered;
+- an attempt to revoke the final Founder is rejected by the database;
+- the rejected mutation does not disappear optimistically;
+- the final Founder grant remains present after refetch.
+
+#### 40. Local runtime acceptance — self mutation
+
+When an authorized actor mutates a role grant belonging to their own organization-member ID:
+
+- the mutation must complete through the canonical RPC first;
+- the browser must then refresh;
+- session-derived role/navigation state must be rebuilt from canonical membership.
+
+The browser refresh must never occur before mutation success.
+
+#### 41. Database regression gate
+
+Although Slice 7E authors no SQL, its runtime depends on existing canonical database behavior.
+
+Before checkpointing Slice 7E:
+
+- dedicated Slice 7D read-model pgTAP: PASS;
+- existing Slice 7B canonical Team pgTAP: PASS;
+- complete local database regression: PASS;
+- local database lint: PASS.
+
+If local browser acceptance creates persistent fixtures, a final clean local reset is required.
+
+After the clean reset:
+
+- Slice 7D dedicated pgTAP must still PASS;
+- Slice 7B canonical Team pgTAP must still PASS;
+- canonical baseline must be restored.
+
+#### 42. Application quality gate
+
+Before Slice 7E implementation may be checkpointed:
+
+- targeted Prettier check for both authored runtime files: PASS;
+- targeted ESLint for both authored runtime files: PASS;
+- TypeScript `--noEmit`: PASS;
+- Production build: PASS;
+- no new Slice 7E `inputValidator()` deprecation usage;
+- `git diff --check`: PASS;
+- generated route-tree changes restored unless separately authorized;
+- implementation diff restricted exactly to the two frozen runtime files.
+
+Existing unrelated TanStack/Nitro build warnings may remain only if proven unchanged/non-blocking.
+
+#### 43. No optimistic or bulk role mutation
+
+Slice 7E does not authorize:
+
+- optimistic role mutation;
+- bulk role grant;
+- bulk role revoke;
+- replace-all-roles semantics;
+- implicit scope conversion;
+- automatic branch-grant cleanup;
+- automatic organization-wide-grant cleanup.
+
+Every mutation represents one exact canonical database fact.
+
+#### 44. Security invariants
+
+Slice 7E must preserve:
+
+- authenticated request identity;
+- server-owned organization identity;
+- organization containment;
+- branch containment;
+- database `team.role.assign` enforcement;
+- direct-table denial;
+- Founder organization-wide rule;
+- final-Founder protection;
+- sensitive role-change audit behavior;
+- no service-role browser/runtime bypass;
+- no client-controlled authorization claims;
+- no role scope inferred from aggregates.
+
+#### 45. Production containment
+
+Slice 7E does not authorize:
+
+- Production database reads for acceptance;
+- Production database writes;
+- Production database migration;
+- Production Supabase advisor queries;
+- Production role mutation;
+- Production application deployment.
+
+All implementation and acceptance work remains local until a separately governed release boundary.
+
+#### 46. Commit discipline
+
+Slice 7E follows the established three-stage Git discipline:
+
+1. technical design freeze documentation commit;
+2. exact two-file runtime implementation commit;
+3. implementation checkpoint documentation commit.
+
+Each commit is pushed and reconciled independently.
+
+No pull request is required for the current `architecture-rebuild` branch workflow.
+
+#### 47. Slice 7E completion definition
+
+Slice 7E is complete only when:
+
+- exact canonical live grants are visible to authorized role administrators;
+- active members can receive exact canonical role/scope grants;
+- exact grants can be revoked independently;
+- same-role multi-scope grants remain independent;
+- branch assignment choices come only from the canonical scope catalogue;
+- suspended members cannot receive new grants;
+- Founder safety remains database-authoritative;
+- unauthorized Team viewers receive no administrative controls;
+- all local regression and application gates pass;
+- implementation and checkpoint commits are pushed and reconciled.
+
+Slice 7E does not itself release Sprint 10.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
