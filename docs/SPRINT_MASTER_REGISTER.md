@@ -8326,3 +8326,316 @@ The isolated Supabase Preview branch was independently reconciled for the Team-a
 This correction supersedes only the earlier deployment-occurrence wording. It does not change the Slice 7E implementation acceptance result, does not convert Sprint 10 into a Production release, and does not authorize a Git-main or Supabase-main merge.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+### Slice 7F technical design freeze — Canonical Booking Schedule Read Surface
+
+Sprint 10 Slice 7F is a deliberately narrow application read-surface slice.
+
+Its purpose is to bring authoritative Sprint 10 shoot-schedule evidence into the existing canonical `/bookings` workspace without introducing scheduling mutation controls or widening any database authorization boundary.
+
+#### 1. Discovery basis
+
+Read-only discovery on 2026-08-17 established that:
+
+- `/bookings` already reads canonical `bookings`, accepted quotation evidence, booking journey state and transition history;
+- the current Bookings runtime does not read any Sprint 10 operational table;
+- the current `/bookings` copy still describes the older Sprint 8 read-only boundary;
+- generated Supabase types already contain all Sprint 10 schedule table and RPC contracts;
+- local Supabase migration history is current through `20260817042405_sprint10_team_role_admin_read_model.sql`;
+- `/prep` and `/safety` remain deliberately contained and still depend on legacy/mock runtime state;
+- the repository worktree was clean before this freeze.
+
+#### 2. Exact Slice 7F implementation boundary
+
+Slice 7F implementation may modify exactly:
+
+- `src/lib/booking.functions.ts`;
+- `src/routes/_authenticated/bookings.tsx`.
+
+No other authored application file is part of Slice 7F.
+
+`src/routeTree.gen.ts` may be regenerated transiently by normal TanStack build tooling but must be restored before commit unless an independently approved route-definition change is required.
+
+#### 3. Canonical scheduling evidence
+
+The existing authoritative scheduling source remains:
+
+`public.booking_shoot_schedules`
+
+The runtime must not introduce:
+
+- a parallel booking date field;
+- mutable booking schedule state;
+- legacy Zustand schedule truth;
+- inferred reservation status;
+- client-computed schedule versioning.
+
+Every schedule row remains immutable canonical evidence.
+
+The current authoritative schedule for a booking is the row with the highest canonical `schedule_version`.
+
+Historical schedule rows remain visible as immutable lineage.
+
+#### 4. Schedule read authorization
+
+Slice 7F introduces no new database permission.
+
+Direct authenticated schedule reads continue to rely on the existing database boundary:
+
+- `booking.read`;
+- booking-derived branch scope;
+- forced RLS on `booking_shoot_schedules`.
+
+The application must not use:
+
+- service-role access;
+- secret-key access;
+- direct Postgres credentials;
+- client-owned authorization claims.
+
+The request-scoped authenticated Supabase client remains authoritative.
+
+#### 5. Booking workspace server contract
+
+`listBookingWorkspace()` may be extended to include canonical:
+
+`booking_shoot_schedules`
+
+for the bookings already visible through the existing workspace query.
+
+The server function must continue to:
+
+- use `requireSupabaseAuth`;
+- use server-owned `ORGANIZATION_ID`;
+- query only booking IDs already resolved through the canonical booking read path;
+- preserve existing booking, quotation, journey, lead and family behavior.
+
+The schedule query must not call a mutation RPC.
+
+#### 6. Schedule runtime projection
+
+The application may consume the generated canonical schedule row type directly or expose an equivalent normalized runtime projection.
+
+At minimum the UI may represent:
+
+- schedule ID;
+- booking ID;
+- schedule version;
+- predecessor schedule ID;
+- schedule state;
+- scheduled start;
+- scheduled end;
+- timezone;
+- location type;
+- location details;
+- reschedule reason;
+- recorded timestamp;
+- recording member identifier.
+
+No additional derived scheduling fact becomes canonical merely because it is displayed.
+
+#### 7. Current schedule semantics
+
+For each booking:
+
+- zero schedule rows means no canonical shoot plan exists;
+- the highest schedule version is the current authoritative schedule tip;
+- `proposed` means the date/time is proposed and is not reserved;
+- `reserved` means the schedule is authoritative/reserved;
+- a later reserved schedule with a predecessor represents immutable reschedule evidence.
+
+The UI must not label a `proposed` schedule as confirmed or reserved.
+
+#### 8. Schedule-history semantics
+
+The Bookings workspace may render complete visible schedule history ordered by canonical schedule version.
+
+History must preserve:
+
+- version order;
+- proposal/reservation state;
+- predecessor lineage;
+- scheduled times;
+- location evidence;
+- reschedule reason where canonically present;
+- recorded time.
+
+The UI must not silently collapse historical schedule rows into one mutable event.
+
+#### 9. No scheduling mutations in Slice 7F
+
+Although the database already exposes:
+
+- `propose_booking_shoot_schedule(...)`;
+- `reschedule_booking_shoot(...)`;
+
+Slice 7F must not invoke either RPC.
+
+Slice 7F introduces no:
+
+- proposal form;
+- reschedule form;
+- schedule edit control;
+- client-side scheduling permission model;
+- optimistic schedule mutation.
+
+A later separately frozen slice may expose those mutations.
+
+#### 10. No journey mutations in Slice 7F
+
+Slice 7F must not invoke:
+
+- `confirm_booking_after_advance(...)`;
+- `start_pre_shoot_preparation(...)`;
+- `mark_booking_shoot_scheduled(...)`;
+- any booking-team mutation;
+- any preparation-item mutation;
+- any safety-readiness mutation;
+- any safety sign-off mutation.
+
+The journey remains read-only in Slice 7F.
+
+#### 11. Preparation containment
+
+Slice 7F must not add `booking_preparations` or `booking_preparation_items` to the generic Booking workspace.
+
+Preparation evidence remains governed by `prep.read`, which is narrower than ordinary `booking.read`.
+
+The `/prep` route remains contained.
+
+#### 12. Safety containment
+
+Slice 7F must not read or display:
+
+- `booking_safety_readiness`;
+- `booking_safety_signoffs`;
+- safety-state details;
+- comfort-state details;
+- formal sign-off details.
+
+Restricted safety/comfort evidence must not leak into the broad Booking workspace.
+
+The `/safety` route remains contained.
+
+#### 13. Team-assignment containment
+
+Slice 7F must not add booking-team assignment UI or external-creative presentation.
+
+Canonical booking staffing remains a separate later runtime boundary.
+
+No booking-team assignment mutation is authorized.
+
+#### 14. Existing Bookings copy correction
+
+The current `/bookings` runtime contains explanatory wording tied to the older Sprint 8 boundary.
+
+Slice 7F may update that copy only as needed to accurately describe the current canonical state.
+
+Updated wording must preserve these truths:
+
+- booking and journey evidence are canonical;
+- schedule evidence is canonical when present;
+- `Advance Pending` is not proof of payment;
+- a proposed schedule is not a reservation;
+- journey advancement remains controlled by dedicated database operations;
+- Slice 7F itself exposes no journey or schedule mutation.
+
+#### 15. Empty-state behavior
+
+The existing no-booking empty state remains valid.
+
+For a booking with no schedule evidence, the Bookings UI must show an explicit neutral state equivalent to:
+
+`No canonical shoot plan recorded`
+
+rather than inventing a date or falling back to legacy booking data.
+
+#### 16. Application validation gate
+
+Before Slice 7F implementation may be checkpointed:
+
+- targeted Prettier on the two authored files: PASS;
+- targeted ESLint on the two authored files: PASS;
+- production build: PASS;
+- TypeScript `--noEmit`: PASS after normal route generation;
+- `git diff --check`: PASS;
+- implementation diff restricted exactly to the two frozen authored files;
+- no migration file added or modified;
+- generated Supabase types unchanged;
+- checked-in route tree restored before commit.
+
+#### 17. Runtime acceptance gate
+
+Controlled local authenticated acceptance must prove at minimum:
+
+- `/bookings` still renders canonical booking and journey data;
+- a booking with no schedule shows the explicit no-schedule state;
+- a Stage 7 proposed schedule is displayed as proposed / not reserved;
+- a reserved schedule is displayed as reserved;
+- schedule version history renders in canonical order;
+- reschedule lineage remains visible rather than overwritten;
+- no scheduling mutation control is exposed;
+- no journey mutation control is exposed;
+- no preparation evidence is exposed;
+- no restricted safety evidence is exposed;
+- no legacy Zustand booking schedule becomes authoritative.
+
+Disposable local runtime evidence must be removed or reset after acceptance.
+
+#### 18. Database regression boundary
+
+Slice 7F authors no SQL.
+
+Before checkpointing:
+
+- existing Sprint 10 scheduling pgTAP remains PASS;
+- complete local database regression remains PASS;
+- local database lint remains PASS;
+- local migration history remains unchanged.
+
+If runtime fixtures are created, the final local baseline must be restored.
+
+#### 19. Preview-only deployment boundary
+
+Slice 7F remains non-Production.
+
+After the implementation and checkpoint commits are pushed to `architecture-rebuild`:
+
+- Vercel must create Preview deployments only;
+- `architecture-rebuild` must continue using its branch-specific isolated Supabase Preview configuration;
+- no Vercel Production deployment is authorized;
+- no Production Supabase read, write or migration is authorized;
+- Git `main` is not modified;
+- Supabase `main` is not merged.
+
+#### 20. Explicit Slice 7F containment
+
+Slice 7F does not authorize:
+
+- schedule proposal or reschedule UI;
+- booking confirmation UI;
+- payment mutation;
+- preparation runtime cutover;
+- safety runtime cutover;
+- booking-team runtime cutover;
+- Stage 8 -> 9 mutation UI;
+- Stage 9 -> 10 mutation UI;
+- Stage 10 -> 11 implementation;
+- capacity or overlap logic;
+- external calendar integration;
+- any database schema change;
+- Sprint 10 release.
+
+#### 21. Commit discipline
+
+Slice 7F follows the established three-stage discipline:
+
+1. technical design freeze documentation commit;
+2. exact two-file implementation commit;
+3. implementation checkpoint documentation commit.
+
+Each commit is pushed and reconciled independently.
+
+Every `architecture-rebuild` push must be verified as a Vercel Preview deployment before proceeding to the next governed step.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
