@@ -5970,3 +5970,207 @@ After Slice 7C is implemented, validated and checkpointed, the next Team-access 
 That later boundary must not infer per-role grant scope from the aggregate Slice 7B Team directory.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+### Slice 7C implementation checkpoint — Canonical Team Runtime Cutover
+
+Sprint 10 Slice 7C was implemented, locally validated and checkpointed on 2026-08-17.
+
+Implementation commit:
+
+`bc0436817455473f88a6ec04fe37547ef80f67f9` — `feat: cut over team access runtime`
+
+The implementation commit was pushed directly to `architecture-rebuild` and reconciled exactly across local HEAD, `origin/architecture-rebuild` and the actual remote branch.
+
+#### Authored implementation boundary
+
+The Slice 7C implementation commit contains exactly the six files authorized by the technical freeze:
+
+- `src/lib/session.ts`;
+- `src/lib/access.ts`;
+- `src/lib/team.functions.ts`;
+- `src/lib/invites.functions.ts`;
+- `src/routes/_authenticated/team.tsx`;
+- `src/routes/auth.tsx`.
+
+No Supabase migration was added or modified.
+
+No generated Supabase type file was modified.
+
+`src/routeTree.gen.ts` was generated transiently by the normal TanStack runtime/build process and restored to the pre-Slice-7C checked-in artifact before commit.
+
+#### Canonical runtime cutover completed
+
+The live Team/invitation runtime now consumes the Slice 7B canonical access-control foundation.
+
+Implemented runtime behavior includes:
+
+- canonical twelve-role application vocabulary;
+- `client_coordinator` replacing the legacy `coordinator` role identity;
+- `album_coordinator` replacing the legacy `album` role identity;
+- first-class `studio_manager` and `videographer` application roles;
+- authenticated membership resolution through `my_membership(uuid)`;
+- Team navigation visibility for Founder, Studio Manager and Client Coordinator;
+- Team presentation capabilities derived from canonical effective permissions;
+- Team directory reads through `team_access_directory(uuid)`;
+- invitation history through `team_invitation_directory(uuid)`;
+- invitation creation through `create_organization_invitation(...)`;
+- invitation revocation through `revoke_organization_invitation(...)`;
+- public bearer-token preview through `preview_organization_invitation(text)`;
+- authenticated invitation acceptance through `accept_organization_invitation(text)`;
+- one-time raw invitation-link handling only from the successful creation response;
+- role-less invitation support;
+- read-only canonical role presentation;
+- removal of the legacy/mock Team-role task surface.
+
+The six authored runtime files contain no live Team/invitation authority path using:
+
+- `studio_invites`;
+- `user_roles`;
+- Team membership reads from `profiles`;
+- `has_role`;
+- `supabaseAdmin`.
+
+Canonical role grant/revoke UI remains intentionally contained.
+
+#### Application validation
+
+Static/application validation passed before checkpointing:
+
+- targeted Prettier on all six authored files: PASS;
+- targeted ESLint on all six authored files: PASS;
+- Production build: PASS;
+- TypeScript after normal TanStack route generation: PASS;
+- `git diff --check`: PASS;
+- authored implementation boundary: exactly six files;
+- no migration change;
+- no generated Supabase type change;
+- checked-in `src/routeTree.gen.ts` restored before commit.
+
+The implementation commit contains:
+
+- 6 files changed;
+- 793 insertions;
+- 519 deletions.
+
+#### Authenticated local runtime acceptance
+
+Disposable authenticated local fixtures were used under the explicit Slice 7C runtime validation plan.
+
+Founder validation proved:
+
+- Team navigation and canonical Team directory access;
+- invitation-history access;
+- all canonical invitation role choices available;
+- role-less invitation creation;
+- role-bearing Editor invitation creation;
+- one-time invitation URL behavior;
+- canonical invitation revocation;
+- no role-editing controls;
+- accepted role-less membership materializes with zero active role grants;
+- accepted Editor invitation materializes exactly one active organization-wide `editor` grant.
+
+Studio Manager validation proved:
+
+- Team navigation and canonical Team directory access;
+- invitation-history access;
+- role-less invitation creation;
+- no role selector exposed;
+- no role-administration controls exposed;
+- canonical invitation revocation;
+- revocation records the Studio Manager canonical organization-member ID;
+- manager-created invitation retained zero preauthorized roles.
+
+Client Coordinator validation proved:
+
+- Team navigation is visible;
+- canonical Team directory is readable;
+- no invitation creation surface is exposed;
+- no invitation history is exposed;
+- no revoke control is exposed;
+- no role-administration controls are exposed.
+
+Photographer validation additionally proved:
+
+- Team is absent from navigation;
+- direct `/team` access is contained;
+- no Team directory or invitation data is disclosed.
+
+#### Invitation and authorization contract validation
+
+The canonical Slice 7B Team pgTAP contract was rerun against the clean post-runtime local database:
+
+- files: 1;
+- tests: 42;
+- result: PASS.
+
+That regression proves, among other canonical negative cases:
+
+- Client Coordinator invitation denial;
+- Client Coordinator role-assignment denial;
+- Studio Manager role-bearing invitation denial;
+- revoked invitation preview denial;
+- unknown-token preview denial;
+- unconfirmed-email acceptance denial;
+- wrong-email acceptance denial;
+- accepted-token replay denial;
+- cross-organization mutation denial;
+- raw bearer-token audit exclusion;
+- final-Founder protection.
+
+A separate transaction-only invitation-preview lifecycle check additionally proved:
+
+- accepted invitation token preview rows: 0;
+- expired pending invitation token preview rows: 0;
+- valid pending control preview rows: 1.
+
+The lifecycle test rolled back completely.
+
+#### Runtime cleanup and local baseline restoration
+
+All disposable runtime evidence was removed after acceptance.
+
+A full explicit local-only:
+
+`npx supabase db reset --local`
+
+completed successfully and replayed the entire migration chain through:
+
+`20260816221825_sprint10_canonical_team_access_foundation.sql`.
+
+Final local baseline after reset:
+
+- Auth users: 0;
+- organization members: 0;
+- live role grants: 0;
+- organization invitations: 0;
+- canonical Little Shots by Hema organization status: `suspended`;
+- canonical role catalogue: 12 roles.
+
+The canonical Team pgTAP rerun and the transaction-only lifecycle test both left this clean baseline unchanged.
+
+#### Repository checkpoint
+
+Implementation commit:
+
+`bc0436817455473f88a6ec04fe37547ef80f67f9`
+
+Remote reconciliation after push:
+
+- local HEAD: `bc0436817455473f88a6ec04fe37547ef80f67f9`;
+- tracking branch: `bc0436817455473f88a6ec04fe37547ef80f67f9`;
+- actual remote branch: `bc0436817455473f88a6ec04fe37547ef80f67f9`;
+- divergence: `0 0`.
+
+The implementation worktree was clean before this documentation checkpoint was authored.
+
+#### Production containment
+
+Slice 7C performed no Production database query, write or migration deployment.
+
+No Production application deployment is authorized by this checkpoint.
+
+Legacy database objects remain present and contained; Slice 7C removes them only from the live Team/invitation application authority path.
+
+Canonical role administration remains deferred until exact role-key-to-grant-scope representation can be exposed safely.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
