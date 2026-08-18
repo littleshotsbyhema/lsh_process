@@ -11259,3 +11259,415 @@ The containment gates remain:
 **IMPLEMENTATION VALIDATED / PUSHED / PREVIEW DEPLOYMENT VERIFIED / NOT PRODUCTION RELEASED**
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+---
+
+## Sprint 10 Slice 7J - Canonical Pre-Shoot Preparation Read Surface - Technical Design Freeze
+
+### Status
+
+**TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT STARTED / NOT PRODUCTION RELEASED**
+
+Sprint 10 remains:
+
+**IMPLEMENTATION IN PROGRESS / NOT RELEASED**
+
+### Objective
+
+Expose existing canonical pre-shoot preparation evidence through the authenticated Bookings workspace without introducing any preparation mutation or journey-advancement authority.
+
+Slice 7J is read-only.
+
+The application will expose canonical evidence already governed by:
+
+- `booking_preparations`;
+- `booking_preparation_items`;
+- canonical `prep.read` permission;
+- existing row-level security and branch scope.
+
+The database remains the sole authority for preparation visibility and preparation evidence integrity.
+
+### Existing canonical database authority
+
+Slice 7J authors no new SQL.
+
+Canonical preparation evidence already exists in:
+
+`booking_preparations`
+
+with authoritative fields including:
+
+- preparation identity;
+- booking identity;
+- preparation start timestamp;
+- preparation actor.
+
+Canonical preparation checklist evidence already exists in:
+
+`booking_preparation_items`
+
+with authoritative fields including:
+
+- service category;
+- taxonomy version;
+- item key;
+- item label;
+- required / optional classification;
+- canonical sort order;
+- satisfied / unsatisfied state;
+- satisfaction timestamp;
+- satisfaction actor;
+- creation and update attribution.
+
+Authenticated SELECT access to both preparation surfaces is controlled through canonical:
+
+`prep.read`
+
+and existing booking / branch scope enforcement.
+
+The application must not recreate those authorization rules as an alternative source of truth.
+
+### Generated type evidence
+
+The existing generated Supabase type file already contains canonical table types for:
+
+- `booking_preparations`;
+- `booking_preparation_items`.
+
+Slice 7J therefore expects no generated type change.
+
+### Frozen implementation boundary
+
+Implementation is limited to exactly:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+No migration is expected.
+
+No generated Supabase type change is expected.
+
+No package change is expected.
+
+No lockfile change is expected.
+
+No route-tree change is expected.
+
+No role, permission or ACL migration is expected.
+
+No preparation mutation is expected.
+
+No safety mutation is expected.
+
+No team-assignment mutation is expected.
+
+No external-creative mutation is expected.
+
+### Permission model
+
+`listBookingWorkspace()` will continue resolving canonical effective permissions through:
+
+`effective_permissions(ORGANIZATION_ID)`
+
+and will additionally derive:
+
+`canReadPreparation`
+
+from:
+
+`prep.read`
+
+This boolean is a presentation-containment signal only.
+
+Canonical database RLS remains authoritative for actual preparation-row visibility.
+
+No hard-coded role-name authorization may be introduced.
+
+### Canonical workspace read model
+
+Add canonical preparation evidence to `BookingWorkspaceData`.
+
+Expected additions:
+
+- `bookingPreparations`
+- `bookingPreparationItems`
+- `canReadPreparation`
+
+Preparation rows must use the already-generated canonical table row types.
+
+No manually duplicated preparation domain model should be introduced when the generated table types already represent the canonical schema.
+
+### Preparation loading boundary
+
+When:
+
+`canReadPreparation === true`
+
+and visible bookings exist, `listBookingWorkspace()` may read canonical preparation evidence for those visible booking IDs.
+
+Expected read sequence:
+
+1. read `booking_preparations` scoped to the visible booking IDs;
+2. collect the returned canonical preparation IDs;
+3. if preparation IDs exist, read `booking_preparation_items` scoped to those preparation IDs;
+4. preserve canonical checklist ordering by `sort_order`.
+
+When:
+
+`canReadPreparation === false`
+
+the workspace must return:
+
+- no preparation rows;
+- no preparation item rows.
+
+The application must not attempt to infer hidden preparation evidence.
+
+### Read authority containment
+
+Slice 7J must not:
+
+- infer that preparation exists merely because a booking is Stage 9 or later;
+- fabricate a preparation start timestamp;
+- fabricate checklist items from UI taxonomy constants;
+- fabricate required / optional classification;
+- infer satisfaction from journey stage;
+- infer satisfaction from safety or scheduling state;
+- expose preparation evidence when canonical rows are absent;
+- bypass canonical RLS.
+
+Only canonical rows returned by Supabase may be displayed.
+
+### Read-only UI surface
+
+The authenticated Bookings workspace may display a dedicated canonical pre-shoot preparation section only when:
+
+- actor has `prep.read`;
+- canonical preparation evidence exists for the booking.
+
+The section may display:
+
+- preparation started timestamp;
+- checklist item label;
+- required / optional status;
+- satisfied / unsatisfied status;
+- satisfaction timestamp when present.
+
+The checklist must render in canonical `sort_order`.
+
+The UI may identify the evidence as canonical pre-shoot preparation.
+
+The UI must not expose a preparation mutation control in Slice 7J.
+
+### No-evidence state
+
+For an actor with `prep.read`, a booking without canonical preparation evidence may display an explicit read-only no-evidence state such as:
+
+`Pre-shoot preparation has not started.`
+
+This message is permitted only as a statement that no canonical preparation row is currently visible.
+
+It must not imply that the booking is eligible to start preparation.
+
+Eligibility remains controlled by the separate canonical mutation RPC.
+
+### Stage semantics
+
+Stage 8 / `booking_confirmed` with no preparation row:
+
+- preparation evidence must not be fabricated;
+- no Stage 8 -> 9 control is introduced in Slice 7J.
+
+Stage 9 / `pre_shoot_preparation` with canonical preparation evidence:
+
+- the authoritative preparation instance may be displayed;
+- canonical checklist items may be displayed.
+
+Later stages with preserved canonical preparation evidence:
+
+- the historical preparation evidence may remain visible;
+- the UI must not imply that preparation state is currently mutable.
+
+Journey stage is context only.
+
+Preparation evidence comes from preparation tables.
+
+### Explicit non-goals
+
+Slice 7J does not expose:
+
+- `start_pre_shoot_preparation`;
+- preparation-item satisfaction mutation;
+- preparation-item unsatisfaction or reversal;
+- generic journey advancement;
+- Stage 8 -> Stage 9 mutation;
+- Stage 9 -> Stage 10 mutation;
+- `mark_booking_shoot_scheduled`;
+- safety-readiness mutation;
+- safety signoff;
+- team assignment;
+- external creative assignment;
+- payment mutation;
+- booking confirmation;
+- schedule mutation.
+
+### Runtime acceptance cases
+
+#### Case A - authorized preparation read
+
+Given:
+
+- actor has `prep.read`;
+- booking has one canonical preparation instance;
+- canonical preparation items exist;
+
+the Bookings workspace must display the canonical preparation evidence.
+
+Result expected: **PASS**
+
+#### Case B - canonical checklist fidelity
+
+For visible preparation items, the UI must preserve:
+
+- canonical item labels;
+- required / optional classification;
+- satisfied / unsatisfied state;
+- satisfaction timestamp when present;
+- canonical `sort_order`.
+
+No checklist item may be synthesized client-side.
+
+Result expected: **PASS**
+
+#### Case C - no preparation evidence
+
+For a visible booking with:
+
+- actor has `prep.read`;
+- no canonical preparation row;
+
+the workspace must:
+
+- display no fabricated checklist;
+- display no fabricated preparation timestamp;
+- avoid implying that preparation has already started.
+
+A read-only canonical no-evidence message is permitted.
+
+Result expected: **PASS**
+
+#### Case D - actor without prep.read
+
+An actor lacking:
+
+`prep.read`
+
+must receive:
+
+- no preparation section containing canonical preparation evidence;
+- no preparation rows in the application workspace model;
+- no preparation item rows in the application workspace model.
+
+Canonical database authorization remains authoritative.
+
+Result expected: **PASS**
+
+#### Case E - historical preparation visibility
+
+For a later-stage booking that retains canonical preparation evidence:
+
+- the historical preparation instance remains readable when authorized;
+- checklist evidence remains canonical;
+- the UI does not imply that preparation is currently mutable.
+
+Result expected: **PASS**
+
+#### Case F - no mutation surface
+
+The Slice 7J UI must expose no control that invokes:
+
+- `start_pre_shoot_preparation`;
+- preparation-item mutation;
+- Stage 8 -> 9 advancement;
+- Stage 9 -> 10 advancement.
+
+Result expected: **PASS**
+
+#### Case G - source containment
+
+The Slice 7J implementation must introduce no runtime reference to:
+
+- `start_pre_shoot_preparation`;
+- preparation-item mutation RPCs;
+- `mark_booking_shoot_scheduled`;
+- safety mutation;
+- team-assignment mutation;
+- external-creative mutation;
+- generic journey advancement.
+
+The committed implementation must remain limited to exactly:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+Result expected: **PASS**
+
+### Validation gate
+
+Before implementation commit:
+
+Application:
+
+- targeted Prettier;
+- targeted ESLint;
+- `npm run build`;
+- `npx tsc --noEmit`;
+- `git diff --check`.
+
+The known checked-in TanStack generated-route baseline defect must continue to be classified separately if reproduced unchanged and unrelated to Slice 7J.
+
+Database regression:
+
+- `supabase/tests/sprint10_pre_shoot_preparation_test.sql`;
+- `supabase/tests/sprint10_preparation_items_test.sql`;
+- complete local database regression;
+- `npx supabase db lint --local`.
+
+Current dedicated pgTAP plans:
+
+- pre-shoot preparation: 71 tests;
+- preparation items: 83 tests.
+
+Runtime acceptance:
+
+- authenticated local fixtures covering Cases A-G;
+- fixture cleanup with local database reset afterward.
+
+### Commit containment
+
+The technical-design freeze must be committed separately from implementation.
+
+Expected freeze commit subject:
+
+`docs: freeze sprint 10 slice 7j preparation read surface`
+
+Implementation must not begin until the freeze commit is:
+
+- reviewed;
+- committed;
+- pushed;
+- Git / GitHub reconciled;
+- verified as an exact READY Vercel Preview deployment.
+
+### Production containment
+
+Still HOLD:
+
+- Git `main` merge;
+- Supabase branch merge;
+- Production database mutation;
+- Production application release/redeployment.
+
+Sprint 10 remains:
+
+**IMPLEMENTATION IN PROGRESS / NOT RELEASED**
