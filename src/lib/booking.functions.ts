@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
@@ -57,6 +58,7 @@ export type BookingWorkspaceData = {
   schedules: BookingShootScheduleRow[];
   leads: BookingLeadSummary[];
   families: BookingFamilySummary[];
+  canSchedule: boolean;
 };
 
 function throwIfError(error: { message: string } | null) {
@@ -65,23 +67,51 @@ function throwIfError(error: { message: string } | null) {
   }
 }
 
+const proposeShootScheduleSchema = z.object({
+  bookingId: z.string().uuid(),
+  scheduledStartAt: z.string().datetime({ offset: true }),
+  scheduledEndAt: z.string().datetime({ offset: true }),
+  timezone: z.string().trim().min(1),
+  locationType: z.string().trim().min(1),
+  locationDetails: z.string().trim().min(1).optional(),
+});
+
+const rescheduleShootSchema = z.object({
+  bookingId: z.string().uuid(),
+  scheduledStartAt: z.string().datetime({ offset: true }),
+  scheduledEndAt: z.string().datetime({ offset: true }),
+  timezone: z.string().trim().min(1),
+  locationType: z.string().trim().min(1),
+  rescheduleReason: z.string().trim().min(1),
+  locationDetails: z.string().trim().min(1).optional(),
+});
+
 export const listBookingWorkspace = createServerFn({
   method: "GET",
 })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<BookingWorkspaceData> => {
-    const bookingsResult = await context.supabase
-      .from("bookings")
-      .select("*")
-      .eq("organization_id", ORGANIZATION_ID)
-      .order("created_at", {
-        ascending: false,
-      })
-      .limit(100);
+    const [bookingsResult, permissionResult] = await Promise.all([
+      context.supabase
+        .from("bookings")
+        .select("*")
+        .eq("organization_id", ORGANIZATION_ID)
+        .order("created_at", {
+          ascending: false,
+        })
+        .limit(100),
+
+      context.supabase.rpc("effective_permissions", {
+        p_organization_id: ORGANIZATION_ID,
+      }),
+    ]);
 
     throwIfError(bookingsResult.error);
+    throwIfError(permissionResult.error);
 
     const bookings = bookingsResult.data ?? [];
+    const permissions = new Set(permissionResult.data ?? []);
+    const canSchedule = permissions.has("shoot.schedule");
 
     if (bookings.length === 0) {
       const stagesResult = await context.supabase
@@ -105,6 +135,7 @@ export const listBookingWorkspace = createServerFn({
         schedules: [],
         leads: [],
         families: [],
+        canSchedule,
       };
     }
 
@@ -223,5 +254,55 @@ export const listBookingWorkspace = createServerFn({
       schedules: schedulesResult.data ?? [],
       leads,
       families,
+      canSchedule,
     };
+  });
+
+export const proposeShootSchedule = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(proposeShootScheduleSchema)
+  .handler(async ({ context, data }): Promise<BookingShootScheduleRow> => {
+    const result = await context.supabase.rpc("propose_booking_shoot_schedule", {
+      p_booking_id: data.bookingId,
+      p_scheduled_start_at: data.scheduledStartAt,
+      p_scheduled_end_at: data.scheduledEndAt,
+      p_timezone: data.timezone,
+      p_location_type: data.locationType,
+      p_location_details: data.locationDetails,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Schedule proposal returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const rescheduleShoot = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(rescheduleShootSchema)
+  .handler(async ({ context, data }): Promise<BookingShootScheduleRow> => {
+    const result = await context.supabase.rpc("reschedule_booking_shoot", {
+      p_booking_id: data.bookingId,
+      p_scheduled_start_at: data.scheduledStartAt,
+      p_scheduled_end_at: data.scheduledEndAt,
+      p_timezone: data.timezone,
+      p_location_type: data.locationType,
+      p_reschedule_reason: data.rescheduleReason,
+      p_location_details: data.locationDetails,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Reschedule returned no row.");
+    }
+
+    return result.data;
   });

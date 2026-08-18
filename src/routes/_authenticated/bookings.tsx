@@ -1,10 +1,15 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Check, Circle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { AppShell, Card, PageHeader } from "@/components/AppShell";
 import {
   listBookingWorkspace,
+  proposeShootSchedule,
+  rescheduleShoot,
   type BookingJourneyStageRow,
   type BookingShootScheduleRow,
   type BookingStageTransitionRow,
@@ -140,6 +145,264 @@ function ScheduleHistory({ schedules }: { schedules: BookingShootScheduleRow[] }
   );
 }
 
+function resolveBrowserTimezone(): string | null {
+  try {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return timeZone && timeZone.length > 0 ? timeZone : null;
+  } catch {
+    return null;
+  }
+}
+
+type ScheduleMutationMode = "propose" | "reschedule";
+
+function ScheduleMutationForm({
+  mode,
+  bookingId,
+  onCancel,
+  onSuccess,
+}: {
+  mode: ScheduleMutationMode;
+  bookingId: string;
+  onCancel: () => void;
+  onSuccess: () => Promise<void>;
+}) {
+  const [timezone] = useState(resolveBrowserTimezone);
+
+  const [scheduledStart, setScheduledStart] = useState("");
+  const [scheduledEnd, setScheduledEnd] = useState("");
+  const [locationType, setLocationType] = useState("");
+  const [locationDetails, setLocationDetails] = useState("");
+  const [rescheduleReason, setRescheduleReason] = useState("");
+
+  const proposeFn = useServerFn(proposeShootSchedule);
+  const rescheduleFn = useServerFn(rescheduleShoot);
+
+  const proposeMutation = useMutation({
+    mutationFn: (vars: {
+      bookingId: string;
+      scheduledStartAt: string;
+      scheduledEndAt: string;
+      timezone: string;
+      locationType: string;
+      locationDetails?: string;
+    }) => proposeFn({ data: vars }),
+    onSuccess: async () => {
+      toast.success("Shoot schedule proposed.");
+      await onSuccess();
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not propose the shoot schedule."),
+  });
+
+  const rescheduleMutation = useMutation({
+    mutationFn: (vars: {
+      bookingId: string;
+      scheduledStartAt: string;
+      scheduledEndAt: string;
+      timezone: string;
+      locationType: string;
+      rescheduleReason: string;
+      locationDetails?: string;
+    }) => rescheduleFn({ data: vars }),
+    onSuccess: async () => {
+      toast.success("Shoot rescheduled.");
+      await onSuccess();
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not reschedule the shoot."),
+  });
+
+  const mutation = mode === "propose" ? proposeMutation : rescheduleMutation;
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!timezone) {
+      toast.error("A browser timezone could not be resolved. Scheduling is unavailable.");
+      return;
+    }
+
+    if (!scheduledStart || !scheduledEnd) {
+      toast.error("Start and end times are required.");
+      return;
+    }
+
+    const startDate = new Date(scheduledStart);
+    const endDate = new Date(scheduledEnd);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      toast.error("Enter valid start and end times.");
+      return;
+    }
+
+    if (endDate <= startDate) {
+      toast.error("The scheduled end must be after the scheduled start.");
+      return;
+    }
+
+    if (!locationType.trim()) {
+      toast.error("Location type is required.");
+      return;
+    }
+
+    const trimmedDetails = locationDetails.trim();
+
+    if (mode === "propose") {
+      proposeMutation.mutate({
+        bookingId,
+        scheduledStartAt: startDate.toISOString(),
+        scheduledEndAt: endDate.toISOString(),
+        timezone,
+        locationType: locationType.trim(),
+        locationDetails: trimmedDetails.length > 0 ? trimmedDetails : undefined,
+      });
+      return;
+    }
+
+    if (!rescheduleReason.trim()) {
+      toast.error("A reschedule reason is required.");
+      return;
+    }
+
+    rescheduleMutation.mutate({
+      bookingId,
+      scheduledStartAt: startDate.toISOString(),
+      scheduledEndAt: endDate.toISOString(),
+      timezone,
+      locationType: locationType.trim(),
+      rescheduleReason: rescheduleReason.trim(),
+      locationDetails: trimmedDetails.length > 0 ? trimmedDetails : undefined,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-5 rounded-lg border border-border bg-card p-4">
+      <p className="text-sm font-medium text-primary">
+        {mode === "propose" ? "Propose shoot schedule" : "Reschedule shoot"}
+      </p>
+
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+        {mode === "propose"
+          ? "Proposing a schedule does not reserve a date or confirm this booking."
+          : "Rescheduling replaces the current reserved schedule with another reserved version. It does not confirm the booking or advance the journey."}
+      </p>
+
+      {!timezone ? (
+        <p className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          The browser timezone could not be resolved. Scheduling cannot be submitted.
+        </p>
+      ) : null}
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Scheduled start
+          </span>
+          <input
+            type="datetime-local"
+            value={scheduledStart}
+            onChange={(event) => setScheduledStart(event.target.value)}
+            required
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+          />
+        </label>
+
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Scheduled end
+          </span>
+          <input
+            type="datetime-local"
+            value={scheduledEnd}
+            onChange={(event) => setScheduledEnd(event.target.value)}
+            required
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+          />
+        </label>
+
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Timezone
+          </span>
+          <input
+            type="text"
+            value={timezone ?? "Unavailable"}
+            readOnly
+            disabled
+            className="mt-1.5 w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground"
+          />
+        </label>
+
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Location type
+          </span>
+          <input
+            type="text"
+            value={locationType}
+            onChange={(event) => setLocationType(event.target.value)}
+            required
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+          />
+        </label>
+
+        <label className="block sm:col-span-2">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Location details (optional)
+          </span>
+          <input
+            type="text"
+            value={locationDetails}
+            onChange={(event) => setLocationDetails(event.target.value)}
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+          />
+        </label>
+
+        {mode === "reschedule" ? (
+          <label className="block sm:col-span-2">
+            <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+              Reschedule reason
+            </span>
+            <textarea
+              value={rescheduleReason}
+              onChange={(event) => setRescheduleReason(event.target.value)}
+              required
+              rows={2}
+              className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+            />
+          </label>
+        ) : null}
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button
+          type="submit"
+          disabled={mutation.isPending || !timezone}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+        >
+          {mutation.isPending
+            ? mode === "propose"
+              ? "Proposing…"
+              : "Rescheduling…"
+            : mode === "propose"
+              ? "Propose schedule"
+              : "Confirm reschedule"}
+        </button>
+
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={mutation.isPending}
+          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-primary hover:bg-muted disabled:opacity-60"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function TransitionHistory({
   transitions,
   stages,
@@ -184,12 +447,24 @@ function TransitionHistory({
 }
 
 function BookingsPage() {
+  const queryClient = useQueryClient();
+
   const workspaceQuery = useQuery({
     queryKey: ["booking-workspace"],
     queryFn: () => listBookingWorkspace(),
   });
 
   const data = workspaceQuery.data;
+
+  const [activeForm, setActiveForm] = useState<{
+    bookingId: string;
+    mode: ScheduleMutationMode;
+  } | null>(null);
+
+  const refreshBookingWorkspace = async () => {
+    setActiveForm(null);
+    await queryClient.invalidateQueries({ queryKey: ["booking-workspace"] });
+  };
 
   return (
     <AppShell>
@@ -259,6 +534,20 @@ function BookingsPage() {
             const currentSchedule = scheduleHistory[scheduleHistory.length - 1] ?? null;
 
             const currentOrder = currentStage?.stage_order ?? 0;
+
+            const canPropose =
+              data.canSchedule &&
+              currentOrder === 7 &&
+              (!currentSchedule || currentSchedule.schedule_state === "proposed");
+
+            const canReschedule =
+              data.canSchedule &&
+              currentOrder >= 8 &&
+              currentOrder <= 10 &&
+              currentSchedule?.schedule_state === "reserved";
+
+            const isActiveForm = (mode: ScheduleMutationMode) =>
+              activeForm?.bookingId === booking.id && activeForm.mode === mode;
 
             return (
               <Card key={booking.id} className="p-6">
@@ -365,6 +654,25 @@ function BookingsPage() {
                         No date is inferred from legacy booking state. Shoot timing appears here
                         only when authoritative schedule evidence exists.
                       </p>
+
+                      {canPropose && !isActiveForm("propose") ? (
+                        <button
+                          type="button"
+                          onClick={() => setActiveForm({ bookingId: booking.id, mode: "propose" })}
+                          className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                        >
+                          Propose shoot schedule
+                        </button>
+                      ) : null}
+
+                      {canPropose && isActiveForm("propose") ? (
+                        <ScheduleMutationForm
+                          mode="propose"
+                          bookingId={booking.id}
+                          onCancel={() => setActiveForm(null)}
+                          onSuccess={refreshBookingWorkspace}
+                        />
+                      ) : null}
                     </Card>
                   ) : (
                     <>
@@ -424,6 +732,48 @@ function BookingsPage() {
                             ? "This shoot plan is proposed only. It does not reserve or confirm the date."
                             : "This is the current authoritative reserved shoot schedule."}
                         </p>
+
+                        {canPropose && !isActiveForm("propose") ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActiveForm({ bookingId: booking.id, mode: "propose" })
+                            }
+                            className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                          >
+                            Propose changed schedule
+                          </button>
+                        ) : null}
+
+                        {canReschedule && !isActiveForm("reschedule") ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActiveForm({ bookingId: booking.id, mode: "reschedule" })
+                            }
+                            className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                          >
+                            Reschedule
+                          </button>
+                        ) : null}
+
+                        {canPropose && isActiveForm("propose") ? (
+                          <ScheduleMutationForm
+                            mode="propose"
+                            bookingId={booking.id}
+                            onCancel={() => setActiveForm(null)}
+                            onSuccess={refreshBookingWorkspace}
+                          />
+                        ) : null}
+
+                        {canReschedule && isActiveForm("reschedule") ? (
+                          <ScheduleMutationForm
+                            mode="reschedule"
+                            bookingId={booking.id}
+                            onCancel={() => setActiveForm(null)}
+                            onSuccess={refreshBookingWorkspace}
+                          />
+                        ) : null}
                       </Card>
 
                       <div className="mt-6">
@@ -513,9 +863,11 @@ function BookingsPage() {
                 <Card className="mt-6 p-5">
                   <p className="text-xs leading-5 text-muted-foreground">
                     Advance Pending is a workflow state, not proof of payment. A proposed shoot plan
-                    is not a reservation. Booking confirmation and later journey advancement remain
-                    controlled by authoritative server-enforced gates; this Slice 7F view exposes no
-                    schedule or journey mutation.
+                    is not a reservation. Shoot schedule proposal and reschedule are available above
+                    through the authoritative server-enforced RPC boundary where eligible. Booking
+                    confirmation, payment, preparation, safety, team assignment and general journey
+                    advancement remain controlled by separate authoritative gates and are not
+                    exposed on this screen.
                   </p>
                 </Card>
               </Card>
