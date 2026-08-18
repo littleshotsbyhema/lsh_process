@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { AppShell, Card, PageHeader } from "@/components/AppShell";
 import {
+  confirmBookingAfterAdvance,
   listBookingWorkspace,
   proposeShootSchedule,
   recordBookingPayment,
@@ -668,6 +669,53 @@ function ScheduleMutationForm({
   );
 }
 
+function BookingConfirmationControl({
+  bookingId,
+  onSuccess,
+}: {
+  bookingId: string;
+  onSuccess: () => Promise<void>;
+}) {
+  const confirmBookingFn = useServerFn(confirmBookingAfterAdvance);
+
+  const confirmBookingMutation = useMutation({
+    mutationFn: () =>
+      confirmBookingFn({
+        data: {
+          bookingId,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Booking confirmed and shoot reserved.");
+      await onSuccess();
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not confirm the booking."),
+  });
+
+  return (
+    <div className="mt-4 rounded-lg border border-border bg-card p-4">
+      <p className="text-sm font-medium text-primary">Confirm booking & reserve shoot</p>
+
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+        This dedicated action confirms the booking, reserves the current proposed shoot plan and
+        advances the client journey exactly from Stage 7 to Stage 8. It does not start pre-shoot
+        preparation, complete preparation, mark safety readiness, assign team members, mark the
+        shoot scheduled, or advance beyond Stage 8.
+      </p>
+
+      <button
+        type="button"
+        onClick={() => confirmBookingMutation.mutate()}
+        disabled={confirmBookingMutation.isPending}
+        className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+      >
+        {confirmBookingMutation.isPending ? "Confirming…" : "Confirm booking & reserve shoot"}
+      </button>
+    </div>
+  );
+}
+
 function TransitionHistory({
   transitions,
   stages,
@@ -812,6 +860,15 @@ function BookingsPage() {
               data.canRecordPayment &&
               paymentSummary !== null &&
               !paymentSummary.advance_satisfied;
+
+            const canConfirmBooking =
+              currentOrder === 7 &&
+              currentStage?.stage_key === "advance_pending" &&
+              data.canConfirmBooking &&
+              data.canReadPayment &&
+              paymentSummary !== null &&
+              paymentSummary.advance_satisfied &&
+              currentSchedule?.schedule_state === "proposed";
 
             const canPropose =
               data.canSchedule &&
@@ -1050,6 +1107,13 @@ function BookingsPage() {
                             : "This is the current authoritative reserved shoot schedule."}
                         </p>
 
+                        {canConfirmBooking && !isActiveForm("propose") ? (
+                          <BookingConfirmationControl
+                            bookingId={booking.id}
+                            onSuccess={refreshBookingWorkspace}
+                          />
+                        ) : null}
+
                         {canPropose && !isActiveForm("propose") ? (
                           <button
                             type="button"
@@ -1182,7 +1246,10 @@ function BookingsPage() {
                     Advance Pending is a workflow state, not proof of payment. Authorized users can
                     read canonical advance evidence and record new immutable payment evidence above
                     while the Stage 7 advance remains outstanding. A proposed shoot plan is not a
-                    reservation. Booking confirmation, payment reversal, preparation, safety, team
+                    reservation. When the Stage 7 advance is satisfied and a proposed shoot plan
+                    exists, an actor with booking.confirm can use the dedicated confirmation control
+                    above. That operation confirms the booking, reserves the current proposal and
+                    advances exactly to Stage 8. Payment reversal, preparation, safety, team
                     assignment and general journey advancement remain controlled by separate
                     authoritative gates and are not exposed on this screen.
                   </p>

@@ -68,6 +68,7 @@ export type BookingWorkspaceData = {
   paymentSummaries: BookingPaymentSummary[];
   canReadPayment: boolean;
   canRecordPayment: boolean;
+  canConfirmBooking: boolean;
   canSchedule: boolean;
 };
 
@@ -105,6 +106,10 @@ const recordBookingPaymentSchema = z.object({
   note: z.string().trim().min(1).optional(),
 });
 
+const confirmBookingAfterAdvanceSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
 export const listBookingWorkspace = createServerFn({
   method: "GET",
 })
@@ -132,6 +137,7 @@ export const listBookingWorkspace = createServerFn({
     const permissions = new Set(permissionResult.data ?? []);
     const canReadPayment = permissions.has("payment.read");
     const canRecordPayment = permissions.has("payment.record");
+    const canConfirmBooking = permissions.has("booking.confirm");
     const canSchedule = permissions.has("shoot.schedule");
 
     if (bookings.length === 0) {
@@ -159,6 +165,7 @@ export const listBookingWorkspace = createServerFn({
         paymentSummaries: [],
         canReadPayment,
         canRecordPayment,
+        canConfirmBooking,
         canSchedule,
       };
     }
@@ -306,6 +313,7 @@ export const listBookingWorkspace = createServerFn({
       paymentSummaries,
       canReadPayment,
       canRecordPayment,
+      canConfirmBooking,
       canSchedule,
     };
   });
@@ -378,6 +386,25 @@ export const recordBookingPayment = createServerFn({
 
     if (!result.data) {
       throw new Error("Payment recording returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const confirmBookingAfterAdvance = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(confirmBookingAfterAdvanceSchema)
+  .handler(async ({ context, data }): Promise<BookingRow> => {
+    const result = await context.supabase.rpc("confirm_booking_after_advance", {
+      p_booking_id: data.bookingId,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Booking confirmation returned no row.");
     }
 
     return result.data;
