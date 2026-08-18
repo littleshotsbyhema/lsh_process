@@ -10120,3 +10120,433 @@ Each commit is pushed and reconciled independently.
 Every `architecture-rebuild` push must be verified as a Vercel Preview deployment before proceeding to the next governed commit.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+---
+
+## Sprint 10 Slice 7H - Controlled Advance Payment Evidence - Implementation Checkpoint
+
+### Implementation evidence
+
+Sprint 10 Slice 7H controlled advance-payment evidence runtime implementation completed locally, was fully validated, committed, pushed and Preview-reconciled on 2026-08-18.
+
+- Freeze commit: `65e51b134143a2810069982173e34b64454be3ca`
+- Implementation commit: `811aa2cf2fe13571708c0795f7b636fc084e0834`
+- Implementation commit message: `feat: add controlled advance payment evidence`
+- Implementation parent: `65e51b134143a2810069982173e34b64454be3ca`
+- Branch: `architecture-rebuild`
+
+The implementation commit contains exactly:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+Implementation diff:
+
+- `src/lib/booking.functions.ts`: 76 additions / 0 deletions;
+- `src/routes/_authenticated/bookings.tsx`: 323 additions / 6 deletions;
+- total: 399 additions / 6 deletions.
+
+No migration, generated Supabase type, generated route-tree, package, lockfile, access-control, preparation, safety, team-assignment or external-creative file is part of the implementation commit.
+
+### Delivered payment capability model
+
+`listBookingWorkspace()` continues to resolve canonical effective permissions through:
+
+`effective_permissions(ORGANIZATION_ID)`
+
+and now derives:
+
+- `canReadPayment` from `permissions.has("payment.read")`;
+- `canRecordPayment` from `permissions.has("payment.record")`.
+
+No hard-coded role-name payment authorization model was introduced.
+
+These booleans are presentation/read-containment signals only.
+
+Canonical database RPC authorization remains authoritative.
+
+### Delivered canonical payment read model
+
+When `canReadPayment === true`, the booking workspace calls:
+
+`get_booking_payment_summary(uuid)`
+
+only for bookings already present in the canonical visible booking workspace.
+
+The application does not calculate the required advance or financial totals itself.
+
+Rendered financial truth comes from the canonical summary fields:
+
+- accepted quotation total;
+- required advance;
+- valid collected amount;
+- outstanding advance;
+- advance-satisfied state;
+- payment count;
+- reversal count;
+- confirmed-with-advance-shortfall signal.
+
+When `canReadPayment === false`:
+
+- the summary RPC is not called by the workspace;
+- payment amounts are not rendered;
+- payment counts are not rendered;
+- payment controls are not rendered.
+
+### Delivered payment mutation boundary
+
+Slice 7H adds exactly one new payment mutation server function:
+
+`recordBookingPayment`
+
+It calls only:
+
+`record_booking_payment(...)`
+
+The server function:
+
+- uses `requireSupabaseAuth`;
+- validates booking UUID;
+- validates positive whole-INR amount;
+- validates the canonical payment-method enum;
+- validates an offset-aware received timestamp;
+- normalizes blank optional reference/note values;
+- surfaces database errors;
+- returns the authoritative payment row.
+
+No direct INSERT, UPDATE or DELETE path against `booking_payments` was introduced.
+
+No reversal RPC and no booking-confirmation RPC were exposed by Slice 7H.
+
+### Delivered controlled payment UI
+
+The `/bookings` runtime now displays canonical advance evidence only for actors with payment-read capability.
+
+The record-payment control is additionally contained to:
+
+- canonical Stage 7 / `advance_pending`;
+- payment-read capability;
+- payment-record capability;
+- an available canonical payment summary;
+- `advance_satisfied === false`.
+
+The record-payment form accepts exactly:
+
+- whole-INR amount;
+- payment method;
+- received timestamp;
+- optional external reference;
+- optional note.
+
+Canonical payment methods are:
+
+- `cash`;
+- `upi`;
+- `bank_transfer`;
+- `card`;
+- `other`.
+
+The UI does not block overpayment.
+
+Payment evidence remains append-only and intentionally non-idempotent.
+
+Submit is disabled while a mutation is pending, but no fake client-side deduplication was introduced.
+
+### Advance satisfaction containment
+
+Payment satisfaction is explicitly not treated as:
+
+- booking confirmation;
+- shoot reservation;
+- preparation start;
+- safety readiness;
+- team assignment;
+- arbitrary journey advancement.
+
+After successful payment recording, the runtime invalidates:
+
+`["booking-workspace"]`
+
+and refetches canonical state.
+
+No optimistic financial totals, journey movement or scheduling state are fabricated client-side.
+
+### Controlled local runtime acceptance
+
+Disposable authenticated local fixtures exercised all frozen Slice 7H acceptance cases.
+
+#### Case A - unpaid canonical summary
+
+A canonical Stage 7 booking with a proposed, unreserved shoot plan was rendered for an authorized Founder.
+
+The UI and database showed:
+
+- accepted quotation total: INR 30,000;
+- required advance: INR 15,000;
+- valid collected: INR 0;
+- outstanding advance: INR 15,000;
+- advance satisfied: false;
+- payment count: 0;
+- reversal count: 0;
+- journey stage: `advance_pending`;
+- journey version: 1;
+- schedule version: 1;
+- schedule state: `proposed`.
+
+The record-payment control was available.
+
+Result: **PASS**
+
+#### Case B - partial payment
+
+The Founder recorded one INR 5,000 Cash payment through the Slice 7H UI.
+
+Canonical state refreshed to:
+
+- valid collected: INR 5,000;
+- outstanding advance: INR 10,000;
+- advance satisfied: false;
+- payment count: 1.
+
+The booking remained:
+
+- `advance_pending`;
+- journey version 1;
+- schedule version 1;
+- schedule state `proposed`.
+
+No booking confirmation or reservation occurred.
+
+Result: **PASS**
+
+#### Case C - threshold satisfaction without confirmation
+
+The Founder recorded a second INR 10,000 UPI payment with external reference:
+
+`S7H-UPI-THRESHOLD`
+
+Canonical state became:
+
+- valid collected: INR 15,000;
+- outstanding advance: INR 0;
+- advance satisfied: true;
+- payment count: 2;
+- reversal count: 0.
+
+The record-payment control disappeared after authoritative refresh.
+
+The booking still remained:
+
+- `advance_pending`;
+- journey version 1;
+- schedule version 1;
+- schedule state `proposed`;
+- reserved schedule rows: 0.
+
+No automatic booking confirmation or reservation occurred.
+
+Result: **PASS**
+
+#### Case D - actor without payment.record
+
+A Photographer fixture without `payment.record` received no payment mutation control.
+
+A forced direct RPC attempt was rejected with SQLSTATE `42501` and:
+
+`record_booking_payment: payment.record permission required`
+
+The permission-test booking remained at zero payment rows.
+
+Result: **PASS**
+
+#### Case E - actor without payment.read
+
+The same Photographer fixture also lacked `payment.read`.
+
+The booking UI exposed no canonical payment summary, amounts, counts or payment controls.
+
+A forced direct summary RPC attempt was rejected with SQLSTATE `42501` and:
+
+`get_booking_payment_summary: payment.read permission required`
+
+The canonical booking/payment state remained unchanged.
+
+Result: **PASS**
+
+#### Case F - runtime containment
+
+Runtime source inspection confirmed the Bookings module exposes only:
+
+- canonical workspace read;
+- canonical payment-summary read when authorized;
+- schedule proposal;
+- schedule reschedule;
+- payment recording.
+
+No runtime reference exists in the Slice 7H implementation to:
+
+- `reverse_booking_payment`;
+- `confirm_booking_after_advance`;
+- `start_pre_shoot_preparation`;
+- `mark_booking_shoot_scheduled`;
+- generic journey advancement;
+- preparation mutation;
+- safety mutation;
+- team-assignment mutation;
+- external-creative mutation.
+
+Authenticated visual acceptance also confirmed those controls are not exposed.
+
+Result: **PASS**
+
+### Database regression gate
+
+Slice 7H authored no SQL.
+
+Dedicated regression validation completed successfully:
+
+- Sprint 9 advance-payment evidence pgTAP: PASS;
+- Sprint 9 booking-confirmation pgTAP: PASS;
+- Sprint 10 shoot-schedule pgTAP: PASS;
+- combined dedicated gate: **255/255 PASS**.
+
+Complete local database regression:
+
+- **1083/1083 PASS** across 16 pgTAP files.
+
+Database lint:
+
+`npx supabase db lint --local`
+
+Result:
+
+`No schema errors found`
+
+Result: **PASS**
+
+### Application validation gate
+
+Application validation completed successfully:
+
+- targeted Prettier: PASS;
+- targeted ESLint: PASS;
+- production build: PASS;
+- TypeScript `npx tsc --noEmit`: PASS;
+- `git diff --check`: PASS;
+- generated `src/routeTree.gen.ts` restored after tooling regeneration;
+- final implementation boundary contained exactly the two frozen runtime files.
+
+Result: **PASS**
+
+### Disposable fixture cleanup
+
+After local acceptance:
+
+- the development server was stopped;
+- generated route-tree output was restored;
+- `npx supabase db reset --local --yes` completed successfully;
+- the complete migration chain reapplied successfully.
+
+Post-reset disposable evidence returned to zero for all checked acceptance tables, including:
+
+- `auth.users`;
+- `organization_members`;
+- `member_role_grants`;
+- `families`;
+- `quotations`;
+- `bookings`;
+- `booking_payment_requirements`;
+- `booking_payments`;
+- `booking_payment_reversals`;
+- `booking_shoot_schedules`;
+- `booking_journey_states`;
+- `booking_stage_transitions`.
+
+Result: **PASS**
+
+### Git implementation reconciliation
+
+Implementation commit:
+
+`811aa2cf2fe13571708c0795f7b636fc084e0834`
+
+was created directly on top of the Slice 7H freeze:
+
+`65e51b134143a2810069982173e34b64454be3ca`
+
+Pre-push divergence was:
+
+- remote-only commits: 0;
+- local-only commits: 1.
+
+The implementation push completed as the expected fast-forward:
+
+`65e51b1..811aa2c`
+
+Post-push:
+
+- local HEAD = `811aa2cf2fe13571708c0795f7b636fc084e0834`;
+- tracking ref = `811aa2cf2fe13571708c0795f7b636fc084e0834`;
+- divergence = 0 / 0;
+- worktree = clean.
+
+GitHub independently confirmed:
+
+- branch `architecture-rebuild` points to the exact implementation SHA;
+- the implementation is exactly one commit above the freeze;
+- exactly the two frozen implementation files changed.
+
+Result: **PASS**
+
+### Vercel Preview reconciliation
+
+The implementation push produced the expected Vercel Preview deployment:
+
+- deployment ID: `dpl_DQj9T9PHMHoypvT9UKQQeaN17DkG`;
+- Git SHA: `811aa2cf2fe13571708c0795f7b636fc084e0834`;
+- Git branch: `architecture-rebuild`;
+- state: `READY`;
+- target: `null`;
+- source: `git`;
+- branch alias: `memory-keeper-os-git-architecture-rebuild-team1996.vercel.app`.
+
+The exact SHA, branch, READY state and non-Production target were independently reconciled through authenticated read-only Vercel metadata.
+
+The previously recorded Production deployment remains:
+
+- deployment ID: `dpl_varrdvzMrBSfnNVjhwNnF4mrSzAL`;
+- Git SHA: `e570da0b7715f992edd4cd870437d3dbbaf7324a`;
+- target: `production`;
+- state: `READY`.
+
+The Slice 7H implementation push did not replace Production.
+
+Result: **PASS**
+
+### Production and merge containment
+
+Slice 7H implementation performed no:
+
+- Production Vercel deployment;
+- Production Supabase write;
+- Production Supabase migration;
+- remote payment mutation;
+- booking confirmation;
+- payment reversal;
+- Git merge into `main`;
+- Supabase branch merge;
+- preparation, safety, team-assignment or external-creative runtime release;
+- Sprint 10 release.
+
+The containment gates remain:
+
+- Git `main` merge: **HOLD**
+- Supabase branch merge: **HOLD**
+- Production database mutation: **HOLD**
+- Production application release/redeployment: **HOLD**
+
+### Slice 7H checkpoint status
+
+**IMPLEMENTATION VALIDATED / PUSHED / PREVIEW DEPLOYMENT VERIFIED / NOT PRODUCTION RELEASED**
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
