@@ -10877,3 +10877,385 @@ Still HOLD:
 Sprint 10 remains:
 
 **IMPLEMENTATION IN PROGRESS / NOT RELEASED**
+
+---
+
+## Sprint 10 Slice 7I - Controlled Booking Confirmation & Schedule Reservation - Implementation Checkpoint
+
+### Status
+
+**IMPLEMENTATION VALIDATED / PUSHED / PREVIEW DEPLOYMENT VERIFIED / NOT PRODUCTION RELEASED**
+
+Sprint 10 remains:
+
+**IMPLEMENTATION IN PROGRESS / NOT RELEASED**
+
+### Implementation commit
+
+The frozen Slice 7I implementation was committed as:
+
+`4b2a72843eb4a9c1a96db61f3a6a4f546f931d90`
+
+Subject:
+
+`feat: add controlled booking confirmation`
+
+Parent:
+
+`85101977129714e5a56b58eee9ecb6a880d903df`
+
+The implementation changed exactly:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+No migration, generated Supabase type, package, lockfile, route-tree, access-control, preparation, safety, team-assignment or external-creative source change was committed.
+
+### Implemented authority boundary
+
+The authenticated Bookings workspace now exposes the existing canonical:
+
+`confirm_booking_after_advance(uuid)`
+
+through one controlled application server mutation:
+
+`confirmBookingAfterAdvance`
+
+The server mutation:
+
+- requires authenticated Supabase context;
+- validates the booking UUID;
+- calls only the canonical `confirm_booking_after_advance(...)` RPC;
+- surfaces canonical database errors;
+- returns the authoritative booking row;
+- performs no direct booking, journey, transition, schedule, payment, preparation, safety or team-assignment table writes.
+
+`listBookingWorkspace()` now derives the presentation-only:
+
+`canConfirmBooking`
+
+signal from canonical effective permission:
+
+`booking.confirm`
+
+No role-name authorization was introduced.
+
+### UI containment
+
+The dedicated:
+
+`Confirm booking & reserve shoot`
+
+control is rendered only when presentation evidence shows:
+
+- exact Stage 7 / `advance_pending`;
+- actor has `booking.confirm`;
+- actor can read canonical payment evidence;
+- canonical payment summary exists;
+- `advance_satisfied === true`;
+- current authoritative shoot schedule exists;
+- current schedule state is `proposed`.
+
+The UI does not require `shoot.schedule` permission for confirmation.
+
+The control explicitly communicates that the operation:
+
+- confirms the booking;
+- reserves the current proposed shoot plan;
+- advances exactly Stage 7 -> Stage 8.
+
+It explicitly does not claim to:
+
+- start or complete pre-shoot preparation;
+- mark safety readiness;
+- assign team members;
+- mark the shoot scheduled;
+- advance beyond Stage 8.
+
+Duplicate submission is disabled while the confirmation mutation is pending.
+
+After success, `["booking-workspace"]` is invalidated/refetched and no optimistic journey or schedule state is fabricated.
+
+### Application validation
+
+Targeted formatting:
+
+- Prettier: **PASS**
+
+Targeted lint:
+
+- ESLint: **PASS**
+
+Application build:
+
+- `npm run build`: **PASS**
+- client build: **PASS**
+- SSR build: **PASS**
+- Nitro build: **PASS**
+
+The build emitted only previously observed non-blocking warnings.
+
+TypeScript validation:
+
+- `npx tsc --noEmit` passed after TanStack regenerated the route tree during the application build;
+- after restoring the frozen checked-in `src/routeTree.gen.ts`, the same command exposed 12 unrelated route-registration errors across six pre-existing route source files;
+- none of those six files changed in Slice 7I;
+- the missing route registrations are absent from the frozen checked-in route tree;
+- this is classified as a **PRE-EXISTING GENERATED-ROUTE BASELINE DEFECT / NOT A SLICE 7I REGRESSION**.
+
+Source diff validation:
+
+- `git diff --check`: **PASS**
+
+### Database regression
+
+Sprint 9 booking-confirmation pgTAP:
+
+- files: 1
+- tests: 65
+- result: **PASS**
+
+Sprint 10 shoot-schedule pgTAP:
+
+- files: 1
+- tests: 111
+- result: **PASS**
+
+Targeted database tests:
+
+- total: 176
+- result: **PASS**
+
+Complete local database regression:
+
+- files: 16
+- tests: 1083 / 1083
+- result: **PASS**
+
+Local database lint:
+
+- `npx supabase db lint --local`
+- result: **PASS**
+- schema errors: none.
+
+### Runtime acceptance
+
+#### Case A - eligible confirmation
+
+Eligible Stage 7 booking with:
+
+- satisfied canonical advance;
+- proposed current schedule;
+- `booking.confirm`;
+- payment-read capability
+
+displayed:
+
+`Confirm booking & reserve shoot`
+
+Result: **PASS**
+
+#### Case B - successful confirmation
+
+Confirmation through the authenticated UI produced:
+
+- same canonical booking;
+- exact Stage 7 -> Stage 8 advancement;
+- Stage 8 / `booking_confirmed`;
+- exactly one canonical `advance_satisfied` transition;
+- immutable proposed schedule version 1 preserved;
+- append-only reserved schedule version 2 created;
+- reserved version 2 linked to proposed version 1;
+- confirmation control removed after authoritative refetch;
+- no Stage 9 or Stage 10 advancement exposed.
+
+Result: **PASS**
+
+#### Case C - unsatisfied advance
+
+Zero and partial advance fixtures:
+
+- displayed no confirmation control;
+- forced canonical RPC calls were rejected with the required-advance-unsatisfied gate;
+- remained Stage 7;
+- created no confirmation transition;
+- retained the existing proposed schedule unchanged.
+
+Result: **PASS**
+
+#### Case D - proposed schedule missing
+
+Satisfied-advance fixture without a current proposed shoot plan:
+
+- displayed no confirmation control;
+- forced canonical RPC was rejected with:
+  `confirm_booking_after_advance: current proposed shoot plan required`;
+- remained Stage 7;
+- created no confirmation transition;
+- had no schedule mutation.
+
+Result: **PASS**
+
+#### Case E - actor without booking.confirm
+
+A controlled local actor with:
+
+- `booking.read = true`;
+- `payment.read = true`;
+- `shoot.schedule = true`;
+- `booking.confirm = false`
+
+could read the otherwise eligible Stage 7 booking, payment evidence and proposed schedule but received no confirmation control.
+
+Forced canonical RPC was rejected with:
+
+`confirm_booking_after_advance: booking.confirm permission required`
+
+The booking remained:
+
+- Stage 7 / `advance_pending`;
+- advance satisfied;
+- zero confirmation transitions;
+- one unchanged proposed schedule row.
+
+Result: **PASS**
+
+#### Case F - replay containment
+
+Direct canonical replay after successful confirmation:
+
+- returned the same booking;
+- remained Stage 8 / `booking_confirmed`;
+- retained exactly one confirmation transition;
+- retained exactly two schedule rows;
+- retained exactly one reserved schedule row;
+- retained latest schedule version 2;
+- created no duplicate reservation or transition.
+
+Result: **PASS**
+
+#### Case G - runtime source containment
+
+The implementation introduced no forbidden runtime mutation reference and no direct table mutation for:
+
+- payment reversal;
+- generic journey advancement;
+- pre-shoot preparation;
+- mark-shoot-scheduled;
+- preparation mutation;
+- safety mutation;
+- team-assignment mutation;
+- external-creative mutation.
+
+Result: **PASS**
+
+### Runtime fixture cleanup
+
+All Slice 7I runtime fixtures were local-only.
+
+After acceptance:
+
+`npx supabase db reset --local`
+
+replayed the complete migration chain and restored the canonical local baseline.
+
+Post-reset verification confirmed:
+
+- canonical organization returned to `suspended`;
+- fixture Auth users: 0;
+- fixture custom roles: 0;
+- fixture organization members: 0;
+- fixture families: 0;
+- fixture bookings: 0.
+
+A transient local Storage health warning occurred during container restart.
+
+Subsequent:
+
+`npx supabase status`
+
+confirmed the local development stack was running with the required API, Auth and database services available.
+
+Result: **PASS**
+
+### Git reconciliation
+
+Before push:
+
+- local implementation SHA = `4b2a72843eb4a9c1a96db61f3a6a4f546f931d90`;
+- remote branch SHA = `85101977129714e5a56b58eee9ecb6a880d903df`;
+- divergence = 0 / 1;
+- merge base = exact Slice 7I freeze SHA;
+- worktree = clean.
+
+The implementation push completed as the expected fast-forward:
+
+`8510197..4b2a728`
+
+Post-push:
+
+- local HEAD = `4b2a72843eb4a9c1a96db61f3a6a4f546f931d90`;
+- tracking ref = `4b2a72843eb4a9c1a96db61f3a6a4f546f931d90`;
+- divergence = 0 / 0;
+- worktree = clean.
+
+GitHub independently confirmed:
+
+- branch `architecture-rebuild` points to the exact implementation SHA;
+- parent is the exact Slice 7I freeze SHA;
+- subject is `feat: add controlled booking confirmation`;
+- exactly the two frozen implementation files changed.
+
+Result: **PASS**
+
+### Vercel Preview reconciliation
+
+The implementation push produced the expected Vercel Preview deployment:
+
+- deployment ID: `dpl_CJpvrxBVUFGJt9jos7qEKEdS11XE`;
+- Git SHA: `4b2a72843eb4a9c1a96db61f3a6a4f546f931d90`;
+- Git branch: `architecture-rebuild`;
+- Git subject: `feat: add controlled booking confirmation`;
+- state: `READY`;
+- target: `null`;
+- source: GitHub;
+- branch alias: `memory-keeper-os-git-architecture-rebuild-team1996.vercel.app`.
+
+The exact SHA, branch, READY state and non-Production target were independently reconciled through authenticated read-only Vercel metadata.
+
+The previously recorded Production deployment remains:
+
+- deployment ID: `dpl_varrdvzMrBSfnNVjhwNnF4mrSzAL`;
+- Git SHA: `e570da0b7715f992edd4cd870437d3dbbaf7324a`;
+- target: `production`;
+- state: `READY`.
+
+The Slice 7I implementation push did not replace Production.
+
+Result: **PASS**
+
+### Production and merge containment
+
+Slice 7I implementation performed no:
+
+- Production Vercel deployment;
+- Production Supabase write;
+- Production Supabase migration;
+- remote booking mutation;
+- Git merge into `main`;
+- Supabase branch merge;
+- preparation, safety, team-assignment or external-creative runtime release;
+- Sprint 10 release.
+
+The containment gates remain:
+
+- Git `main` merge: **HOLD**
+- Supabase branch merge: **HOLD**
+- Production database mutation: **HOLD**
+- Production application release/redeployment: **HOLD**
+
+### Slice 7I checkpoint status
+
+**IMPLEMENTATION VALIDATED / PUSHED / PREVIEW DEPLOYMENT VERIFIED / NOT PRODUCTION RELEASED**
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
