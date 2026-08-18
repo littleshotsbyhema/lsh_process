@@ -9441,3 +9441,682 @@ The existing containment gates remain:
 **IMPLEMENTATION VALIDATED / PUSHED / PREVIEW DEPLOYMENT VERIFIED / AUTHENTICATED PREVIEW APP SMOKE BLOCKED BY EMPTY REMOTE AUTH BASELINE / NOT PRODUCTION RELEASED**
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+---
+
+## Sprint 10 Slice 7H — Controlled Advance Payment Evidence — Technical Design Freeze
+
+Governed base commit: `7e2fe98053f9c43a9a5c1e37fbe21ec23fadc9d0` (Slice 7G checkpoint).
+
+Branch: `architecture-rebuild`.
+
+Slice 7H remains Preview-only. Production, Git `main`, and the Production Supabase environment remain outside this slice.
+
+### 1. Discovery basis
+
+Post-Slice-7G read-only discovery established that the next canonical workflow dependency is advance-payment evidence rather than booking confirmation.
+
+The database already provides the complete controlled payment foundation introduced in Sprint 9:
+
+- `booking_payment_requirements`;
+- `booking_payments`;
+- `booking_payment_reversals`;
+- `payment.read`;
+- `payment.record`;
+- `payment.reverse`;
+- `record_booking_payment(...)`;
+- `reverse_booking_payment(...)`;
+- `get_booking_payment_summary(uuid)`.
+
+The generated Supabase application contract already contains the payment tables, payment method enum and RPC signatures required for runtime integration.
+
+No Supabase type regeneration is required for Slice 7H.
+
+Current application discovery established that:
+
+- `/bookings` does not currently read canonical payment summary state;
+- no application server function currently calls `record_booking_payment(...)`;
+- no application server function currently calls `get_booking_payment_summary(...)`;
+- no application server function currently calls `reverse_booking_payment(...)`;
+- no application server function currently calls `confirm_booking_after_advance(...)`;
+- Slice 7G exposes only controlled shoot proposal and reschedule mutations.
+
+Canonical booking confirmation cannot succeed until valid non-reversed payment evidence satisfies the frozen advance requirement.
+
+Sprint 10 additionally requires the current shoot schedule tip to be a `proposed` schedule before first-time confirmation.
+
+Therefore booking confirmation is deferred to a later separately frozen slice.
+
+Slice 7H exists only to make the canonical advance-payment prerequisite visible and recordable through the application without releasing confirmation itself.
+
+### 2. Exact Slice 7H implementation boundary
+
+Slice 7H implementation is restricted to exactly:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+No other implementation file may change.
+
+In particular Slice 7H does not authorize changes to:
+
+- `src/integrations/supabase/types.ts`;
+- `src/lib/access.ts`;
+- `/prep`;
+- `/safety`;
+- generated route definitions;
+- migrations;
+- pgTAP test files;
+- package metadata;
+- lockfiles.
+
+`src/routeTree.gen.ts` may be regenerated temporarily by normal application tooling but must be restored before commit because Slice 7H introduces no route-definition change.
+
+### 3. Existing canonical payment guarantees consumed as-is
+
+Slice 7H authors no SQL and creates no new payment behavior.
+
+The existing canonical RPC:
+
+`record_booking_payment(
+  uuid,
+  integer,
+  booking_payment_method,
+  timestamptz,
+  text,
+  text
+)`
+
+remains the sole Slice 7H payment mutation authority.
+
+The RPC already owns:
+
+- booking existence validation;
+- positive whole-INR payment validation;
+- authenticated active-member resolution;
+- `payment.record` authorization;
+- booking branch-scope authorization;
+- canonical payment-requirement linkage;
+- immutable payment evidence creation;
+- canonical payment reference generation;
+- payment audit evidence.
+
+The frozen payment-method vocabulary remains exactly:
+
+- `cash`;
+- `upi`;
+- `bank_transfer`;
+- `card`;
+- `other`.
+
+Slice 7H does not reproduce those database rules in a second business-authority layer.
+
+Client validation exists for UX only.
+
+The database remains authoritative.
+
+### 4. Canonical payment summary authority
+
+Payment state displayed by Slice 7H must come from:
+
+`get_booking_payment_summary(uuid)`
+
+rather than from client-side arithmetic over raw payment rows.
+
+The canonical derived summary exposes:
+
+- `booking_id`;
+- `source_quotation_id`;
+- `accepted_quotation_total_inr`;
+- `required_advance_inr`;
+- `valid_collected_inr`;
+- `advance_outstanding_inr`;
+- `advance_satisfied`;
+- `payment_count`;
+- `reversal_count`;
+- `confirmed_with_advance_shortfall`.
+
+The application must not independently recalculate the 50% advance requirement.
+
+The database's frozen rule remains authoritative:
+
+`required advance = 50% of final accepted quotation value`
+
+using the canonical whole-INR rounding rule already implemented in Sprint 9.
+
+Slice 7H does not read raw payment or reversal rows merely to recreate the summary.
+
+### 5. Payment capability model
+
+`listBookingWorkspace()` may extend its existing `effective_permissions(ORGANIZATION_ID)` result into two explicit presentation capabilities:
+
+`canReadPayment`
+
+derived only from:
+
+`permissions.has("payment.read")`
+
+and:
+
+`canRecordPayment`
+
+derived only from:
+
+`permissions.has("payment.record")`.
+
+No hard-coded React role-name authorization is permitted.
+
+The application must not infer payment authority from:
+
+- Founder identity;
+- Sales identity;
+- Accounts identity;
+- navigation roles;
+- legacy `bookings.finance`;
+- any other frontend role list.
+
+Permission-derived capability controls are presentation/UX gates only.
+
+The payment RPCs continue to re-authorize every operation independently.
+
+### 6. Payment-summary workspace extension
+
+When `canReadPayment === true`, `listBookingWorkspace()` may call:
+
+`get_booking_payment_summary(uuid)`
+
+for the canonical bookings already resolved through the existing workspace.
+
+The server function must:
+
+- continue to use `requireSupabaseAuth`;
+- continue to use server-owned `ORGANIZATION_ID`;
+- request summaries only for bookings already visible through the canonical booking query;
+- surface canonical RPC errors;
+- preserve existing booking, quotation, journey, schedule, lead and family behavior.
+
+When `canReadPayment === false`:
+
+- the application must not invoke the payment-summary RPC for that user;
+- payment totals must not be exposed;
+- required advance must not be exposed;
+- collected payment value must not be exposed;
+- payment counts and reversal counts must not be exposed.
+
+Payment information must not leak through the broad `booking.read` capability.
+
+### 7. Controlled payment-recording mutation
+
+Slice 7H may add exactly one new application payment mutation server function:
+
+`recordBookingPayment`
+
+It must call only:
+
+`record_booking_payment(...)`.
+
+The server function must:
+
+- use `requireSupabaseAuth`;
+- accept validated input;
+- keep organization and authenticated actor authority server-owned;
+- surface database errors rather than fabricate success;
+- return the canonical payment row returned by the RPC.
+
+The application must not directly INSERT, UPDATE or DELETE:
+
+- `booking_payments`;
+- `booking_payment_reversals`;
+- `booking_payment_requirements`.
+
+No other payment mutation RPC is authorized in Slice 7H.
+
+### 8. Payment input contract
+
+The controlled payment form may collect only:
+
+- amount in whole INR;
+- payment method;
+- received timestamp;
+- optional external reference;
+- optional note.
+
+Client validation must require:
+
+- amount is an integer;
+- amount is greater than zero;
+- payment method is one of the canonical enum values;
+- received timestamp resolves to a valid instant;
+- optional textual values are normalized so blank optional input is not represented as meaningful evidence.
+
+The database remains authoritative for payment validity.
+
+No floating-point currency model may be introduced.
+
+No alternate currency is introduced.
+
+Slice 7H remains INR-only because the canonical booking-payment foundation is INR-only.
+
+### 9. Payment evidence is append-only
+
+Every successful `record_booking_payment(...)` invocation represents new immutable payment evidence.
+
+Slice 7H must not describe the operation as idempotent.
+
+The application must not assume that replaying the same payment payload returns the original payment.
+
+A repeated successful invocation may represent another payment and therefore may create another canonical payment row.
+
+The submit control must be disabled while the current mutation request is pending to reduce accidental duplicate submission.
+
+No application-level payment deduplication rule is invented.
+
+Correction of an incorrectly recorded payment remains:
+
+original payment -> immutable reversal -> new payment
+
+but Slice 7H does not expose the reversal operation.
+
+### 10. Payment presentation boundary
+
+For a user with `canReadPayment === true`, the Booking workspace may display the canonical derived payment summary.
+
+At minimum the UI may show:
+
+- accepted quotation total;
+- required advance;
+- valid collected amount;
+- outstanding advance;
+- whether the advance requirement is satisfied;
+- payment count;
+- reversal count where non-zero;
+- confirmed-with-shortfall warning where canonically returned.
+
+The UI must clearly distinguish:
+
+- `Advance outstanding`;
+- `Advance satisfied`.
+
+`advance_satisfied === true` is financial evidence only.
+
+It must not be presented as:
+
+- Booking Confirmed;
+- shoot reserved;
+- preparation started;
+- shoot scheduled.
+
+Journey state and schedule state remain separate canonical facts.
+
+### 11. Narrow payment-recording UI gate
+
+Slice 7H payment recording is intended only to satisfy the controlled Stage 7 advance prerequisite.
+
+The record-payment control may render only when all of the following are true:
+
+- canonical journey stage is Stage 7 / `advance_pending`;
+- `canReadPayment === true`;
+- `canRecordPayment === true`;
+- a canonical payment summary exists;
+- `advance_satisfied === false`.
+
+This is deliberately narrower than the underlying database RPC.
+
+It is a Slice 7H product/UX containment rule, not an authorization boundary.
+
+The database remains authoritative for permission and booking integrity.
+
+A successful payment that satisfies or exceeds the outstanding advance causes the refreshed summary to report `advance_satisfied === true`, after which the Slice 7H payment-recording control is no longer presented.
+
+Slice 7H does not introduce a client-side rule that payment amount must be less than or equal to the current outstanding amount.
+
+If a valid real payment exceeds the outstanding advance, the canonical RPC remains capable of recording the actual received amount.
+
+### 12. Mutation refresh behavior
+
+After a successful payment mutation the application must invalidate:
+
+`["booking-workspace"]`
+
+and refetch canonical state.
+
+The UI must not optimistically modify:
+
+- collected totals;
+- outstanding totals;
+- payment counts;
+- journey state;
+- schedule state.
+
+The database-returned and subsequently refetched canonical evidence remains authoritative.
+
+Mutation failures must be visibly surfaced.
+
+### 13. Booking confirmation remains excluded
+
+Slice 7H must not call:
+
+`confirm_booking_after_advance(uuid)`.
+
+Slice 7H introduces no:
+
+- Confirm Booking button;
+- automatic confirmation after advance satisfaction;
+- automatic Stage 7 -> 8 transition;
+- automatic schedule reservation.
+
+Even when:
+
+`advance_satisfied === true`
+
+the booking remains at its existing canonical journey stage until the separately governed confirmation RPC is explicitly invoked in a later slice.
+
+If a current Stage 7 schedule tip is `proposed`, recording sufficient payment must not convert it to `reserved`.
+
+Only `confirm_booking_after_advance(...)` owns that future atomic reservation-and-confirmation behavior.
+
+### 14. Payment reversal remains excluded
+
+Although the database exposes:
+
+`reverse_booking_payment(uuid,text)`
+
+Slice 7H must not invoke it.
+
+Slice 7H introduces no:
+
+- payment reversal button;
+- delete-payment action;
+- edit-payment action;
+- correction workflow;
+- refund workflow.
+
+Historical payment correction remains a later separately governed runtime boundary.
+
+No existing immutable payment evidence may be rewritten.
+
+### 15. Preparation, safety and later journey containment
+
+Slice 7H must not invoke:
+
+- `start_pre_shoot_preparation(...)`;
+- `mark_booking_shoot_scheduled(...)`;
+- any preparation mutation;
+- any preparation-item mutation;
+- any booking-team mutation;
+- any external-creative mutation;
+- any safety-readiness mutation;
+- any safety-signoff mutation;
+- any generic journey-advance operation.
+
+`/prep` remains contained.
+
+`/safety` remains contained.
+
+No Stage 8 -> 9 runtime cutover is authorized.
+
+No Stage 9 -> 10 runtime cutover is authorized.
+
+No Stage 10 -> 11 implementation is authorized.
+
+### 16. Scheduling containment
+
+Slice 7H preserves the existing Slice 7G scheduling runtime unchanged.
+
+The existing controlled RPCs remain:
+
+- `propose_booking_shoot_schedule(...)`;
+- `reschedule_booking_shoot(...)`.
+
+Slice 7H must not widen their eligibility, permissions or semantics.
+
+Payment satisfaction must not itself:
+
+- reserve a proposed schedule;
+- reschedule a booking;
+- create schedule history;
+- alter schedule history.
+
+### 17. Controlled local runtime acceptance
+
+Slice 7H implementation must be validated with disposable authenticated local fixtures.
+
+Acceptance must prove at minimum:
+
+#### Case A — canonical unpaid summary
+
+An authorized payment reader views a canonical Stage 7 booking with:
+
+- accepted quotation;
+- frozen payment requirement;
+- zero valid collected payment.
+
+The application must render canonical summary values including:
+
+- required advance;
+- zero collected;
+- full advance outstanding;
+- `advance_satisfied === false`.
+
+Result required: **PASS**
+
+#### Case B — partial advance payment
+
+An authorized payment recorder submits a valid partial payment.
+
+The database must append one canonical payment row.
+
+After authoritative refetch:
+
+- collected value increases by exactly the recorded amount;
+- outstanding advance decreases accordingly;
+- `advance_satisfied` remains false;
+- booking remains Stage 7;
+- no booking-confirmation transition is created.
+
+Result required: **PASS**
+
+#### Case C — advance threshold satisfied without confirmation
+
+A subsequent valid payment brings valid non-reversed collected INR to at least the required advance.
+
+After authoritative refetch:
+
+- `advance_satisfied === true`;
+- `advance_outstanding_inr === 0`;
+- payment count reflects the canonical payment evidence;
+- booking remains Stage 7 / `advance_pending`;
+- no Stage 7 -> 8 transition exists.
+
+For this controlled fixture a proposed shoot plan may already exist.
+
+If so, after payment satisfaction:
+
+- the schedule must remain `proposed`;
+- no `reserved` schedule version may appear merely because payment was satisfied.
+
+This proves that Slice 7H does not silently perform booking confirmation.
+
+Result required: **PASS**
+
+#### Case D — unauthorized payment mutation
+
+An authenticated actor without `payment.record` must receive no payment-recording control.
+
+A forced otherwise-valid direct invocation of:
+
+`record_booking_payment(...)`
+
+must be rejected by the database with the canonical authorization error.
+
+Canonical payment state must remain unchanged.
+
+Result required: **PASS**
+
+#### Case E — payment-read containment
+
+An authenticated actor without `payment.read` must receive no payment summary.
+
+The application must not expose:
+
+- required advance;
+- collected payment value;
+- outstanding value;
+- payment counts;
+- reversal counts.
+
+A forced direct payment-summary invocation must remain subject to the canonical database `payment.read` authorization boundary.
+
+Result required: **PASS**
+
+#### Case F — runtime containment
+
+Authenticated visual acceptance must confirm that Slice 7H introduces no:
+
+- payment reversal UI;
+- booking-confirmation UI;
+- preparation mutation UI;
+- safety mutation UI;
+- booking-team mutation UI;
+- external-creative mutation UI;
+- arbitrary journey-transition UI.
+
+Result required: **PASS**
+
+### 18. Disposable fixture cleanup
+
+All local authentication and business fixtures created for Slice 7H acceptance are disposable.
+
+After acceptance:
+
+- development processes used for fixture validation must be stopped;
+- temporary fixture scripts must be removed;
+- local Supabase must be reset to the canonical migration baseline;
+- generated route-tree output must be restored if tooling changed it.
+
+Explicit post-reset zero-count evidence must include at least the disposable tables touched by acceptance, including:
+
+- `auth.users`;
+- `organization_members`;
+- `member_role_grants`;
+- `families`;
+- `quotations`;
+- `quotation_line_items`;
+- `bookings`;
+- `booking_payment_requirements`;
+- `booking_payments`;
+- `booking_payment_reversals`;
+- `booking_journey_states`;
+- `booking_stage_transitions`;
+- `booking_shoot_schedules`;
+- `audit_events`.
+
+### 19. Database regression gate
+
+Slice 7H authors no SQL.
+
+Before the implementation may be checkpointed:
+
+- `supabase/tests/sprint9_advance_payments_test.sql` must PASS;
+- `supabase/tests/sprint9_booking_confirmation_test.sql` must PASS;
+- `supabase/tests/sprint10_shoot_schedule_test.sql` must PASS;
+- the complete local pgTAP suite must PASS;
+- `npx supabase db lint --local` must PASS;
+- the canonical local migration chain must remain unchanged.
+
+Actual test totals must be recorded from the validation run rather than invented in advance.
+
+### 20. Application validation gate
+
+Before Slice 7H implementation may be checkpointed:
+
+- targeted Prettier on the two authored files: PASS;
+- targeted ESLint on the two authored files: PASS;
+- TypeScript `npx tsc --noEmit`: PASS;
+- production application build: PASS;
+- `git diff --check`: PASS;
+- implementation diff restricted exactly to the two frozen authored files;
+- no migration file added or modified;
+- generated Supabase types unchanged;
+- generated route tree restored before commit.
+
+### 21. Preview-only deployment boundary
+
+Every governed Slice 7H push to:
+
+`architecture-rebuild`
+
+must be independently reconciled to a Vercel Preview deployment.
+
+Required evidence for each push:
+
+- exact Git SHA;
+- exact Git branch `architecture-rebuild`;
+- Vercel state `READY`;
+- deployment target is not Production;
+- branch Preview alias is present.
+
+No manual Production deployment is authorized.
+
+The previously existing Production deployment must not be replaced by Slice 7H.
+
+### 22. Preview authentication boundary
+
+Controlled authenticated functional acceptance for Slice 7H is performed locally with disposable fixtures.
+
+The absence of usable remote Preview authentication state must not be "fixed" merely to manufacture a Preview smoke test.
+
+Slice 7H does not authorize creating remote:
+
+- Auth users;
+- organization memberships;
+- role grants;
+- bookings;
+- payment evidence;
+- schedule evidence;
+- business fixtures
+
+solely for Preview acceptance.
+
+If a valid pre-existing isolated Preview authentication environment is unavailable, Preview application verification is limited to deployment/build reconciliation and any unauthenticated surface that can be observed without remote state mutation.
+
+### 23. Production and merge containment
+
+Slice 7H authorizes no:
+
+- Production Supabase read;
+- Production Supabase write;
+- Production Supabase migration;
+- remote payment mutation;
+- Production Vercel deployment;
+- Git merge into `main`;
+- Supabase branch merge;
+- payment reversal release;
+- booking-confirmation release;
+- preparation runtime release;
+- safety runtime release;
+- Stage 8 -> 9 runtime release;
+- Stage 9 -> 10 runtime release;
+- Stage 10 -> 11 implementation;
+- Sprint 10 release.
+
+Existing containment remains:
+
+- Git `main` merge: **HOLD**
+- Supabase branch merge: **HOLD**
+- Production database mutation: **HOLD**
+- Production application release/redeployment: **HOLD**
+
+### 24. Commit discipline
+
+Slice 7H follows the established three-stage governed commit discipline:
+
+1. technical-design freeze documentation commit;
+2. exact two-file implementation commit;
+3. implementation checkpoint documentation commit.
+
+Each commit is pushed and reconciled independently.
+
+Every `architecture-rebuild` push must be verified as a Vercel Preview deployment before proceeding to the next governed commit.
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
