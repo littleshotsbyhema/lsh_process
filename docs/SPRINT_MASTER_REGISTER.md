@@ -9028,3 +9028,416 @@ Slice 7G follows the established three-stage discipline:
 Each commit is pushed and reconciled independently. Every `architecture-rebuild` push must be verified as a Vercel Preview deployment before proceeding to the next governed step.
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+---
+
+## Sprint 10 Slice 7G - Controlled Shoot Scheduling Mutations - Implementation Checkpoint
+
+### Implementation evidence
+
+Sprint 10 Slice 7G controlled shoot-scheduling mutation runtime implementation completed locally, was fully validated, committed, pushed and reconciled on 2026-08-18.
+
+- Freeze commit: `61e253c033da5f3c8cc8b774b095535d0201a8ff`
+- Implementation commit: `3a24874d92eab3ecd5fd450a7837439647a98a89`
+- Implementation commit message: `feat: add controlled booking schedule mutations`
+- Implementation parent: `61e253c033da5f3c8cc8b774b095535d0201a8ff`
+- Branch: `architecture-rebuild`
+
+The implementation commit contains exactly:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+Implementation diff:
+
+- `src/lib/booking.functions.ts`: 89 additions / 8 deletions;
+- `src/routes/_authenticated/bookings.tsx`: 356 additions / 4 deletions;
+- total: 445 additions / 12 deletions.
+
+No migration, generated Supabase type, generated route-tree, package, lockfile, access-control, preparation, safety, team-assignment or external-creative file is part of the implementation commit.
+
+### Delivered scheduling capability model
+
+`listBookingWorkspace()` now resolves canonical effective permissions through:
+
+`effective_permissions(ORGANIZATION_ID)`
+
+and exposes:
+
+`canSchedule`
+
+derived only from:
+
+`permissions.has("shoot.schedule")`
+
+No React role-name authorization model was introduced.
+
+`canSchedule` remains presentation-only authority.
+
+The canonical database RPCs continue to re-authorize every scheduling mutation independently.
+
+### Delivered scheduling mutation boundary
+
+The authenticated runtime now exposes exactly two scheduling mutation server functions:
+
+- `proposeShootSchedule`;
+- `rescheduleShoot`.
+
+They call only the frozen canonical RPCs:
+
+- `propose_booking_shoot_schedule(...)`;
+- `reschedule_booking_shoot(...)`.
+
+Both server functions:
+
+- use `requireSupabaseAuth`;
+- use validated server-function input;
+- preserve server-owned organization/authentication context;
+- surface database errors rather than fabricating success;
+- return the authoritative schedule row returned by the database.
+
+No direct INSERT, UPDATE or DELETE path against `booking_shoot_schedules` was introduced.
+
+No other mutation RPC was added to the Slice 7G runtime.
+
+### Delivered controlled scheduling UI
+
+The `/bookings` runtime now exposes scheduling controls only when both canonical workflow eligibility and `canSchedule` allow them.
+
+Proposal controls are limited to:
+
+- canonical Stage 7 / `advance_pending`;
+- no schedule tip or an existing `proposed` tip;
+- `canSchedule === true`.
+
+Reschedule controls are limited to:
+
+- canonical Stage 8, 9 or 10;
+- a current `reserved` schedule tip;
+- `canSchedule === true`.
+
+The UI does not treat those visibility rules as the security boundary.
+
+The database remains authoritative for every mutation.
+
+### Delivered form and timezone behavior
+
+Scheduling forms use paired `datetime-local` inputs.
+
+At form-open time the browser resolves its timezone through:
+
+`Intl.DateTimeFormat().resolvedOptions().timeZone`
+
+The resolved timezone:
+
+- is captured once for the form instance;
+- is shown read-only;
+- is submitted with the interpreted schedule instants;
+- has no application fallback;
+- cannot be arbitrarily edited.
+
+If the browser cannot resolve a usable timezone, scheduling submission is disabled and an explicit error is displayed.
+
+Client UX validation also requires:
+
+- start and end values;
+- end after start;
+- non-blank location type;
+- non-blank reschedule reason for rescheduling;
+- optional location details.
+
+Database validation remains authoritative.
+
+### Proposal and reschedule semantics
+
+Proposal behavior preserves the canonical distinction:
+
+`Proposed · not reserved`
+
+A proposal does not reserve the date and does not confirm the booking.
+
+Rescheduling is available only over an existing reserved schedule and produces another reserved schedule version.
+
+A reschedule:
+
+- does not revert the booking to proposed;
+- does not confirm the booking;
+- does not advance the booking journey;
+- requires a reschedule reason.
+
+After successful mutations the runtime invalidates:
+
+`["booking-workspace"]`
+
+and refetches authoritative canonical state.
+
+No optimistic schedule-history rewrite was introduced.
+
+### Controlled local runtime acceptance
+
+Disposable authenticated local fixtures exercised all frozen Slice 7G acceptance cases.
+
+#### Case A - Stage 7 initial proposal
+
+A Stage 7 booking with no schedule was proposed successfully by an authorized Founder fixture.
+
+Result:
+
+- canonical schedule v1 created;
+- state was `proposed`;
+- UI rendered `Proposed · not reserved`;
+- no reservation or booking-confirmation semantics were implied.
+
+Result: **PASS**
+
+#### Case B - proposal idempotency and immutable history
+
+Exact replay of the v1 proposal returned the same canonical tip without creating another schedule row.
+
+A changed proposal appended canonical v2:
+
+- v1 remained unchanged;
+- v2 referenced v1 as predecessor;
+- both versions remained visible in immutable history.
+
+Result: **PASS**
+
+#### Case C - reserved reschedule and idempotency
+
+Existing canonical local payment and booking-confirmation operations were used only as controlled fixture setup to advance the disposable booking to Stage 8 and create the canonical reserved schedule.
+
+Those operations were not added to the Slice 7G UI or implementation surface.
+
+The Stage 8 fixture then contained reserved v3.
+
+A changed reschedule created reserved v4:
+
+- v4 referenced v3;
+- state remained `reserved`;
+- reschedule reason `Client requested date change` was recorded;
+- all earlier versions remained immutable.
+
+Exact replay of the v4 values and reason:
+
+- returned the existing canonical tip;
+- did not create v5;
+- left total schedule count at four.
+
+Result: **PASS**
+
+#### Case D1 - unauthorized Sales actor
+
+The Sales fixture retained canonical booking/schedule read visibility but received:
+
+- no proposal control;
+- no Reschedule control;
+- no scheduling mutation form.
+
+A forced otherwise-valid reschedule RPC invocation was rejected by the database with:
+
+`SQLSTATE 42501`
+
+and:
+
+`reschedule_booking_shoot: shoot.schedule permission required`
+
+The canonical schedule count remained four.
+
+Result: **PASS**
+
+#### Case D2 - authorized but ineligible Founder actor
+
+A Founder fixture with scheduling permission directly attempted a proposal after the booking had reached canonical Stage 8.
+
+The database rejected the operation with:
+
+`SQLSTATE 22023`
+
+and:
+
+`propose_booking_shoot_schedule: booking must be at Advance Pending`
+
+Journey state remained:
+
+- `booking_confirmed`;
+- stage order 8;
+- journey version 2.
+
+Canonical schedule count remained four.
+
+Result: **PASS**
+
+#### Case E - runtime containment
+
+Authenticated visual acceptance confirmed that Slice 7G introduced no:
+
+- payment mutation UI;
+- booking-confirmation UI;
+- arbitrary/general journey advancement UI;
+- preparation mutation UI;
+- safety mutation UI;
+- booking-team mutation UI;
+- external-creative mutation UI.
+
+Result: **PASS**
+
+### Disposable fixture cleanup
+
+After local runtime acceptance:
+
+- the development server was stopped;
+- temporary fixture scripts were removed;
+- `npx supabase db reset --local --yes` completed successfully;
+- the complete local migration chain reapplied through `20260817042405_sprint10_team_role_admin_read_model.sql`;
+- generated `src/routeTree.gen.ts` output was restored and excluded from authored changes.
+
+Post-reset disposable evidence returned to zero for all explicitly checked tables:
+
+- `auth.users`;
+- `organization_members`;
+- `member_role_grants`;
+- `families`;
+- `quotations`;
+- `quotation_line_items`;
+- `bookings`;
+- `booking_payments`;
+- `booking_journey_states`;
+- `booking_stage_transitions`;
+- `booking_shoot_schedules`;
+- `audit_events`.
+
+Result: **PASS**
+
+### Database regression gate
+
+Slice 7G authored no SQL.
+
+Post-cleanup validation completed successfully:
+
+- dedicated `supabase/tests/sprint10_shoot_schedule_test.sql`: **111/111 PASS**;
+- complete local pgTAP regression: **1083/1083 PASS** across 16 files;
+- `npx supabase db lint --local`: **PASS - No schema errors found**;
+- no migration was added or modified.
+
+Result: **PASS**
+
+### Application validation gate
+
+Final application validation completed successfully:
+
+- targeted Prettier for both authored runtime files: PASS;
+- targeted ESLint for both authored runtime files: PASS with zero errors/warnings;
+- production build: PASS;
+- TypeScript `npx tsc --noEmit`: PASS;
+- generated `src/routeTree.gen.ts` restored after tooling regeneration;
+- `git diff --check`: PASS;
+- final implementation boundary contained exactly the two frozen runtime files.
+
+No generated Supabase type change was required.
+
+Result: **PASS**
+
+### Git implementation reconciliation
+
+Implementation commit:
+
+`3a24874d92eab3ecd5fd450a7837439647a98a89`
+
+was created directly on top of the Slice 7G freeze:
+
+`61e253c033da5f3c8cc8b774b095535d0201a8ff`
+
+Pre-push divergence was:
+
+- remote-only commits: 0;
+- local-only commits: 1.
+
+The implementation push completed as the expected fast-forward:
+
+`61e253c..3a24874`
+
+Post-push:
+
+- local HEAD = `3a24874d92eab3ecd5fd450a7837439647a98a89`;
+- tracking ref = `3a24874d92eab3ecd5fd450a7837439647a98a89`;
+- worktree = clean.
+
+GitHub independently confirmed:
+
+- branch `architecture-rebuild` points to the exact implementation SHA;
+- the implementation is one commit directly above the freeze;
+- only the two frozen implementation files changed.
+
+Result: **PASS**
+
+### Vercel Preview reconciliation
+
+The implementation push produced the expected Vercel deployment:
+
+- deployment ID: `dpl_6WWJKUob22LeGWFPVELx2vEkydwx`;
+- Git SHA: `3a24874d92eab3ecd5fd450a7837439647a98a89`;
+- Git branch: `architecture-rebuild`;
+- state: `READY`;
+- target: `null`;
+- source: `git`;
+- branch alias: `memory-keeper-os-git-architecture-rebuild-team1996.vercel.app`.
+
+The exact SHA, branch, READY state and non-Production target were independently reconciled through authenticated read-only Vercel project/deployment metadata.
+
+The previously recorded Production deployment remains:
+
+- deployment ID: `dpl_varrdvzMrBSfnNVjhwNnF4mrSzAL`;
+- Git SHA: `e570da0b7715f992edd4cd870437d3dbbaf7324a`;
+- target: `production`;
+- state: `READY`.
+
+The Slice 7G implementation push therefore did not replace that Production deployment.
+
+Result: **PASS**
+
+### Preview application authentication observation
+
+The branch Preview successfully rendered the application authentication surface.
+
+An authenticated `/bookings` Preview smoke test could not be completed without creating remote authentication/business state because the Supabase environment inspected during login diagnosis contained:
+
+- zero `auth.users` rows;
+- no organization membership;
+- no Founder grant;
+- canonical organization status `suspended`.
+
+No remote user, membership, role grant, schedule, booking or other business fixture was created merely to manufacture a Preview login.
+
+This absence of remote authentication state is recorded as an environment limitation rather than a Slice 7G application failure.
+
+A read-only Supabase dashboard diagnostic was used during that login investigation. No Supabase write or migration was performed. The exact dashboard branch/environment identity was not independently captured as acceptance evidence, so that diagnostic is not treated as Production validation and authorizes no further remote database activity.
+
+### Production and merge containment
+
+Slice 7G implementation performed no:
+
+- Production Vercel deployment;
+- Production Supabase write;
+- Production Supabase migration;
+- remote scheduling mutation;
+- Git merge into `main`;
+- Supabase branch merge;
+- booking-confirmation UI release;
+- payment UI release;
+- preparation or safety runtime release;
+- booking-team mutation runtime release;
+- external-creative mutation runtime release;
+- Sprint 10 release.
+
+The existing containment gates remain:
+
+- Git `main` merge: **HOLD**
+- Supabase branch merge: **HOLD**
+- Production database mutation: **HOLD**
+- Production application release/redeployment: **HOLD**
+
+### Slice 7G checkpoint status
+
+**IMPLEMENTATION VALIDATED / PUSHED / PREVIEW DEPLOYMENT VERIFIED / AUTHENTICATED PREVIEW APP SMOKE BLOCKED BY EMPTY REMOTE AUTH BASELINE / NOT PRODUCTION RELEASED**
+
+Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
