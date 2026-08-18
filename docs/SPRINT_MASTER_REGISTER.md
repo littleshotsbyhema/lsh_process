@@ -10550,3 +10550,330 @@ The containment gates remain:
 **IMPLEMENTATION VALIDATED / PUSHED / PREVIEW DEPLOYMENT VERIFIED / NOT PRODUCTION RELEASED**
 
 Sprint 10 remains **IMPLEMENTATION IN PROGRESS / NOT RELEASED**.
+
+---
+
+## Sprint 10 Slice 7I - Controlled Booking Confirmation & Schedule Reservation - Technical Design Freeze
+
+### Status
+
+**TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT STARTED / NOT PRODUCTION RELEASED**
+
+### Objective
+
+Expose the existing canonical advance-satisfied booking-confirmation operation through the authenticated Bookings workspace without creating any alternative journey, financial or scheduling authority.
+
+Slice 7I will allow an authorized actor to deliberately confirm an eligible Stage 7 booking only through:
+
+`confirm_booking_after_advance(uuid)`
+
+The canonical database RPC remains the sole authority for confirmation eligibility, schedule reservation and Stage 7 -> Stage 8 advancement.
+
+### Existing canonical database authority
+
+Slice 7I authors no new SQL.
+
+The existing canonical confirmation RPC already enforces:
+
+- authenticated actor;
+- active organization membership;
+- `booking.confirm` permission;
+- branch scope;
+- exactly one canonical journey state;
+- exact Stage 7 / `advance_pending` first-time confirmation state;
+- accepted quotation integrity;
+- immutable booking payment-requirement integrity;
+- satisfied required advance;
+- a current authoritative proposed shoot plan;
+- append-only conversion of that proposal into reserved schedule evidence;
+- authoritative Stage 7 -> Stage 8 journey advancement;
+- canonical `advance_satisfied` transition evidence;
+- audit evidence;
+- idempotent replay after successful confirmation.
+
+The application must not reproduce those invariants as an alternative source of truth.
+
+### Frozen implementation boundary
+
+Implementation is limited to exactly:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+No migration is expected.
+
+No generated Supabase type change is expected.
+
+No package, lockfile, route-tree, access-control, preparation, safety, team-assignment or external-creative change is expected.
+
+### Permission model
+
+`listBookingWorkspace()` will continue resolving canonical effective permissions through:
+
+`effective_permissions(ORGANIZATION_ID)`
+
+and will additionally derive:
+
+`canConfirmBooking`
+
+from:
+
+`booking.confirm`
+
+This boolean is a presentation-containment signal only.
+
+The database RPC remains authoritative for actual authorization.
+
+No hard-coded role-name authorization may be introduced.
+
+### Server mutation boundary
+
+Add exactly one booking-confirmation server function:
+
+`confirmBookingAfterAdvance`
+
+Input:
+
+- `bookingId`: valid UUID
+
+The server function must:
+
+- use `requireSupabaseAuth`;
+- validate the booking UUID;
+- call only `confirm_booking_after_advance(...)`;
+- surface canonical database errors;
+- return the authoritative booking row.
+
+It must not directly mutate:
+
+- `bookings`;
+- `booking_journey_states`;
+- `booking_stage_transitions`;
+- `booking_shoot_schedules`;
+- payment evidence;
+- preparation evidence;
+- safety evidence;
+- team assignments.
+
+### Controlled UI eligibility
+
+The confirmation control may be rendered only when all presentation evidence currently available to the Bookings workspace indicates:
+
+- current canonical journey stage is exactly Stage 7 / `advance_pending`;
+- actor has `booking.confirm`;
+- actor has payment-read capability;
+- one canonical payment summary is available;
+- `advance_satisfied === true`;
+- one current shoot schedule exists;
+- current shoot schedule state is `proposed`.
+
+The UI eligibility check is containment only.
+
+It must not be treated as authoritative validation.
+
+A forced or stale request must still rely on the database RPC to reject invalid confirmation.
+
+The confirmation control must not require `shoot.schedule` permission because the canonical confirmation RPC authorizes through `booking.confirm`.
+
+### Confirmation interaction
+
+The action must clearly communicate its coupled canonical effect.
+
+Preferred control label:
+
+`Confirm booking & reserve shoot`
+
+Before mutation, the UI must make clear that confirmation will:
+
+- confirm the booking;
+- reserve the current proposed shoot plan;
+- advance the booking from Stage 7 to Stage 8.
+
+The UI must not imply that confirmation:
+
+- starts pre-shoot preparation;
+- completes preparation;
+- marks safety readiness;
+- assigns team members;
+- marks the shoot scheduled;
+- advances beyond Stage 8.
+
+While confirmation is pending, duplicate submission must be disabled.
+
+No optimistic journey or schedule mutation may be fabricated client-side.
+
+### Successful confirmation refresh
+
+After successful confirmation:
+
+`["booking-workspace"]`
+
+must be invalidated/refetched.
+
+The refreshed canonical state should then expose:
+
+- Stage 8 / `booking_confirmed`;
+- reserved schedule evidence;
+- preserved historical proposed schedule evidence;
+- canonical transition history;
+- canonical payment summary.
+
+The confirmation control must disappear because the booking is no longer Stage 7.
+
+### Explicit non-goals
+
+Slice 7I does not expose:
+
+- payment reversal;
+- generic journey advancement;
+- `start_pre_shoot_preparation`;
+- `mark_booking_shoot_scheduled`;
+- preparation checklist mutation;
+- safety-readiness mutation;
+- safety signoff;
+- team assignment;
+- external creative assignment;
+- post-confirmation rescheduling beyond the already-existing controlled schedule surface;
+- Stage 8 -> Stage 9 advancement;
+- Stage 9 -> Stage 10 advancement.
+
+### Runtime acceptance cases
+
+#### Case A - eligible confirmation
+
+Given:
+
+- Stage 7 / `advance_pending`;
+- canonical advance satisfied;
+- current schedule state `proposed`;
+- actor has `booking.confirm`;
+- actor can read payment evidence;
+
+the UI must expose:
+
+`Confirm booking & reserve shoot`
+
+Result expected: **PASS**
+
+#### Case B - successful confirmation
+
+Confirmation through the UI must result in canonical database state showing:
+
+- booking remains the same canonical booking;
+- journey advances exactly Stage 7 -> Stage 8;
+- canonical confirmation transition exists exactly once;
+- current schedule becomes authoritative reserved evidence through append-only lineage;
+- original proposed schedule remains immutable history;
+- no preparation start occurs;
+- no Stage 9 or Stage 10 advancement occurs.
+
+Result expected: **PASS**
+
+#### Case C - unsatisfied advance
+
+For zero or partial valid collection:
+
+- confirmation control is absent;
+- forced direct confirmation RPC is rejected by the canonical financial gate;
+- journey and schedule remain unchanged.
+
+Result expected: **PASS**
+
+#### Case D - proposed schedule missing
+
+With satisfied advance but no current proposed shoot plan:
+
+- confirmation control is absent;
+- forced direct confirmation RPC is rejected;
+- no Stage 8 transition occurs.
+
+Result expected: **PASS**
+
+#### Case E - actor without booking.confirm
+
+An actor lacking `booking.confirm`:
+
+- receives no confirmation control;
+- direct RPC confirmation is rejected;
+- canonical booking state remains unchanged.
+
+Result expected: **PASS**
+
+#### Case F - replay containment
+
+After successful confirmation:
+
+- confirmation control is absent;
+- direct canonical replay remains idempotent;
+- no duplicate confirmation transition is created;
+- no duplicate reserved schedule evidence is created.
+
+Result expected: **PASS**
+
+#### Case G - runtime containment
+
+The Slice 7I implementation must introduce no runtime reference to:
+
+- `reverse_booking_payment`;
+- `start_pre_shoot_preparation`;
+- `mark_booking_shoot_scheduled`;
+- generic journey advancement;
+- preparation mutation;
+- safety mutation;
+- team-assignment mutation;
+- external-creative mutation.
+
+Result expected: **PASS**
+
+### Validation gate
+
+Before implementation commit:
+
+Application:
+
+- targeted Prettier;
+- targeted ESLint;
+- `npm run build`;
+- `npx tsc --noEmit`;
+- `git diff --check`.
+
+Database regression:
+
+- Sprint 9 booking-confirmation pgTAP;
+- Sprint 10 shoot-schedule pgTAP;
+- complete local database regression;
+- `npx supabase db lint --local`.
+
+Runtime acceptance:
+
+- controlled authenticated local fixtures covering Cases A-G;
+- fixture cleanup with local database reset afterward.
+
+### Commit containment
+
+Technical-design freeze must be committed separately from implementation.
+
+Expected freeze commit subject:
+
+`docs: freeze sprint 10 slice 7i booking confirmation`
+
+Implementation must not begin until the freeze commit is:
+
+- reviewed;
+- committed;
+- pushed;
+- Git/GitHub reconciled;
+- verified as an exact READY Vercel Preview deployment.
+
+### Production containment
+
+Still HOLD:
+
+- Git `main` merge;
+- Supabase branch merge;
+- Production database mutation;
+- Production application release/redeployment.
+
+Sprint 10 remains:
+
+**IMPLEMENTATION IN PROGRESS / NOT RELEASED**
