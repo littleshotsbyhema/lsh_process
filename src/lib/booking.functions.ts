@@ -17,6 +17,13 @@ export type BookingStageTransitionRow =
 export type BookingShootScheduleRow =
   Database["public"]["Tables"]["booking_shoot_schedules"]["Row"];
 
+export type BookingPaymentRow = Database["public"]["Tables"]["booking_payments"]["Row"];
+
+export type BookingPaymentMethod = Database["public"]["Enums"]["booking_payment_method"];
+
+export type BookingPaymentSummary =
+  Database["public"]["Functions"]["get_booking_payment_summary"]["Returns"][number];
+
 export type BookingQuotationSummary = {
   id: string;
   quotation_reference: string;
@@ -58,6 +65,9 @@ export type BookingWorkspaceData = {
   schedules: BookingShootScheduleRow[];
   leads: BookingLeadSummary[];
   families: BookingFamilySummary[];
+  paymentSummaries: BookingPaymentSummary[];
+  canReadPayment: boolean;
+  canRecordPayment: boolean;
   canSchedule: boolean;
 };
 
@@ -86,6 +96,15 @@ const rescheduleShootSchema = z.object({
   locationDetails: z.string().trim().min(1).optional(),
 });
 
+const recordBookingPaymentSchema = z.object({
+  bookingId: z.string().uuid(),
+  amountInr: z.number().int().positive(),
+  paymentMethod: z.enum(["cash", "upi", "bank_transfer", "card", "other"]),
+  receivedAt: z.string().datetime({ offset: true }),
+  externalReference: z.string().trim().min(1).optional(),
+  note: z.string().trim().min(1).optional(),
+});
+
 export const listBookingWorkspace = createServerFn({
   method: "GET",
 })
@@ -111,6 +130,8 @@ export const listBookingWorkspace = createServerFn({
 
     const bookings = bookingsResult.data ?? [];
     const permissions = new Set(permissionResult.data ?? []);
+    const canReadPayment = permissions.has("payment.read");
+    const canRecordPayment = permissions.has("payment.record");
     const canSchedule = permissions.has("shoot.schedule");
 
     if (bookings.length === 0) {
@@ -135,6 +156,9 @@ export const listBookingWorkspace = createServerFn({
         schedules: [],
         leads: [],
         families: [],
+        paymentSummaries: [],
+        canReadPayment,
+        canRecordPayment,
         canSchedule,
       };
     }
@@ -244,6 +268,31 @@ export const listBookingWorkspace = createServerFn({
       families = familiesResult.data ?? [];
     }
 
+    const paymentSummaries: BookingPaymentSummary[] = [];
+
+    if (canReadPayment) {
+      const paymentSummaryResults = await Promise.all(
+        bookingIds.map((bookingId) =>
+          context.supabase.rpc("get_booking_payment_summary", {
+            p_booking_id: bookingId,
+          }),
+        ),
+      );
+
+      for (const summaryResult of paymentSummaryResults) {
+        throwIfError(summaryResult.error);
+
+        const rows = summaryResult.data ?? [];
+        const summary = rows[0];
+
+        if (rows.length !== 1 || !summary) {
+          throw new Error("Booking payment summary returned an unexpected row count.");
+        }
+
+        paymentSummaries.push(summary);
+      }
+    }
+
     return {
       bookings,
       quotations: quotationsResult.data ?? [],
@@ -254,6 +303,9 @@ export const listBookingWorkspace = createServerFn({
       schedules: schedulesResult.data ?? [],
       leads,
       families,
+      paymentSummaries,
+      canReadPayment,
+      canRecordPayment,
       canSchedule,
     };
   });
@@ -302,6 +354,30 @@ export const rescheduleShoot = createServerFn({
 
     if (!result.data) {
       throw new Error("Reschedule returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const recordBookingPayment = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(recordBookingPaymentSchema)
+  .handler(async ({ context, data }): Promise<BookingPaymentRow> => {
+    const result = await context.supabase.rpc("record_booking_payment", {
+      p_booking_id: data.bookingId,
+      p_amount_inr: data.amountInr,
+      p_payment_method: data.paymentMethod,
+      p_received_at: data.receivedAt,
+      p_external_reference: data.externalReference,
+      p_note: data.note,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Payment recording returned no row.");
     }
 
     return result.data;

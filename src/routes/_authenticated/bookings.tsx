@@ -9,8 +9,11 @@ import { AppShell, Card, PageHeader } from "@/components/AppShell";
 import {
   listBookingWorkspace,
   proposeShootSchedule,
+  recordBookingPayment,
   rescheduleShoot,
   type BookingJourneyStageRow,
+  type BookingPaymentMethod,
+  type BookingPaymentSummary,
   type BookingShootScheduleRow,
   type BookingStageTransitionRow,
 } from "@/lib/booking.functions";
@@ -142,6 +145,268 @@ function ScheduleHistory({ schedules }: { schedules: BookingShootScheduleRow[] }
         </div>
       ))}
     </div>
+  );
+}
+
+function paymentMethodLabel(method: BookingPaymentMethod) {
+  switch (method) {
+    case "cash":
+      return "Cash";
+    case "upi":
+      return "UPI";
+    case "bank_transfer":
+      return "Bank transfer";
+    case "card":
+      return "Card";
+    case "other":
+      return "Other";
+  }
+}
+
+function PaymentSummary({ summary }: { summary: BookingPaymentSummary }) {
+  return (
+    <div className="mt-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Accepted quotation total
+          </div>
+          <div className="mt-1 font-serif text-xl text-primary">
+            {formatInr(summary.accepted_quotation_total_inr)}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Required advance
+          </div>
+          <div className="mt-1 font-serif text-xl text-primary">
+            {formatInr(summary.required_advance_inr)}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Valid collected
+          </div>
+          <div className="mt-1 font-serif text-xl text-primary">
+            {formatInr(summary.valid_collected_inr)}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Advance outstanding
+          </div>
+          <div className="mt-1 font-serif text-xl text-primary">
+            {formatInr(summary.advance_outstanding_inr)}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2 text-xs">
+        <span className="rounded-full border border-border bg-muted px-3 py-1 font-medium text-primary">
+          {summary.advance_satisfied ? "Advance satisfied" : "Advance outstanding"}
+        </span>
+
+        <span className="rounded-full border border-border bg-card px-3 py-1 text-muted-foreground">
+          {summary.payment_count} payment{summary.payment_count === 1 ? "" : "s"}
+        </span>
+
+        {summary.reversal_count > 0 ? (
+          <span className="rounded-full border border-border bg-card px-3 py-1 text-muted-foreground">
+            {summary.reversal_count} reversal{summary.reversal_count === 1 ? "" : "s"}
+          </span>
+        ) : null}
+      </div>
+
+      {summary.confirmed_with_advance_shortfall ? (
+        <p className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs leading-5 text-destructive">
+          Canonical records report that this booking was confirmed with an advance shortfall.
+        </p>
+      ) : null}
+
+      {summary.advance_satisfied ? (
+        <p className="mt-4 text-xs leading-5 text-muted-foreground">
+          The financial advance requirement is satisfied. This does not confirm the booking, reserve
+          a proposed shoot plan, or advance the client journey.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function PaymentRecordForm({
+  bookingId,
+  onCancel,
+  onSuccess,
+}: {
+  bookingId: string;
+  onCancel: () => void;
+  onSuccess: () => Promise<void>;
+}) {
+  const [amount, setAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<BookingPaymentMethod>("upi");
+  const [receivedAt, setReceivedAt] = useState("");
+  const [externalReference, setExternalReference] = useState("");
+  const [note, setNote] = useState("");
+
+  const recordPaymentFn = useServerFn(recordBookingPayment);
+
+  const recordPaymentMutation = useMutation({
+    mutationFn: (vars: {
+      bookingId: string;
+      amountInr: number;
+      paymentMethod: BookingPaymentMethod;
+      receivedAt: string;
+      externalReference?: string;
+      note?: string;
+    }) => recordPaymentFn({ data: vars }),
+    onSuccess: async () => {
+      toast.success("Payment evidence recorded.");
+      await onSuccess();
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not record payment evidence."),
+  });
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const amountInr = Number(amount);
+
+    if (!Number.isInteger(amountInr) || amountInr <= 0) {
+      toast.error("Enter a positive whole-INR payment amount.");
+      return;
+    }
+
+    if (!receivedAt) {
+      toast.error("Received time is required.");
+      return;
+    }
+
+    const receivedDate = new Date(receivedAt);
+
+    if (Number.isNaN(receivedDate.getTime())) {
+      toast.error("Enter a valid received time.");
+      return;
+    }
+
+    const trimmedReference = externalReference.trim();
+    const trimmedNote = note.trim();
+
+    recordPaymentMutation.mutate({
+      bookingId,
+      amountInr,
+      paymentMethod,
+      receivedAt: receivedDate.toISOString(),
+      externalReference: trimmedReference.length > 0 ? trimmedReference : undefined,
+      note: trimmedNote.length > 0 ? trimmedNote : undefined,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-5 rounded-lg border border-border bg-card p-4">
+      <p className="text-sm font-medium text-primary">Record advance payment evidence</p>
+
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+        This appends immutable payment evidence. Recording sufficient advance does not confirm the
+        booking or reserve its proposed shoot plan.
+      </p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Amount · INR
+          </span>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            inputMode="numeric"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            required
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+          />
+        </label>
+
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Payment method
+          </span>
+          <select
+            value={paymentMethod}
+            onChange={(event) => setPaymentMethod(event.target.value as BookingPaymentMethod)}
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+          >
+            {(["cash", "upi", "bank_transfer", "card", "other"] as BookingPaymentMethod[]).map(
+              (method) => (
+                <option key={method} value={method}>
+                  {paymentMethodLabel(method)}
+                </option>
+              ),
+            )}
+          </select>
+        </label>
+
+        <label className="block sm:col-span-2">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Received at
+          </span>
+          <input
+            type="datetime-local"
+            value={receivedAt}
+            onChange={(event) => setReceivedAt(event.target.value)}
+            required
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+          />
+        </label>
+
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            External reference (optional)
+          </span>
+          <input
+            type="text"
+            value={externalReference}
+            onChange={(event) => setExternalReference(event.target.value)}
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+          />
+        </label>
+
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Note (optional)
+          </span>
+          <input
+            type="text"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+          />
+        </label>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button
+          type="submit"
+          disabled={recordPaymentMutation.isPending}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+        >
+          {recordPaymentMutation.isPending ? "Recording…" : "Record payment"}
+        </button>
+
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={recordPaymentMutation.isPending}
+          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-primary hover:bg-muted disabled:opacity-60"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 }
 
@@ -461,8 +726,11 @@ function BookingsPage() {
     mode: ScheduleMutationMode;
   } | null>(null);
 
+  const [activePaymentBookingId, setActivePaymentBookingId] = useState<string | null>(null);
+
   const refreshBookingWorkspace = async () => {
     setActiveForm(null);
+    setActivePaymentBookingId(null);
     await queryClient.invalidateQueries({ queryKey: ["booking-workspace"] });
   };
 
@@ -533,7 +801,17 @@ function BookingsPage() {
 
             const currentSchedule = scheduleHistory[scheduleHistory.length - 1] ?? null;
 
+            const paymentSummary =
+              data.paymentSummaries.find((summary) => summary.booking_id === booking.id) ?? null;
+
             const currentOrder = currentStage?.stage_order ?? 0;
+
+            const canRecordPayment =
+              currentOrder === 7 &&
+              data.canReadPayment &&
+              data.canRecordPayment &&
+              paymentSummary !== null &&
+              !paymentSummary.advance_satisfied;
 
             const canPropose =
               data.canSchedule &&
@@ -628,6 +906,45 @@ function BookingsPage() {
                     </div>
                   </div>
                 </div>
+
+                {data.canReadPayment && paymentSummary ? (
+                  <div className="mt-7 border-t border-border pt-6">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                          Canonical advance evidence
+                        </div>
+                        <h3 className="mt-1 font-serif text-xl text-primary">Advance payment</h3>
+                      </div>
+
+                      <span className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] uppercase tracking-wider text-primary">
+                        {paymentSummary.advance_satisfied
+                          ? "Advance satisfied"
+                          : "Advance outstanding"}
+                      </span>
+                    </div>
+
+                    <PaymentSummary summary={paymentSummary} />
+
+                    {canRecordPayment && activePaymentBookingId !== booking.id ? (
+                      <button
+                        type="button"
+                        onClick={() => setActivePaymentBookingId(booking.id)}
+                        className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                      >
+                        Record advance payment
+                      </button>
+                    ) : null}
+
+                    {canRecordPayment && activePaymentBookingId === booking.id ? (
+                      <PaymentRecordForm
+                        bookingId={booking.id}
+                        onCancel={() => setActivePaymentBookingId(null)}
+                        onSuccess={refreshBookingWorkspace}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
 
                 <div className="mt-7 border-t border-border pt-6">
                   <div className="flex flex-wrap items-start justify-between gap-4">
@@ -862,12 +1179,12 @@ function BookingsPage() {
 
                 <Card className="mt-6 p-5">
                   <p className="text-xs leading-5 text-muted-foreground">
-                    Advance Pending is a workflow state, not proof of payment. A proposed shoot plan
-                    is not a reservation. Shoot schedule proposal and reschedule are available above
-                    through the authoritative server-enforced RPC boundary where eligible. Booking
-                    confirmation, payment, preparation, safety, team assignment and general journey
-                    advancement remain controlled by separate authoritative gates and are not
-                    exposed on this screen.
+                    Advance Pending is a workflow state, not proof of payment. Authorized users can
+                    read canonical advance evidence and record new immutable payment evidence above
+                    while the Stage 7 advance remains outstanding. A proposed shoot plan is not a
+                    reservation. Booking confirmation, payment reversal, preparation, safety, team
+                    assignment and general journey advancement remain controlled by separate
+                    authoritative gates and are not exposed on this screen.
                   </p>
                 </Card>
               </Card>
