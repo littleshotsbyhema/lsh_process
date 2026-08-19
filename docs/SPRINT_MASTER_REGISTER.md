@@ -13059,3 +13059,551 @@ The checkpoint commit must contain only:
 `docs/SPRINT_MASTER_REGISTER.md`
 
 Production containment remains HOLD after checkpoint creation.
+
+## Sprint 10 Slice 7L - Canonical Booking Team Assignment Read Model and Read Surface - Technical Design Freeze
+
+**Status:** TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT STARTED / NOT PRODUCTION RELEASED
+
+### 1. Governed implementation base
+
+Slice 7L begins from exact checkpoint:
+
+`4532f01d3adbe68e702634174b94dd59ce82b243`
+
+Branch:
+
+`architecture-rebuild`
+
+This is the completed Sprint 10 Slice 7K checkpoint.
+
+Implementation must not begin until this freeze is:
+
+- reviewed;
+- committed;
+- pushed;
+- Git/GitHub reconciled;
+- independently reconciled to a READY non-Production Vercel Preview.
+
+### 2. Discovery basis
+
+Read-only discovery established the current canonical booking-team authority.
+
+`public.booking_team_assignments` remains the single canonical booking-scoped staffing lifecycle table.
+
+Its current canonical shape is exactly 11 columns:
+
+- `id`;
+- `organization_id`;
+- `booking_id`;
+- `assignment_role`;
+- `assigned_member_id`;
+- `assigned_external_creative_id`;
+- `assigned_at`;
+- `assigned_by`;
+- `ended_at`;
+- `ended_by`;
+- `end_reason`.
+
+Assignment subject identity is exactly one of:
+
+- internal organization member;
+- external creative.
+
+Current canonical assignment-role vocabulary is exactly:
+
+- `lead_photographer`;
+- `assistant`;
+- `stylist`;
+- `lead_videographer`;
+- `supporting_videographer`.
+
+Current cardinality rules remain database-owned:
+
+- at most one current Lead Photographer;
+- at most one current Lead Videographer;
+- multiple Assistants permitted;
+- multiple Stylists permitted;
+- multiple Supporting Videographers permitted subject to canonical uniqueness rules.
+
+### 3. Read-boundary finding
+
+`booking_team_assignments` already exposes authenticated canonical SELECT evidence through its forced-RLS booking-derived access boundary.
+
+Authenticated direct:
+
+- INSERT;
+- UPDATE;
+- DELETE
+
+remain denied.
+
+However, direct application reading of the assignment table alone is insufficient for a human-readable operational surface.
+
+Internal subject display identity resides in canonical organization-member evidence.
+
+External subject display identity resides in:
+
+`public.external_creatives`
+
+Direct authenticated access to `external_creatives` is intentionally denied.
+
+The existing:
+
+`team_access_directory(uuid)`
+
+belongs to the narrower canonical `team.read` domain and must not be used as a substitute for the booking-scoped staffing read boundary.
+
+Actors may legitimately hold `booking.read` without `team.read`.
+
+Slice 7L therefore must not:
+
+- require `team.read` merely to understand staffing on an otherwise-readable booking;
+- broaden direct `organization_members` access;
+- broaden direct `external_creatives` access;
+- expose the general Team directory;
+- expose freelancer CRM/contact information;
+- use service-role access from the application.
+
+### 4. Architectural decision
+
+Slice 7L introduces one deliberately narrow canonical booking-team read projection.
+
+The read model exists only to present human-readable booking-assignment evidence to actors who already have canonical authority to read the booking.
+
+The new database function is:
+
+`get_booking_team_assignment_history(uuid)`
+
+Conceptual input:
+
+- booking UUID.
+
+It returns booking-scoped immutable assignment evidence only.
+
+At minimum its projection must contain:
+
+- assignment UUID;
+- booking UUID;
+- assignment role;
+- subject type;
+- subject UUID;
+- subject display name;
+- assigned timestamp;
+- ended timestamp;
+- end reason;
+- current-state boolean.
+
+Subject type must distinguish exactly:
+
+- `internal_member`;
+- `external_creative`.
+
+No parallel assignment truth is created.
+
+The source of assignment lifecycle truth remains:
+
+`public.booking_team_assignments`
+
+The source of internal display identity remains:
+
+`public.organization_members`
+
+The source of external display identity remains:
+
+`public.external_creatives`.
+
+### 5. Safe identity projection
+
+The read model may expose only the minimum human-readable identity needed to understand a booking assignment.
+
+Permitted subject identity output:
+
+- stable canonical subject UUID;
+- subject type;
+- display name.
+
+It must not expose from organization-member or external-creative identity sources:
+
+- email;
+- phone;
+- authentication user ID;
+- role-grant history;
+- branch-grant history;
+- invitation state;
+- payroll/employment data;
+- private notes;
+- contact CRM data.
+
+External creative identity remains a minimal operational identity registry, not a freelancer directory.
+
+### 6. Database authorization contract
+
+`get_booking_team_assignment_history(uuid)` must be:
+
+- `SECURITY DEFINER`;
+- `SET search_path = ''`;
+- executable by `authenticated`;
+- denied to `anon`.
+
+The function must independently require:
+
+- authenticated `auth.uid()`;
+- an existing canonical booking;
+- current active organization membership;
+- canonical `booking.read`;
+- booking-derived branch scope where applicable.
+
+It must not require:
+
+- `team.read`;
+- `booking.team.assign`;
+- `booking.write`;
+- `booking.stage.advance`;
+- `prep.read`;
+- `prep.write`;
+- `safety.read`;
+- `safety.write`;
+- `safety.signoff`;
+- `shoot.schedule`.
+
+The function must not trust:
+
+- client-supplied organization IDs;
+- user-editable metadata;
+- application role labels;
+- client-computed branch authority.
+
+The booking row resolves organization and branch authority.
+
+### 7. Read-only database behavior
+
+The Slice 7L read model performs no mutation.
+
+It must not:
+
+- insert assignment rows;
+- update assignment rows;
+- close assignments;
+- create external creatives;
+- create audit events;
+- alter journey state;
+- alter preparation state;
+- alter safety state;
+- alter shoot schedule state.
+
+Read invocation is side-effect free.
+
+No new database permission key or role grant is introduced.
+
+### 8. Assignment history semantics
+
+The read model must preserve complete visible canonical assignment history.
+
+A current assignment is exactly:
+
+`ended_at IS NULL`
+
+A historical assignment is exactly:
+
+`ended_at IS NOT NULL`
+
+Historical rows must not be collapsed into the current subject.
+
+The read result must preserve:
+
+- assignment identity;
+- assignment role;
+- subject identity;
+- original assignment timestamp;
+- ending timestamp;
+- canonical end reason.
+
+The function may calculate the presentation boolean:
+
+`is_current = ended_at IS NULL`
+
+That boolean is derived presentation state only; lifecycle truth remains the canonical row.
+
+Results must use deterministic ordering.
+
+### 9. All five canonical roles remain visible
+
+Slice 7L must not regress the extended creative foundation to the original three-role model.
+
+The read surface must correctly represent:
+
+- Lead Photographer;
+- Assistant;
+- Stylist;
+- Lead Videographer;
+- Supporting Videographer.
+
+It must correctly represent both valid assignment subject forms.
+
+An external assignment must not be mislabeled as an internal member.
+
+An internal assignment must not be mislabeled as a freelancer.
+
+### 10. No readiness inference
+
+Slice 7L displays staffing evidence.
+
+It does not determine whether a booking is ready for Stage 10.
+
+The application must not infer:
+
+- required staffing composition;
+- package-specific staffing sufficiency;
+- Lead Videographer commercial requirement;
+- preparation completeness;
+- safety readiness;
+- formal safety sign-off completeness;
+- Stage 9 -> 10 eligibility.
+
+Those rules remain canonical inside the dedicated database gate.
+
+The UI must not show labels such as:
+
+- Team ready;
+- Staffing complete;
+- Ready for Shoot Scheduled;
+- Stage 10 requirements satisfied
+
+merely from visible assignment rows.
+
+### 11. Booking workspace server integration
+
+`listBookingWorkspace()` may consume the new booking-scoped read projection for bookings already visible through the canonical Bookings workspace.
+
+It must continue to:
+
+- use `requireSupabaseAuth`;
+- use server-owned organization configuration;
+- obtain bookings through the existing canonical read path;
+- preserve existing schedule, payment, preparation and journey behavior.
+
+The application must not query `external_creatives` directly.
+
+The application must not query `organization_members` directly to bypass canonical Team access controls.
+
+The safe booking-team projection is the only new identity-resolution boundary.
+
+### 12. Booking workspace UI
+
+The existing `/bookings` workspace may add a section titled:
+
+`Canonical booking team`
+
+The section is read-only.
+
+It may show:
+
+- assignment role;
+- subject display name;
+- internal/external subject indicator;
+- current/historical state;
+- assigned timestamp;
+- ended timestamp when present;
+- canonical end reason when present.
+
+Current and historical evidence must be visually distinguishable.
+
+If no assignment evidence exists, the UI must render an explicit canonical empty state.
+
+The empty state must not claim that staffing is incomplete or that Stage 10 is blocked.
+
+### 13. No Slice 7L mutation controls
+
+Slice 7L must expose no controls for:
+
+- assigning an internal team member;
+- replacing an internal team member;
+- unassigning an internal team member;
+- creating an external creative;
+- assigning an external creative;
+- replacing an external creative;
+- unassigning an external creative.
+
+Specifically, Slice 7L application code must not invoke:
+
+- `assign_booking_team_member`;
+- `create_external_creative`;
+- `assign_booking_external_creative`.
+
+Those mutation RPCs remain separately governed.
+
+### 14. Journey containment
+
+Slice 7L introduces no journey mutation.
+
+It must not invoke:
+
+- `mark_booking_shoot_scheduled`;
+- generic journey advancement;
+- any Stage 10 -> 11 operation.
+
+The current journey surface remains unchanged except that staffing evidence may now be read alongside it.
+
+### 15. Safety and preparation containment
+
+Slice 7L must not widen restricted safety evidence.
+
+It must not query or render new:
+
+- safety readiness details;
+- safety sign-off details;
+- comfort evidence.
+
+Existing preparation behavior remains unchanged.
+
+Staffing evidence must not be presented as a substitute for preparation or safety evidence.
+
+### 16. Exact implementation boundary
+
+Slice 7L implementation may change exactly:
+
+- `supabase/migrations/20260819150000_sprint10_booking_team_assignment_read_model.sql`;
+- `supabase/tests/sprint10_booking_team_assignment_read_model_test.sql`;
+- `src/integrations/supabase/types.ts`;
+- `src/lib/booking.functions.ts`;
+- `src/routes/_authenticated/bookings.tsx`.
+
+No other authored file is part of the Slice 7L implementation commit.
+
+`src/routeTree.gen.ts` may be regenerated transiently by normal TanStack tooling but must be restored before implementation commit.
+
+The generated Supabase type file is permitted only because Slice 7L adds the governed public read RPC.
+
+### 17. Database test contract
+
+The dedicated Slice 7L pgTAP suite must cover at minimum:
+
+- function existence and exact signature;
+- exact return projection;
+- `SECURITY DEFINER`;
+- empty search path;
+- authenticated execution;
+- anonymous denial;
+- active-membership enforcement;
+- `booking.read` enforcement;
+- branch isolation;
+- organization isolation;
+- internal subject display-name resolution;
+- external subject display-name resolution;
+- actor with `booking.read` but without `team.read`;
+- all five canonical assignment roles;
+- current assignment state;
+- historical assignment state;
+- deterministic history ordering;
+- canonical end-reason preservation;
+- direct `external_creatives` authenticated access remains denied;
+- direct booking-team INSERT/UPDATE/DELETE remain denied;
+- read invocation produces no audit or business mutation.
+
+Existing regression suites must remain green, including:
+
+- `sprint10_booking_team_assignments_test.sql`;
+- `sprint10_extended_creative_assignments_test.sql`;
+- `sprint10_canonical_team_access_test.sql`;
+- `sprint10_stage9_10_gate_test.sql`.
+
+The complete local pgTAP total must be recorded from the actual validation run rather than predicted in this freeze.
+
+### 18. Application validation
+
+Before implementation commit:
+
+- targeted Prettier;
+- targeted ESLint;
+- `npm run build`;
+- `npx tsc --noEmit`;
+- `git diff --check`;
+- exact five-file implementation containment.
+
+If the known checked-in TanStack route-tree TypeScript baseline defect reproduces unchanged, it must again be separately attributed by comparing generated-tree and frozen-tree TypeScript results.
+
+No Slice 7L-authored diagnostic is acceptable.
+
+### 19. Runtime acceptance
+
+Controlled authenticated local fixtures must cover at minimum:
+
+#### Case A — canonical internal staffing read
+
+A readable booking with current internal assignments shows correct role, subject identity and current status.
+
+#### Case B — assignment history
+
+A replaced or ended assignment remains visible as historical evidence while the current assignment remains distinct.
+
+#### Case C — external creative read
+
+A canonical external creative assignment displays the safe external display name without granting direct authenticated access to `external_creatives`.
+
+#### Case D — booking.read without team.read
+
+An actor with canonical `booking.read` but no `team.read` can read booking-scoped assignment evidence without receiving the Team directory.
+
+#### Case E — no booking.read
+
+An authenticated actor without `booking.read` cannot obtain assignment history through the read RPC.
+
+#### Case F — branch isolation
+
+A branch-scoped booking reader cannot read assignment evidence for a booking outside canonical branch authority.
+
+#### Case G — empty state
+
+A readable booking with zero assignment rows displays an explicit neutral empty state.
+
+#### Case H — mutation containment
+
+The Slice 7L application exposes no team-assignment, external-creative or journey mutation control and introduces no mutation RPC reference.
+
+### 20. Runtime cleanup
+
+All Slice 7L acceptance fixtures must be local only.
+
+After runtime acceptance evidence is captured:
+
+`npx supabase db reset --local`
+
+must remove all Slice 7L fixture residue.
+
+The canonical organization must return to the migration-defined baseline.
+
+### 21. Commit discipline
+
+Slice 7L follows the governed three-commit sequence:
+
+1. technical-design freeze documentation commit;
+2. exact implementation commit;
+3. implementation checkpoint documentation commit.
+
+Expected freeze commit subject:
+
+`docs: freeze sprint 10 slice 7l booking team read model`
+
+Expected implementation subject:
+
+`feat: add canonical booking team read surface`
+
+Expected checkpoint subject:
+
+`docs: checkpoint sprint 10 slice 7l`
+
+### 22. Production containment
+
+Still HOLD:
+
+- Git `main` merge;
+- Supabase branch merge;
+- Production database mutation;
+- Production application release/redeployment;
+- Stage 9 -> 10 application release;
+- booking-team mutation UI release;
+- Sprint 10 production release.
+
+Sprint 10 remains:
+
+**IMPLEMENTATION IN PROGRESS / NOT RELEASED**
