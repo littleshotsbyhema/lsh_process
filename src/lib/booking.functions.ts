@@ -29,6 +29,19 @@ export type BookingPaymentMethod = Database["public"]["Enums"]["booking_payment_
 export type BookingPaymentSummary =
   Database["public"]["Functions"]["get_booking_payment_summary"]["Returns"][number];
 
+type GeneratedBookingTeamAssignmentHistoryRow =
+  Database["public"]["Functions"]["get_booking_team_assignment_history"]["Returns"][number];
+
+export type BookingTeamAssignmentHistoryRow = Omit<
+  GeneratedBookingTeamAssignmentHistoryRow,
+  "ended_at" | "end_reason" | "subject_display_name" | "subject_id"
+> & {
+  ended_at: string | null;
+  end_reason: string | null;
+  subject_display_name: string | null;
+  subject_id: string | null;
+};
+
 export type BookingQuotationSummary = {
   id: string;
   quotation_reference: string;
@@ -73,6 +86,7 @@ export type BookingWorkspaceData = {
   paymentSummaries: BookingPaymentSummary[];
   bookingPreparations: BookingPreparationRow[];
   bookingPreparationItems: BookingPreparationItemRow[];
+  bookingTeamAssignmentHistory: BookingTeamAssignmentHistoryRow[];
   canReadPayment: boolean;
   canRecordPayment: boolean;
   canConfirmBooking: boolean;
@@ -187,6 +201,7 @@ export const listBookingWorkspace = createServerFn({
         paymentSummaries: [],
         bookingPreparations: [],
         bookingPreparationItems: [],
+        bookingTeamAssignmentHistory: [],
         canReadPayment,
         canRecordPayment,
         canConfirmBooking,
@@ -362,6 +377,21 @@ export const listBookingWorkspace = createServerFn({
       }
     }
 
+    const bookingTeamAssignmentHistory: BookingTeamAssignmentHistoryRow[] = [];
+
+    const bookingTeamHistoryResults = await Promise.all(
+      bookingIds.map((bookingId) =>
+        context.supabase.rpc("get_booking_team_assignment_history", {
+          p_booking_id: bookingId,
+        }),
+      ),
+    );
+
+    for (const historyResult of bookingTeamHistoryResults) {
+      throwIfError(historyResult.error);
+      bookingTeamAssignmentHistory.push(...(historyResult.data ?? []));
+    }
+
     return {
       bookings,
       quotations: quotationsResult.data ?? [],
@@ -375,6 +405,7 @@ export const listBookingWorkspace = createServerFn({
       paymentSummaries,
       bookingPreparations,
       bookingPreparationItems,
+      bookingTeamAssignmentHistory,
       canReadPayment,
       canRecordPayment,
       canConfirmBooking,

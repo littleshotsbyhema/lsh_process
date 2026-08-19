@@ -21,6 +21,7 @@ import {
   type BookingPreparationRow,
   type BookingShootScheduleRow,
   type BookingStageTransitionRow,
+  type BookingTeamAssignmentHistoryRow,
 } from "@/lib/booking.functions";
 
 export const Route = createFileRoute("/_authenticated/bookings")({
@@ -73,6 +74,23 @@ function formatDateTime(value: string | null) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function bookingTeamRoleLabel(role: string) {
+  switch (role) {
+    case "lead_photographer":
+      return "Lead Photographer";
+    case "assistant":
+      return "Assistant";
+    case "stylist":
+      return "Stylist";
+    case "lead_videographer":
+      return "Lead Videographer";
+    case "supporting_videographer":
+      return "Supporting Videographer";
+    default:
+      return role;
+  }
 }
 
 function stageById(stages: BookingJourneyStageRow[], id: string | null) {
@@ -926,6 +944,107 @@ function PreparationReadSurface({
   );
 }
 
+function BookingTeamReadSurface({
+  assignments,
+}: {
+  assignments: BookingTeamAssignmentHistoryRow[];
+}) {
+  return (
+    <div className="mt-7 border-t border-border pt-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Canonical booking team
+          </div>
+          <h3 className="mt-1 font-serif text-xl text-primary">Assignment history</h3>
+        </div>
+
+        <span className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] uppercase tracking-wider text-primary">
+          Read-only
+        </span>
+      </div>
+
+      {assignments.length === 0 ? (
+        <Card className="mt-5 p-5">
+          <p className="text-sm font-medium text-primary">
+            No canonical booking-team assignments are recorded.
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            This is a neutral absence of assignment evidence. It does not by itself establish team
+            readiness, staffing incompleteness, or journey eligibility.
+          </p>
+        </Card>
+      ) : (
+        <div className="mt-5 space-y-3">
+          {assignments.map((assignment) => (
+            <div
+              key={assignment.assignment_id}
+              className="rounded-lg border border-border bg-card px-4 py-4"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {bookingTeamRoleLabel(assignment.assignment_role)}
+                  </div>
+
+                  <div className="mt-1 text-sm font-medium text-primary">
+                    {assignment.subject_display_name ?? "Display name unavailable"}
+                  </div>
+
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {assignment.subject_type === "internal_member"
+                      ? "Internal team member"
+                      : assignment.subject_type === "external_creative"
+                        ? "External creative"
+                        : assignment.subject_type}
+                  </div>
+                </div>
+
+                <span className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] uppercase tracking-wider text-primary">
+                  {assignment.is_current ? "Current" : "Historical"}
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Assigned
+                  </div>
+                  <div className="mt-1 text-xs text-primary">
+                    {formatDateTime(assignment.assigned_at)}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Ended
+                  </div>
+                  <div className="mt-1 text-xs text-primary">
+                    {assignment.ended_at ? formatDateTime(assignment.ended_at) : "—"}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    End reason
+                  </div>
+                  <div className="mt-1 text-xs text-primary">{assignment.end_reason ?? "—"}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="mt-4 text-xs leading-5 text-muted-foreground">
+        This surface reports canonical booking-scoped assignment history only. Assignment evidence
+        does not independently establish shoot readiness or authorize journey advancement.
+      </p>
+    </div>
+  );
+}
+
 function TransitionHistory({
   transitions,
   stages,
@@ -1070,6 +1189,10 @@ function BookingsPage() {
                   .filter((item) => item.preparation_id === preparation.id)
                   .sort((left, right) => left.sort_order - right.sort_order)
               : [];
+
+            const bookingTeamAssignmentHistory = data.bookingTeamAssignmentHistory.filter(
+              (assignment) => assignment.booking_id === booking.id,
+            );
 
             const currentOrder = currentStage?.stage_order ?? 0;
 
@@ -1417,6 +1540,8 @@ function BookingsPage() {
                     onSuccess={refreshBookingWorkspace}
                   />
                 ) : null}
+
+                <BookingTeamReadSurface assignments={bookingTeamAssignmentHistory} />
 
                 <div className="mt-7 border-t border-border pt-6">
                   <div className="flex flex-wrap items-end justify-between gap-4">
