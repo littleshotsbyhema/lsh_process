@@ -15,6 +15,8 @@ import {
   type BookingJourneyStageRow,
   type BookingPaymentMethod,
   type BookingPaymentSummary,
+  type BookingPreparationItemRow,
+  type BookingPreparationRow,
   type BookingShootScheduleRow,
   type BookingStageTransitionRow,
 } from "@/lib/booking.functions";
@@ -716,6 +718,108 @@ function BookingConfirmationControl({
   );
 }
 
+function PreparationReadSurface({
+  preparation,
+  items,
+}: {
+  preparation: BookingPreparationRow | null;
+  items: BookingPreparationItemRow[];
+}) {
+  return (
+    <div className="mt-7 border-t border-border pt-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Canonical pre-shoot preparation
+          </div>
+          <h3 className="mt-1 font-serif text-xl text-primary">Preparation checklist</h3>
+        </div>
+
+        {preparation ? (
+          <span className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] uppercase tracking-wider text-primary">
+            Preparation started
+          </span>
+        ) : null}
+      </div>
+
+      {!preparation ? (
+        <Card className="mt-5 p-5">
+          <p className="text-sm font-medium text-primary">Pre-shoot preparation has not started.</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            No canonical preparation instance is currently visible for this booking. This read-only
+            state does not determine whether preparation is eligible to start.
+          </p>
+        </Card>
+      ) : (
+        <>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Preparation started
+              </div>
+              <div className="mt-1 text-sm font-medium text-primary">
+                {formatDateTime(preparation.started_at)}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Canonical checklist items
+              </div>
+              <div className="mt-1 font-serif text-xl text-primary">{items.length}</div>
+            </div>
+          </div>
+
+          {items.length === 0 ? (
+            <Card className="mt-5 p-5">
+              <p className="text-sm font-medium text-primary">
+                No canonical preparation checklist items are visible.
+              </p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Checklist evidence is shown only when authoritative preparation-item rows are
+                returned.
+              </p>
+            </Card>
+          ) : (
+            <div className="mt-5 space-y-3">
+              {items.map((item) => (
+                <div key={item.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-medium text-primary">{item.item_label}</div>
+
+                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                        <span>{item.is_required ? "Required" : "Optional"}</span>
+                        <span>·</span>
+                        <span>{item.is_satisfied ? "Satisfied" : "Unsatisfied"}</span>
+                      </div>
+                    </div>
+
+                    <span className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] uppercase tracking-wider text-primary">
+                      {item.is_satisfied ? "Satisfied" : "Outstanding"}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                    {item.is_satisfied && item.satisfied_at
+                      ? `Satisfied ${formatDateTime(item.satisfied_at)}`
+                      : "No canonical satisfaction evidence recorded."}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="mt-4 text-xs leading-5 text-muted-foreground">
+            This is read-only canonical preparation evidence. Journey stage, scheduling, safety and
+            team state do not substitute for preparation checklist evidence.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function TransitionHistory({
   transitions,
   stages,
@@ -851,6 +955,15 @@ function BookingsPage() {
 
             const paymentSummary =
               data.paymentSummaries.find((summary) => summary.booking_id === booking.id) ?? null;
+
+            const preparation =
+              data.bookingPreparations.find((item) => item.booking_id === booking.id) ?? null;
+
+            const preparationItems = preparation
+              ? data.bookingPreparationItems
+                  .filter((item) => item.preparation_id === preparation.id)
+                  .sort((left, right) => left.sort_order - right.sort_order)
+              : [];
 
             const currentOrder = currentStage?.stage_order ?? 0;
 
@@ -1173,6 +1286,10 @@ function BookingsPage() {
                   )}
                 </div>
 
+                {data.canReadPreparation ? (
+                  <PreparationReadSurface preparation={preparation} items={preparationItems} />
+                ) : null}
+
                 <div className="mt-7 border-t border-border pt-6">
                   <div className="flex flex-wrap items-end justify-between gap-4">
                     <div>
@@ -1249,9 +1366,10 @@ function BookingsPage() {
                     reservation. When the Stage 7 advance is satisfied and a proposed shoot plan
                     exists, an actor with booking.confirm can use the dedicated confirmation control
                     above. That operation confirms the booking, reserves the current proposal and
-                    advances exactly to Stage 8. Payment reversal, preparation, safety, team
-                    assignment and general journey advancement remain controlled by separate
-                    authoritative gates and are not exposed on this screen.
+                    advances exactly to Stage 8. Authorized users may read canonical pre-shoot
+                    preparation evidence above when it exists. Preparation mutation, payment
+                    reversal, safety, team assignment and general journey advancement remain
+                    controlled by separate authoritative gates and are not exposed on this screen.
                   </p>
                 </Card>
               </Card>

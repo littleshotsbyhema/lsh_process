@@ -19,6 +19,11 @@ export type BookingShootScheduleRow =
 
 export type BookingPaymentRow = Database["public"]["Tables"]["booking_payments"]["Row"];
 
+export type BookingPreparationRow = Database["public"]["Tables"]["booking_preparations"]["Row"];
+
+export type BookingPreparationItemRow =
+  Database["public"]["Tables"]["booking_preparation_items"]["Row"];
+
 export type BookingPaymentMethod = Database["public"]["Enums"]["booking_payment_method"];
 
 export type BookingPaymentSummary =
@@ -66,9 +71,12 @@ export type BookingWorkspaceData = {
   leads: BookingLeadSummary[];
   families: BookingFamilySummary[];
   paymentSummaries: BookingPaymentSummary[];
+  bookingPreparations: BookingPreparationRow[];
+  bookingPreparationItems: BookingPreparationItemRow[];
   canReadPayment: boolean;
   canRecordPayment: boolean;
   canConfirmBooking: boolean;
+  canReadPreparation: boolean;
   canSchedule: boolean;
 };
 
@@ -138,6 +146,7 @@ export const listBookingWorkspace = createServerFn({
     const canReadPayment = permissions.has("payment.read");
     const canRecordPayment = permissions.has("payment.record");
     const canConfirmBooking = permissions.has("booking.confirm");
+    const canReadPreparation = permissions.has("prep.read");
     const canSchedule = permissions.has("shoot.schedule");
 
     if (bookings.length === 0) {
@@ -163,9 +172,12 @@ export const listBookingWorkspace = createServerFn({
         leads: [],
         families: [],
         paymentSummaries: [],
+        bookingPreparations: [],
+        bookingPreparationItems: [],
         canReadPayment,
         canRecordPayment,
         canConfirmBooking,
+        canReadPreparation,
         canSchedule,
       };
     }
@@ -300,6 +312,41 @@ export const listBookingWorkspace = createServerFn({
       }
     }
 
+    let bookingPreparations: BookingPreparationRow[] = [];
+    let bookingPreparationItems: BookingPreparationItemRow[] = [];
+
+    if (canReadPreparation) {
+      const preparationsResult = await context.supabase
+        .from("booking_preparations")
+        .select("*")
+        .eq("organization_id", ORGANIZATION_ID)
+        .in("booking_id", bookingIds)
+        .order("started_at", {
+          ascending: true,
+        });
+
+      throwIfError(preparationsResult.error);
+
+      bookingPreparations = preparationsResult.data ?? [];
+
+      const preparationIds = bookingPreparations.map((preparation) => preparation.id);
+
+      if (preparationIds.length > 0) {
+        const preparationItemsResult = await context.supabase
+          .from("booking_preparation_items")
+          .select("*")
+          .eq("organization_id", ORGANIZATION_ID)
+          .in("preparation_id", preparationIds)
+          .order("sort_order", {
+            ascending: true,
+          });
+
+        throwIfError(preparationItemsResult.error);
+
+        bookingPreparationItems = preparationItemsResult.data ?? [];
+      }
+    }
+
     return {
       bookings,
       quotations: quotationsResult.data ?? [],
@@ -311,9 +358,12 @@ export const listBookingWorkspace = createServerFn({
       leads,
       families,
       paymentSummaries,
+      bookingPreparations,
+      bookingPreparationItems,
       canReadPayment,
       canRecordPayment,
       canConfirmBooking,
+      canReadPreparation,
       canSchedule,
     };
   });
