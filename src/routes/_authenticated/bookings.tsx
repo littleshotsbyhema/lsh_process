@@ -12,6 +12,8 @@ import {
   proposeShootSchedule,
   recordBookingPayment,
   rescheduleShoot,
+  startPreShootPreparation,
+  updatePreShootPreparationItem,
   type BookingJourneyStageRow,
   type BookingPaymentMethod,
   type BookingPaymentSummary,
@@ -719,12 +721,64 @@ function BookingConfirmationControl({
 }
 
 function PreparationReadSurface({
+  bookingId,
   preparation,
   items,
+  canStart,
+  canMutateItems,
+  isHistorical,
+  onSuccess,
 }: {
+  bookingId: string;
   preparation: BookingPreparationRow | null;
   items: BookingPreparationItemRow[];
+  canStart: boolean;
+  canMutateItems: boolean;
+  isHistorical: boolean;
+  onSuccess: () => Promise<void>;
 }) {
+  const startPreparationFn = useServerFn(startPreShootPreparation);
+  const updatePreparationItemFn = useServerFn(updatePreShootPreparationItem);
+
+  const startPreparationMutation = useMutation({
+    mutationFn: () =>
+      startPreparationFn({
+        data: {
+          bookingId,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Pre-shoot preparation started.");
+      await onSuccess();
+    },
+    onError: (error: unknown) =>
+      toast.error(
+        error instanceof Error ? error.message : "Could not start pre-shoot preparation.",
+      ),
+  });
+
+  const updatePreparationItemMutation = useMutation({
+    mutationFn: ({
+      preparationItemId,
+      satisfied,
+    }: {
+      preparationItemId: string;
+      satisfied: boolean;
+    }) =>
+      updatePreparationItemFn({
+        data: {
+          preparationItemId,
+          satisfied,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Preparation item updated.");
+      await onSuccess();
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not update preparation item."),
+  });
+
   return (
     <div className="mt-7 border-t border-border pt-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -745,10 +799,33 @@ function PreparationReadSurface({
       {!preparation ? (
         <Card className="mt-5 p-5">
           <p className="text-sm font-medium text-primary">Pre-shoot preparation has not started.</p>
+
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            No canonical preparation instance is currently visible for this booking. This read-only
-            state does not determine whether preparation is eligible to start.
+            No canonical preparation instance is currently visible for this booking. Client-visible
+            state does not independently establish mutation eligibility; the canonical database
+            operation re-checks all preparation-start gates.
           </p>
+
+          {canStart ? (
+            <>
+              <button
+                type="button"
+                onClick={() => startPreparationMutation.mutate()}
+                disabled={startPreparationMutation.isPending}
+                className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+              >
+                {startPreparationMutation.isPending
+                  ? "Starting preparation..."
+                  : "Start pre-shoot preparation"}
+              </button>
+
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                This dedicated operation delegates preparation creation, checklist instantiation and
+                the exact Stage 8 -&gt; 9 transition to canonical server authority. It does not mark
+                the shoot scheduled or advance beyond Stage 9.
+              </p>
+            </>
+          ) : null}
         </Card>
       ) : (
         <>
@@ -782,37 +859,66 @@ function PreparationReadSurface({
             </Card>
           ) : (
             <div className="mt-5 space-y-3">
-              {items.map((item) => (
-                <div key={item.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-medium text-primary">{item.item_label}</div>
+              {items.map((item) => {
+                const isUpdatingThisItem =
+                  updatePreparationItemMutation.isPending &&
+                  updatePreparationItemMutation.variables?.preparationItemId === item.id;
 
-                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                        <span>{item.is_required ? "Required" : "Optional"}</span>
-                        <span>·</span>
-                        <span>{item.is_satisfied ? "Satisfied" : "Unsatisfied"}</span>
+                return (
+                  <div key={item.id} className="rounded-lg border border-border bg-card px-4 py-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-medium text-primary">{item.item_label}</div>
+
+                        <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                          <span>{item.is_required ? "Required" : "Optional"}</span>
+                          <span>·</span>
+                          <span>{item.is_satisfied ? "Satisfied" : "Unsatisfied"}</span>
+                        </div>
                       </div>
+
+                      <span className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] uppercase tracking-wider text-primary">
+                        {item.is_satisfied ? "Satisfied" : "Outstanding"}
+                      </span>
                     </div>
 
-                    <span className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] uppercase tracking-wider text-primary">
-                      {item.is_satisfied ? "Satisfied" : "Outstanding"}
-                    </span>
-                  </div>
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                      {item.is_satisfied && item.satisfied_at
+                        ? `Satisfied ${formatDateTime(item.satisfied_at)}`
+                        : "No canonical satisfaction evidence recorded."}
+                    </p>
 
-                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                    {item.is_satisfied && item.satisfied_at
-                      ? `Satisfied ${formatDateTime(item.satisfied_at)}`
-                      : "No canonical satisfaction evidence recorded."}
-                  </p>
-                </div>
-              ))}
+                    {canMutateItems ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updatePreparationItemMutation.mutate({
+                            preparationItemId: item.id,
+                            satisfied: !item.is_satisfied,
+                          })
+                        }
+                        disabled={updatePreparationItemMutation.isPending}
+                        className="mt-3 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-primary hover:bg-muted disabled:opacity-60"
+                      >
+                        {isUpdatingThisItem
+                          ? "Updating..."
+                          : item.is_satisfied
+                            ? "Mark outstanding"
+                            : "Mark satisfied"}
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           )}
 
           <p className="mt-4 text-xs leading-5 text-muted-foreground">
-            This is read-only canonical preparation evidence. Journey stage, scheduling, safety and
-            team state do not substitute for preparation checklist evidence.
+            {isHistorical
+              ? "This is historical, read-only canonical preparation evidence. Journey, scheduling, safety and team state do not make historical preparation mutable."
+              : canMutateItems
+                ? "Canonical checklist identity and taxonomy remain read-only. At exact Stage 9, only satisfaction state may change through the controlled preparation-item operation."
+                : "This canonical preparation evidence is read-only for the current actor and journey state. Journey, scheduling, safety and team state do not substitute for checklist evidence."}
           </p>
         </>
       )}
@@ -993,6 +1099,20 @@ function BookingsPage() {
               currentOrder >= 8 &&
               currentOrder <= 10 &&
               currentSchedule?.schedule_state === "reserved";
+
+            const canStartPreparation =
+              currentStage?.stage_key === "booking_confirmed" &&
+              currentOrder === 8 &&
+              preparation === null &&
+              currentSchedule?.schedule_state === "reserved" &&
+              data.canWritePreparation &&
+              data.canAdvanceBookingStage;
+
+            const canMutatePreparationItems =
+              currentStage?.stage_key === "pre_shoot_preparation" &&
+              currentOrder === 9 &&
+              preparation !== null &&
+              data.canWritePreparation;
 
             const isActiveForm = (mode: ScheduleMutationMode) =>
               activeForm?.bookingId === booking.id && activeForm.mode === mode;
@@ -1287,7 +1407,15 @@ function BookingsPage() {
                 </div>
 
                 {data.canReadPreparation ? (
-                  <PreparationReadSurface preparation={preparation} items={preparationItems} />
+                  <PreparationReadSurface
+                    bookingId={booking.id}
+                    preparation={preparation}
+                    items={preparationItems}
+                    canStart={canStartPreparation}
+                    canMutateItems={canMutatePreparationItems}
+                    isHistorical={currentOrder > 9}
+                    onSuccess={refreshBookingWorkspace}
+                  />
                 ) : null}
 
                 <div className="mt-7 border-t border-border pt-6">

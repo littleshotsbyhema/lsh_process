@@ -77,6 +77,8 @@ export type BookingWorkspaceData = {
   canRecordPayment: boolean;
   canConfirmBooking: boolean;
   canReadPreparation: boolean;
+  canWritePreparation: boolean;
+  canAdvanceBookingStage: boolean;
   canSchedule: boolean;
 };
 
@@ -118,6 +120,15 @@ const confirmBookingAfterAdvanceSchema = z.object({
   bookingId: z.string().uuid(),
 });
 
+const startPreShootPreparationSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
+const updatePreShootPreparationItemSchema = z.object({
+  preparationItemId: z.string().uuid(),
+  satisfied: z.boolean(),
+});
+
 export const listBookingWorkspace = createServerFn({
   method: "GET",
 })
@@ -147,6 +158,8 @@ export const listBookingWorkspace = createServerFn({
     const canRecordPayment = permissions.has("payment.record");
     const canConfirmBooking = permissions.has("booking.confirm");
     const canReadPreparation = permissions.has("prep.read");
+    const canWritePreparation = permissions.has("prep.write");
+    const canAdvanceBookingStage = permissions.has("booking.stage.advance");
     const canSchedule = permissions.has("shoot.schedule");
 
     if (bookings.length === 0) {
@@ -178,6 +191,8 @@ export const listBookingWorkspace = createServerFn({
         canRecordPayment,
         canConfirmBooking,
         canReadPreparation,
+        canWritePreparation,
+        canAdvanceBookingStage,
         canSchedule,
       };
     }
@@ -364,6 +379,8 @@ export const listBookingWorkspace = createServerFn({
       canRecordPayment,
       canConfirmBooking,
       canReadPreparation,
+      canWritePreparation,
+      canAdvanceBookingStage,
       canSchedule,
     };
   });
@@ -455,6 +472,45 @@ export const confirmBookingAfterAdvance = createServerFn({
 
     if (!result.data) {
       throw new Error("Booking confirmation returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const startPreShootPreparation = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(startPreShootPreparationSchema)
+  .handler(async ({ context, data }): Promise<BookingPreparationRow> => {
+    const result = await context.supabase.rpc("start_pre_shoot_preparation", {
+      p_booking_id: data.bookingId,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Pre-shoot preparation start returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const updatePreShootPreparationItem = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(updatePreShootPreparationItemSchema)
+  .handler(async ({ context, data }): Promise<BookingPreparationItemRow> => {
+    const result = await context.supabase.rpc("update_pre_shoot_preparation_item", {
+      p_preparation_item_id: data.preparationItemId,
+      p_satisfied: data.satisfied,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Preparation item update returned no row.");
     }
 
     return result.data;
