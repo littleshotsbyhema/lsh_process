@@ -13607,3 +13607,530 @@ Still HOLD:
 Sprint 10 remains:
 
 **IMPLEMENTATION IN PROGRESS / NOT RELEASED**
+
+## Sprint 10 Slice 7L - Canonical Booking Team Assignment Read Model and Read Surface - Implementation Checkpoint
+
+**Status:** IMPLEMENTATION VALIDATED / PUSHED / GITHUB VERIFIED / IMPLEMENTATION PREVIEW VERIFIED / NOT PRODUCTION RELEASED
+
+### Governed identities
+
+- Technical design freeze:
+  `b70cd7b648b4200821e61e537ff8900ea03d7e4f`
+- Implementation:
+  `e03fdeb1d2e6a499e5948ca89ca794fd40cc378d`
+- Implementation parent:
+  `b70cd7b648b4200821e61e537ff8900ea03d7e4f`
+- Implementation subject:
+  `feat: add canonical booking team read surface`
+- Working branch:
+  `architecture-rebuild`
+
+### Exact implementation boundary
+
+The Slice 7L implementation commit changes exactly:
+
+- `supabase/migrations/20260819150000_sprint10_booking_team_assignment_read_model.sql`
+- `supabase/tests/sprint10_booking_team_assignment_read_model_test.sql`
+- `src/integrations/supabase/types.ts`
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+No package manifest, lockfile, permission migration, role migration,
+general Team-directory implementation, assignment mutation UI, safety mutation,
+preparation mutation, or Stage 9 -> 10 journey mutation is part of Slice 7L.
+
+`src/routeTree.gen.ts` was regenerated transiently during build validation and
+was restored to the frozen checked-in version. It is not part of the
+implementation commit.
+
+### Canonical booking-team read model
+
+Slice 7L adds the narrow booking-scoped read RPC:
+
+`public.get_booking_team_assignment_history(uuid)`
+
+The function is:
+
+- `SECURITY DEFINER`
+- `STABLE`
+- configured with empty `search_path`
+- executable by authenticated application actors
+- denied to anon
+- independently authorized from canonical booking authority
+
+Authorization requires:
+
+- authenticated actor
+- existing canonical booking
+- active organization membership
+- canonical `booking.read`
+- booking-derived branch scope when the booking has a branch
+
+The function intentionally does not require:
+
+- `team.read`
+- `booking.team.assign`
+
+This preserves booking-scoped staffing evidence for legitimate booking readers
+without exposing the broader Team directory.
+
+### Safe projection
+
+The RPC exposes only:
+
+- assignment UUID
+- booking UUID
+- assignment role
+- subject type
+- subject UUID
+- subject display name
+- assigned timestamp
+- ended timestamp
+- end reason
+- derived current/historical state
+
+Canonical lifecycle truth remains:
+
+`public.booking_team_assignments`
+
+Canonical internal display identity remains:
+
+`public.organization_members`
+
+Canonical external display identity remains:
+
+`public.external_creatives`
+
+The read model exposes no:
+
+- email
+- phone
+- authentication user UUID
+- permission grant
+- role grant
+- branch grant
+- invitation state
+- CRM contact metadata
+
+Direct authenticated access to `external_creatives` remains denied.
+
+Direct authenticated booking-team writes remain denied.
+
+### Assignment-role coverage
+
+The read model preserves all five canonical assignment roles:
+
+- `lead_photographer`
+- `assistant`
+- `stylist`
+- `lead_videographer`
+- `supporting_videographer`
+
+Both canonical subject forms are supported:
+
+- `internal_member`
+- `external_creative`
+
+Historical rows remain distinguishable from current rows.
+
+Ordering is deterministic by:
+
+1. `assigned_at`
+2. assignment UUID
+
+### Application integration
+
+Generated Supabase types add exactly the new
+`get_booking_team_assignment_history` RPC signature.
+
+The booking workspace application boundary normalizes nullable runtime fields
+for:
+
+- `ended_at`
+- `end_reason`
+- `subject_display_name`
+- `subject_id`
+
+`listBookingWorkspace` invokes the canonical read RPC only for booking IDs
+already visible through the authenticated booking workspace.
+
+The application does not join directly to `external_creatives`.
+
+The application does not reuse `team_access_directory`.
+
+No Slice 7L application code introduces:
+
+- `team.read` coupling
+- `booking.team.assign` coupling
+- direct booking-team table writes
+
+### Canonical booking-team UI
+
+The Bookings workspace now exposes a read-only section labelled:
+
+`Canonical booking team`
+
+The surface shows:
+
+- canonical assignment role
+- safe subject display name
+- internal-member or external-creative subject type
+- current or historical assignment state
+- assigned timestamp
+- ended timestamp
+- end reason
+
+The section exposes no assignment mutation controls.
+
+The zero-assignment state is intentionally neutral.
+
+Zero rows do not imply:
+
+- staffing incompleteness
+- team readiness
+- Stage 10 readiness
+- journey eligibility
+- journey blockage
+
+The UI explicitly states that booking-team assignment evidence does not
+independently establish shoot readiness or authorize journey advancement.
+
+### Mutation containment
+
+Slice 7L adds no application invocation of:
+
+- `assign_booking_team_member`
+- `assign_booking_external_creative`
+- `create_external_creative`
+- `mark_booking_shoot_scheduled`
+
+Slice 7L adds no:
+
+- generic journey-advance control
+- assignment replacement control
+- assignment removal control
+- external-creative creation control
+- safety mutation
+- preparation mutation
+- Stage 9 -> 10 application mutation
+
+The database read function produces no audit, assignment, or journey mutation.
+
+### Dedicated pgTAP validation
+
+Dedicated Slice 7L booking-team read-model pgTAP:
+
+- files:
+  `1`
+- tests:
+  `30`
+- result:
+  PASS
+
+The dedicated contract validates:
+
+- exact function identity/signature
+- exact return projection
+- `SECURITY DEFINER`
+- empty `search_path`
+- authenticated execute
+- anon denial
+- active-membership authority
+- `booking.read` authority
+- branch isolation
+- organization isolation
+- internal display-name resolution
+- external display-name resolution
+- booking reader without `team.read`
+- all five assignment roles
+- current-state representation
+- historical-state representation
+- deterministic ordering
+- end-reason preservation
+- external-creative direct-access containment
+- booking-team direct-write containment
+- read-only mutation containment
+
+### Targeted database regression validation
+
+Canonical booking-team assignment regression:
+
+- files:
+  `1`
+- tests:
+  `75`
+- result:
+  PASS
+
+Extended creative assignment regression:
+
+- files:
+  `1`
+- tests:
+  `85`
+- result:
+  PASS
+
+Canonical team-access regression:
+
+- files:
+  `1`
+- tests:
+  `42`
+- result:
+  PASS
+
+Stage 9 -> 10 gate regression:
+
+- files:
+  `1`
+- tests:
+  `92`
+- result:
+  PASS
+
+### Complete local database regression
+
+Complete local pgTAP suite:
+
+- files:
+  `17`
+- tests:
+  `1113`
+- result:
+  PASS
+
+Local database lint:
+
+- schema errors:
+  none
+- result:
+  PASS
+
+### Source-quality validation
+
+Targeted Prettier:
+
+PASS.
+
+Targeted ESLint:
+
+PASS.
+
+`git diff --check`:
+
+PASS.
+
+Production application build:
+
+PASS.
+
+The build completed client, SSR and Nitro production bundles successfully.
+
+Existing TanStack deprecation and bundle-size messages remained warnings and
+did not fail the build.
+
+### TypeScript baseline attribution
+
+TanStack build regeneration produced a current generated route tree.
+
+With the generated route tree:
+
+- `npx tsc --noEmit`:
+  PASS
+- diagnostics:
+  none
+
+After restoring the frozen checked-in route tree:
+
+- diagnostics:
+  `12`
+- diagnostic files remain the known unrelated baseline:
+  - `src/routes/_authenticated/guide-reviews.tsx`
+  - `src/routes/_authenticated/leads.tsx`
+  - `src/routes/_authenticated/leads_.$leadId.tsx`
+  - `src/routes/_authenticated/tasks.tsx`
+  - `src/routes/_authenticated/whatsapp.tsx`
+  - `src/routes/memory-guide.tsx`
+- Slice 7L authored-file diagnostics:
+  none
+
+Classification:
+
+**TypeScript baseline attribution PASS / Slice 7L regression NO**
+
+### Runtime acceptance
+
+Runtime Case A - internal current staffing read:
+
+PASS.
+
+The canonical read model returned the current internal Lead Photographer with
+safe internal display identity and current-state evidence.
+
+Runtime Case B - historical staffing read:
+
+PASS.
+
+An ended and replaced Lead Photographer assignment remained visible with:
+
+- historical state
+- ended timestamp
+- preserved end reason
+
+Runtime Case C - external creative safe identity:
+
+PASS.
+
+The booking-scoped read model returned the external Supporting Videographer's
+safe display identity while direct authenticated
+`external_creatives` table access remained unavailable.
+
+Runtime Case D - booking reader without Team-directory authority:
+
+PASS.
+
+A canonical actor with:
+
+- `booking.read`
+- no `team.read`
+
+could read the booking-scoped assignment history.
+
+The same actor received no Team-directory disclosure through
+`team_access_directory`.
+
+Runtime Case E - missing booking-read authority:
+
+PASS.
+
+An active actor without canonical `booking.read` was denied by the database
+read function.
+
+Runtime Case F - branch isolation:
+
+PASS.
+
+The branch-scoped booking reader:
+
+- could read the in-scope branch booking
+- could not read the out-of-scope branch booking
+
+Runtime Case G - zero-assignment neutrality:
+
+PASS.
+
+A booking with zero canonical assignments returned zero read-model rows.
+
+The UI neutral-state acceptance confirmed no inference of staffing
+incompleteness, team readiness or Stage 10 readiness.
+
+Runtime Case H - read-only containment:
+
+PASS.
+
+Read activity caused no change to:
+
+- audit-event count
+- booking-team assignment count
+- booking journey stage
+- booking journey version
+
+The booking-team UI contains no mutation control.
+
+### Runtime cleanup
+
+After runtime acceptance:
+
+- `npx supabase db reset --local`:
+  PASS
+- local database lint:
+  PASS
+- Slice 7L fixture residue:
+  `0,0,0,0,0,0,0`
+- canonical Slice 7L read function after reset:
+  `READ_MODEL_PRESENT`
+- transient generated route tree restored:
+  PASS
+- exact implementation boundary after cleanup:
+  PASS
+
+### Git / GitHub reconciliation
+
+The implementation commit was pushed to:
+
+`architecture-rebuild`
+
+Local and remote reconciliation:
+
+- local:
+  `e03fdeb1d2e6a499e5948ca89ca794fd40cc378d`
+- remote:
+  `e03fdeb1d2e6a499e5948ca89ca794fd40cc378d`
+- divergence:
+  `0 0`
+
+GitHub independently reconciled the branch head to:
+
+`e03fdeb1d2e6a499e5948ca89ca794fd40cc378d`
+
+GitHub independently reconciled the implementation parent to:
+
+`b70cd7b648b4200821e61e537ff8900ea03d7e4f`
+
+GitHub independently reconciled the implementation subject to:
+
+`feat: add canonical booking team read surface`
+
+### Implementation Preview reconciliation
+
+Vercel independently produced a non-Production Preview:
+
+- deployment:
+  `dpl_ApswKe4G71TKyoh9zt2JJtbDroyy`
+- commit:
+  `e03fdeb1d2e6a499e5948ca89ca794fd40cc378d`
+- branch:
+  `architecture-rebuild`
+- state:
+  `READY`
+- target:
+  `null`
+- URL:
+  `memory-keeper-bsxeq2asv-team1996.vercel.app`
+
+### Production containment
+
+Production remains independently unchanged:
+
+- deployment:
+  `dpl_varrdvzMrBSfnNVjhwNnF4mrSzAL`
+- commit:
+  `e570da0b7715f992edd4cd870437d3dbbaf7324a`
+- target:
+  `production`
+- state:
+  `READY`
+
+Slice 7L does not authorize:
+
+- merge to Git `main`
+- Supabase branch merge
+- production database mutation
+- production deployment
+- production promotion
+- production release
+
+### Checkpoint discipline
+
+The next governed commit is documentation-only.
+
+Expected checkpoint commit subject:
+
+`docs: checkpoint sprint 10 slice 7l`
+
+The checkpoint commit must contain only:
+
+`docs/SPRINT_MASTER_REGISTER.md`
+
+Production containment remains HOLD after checkpoint creation.
