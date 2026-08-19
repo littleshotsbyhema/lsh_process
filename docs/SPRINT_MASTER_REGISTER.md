@@ -14134,3 +14134,793 @@ The checkpoint commit must contain only:
 `docs/SPRINT_MASTER_REGISTER.md`
 
 Production containment remains HOLD after checkpoint creation.
+
+## Sprint 10 Slice 7M - Controlled Booking Team Assignment Mutations and Candidate Directory - Technical Design Freeze
+
+**Status:** TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD
+
+### Slice identity
+
+Slice 7M is named:
+
+**Controlled Booking Team Assignment Mutations and Candidate Directory**
+
+Slice 7M builds on the already-canonical Sprint 10 booking-team assignment
+foundation, extended creative assignment foundation and Slice 7L canonical
+booking-team read surface.
+
+Slice 7M does not redefine booking-team lifecycle truth.
+
+Canonical assignment lifecycle truth remains:
+
+`public.booking_team_assignments`
+
+Canonical internal identity remains:
+
+`public.organization_members`
+
+Canonical external creative identity remains:
+
+`public.external_creatives`
+
+Canonical current/history booking-team read evidence remains:
+
+`public.get_booking_team_assignment_history(uuid)`
+
+### Discovery result
+
+Pre-freeze discovery established:
+
+- canonical internal assignment RPC exists:
+  `assign_booking_team_member(uuid,text,uuid,boolean,text)`
+- canonical external assignment RPC exists:
+  `assign_booking_external_creative(uuid,text,uuid,boolean,text)`
+- canonical external-creative registration RPC exists:
+  `create_external_creative(uuid,text)`
+- all three are authenticated-only `SECURITY DEFINER` functions with empty
+  `search_path`
+- anon execution is denied
+- canonical booking-team history read RPC exists
+- authenticated direct access to `external_creatives` remains fully denied
+- no safe external-creative discovery/list RPC currently exists
+- `team_access_directory(uuid)` exists but exposes broader Team-directory
+  information including email, phone, role and branch metadata
+- `booking.team.assign` is currently granted exactly to Founder,
+  Studio Manager and Client Coordinator
+- `team.read` is currently granted to the same three roles
+
+The application must not depend on the present coincidence that
+`booking.team.assign` and `team.read` happen to have the same initial role
+grants.
+
+Booking-team assignment authority remains independently defined by:
+
+`booking.team.assign`
+
+### Architectural decision
+
+Slice 7M must not implement assignment candidate selection by:
+
+- directly selecting `external_creatives`
+- widening authenticated table privileges
+- reusing broad `team_access_directory` results
+- querying raw organization-member role-grant tables from application code
+- matching an external creative solely by display-name text
+- creating a new external identity every time an assignment is needed
+
+Instead, Slice 7M adds one narrow booking-scoped candidate-directory RPC.
+
+### New candidate-directory RPC
+
+The only new database function introduced by Slice 7M is:
+
+`public.get_booking_team_assignment_candidates(p_booking_id uuid)`
+
+Logical signature:
+
+`get_booking_team_assignment_candidates(uuid)`
+
+The function returns exactly:
+
+- `subject_type text`
+- `subject_id uuid`
+- `subject_display_name text`
+- `eligible_assignment_roles text[]`
+
+`subject_type` is exactly one of:
+
+- `internal_member`
+- `external_creative`
+
+The function must expose no:
+
+- email
+- phone
+- auth user ID
+- membership status field
+- raw organization role grants
+- raw branch grants
+- permission grants
+- invitation state
+- CRM/contact metadata
+- safety data
+- preparation data
+
+### Candidate-directory authorization
+
+`get_booking_team_assignment_candidates(uuid)` must be:
+
+- `STABLE`
+- `SECURITY DEFINER`
+- configured with empty `search_path`
+- executable by `authenticated`
+- unavailable to `anon`
+
+Authorization must independently require:
+
+- authenticated actor
+- existing canonical booking
+- active organization membership
+- canonical `booking.team.assign`
+- booking-derived branch scope when the booking has a branch
+- one canonical current booking journey state
+- current journey stage exactly one of:
+  - Stage 8 `booking_confirmed`
+  - Stage 9 `pre_shoot_preparation`
+  - Stage 10 `shoot_scheduled`
+
+The function must not require:
+
+- `team.read`
+- direct `external_creatives` table access
+
+This preserves assignment authority as its own capability if role grants diverge
+in the future.
+
+### Internal-member candidate semantics
+
+Internal candidates must derive only from canonical:
+
+- `organization_members`
+- `member_role_grants`
+- `roles`
+
+An internal candidate must:
+
+- belong to the booking organization
+- be an active organization member
+- possess an unrevoked qualifying operational role grant
+- satisfy the booking branch eligibility rules already enforced by the
+  canonical assignment mutation RPC
+
+For a branchless booking:
+
+- only organization-wide qualifying role grants are eligible
+
+For a branch booking:
+
+- organization-wide qualifying grants are eligible
+- same-branch qualifying grants are eligible
+- grants for other branches are not eligible
+
+Frozen internal role mapping:
+
+- organization role `photographer`
+  -> assignment role `lead_photographer`
+- organization role `assistant`
+  -> assignment role `assistant`
+- organization role `stylist`
+  -> assignment role `stylist`
+- organization role `videographer`
+  -> assignment roles:
+     - `lead_videographer`
+     - `supporting_videographer`
+
+If a member qualifies for multiple assignment roles, those roles are returned
+once each in `eligible_assignment_roles`.
+
+No inactive or ineligible internal member is returned.
+
+### External-creative candidate semantics
+
+External candidates derive only from canonical:
+
+`public.external_creatives`
+
+Only identities belonging to the booking organization may be returned.
+
+Because the existing canonical external-assignment RPC accepts all five
+assignment roles for an external creative, each returned external candidate
+may expose exactly these eligible roles:
+
+- `lead_photographer`
+- `assistant`
+- `stylist`
+- `lead_videographer`
+- `supporting_videographer`
+
+Slice 7M does not introduce a new external-creative classification taxonomy.
+
+Display name is presentation identity only.
+
+Display name must not be treated as a unique identity key.
+
+Slice 7M adds no uniqueness constraint on external-creative display name.
+
+### Candidate ordering
+
+Candidate output must be deterministic.
+
+Frozen ordering:
+
+1. `subject_type`
+2. case-insensitive `subject_display_name`
+3. `subject_id`
+
+Internal and external subjects with identical display names remain distinct
+stable identities.
+
+### Candidate read-only containment
+
+The candidate-directory RPC must perform no:
+
+- assignment mutation
+- external-creative creation
+- membership mutation
+- role-grant mutation
+- audit append
+- booking journey mutation
+- preparation mutation
+- safety mutation
+
+Authenticated direct table privileges remain unchanged.
+
+### Existing mutation RPCs remain authoritative
+
+Slice 7M introduces no new assignment mutation RPC.
+
+The application must use exactly these existing canonical RPCs:
+
+1. `assign_booking_team_member(...)`
+2. `create_external_creative(...)`
+3. `assign_booking_external_creative(...)`
+
+Slice 7M must not rewrite their authorization, locking, lifecycle, history,
+idempotency or audit semantics.
+
+No direct application writes to:
+
+- `booking_team_assignments`
+- `external_creatives`
+
+are permitted.
+
+### Existing assignment lifecycle semantics
+
+Assignment mutations remain limited by the canonical database RPCs to exact
+Stage 8 through Stage 10:
+
+- Stage 8 `booking_confirmed`
+- Stage 9 `pre_shoot_preparation`
+- Stage 10 `shoot_scheduled`
+
+No assignment mutation is introduced before Stage 8.
+
+No assignment mutation is introduced after Stage 10.
+
+Slice 7M does not move the journey forward or backward.
+
+### Assignment roles
+
+The application mutation surface supports exactly the five canonical roles:
+
+- `lead_photographer`
+- `assistant`
+- `stylist`
+- `lead_videographer`
+- `supporting_videographer`
+
+No arbitrary role text is accepted by the UI/server boundary.
+
+### Singular-lead semantics
+
+These roles remain singular across internal and external subjects:
+
+- `lead_photographer`
+- `lead_videographer`
+
+If a different subject replaces a current singular lead assignment:
+
+- a nonblank change reason is required
+- the canonical RPC closes the prior assignment
+- historical evidence is preserved
+- one new current assignment becomes authoritative
+
+Exact same-subject replay remains a database-owned idempotent no-op.
+
+The application must not simulate replacement with a separate remove-plus-add
+sequence.
+
+### Additive-role semantics
+
+These roles remain additive:
+
+- `assistant`
+- `stylist`
+- `supporting_videographer`
+
+Assigning an already-current exact subject/role pair remains an idempotent
+database no-op.
+
+The application must not enforce an invented single-assignment limit for these
+roles.
+
+### Unassignment semantics
+
+Removing a current assignment requires a nonblank change reason.
+
+Unassignment must use the canonical assignment RPC for the subject type:
+
+- internal member:
+  `assign_booking_team_member(..., false, reason)`
+- external creative:
+  `assign_booking_external_creative(..., false, reason)`
+
+Historical assignment evidence must remain visible through the Slice 7L read
+surface after unassignment.
+
+The application must never DELETE assignment evidence.
+
+### External-creative registration semantics
+
+External-creative registration uses only:
+
+`create_external_creative(p_booking_id, p_display_name)`
+
+The canonical 1–160 trimmed display-name rule remains authoritative.
+
+Registration and assignment are separate explicit operations.
+
+Registering an external creative:
+
+- creates stable organization-scoped identity
+- does not automatically assign that identity to the booking
+- does not move the booking journey
+- does not imply a particular assignment role
+
+After successful registration:
+
+- the candidate directory is refreshed
+- the newly registered identity becomes selectable
+- the user must explicitly perform an assignment action
+
+This avoids silently creating an assignment if registration succeeds but a
+later assignment operation is not valid.
+
+Slice 7M adds no:
+
+- external creative rename
+- external creative delete
+- external creative merge
+- text-based automatic deduplication
+
+The UI should present existing external candidates before offering registration
+so existing stable identities can be reused.
+
+### Server-function boundary
+
+`src/lib/booking.functions.ts` may add:
+
+- a presentation boolean:
+  `canAssignBookingTeam`
+- one safe GET server function for booking-scoped candidate discovery
+- controlled POST server functions wrapping the three existing canonical
+  mutation RPCs
+
+Frozen presentation boolean:
+
+`canAssignBookingTeam = permissions.has("booking.team.assign")`
+
+The presentation boolean is not final authorization.
+
+The database RPC remains final authority for every read and mutation.
+
+### Candidate server read
+
+The application candidate-read function accepts only:
+
+- canonical booking UUID
+
+It delegates to:
+
+`get_booking_team_assignment_candidates(uuid)`
+
+It must not:
+
+- query `external_creatives` directly
+- call `team_access_directory`
+- join raw role-grant tables from application code
+
+### Internal assignment server mutation
+
+The controlled internal mutation accepts only:
+
+- booking UUID
+- one of the five frozen assignment roles
+- internal member UUID
+- boolean assigned state
+- optional change reason
+
+It delegates only to:
+
+`assign_booking_team_member(...)`
+
+### External assignment server mutation
+
+The controlled external mutation accepts only:
+
+- booking UUID
+- one of the five frozen assignment roles
+- external creative UUID
+- boolean assigned state
+- optional change reason
+
+It delegates only to:
+
+`assign_booking_external_creative(...)`
+
+### External registration server mutation
+
+The controlled registration mutation accepts only:
+
+- booking UUID
+- display name
+
+It delegates only to:
+
+`create_external_creative(...)`
+
+No application table write is permitted.
+
+### UI location and scope
+
+Slice 7M extends only the existing `/bookings` canonical booking-team section.
+
+The existing label remains:
+
+`Canonical booking team`
+
+The Slice 7L read/history surface remains available according to booking-read
+authority independently of mutation authority.
+
+Mutation controls may render only when:
+
+- `canAssignBookingTeam` is true
+- current canonical stage is exactly 8, 9 or 10
+
+At Stage 11 and later:
+
+- historical/current booking-team evidence remains readable
+- assignment mutation controls are absent
+
+Before Stage 8:
+
+- assignment mutation controls are absent
+
+### Candidate UI
+
+The manage-assignment UI must use only the narrow candidate directory.
+
+For each candidate it may display:
+
+- safe display name
+- internal/external subject type
+- eligible assignment roles
+
+It must not expose Team-directory contact information.
+
+Candidate loading should be booking-scoped and on demand rather than loading
+the same organization candidate set eagerly for every booking in the workspace.
+
+### Assignment UI controls
+
+The UI may expose:
+
+- assign internal candidate
+- assign existing external candidate
+- replace singular Lead Photographer
+- replace singular Lead Videographer
+- remove current assignment
+- register external creative identity
+
+The UI must not expose:
+
+- arbitrary assignment-role text
+- arbitrary subject UUID entry
+- direct row editing
+- direct assignment-history editing
+- history deletion
+- external-creative rename/delete
+- generic journey advancement
+
+### Change-reason presentation
+
+The UI must require a nonblank reason before submitting:
+
+- singular Lead Photographer replacement
+- singular Lead Videographer replacement
+- any unassignment
+
+The database remains final authority and independently validates the reason.
+
+The UI must not invent a mandatory reason for an additive first assignment.
+
+### Mutation refresh semantics
+
+After a successful assignment, replacement or unassignment:
+
+- booking workspace/history must refresh
+- candidate data may refresh
+
+After external registration:
+
+- candidate data must refresh
+- booking assignment history must remain unchanged until an explicit assignment
+  is performed
+
+### Readiness containment
+
+Booking-team mutation UI must not independently infer:
+
+- `Team ready`
+- `Ready for Stage 10`
+- Stage 9 -> 10 eligibility
+
+The canonical Stage 9 -> 10 database gate remains authoritative because team
+assignments are only one component of readiness.
+
+Slice 7M adds no call to:
+
+`mark_booking_shoot_scheduled`
+
+### Safety and preparation containment
+
+Slice 7M adds no:
+
+- safety-readiness write
+- safety-signoff operation
+- preparation-item mutation
+- preparation-start operation
+- safety data disclosure
+- preparation taxonomy change
+
+### Exact implementation boundary
+
+The Slice 7M implementation may change exactly these five files:
+
+1. `supabase/migrations/20260819170000_sprint10_booking_team_assignment_candidates.sql`
+2. `supabase/tests/sprint10_booking_team_assignment_mutation_surface_test.sql`
+3. `src/integrations/supabase/types.ts`
+4. `src/lib/booking.functions.ts`
+5. `src/routes/_authenticated/bookings.tsx`
+
+No other implementation file is authorized.
+
+`src/routeTree.gen.ts` may be regenerated transiently by TanStack tooling but
+must be restored before implementation containment checks and commit.
+
+No package manifest or lockfile change is authorized.
+
+No existing Sprint 10 migration may be edited.
+
+### Migration scope
+
+The new migration may introduce only:
+
+`public.get_booking_team_assignment_candidates(uuid)`
+
+and its required ACL/assertion definitions.
+
+The migration must not:
+
+- alter `booking_team_assignments`
+- alter `external_creatives`
+- alter existing assignment mutation RPCs
+- alter existing role grants
+- alter existing permission rows
+- alter Stage 9 -> 10 logic
+- add a new mutation RPC
+
+### Dedicated pgTAP minimum contract
+
+The dedicated Slice 7M pgTAP suite must cover at minimum:
+
+1. candidate function exists
+2. exact function signature
+3. exact four-column return projection
+4. exact return types
+5. `SECURITY DEFINER`
+6. `STABLE`
+7. empty `search_path`
+8. authenticated execute
+9. anon execute denied
+10. active organization membership required
+11. `booking.team.assign` required
+12. function does not require `team.read`
+13. branch isolation
+14. organization isolation
+15. Stage 8 candidate access
+16. Stage 9 candidate access
+17. Stage 10 candidate access
+18. pre-Stage-8 denial
+19. post-Stage-10 denial
+20. active internal candidate inclusion
+21. inactive member exclusion
+22. branch-ineligible member exclusion
+23. Photographer -> Lead Photographer role mapping
+24. Assistant -> Assistant role mapping
+25. Stylist -> Stylist role mapping
+26. Videographer -> Lead + Supporting Videographer mapping
+27. multi-role member role aggregation without duplicates
+28. external candidate inclusion
+29. external candidates expose exactly the five canonical roles
+30. deterministic ordering
+31. no email/phone projection
+32. direct authenticated external-creative SELECT remains denied
+33. direct authenticated booking-team writes remain denied
+34. candidate read creates no audit evidence
+35. candidate read creates no assignment evidence
+36. candidate read creates no journey mutation
+
+The dedicated suite must additionally prove the existing three mutation RPCs
+remain present with unchanged public signatures.
+
+### Regression suites
+
+Slice 7M validation must rerun at minimum:
+
+- `sprint10_booking_team_assignments_test.sql`
+- `sprint10_extended_creative_assignments_test.sql`
+- `sprint10_booking_team_assignment_read_model_test.sql`
+- `sprint10_canonical_team_access_test.sql`
+- `sprint10_stage9_10_gate_test.sql`
+
+The complete local pgTAP suite must also pass.
+
+The actual complete file/test count must be recorded from execution and must
+not be predicted in advance.
+
+Local database lint must pass.
+
+### Application validation
+
+Required application validation:
+
+- targeted Prettier
+- targeted ESLint
+- production build
+- generated-route-tree `npx tsc --noEmit`
+- restoration of `src/routeTree.gen.ts`
+- checked-in route-tree baseline attribution
+- no Slice 7M-authored TypeScript diagnostic
+- `git diff --check`
+- exact five-file implementation containment
+- no direct application table write
+- no direct `external_creatives` read
+- no `team_access_directory` use in the Slice 7M booking-assignment path
+- no `mark_booking_shoot_scheduled` reference introduced by Slice 7M
+
+### Runtime acceptance
+
+Runtime Case A - internal assignment:
+
+- authorized Stage 8–10 actor loads narrow internal candidates
+- eligible candidate role mapping is correct
+- first internal assignment succeeds
+- canonical current history appears
+- exactly one real assignment audit event is appended
+- journey stage/version does not change
+
+Runtime Case B - singular internal replacement:
+
+- current Lead Photographer or Lead Videographer can be replaced
+- replacement requires a nonblank reason
+- previous assignment becomes historical
+- replacement becomes current
+- historical reason is preserved
+- no journey transition occurs
+
+Runtime Case C - additive role:
+
+- Assistant, Stylist or Supporting Videographer can be added without replacing
+  another current subject in that role
+- exact replay is idempotent
+- no duplicate audit/history evidence is created by replay
+
+Runtime Case D - existing external creative reuse:
+
+- existing external identity appears in the narrow candidate directory
+- no direct `external_creatives` table read is available to authenticated
+- selected existing external identity can be assigned through the canonical RPC
+- canonical history resolves the safe external display name
+
+Runtime Case E - external registration separation:
+
+- registering a new external creative succeeds for an authorized actor
+- candidate directory refresh exposes the new stable identity
+- registration alone creates no booking-team assignment
+- registration alone causes no journey mutation
+- explicit subsequent assignment is required
+
+Runtime Case F - unassignment:
+
+- current internal or external assignment can be removed only with reason
+- canonical assignment row becomes historical rather than deleted
+- end reason remains visible
+- no journey mutation occurs
+
+Runtime Case G - authorization/stage/branch containment:
+
+- actor without `booking.team.assign` receives no mutation controls and database
+  operations are denied
+- out-of-scope branch is denied
+- pre-Stage-8 booking has no mutation controls
+- post-Stage-10 booking has no mutation controls
+- read/history evidence remains independent of mutation authority
+
+Runtime Case H - exact mutation containment:
+
+- only the three pre-existing canonical mutation RPCs are invoked
+- no direct assignment/external table write exists in application code
+- no assignment mutation advances Stage 9 -> 10
+- no Slice 7M operation creates Stage 10 -> 11
+- no safety/preparation state is changed
+
+### Runtime cleanup
+
+After runtime acceptance:
+
+- local Supabase reset must pass
+- database lint must pass
+- Slice 7M fixture residue must be zero
+- transient generated route tree must be restored
+- exact five-file implementation boundary must remain intact before commit
+
+### Frozen commit subjects
+
+Technical design freeze commit subject:
+
+`docs: freeze sprint 10 slice 7m booking team mutations`
+
+Implementation commit subject:
+
+`feat: add controlled booking team assignment mutations`
+
+Checkpoint commit subject:
+
+`docs: checkpoint sprint 10 slice 7m`
+
+### Production containment
+
+Slice 7M does not authorize:
+
+- merge to Git `main`
+- Supabase branch merge
+- production database mutation
+- production deployment
+- production promotion
+- production release
+
+All implementation and validation remain non-production until separately
+authorized.
+
+### Freeze discipline
+
+After this technical design freeze is committed and pushed:
+
+1. GitHub branch reconciliation must match the exact freeze SHA
+2. a non-Production Vercel Preview must be `READY`
+3. only then may implementation begin within the exact frozen five-file
+   boundary
+
+Production remains HOLD.
