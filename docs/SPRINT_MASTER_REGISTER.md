@@ -12633,3 +12633,429 @@ Still HOLD:
 Sprint 10 remains:
 
 **IMPLEMENTATION IN PROGRESS / NOT RELEASED**
+
+## Sprint 10 Slice 7K - Controlled Pre-Shoot Preparation Mutations - Implementation Checkpoint
+
+**Status:** IMPLEMENTATION VALIDATED / PUSHED / GITHUB VERIFIED / IMPLEMENTATION PREVIEW VERIFIED / NOT PRODUCTION RELEASED
+
+### Governed identities
+
+- Technical design freeze:
+  `ac45ce1b421ab6c3c8787899af76f52239d81cb3`
+- Implementation:
+  `b6f0f7aa34afa078eed6cc41f9c2ba00b7b8b1ce`
+- Implementation parent:
+  `ac45ce1b421ab6c3c8787899af76f52239d81cb3`
+- Implementation subject:
+  `feat: add controlled pre-shoot preparation mutations`
+- Working branch:
+  `architecture-rebuild`
+
+### Exact implementation boundary
+
+The Slice 7K implementation commit changes exactly:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+No migration, generated Supabase type, package manifest, lockfile,
+permission migration, role migration, route definition, safety surface,
+team-assignment surface, external-creative surface, or Stage 9 -> 10
+implementation is part of Slice 7K.
+
+`src/routeTree.gen.ts` was regenerated transiently by TanStack tooling during
+build/runtime validation and was restored to the frozen checked-in version.
+It is not part of the implementation commit.
+
+### Implemented controlled mutation surface
+
+Slice 7K adds exactly two application RPC integrations:
+
+1. `start_pre_shoot_preparation`
+   - exposed through `startPreShootPreparation`
+   - accepts only canonical booking UUID input
+   - performs no direct preparation, checklist, journey, transition, or audit
+     table writes from application code
+   - delegates final authorization and state-transition authority to the
+     canonical database RPC
+
+2. `update_pre_shoot_preparation_item`
+   - exposed through `updatePreShootPreparationItem`
+   - accepts only canonical preparation-item UUID plus boolean satisfaction
+     state
+   - performs no direct checklist table writes from application code
+   - delegates final authorization, attribution, timestamp ownership and audit
+     evidence to the canonical database RPC
+
+No Slice 7K application reference to `mark_booking_shoot_scheduled` was added.
+
+### Workspace permission presentation flags
+
+The booking workspace now independently derives:
+
+- `canWritePreparation` from `prep.write`
+- `canAdvanceBookingStage` from `booking.stage.advance`
+
+These are UI presentation-containment flags only. They do not replace
+canonical database authorization.
+
+No role-name authorization was introduced.
+
+### Start-preparation presentation containment
+
+The `Start pre-shoot preparation` control is rendered only when all visible
+presentation conditions are true:
+
+- current canonical stage key is `booking_confirmed`
+- current canonical stage order is `8`
+- no canonical preparation row is visible
+- latest authoritative visible schedule state is `reserved`
+- `canWritePreparation` is true
+- `canAdvanceBookingStage` is true
+
+The database RPC remains final authority and independently re-checks all
+canonical gates.
+
+### Checklist satisfaction presentation containment
+
+Preparation-item mutation controls are rendered only when:
+
+- a canonical preparation exists
+- canonical checklist items exist
+- current stage key is `pre_shoot_preparation`
+- current stage order is `9`
+- `canWritePreparation` is true
+
+The only exposed state changes are:
+
+- unsatisfied -> `Mark satisfied`
+- satisfied -> `Mark outstanding`
+
+Checklist taxonomy identity remains immutable from this application surface.
+
+### Later-stage preparation behavior
+
+At Stage 10 and later, canonical preparation evidence remains readable for an
+actor with `prep.read`, but Slice 7K item mutation controls are absent.
+
+The UI explicitly distinguishes historical/read-only preparation evidence from
+the controlled mutable satisfaction state available only at exact Stage 9.
+
+### Source-quality validation
+
+- targeted Prettier:
+  PASS
+- targeted ESLint:
+  PASS
+- `git diff --check`:
+  PASS
+- production application build:
+  PASS
+- restored source boundary after build:
+  exactly the two Slice 7K implementation files
+
+### TypeScript baseline attribution
+
+TanStack build regeneration produced a current generated route tree.
+
+With the generated route tree:
+
+- `npx tsc --noEmit` exit:
+  `0`
+- generated-tree diagnostics:
+  none
+
+After restoring the frozen checked-in route tree:
+
+- raw `npx tsc --noEmit` exit:
+  `2`
+- diagnostics:
+  `12`
+- diagnostic files:
+  - `src/routes/_authenticated/guide-reviews.tsx`
+  - `src/routes/_authenticated/leads.tsx`
+  - `src/routes/_authenticated/leads_.$leadId.tsx`
+  - `src/routes/_authenticated/tasks.tsx`
+  - `src/routes/_authenticated/whatsapp.tsx`
+  - `src/routes/memory-guide.tsx`
+- Slice 7K authored-file diagnostics:
+  none
+
+Classification:
+
+**TypeScript baseline attribution PASS / Slice 7K regression NO**
+
+The frozen-tree raw TypeScript invocation is not recorded as a raw TypeScript
+PASS.
+
+### Database regression validation
+
+Dedicated canonical preparation-start pgTAP:
+
+- files:
+  `1`
+- tests:
+  `71`
+- result:
+  PASS
+
+Dedicated canonical preparation-item pgTAP:
+
+- files:
+  `1`
+- tests:
+  `83`
+- result:
+  PASS
+
+Complete local database regression:
+
+- files:
+  `16`
+- tests:
+  `1083`
+- result:
+  PASS
+
+Local database lint:
+
+- schema errors:
+  none
+- result:
+  PASS
+
+### Authenticated local runtime validation
+
+Controlled local runtime fixtures used:
+
+- Founder actor with canonical preparation permissions
+- Accounts actor without `prep.read` / `prep.write`
+- eligible Stage 8 booking with latest reserved schedule
+- blocked Stage 8 booking with latest proposed schedule
+
+Runtime evidence established:
+
+#### Case A - authorized preparation start
+
+PASS.
+
+The eligible Stage 8 booking:
+
+- exposed `Start pre-shoot preparation`
+- created exactly one canonical preparation
+- instantiated the exact maternity taxonomy-v1 checklist
+- created `11` items
+- created `8` required items
+- began with `0` satisfied items
+- advanced exactly to Stage 9 `pre_shoot_preparation`
+- incremented journey version `2 -> 3`
+- appended exactly one
+  `pre_shoot_preparation_started` transition
+- appended exactly one
+  `booking.pre_shoot_preparation_started` audit event
+- did not create an application Stage 10 transition
+
+#### Case B - start containment / database final authority
+
+PASS for the exercised runtime denial paths.
+
+The proposed-only Stage 8 booking:
+
+- did not render the start-preparation control
+- direct authenticated RPC invocation was denied with:
+  `current authoritative reserved schedule required`
+- remained Stage 8
+- retained zero preparations
+
+The remaining canonical negative authorization/state branches are covered by
+the dedicated `71`-test preparation-start pgTAP contract, including the
+independent permission and exact-stage rules.
+
+#### Case C - item satisfaction at Stage 9
+
+PASS.
+
+For canonical item `session_brief_reviewed`:
+
+- `Mark satisfied` succeeded
+- canonical `is_satisfied` became true
+- `satisfied_at` was database-owned and populated
+- `satisfied_by` resolved to the authenticated Founder member
+- unrelated checklist items remained unchanged
+- checklist containment became:
+  `11 total / 1 satisfied / 10 outstanding`
+- journey remained Stage 9 / version 3
+- exactly one item-level
+  `booking.preparation_item_updated` audit event existed
+- no Stage 10 transition occurred
+
+#### Case D - controlled reversal
+
+PASS.
+
+For the same canonical item:
+
+- `Mark outstanding` succeeded
+- `is_satisfied` returned to false
+- `satisfied_at` cleared
+- `satisfied_by` cleared
+- `updated_by` remained canonical Founder attribution
+- checklist containment returned to:
+  `11 total / 0 satisfied / 11 outstanding`
+- item-level audit count became exactly `2`
+- journey remained Stage 9 / version 3
+- no application Stage 10 transition occurred
+
+#### Case E - later-stage historical/read-only preparation
+
+PASS.
+
+A fixture-only Stage 9 -> 10 transition with key
+`slice7k_fixture_later_stage_read` was used solely to validate historical
+read behavior.
+
+At Stage 10:
+
+- canonical preparation remained visible
+- all `11` canonical checklist items remained visible
+- no `Mark satisfied` control was exposed
+- no `Mark outstanding` control was exposed
+- no `Start pre-shoot preparation` control was exposed
+- UI copy identified the evidence as historical/read-only
+
+This fixture transition is not an application Slice 7K Stage 9 -> 10
+implementation.
+
+#### Case F - permission containment
+
+PASS.
+
+The Accounts actor:
+
+- retained booking visibility through `booking.read`
+- did not receive canonical preparation visibility because `prep.read` was
+  absent
+- received no Slice 7K preparation mutation controls
+
+A direct authenticated item-update RPC attempt was denied with:
+
+`update_pre_shoot_preparation_item: prep.write permission required`
+
+The denial was a no-op.
+
+#### Case G - no Stage 9 -> 10 Slice 7K operation
+
+PASS.
+
+Slice 7K adds:
+
+- no `mark_booking_shoot_scheduled` invocation
+- no generic journey-advance control
+- no preparation-complete operation
+- no Stage 9 -> 10 application mutation
+
+#### Case H - exact source and mutation containment
+
+PASS.
+
+The implementation commit contains exactly two source files.
+
+The only new Slice 7K database mutation references are:
+
+- `start_pre_shoot_preparation`
+- `update_pre_shoot_preparation_item`
+
+No direct application table writes were added.
+
+### Runtime cleanup
+
+After authenticated local runtime validation:
+
+- `npx supabase db reset --local`:
+  PASS
+- Slice 7K Auth fixture users:
+  `0`
+- Slice 7K families:
+  `0`
+- bookings:
+  `0`
+- booking preparations:
+  `0`
+- booking preparation items:
+  `0`
+- canonical organization restored to:
+  `suspended`
+- transient generated route tree restored:
+  PASS
+
+### Git / GitHub reconciliation
+
+The implementation commit was pushed to:
+
+`architecture-rebuild`
+
+GitHub branch head independently reconciled to:
+
+`b6f0f7aa34afa078eed6cc41f9c2ba00b7b8b1ce`
+
+Implementation parent independently reconciled to:
+
+`ac45ce1b421ab6c3c8787899af76f52239d81cb3`
+
+The remote implementation contains exactly:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+### Implementation Preview reconciliation
+
+Vercel independently produced a non-Production Preview:
+
+- deployment:
+  `dpl_8KiSGfXEjZbkEgYv53hRAzYwthYW`
+- commit:
+  `b6f0f7aa34afa078eed6cc41f9c2ba00b7b8b1ce`
+- branch:
+  `architecture-rebuild`
+- state:
+  `READY`
+- target:
+  `null`
+- URL:
+  `memory-keeper-h0rt2o6us-team1996.vercel.app`
+
+### Production containment
+
+Production remains unchanged:
+
+- deployment:
+  `dpl_varrdvzMrBSfnNVjhwNnF4mrSzAL`
+- commit:
+  `e570da0b7715f992edd4cd870437d3dbbaf7324a`
+- target:
+  `production`
+- state:
+  `READY`
+
+Slice 7K does not authorize:
+
+- merge to Git `main`
+- Supabase branch merge
+- production database mutation
+- production deployment
+- production promotion
+- production release
+
+### Checkpoint discipline
+
+The next governed commit is documentation-only.
+
+Expected checkpoint commit subject:
+
+`docs: checkpoint sprint 10 slice 7k`
+
+The checkpoint commit must contain only:
+
+`docs/SPRINT_MASTER_REGISTER.md`
+
+Production containment remains HOLD after checkpoint creation.
