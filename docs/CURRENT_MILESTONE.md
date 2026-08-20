@@ -14,7 +14,7 @@ Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation
 
 ## Current Verified Checkpoint
 
-Sprint 10 Slice 7O — Controlled Stylist Assignment is the current verified checkpoint. Technical design freeze commit `a960589`; implementation commit `d140a67`. The implementation is committed locally; it has not been pushed. Automated verification (Prettier, ESLint, typecheck, build, full local pgTAP suite of 18 files / 1155 tests, database lint) and local browser E2E acceptance both passed. Full evidence is recorded in the Slice 7O Implementation Checkpoint section of `docs/SPRINT_MASTER_REGISTER.md`. Stylist cardinality is established and implemented as **ADDITIVE / MULTIPLE-CURRENT** — multiple different internal and/or external subjects can hold a current Stylist assignment on the same booking simultaneously.
+Sprint 10 Slice 7O — Controlled Stylist Assignment is the current verified checkpoint. Technical design freeze commit `a960589`; implementation commit `d140a67`. The implementation was committed locally and has since been pushed; commits `a960589`, `d140a67`, and `6413bee` are confirmed present on `origin/architecture-rebuild`. Automated verification (Prettier, ESLint, typecheck, build, full local pgTAP suite of 18 files / 1155 tests, database lint) and local browser E2E acceptance both passed. Full evidence is recorded in the Slice 7O Implementation Checkpoint section of `docs/SPRINT_MASTER_REGISTER.md`. Stylist cardinality is established and implemented as **ADDITIVE / MULTIPLE-CURRENT** — multiple different internal and/or external subjects can hold a current Stylist assignment on the same booking simultaneously.
 
 Production remains HOLD for this and all Sprint 10 work unless separately authorized.
 
