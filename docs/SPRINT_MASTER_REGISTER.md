@@ -14969,3 +14969,329 @@ All implementation and validation remain non-production until separately
 authorized.
 
 Production remains HOLD.
+
+---
+
+## Sprint 10 Slice 7N — Controlled Lead Photographer Assignment — Technical Design Freeze
+
+**Status:** TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD
+
+### Slice identity
+
+Slice 7N is named:
+
+**Controlled Lead Photographer Assignment**
+
+Slice 7N builds on the already-canonical Sprint 10 booking-team assignment
+foundation, the Slice 7L canonical booking-team read surface, and the
+Slice 7M candidate-directory read surface.
+
+Slice 7N does not redefine booking-team lifecycle truth.
+
+Canonical assignment lifecycle truth remains:
+
+`public.booking_team_assignments`
+
+Canonical internal identity remains:
+
+`public.organization_members`
+
+Canonical candidate discovery remains:
+
+`public.get_booking_team_assignment_candidates(uuid)`
+
+Canonical current/history booking-team read evidence remains:
+
+`public.get_booking_team_assignment_history(uuid)`
+
+### Business outcome
+
+An authorized actor can assign one eligible internal organization member as
+the current Lead Photographer for an eligible Stage 8-10 booking, when no
+current Lead Photographer assignment exists for that booking, entirely
+through the booking workspace UI.
+
+### Discovery result
+
+Pre-freeze discovery established:
+
+- the canonical assignment RPC already exists and is unmodified:
+  `assign_booking_team_member(uuid,text,uuid,boolean,text)`
+- the RPC is authenticated-only, `SECURITY DEFINER`, empty `search_path`;
+  anon execution is denied
+- the RPC already enforces, independent of any UI behavior: authenticated
+  actor, active organization membership, `booking.team.assign` permission,
+  booking-derived branch scope, Stage 8-10 gating, and idempotent
+  same-subject replay (a repeat call with the identical member for a role
+  that already has that exact member as current holder returns the
+  existing row rather than erroring)
+- the RPC's replacement-reason branch (`p_change_reason` required when a
+  *different* subject replaces an existing current Lead Photographer) is
+  pre-existing RPC behavior that this slice's UI does not invoke, because
+  this slice only offers assignment where no current holder exists
+- the candidate-directory RPC (`get_booking_team_assignment_candidates`)
+  already returns, per candidate, whether `lead_photographer` is present in
+  `eligible_assignment_roles`, and whether it is present in
+  `roles_requiring_change_reason` for the booking
+- `src/integrations/supabase/types.ts` already contains a complete,
+  sufficient generated type for `assign_booking_team_member` (`Args`
+  matching the RPC's five parameters exactly; `Returns` matching the full
+  `booking_team_assignments` row) — confirmed by direct inspection; no
+  edit to this file is authorized unless a later inspection during
+  implementation proves otherwise, in which case implementation must stop
+  and the discrepancy must be documented before proceeding
+
+The application must not depend on any assumption beyond what the RPC
+itself enforces server-side.
+
+### In-scope behavior
+
+Slice 7N adds exactly one mutation capability to the booking workspace UI:
+
+- an authorized actor, viewing the existing Slice 7M candidate picker for
+  an eligible booking, can select one internal candidate whose
+  `eligible_assignment_roles` includes `lead_photographer` and whose
+  booking-level `roles_requiring_change_reason` does **not** include
+  `lead_photographer` (i.e., no current holder exists), and submit an
+  assignment for that candidate to `lead_photographer`
+- the submission calls `assign_booking_team_member` with
+  `p_assignment_role = 'lead_photographer'`, `p_is_assigned = true`, and
+  `p_change_reason = NULL`
+- on success, the candidate directory, the Slice 7L read/history surface,
+  and any other booking-team-derived UI state for that booking refresh to
+  reflect the new assignment without a full page reload
+- on failure, the RPC's error is surfaced to the actor without silently
+  retrying or masking the failure
+
+### Explicit exclusions
+
+Slice 7N must not implement:
+
+- replacing an existing current Lead Photographer (the
+  `p_change_reason`-gated replacement path)
+- unassigning (ending) any current assignment
+- assigning Stylist, Lead Videographer, Assistant, or Supporting
+  Videographer roles
+- assigning or registering external creatives
+- any safety-readiness read or write behavior
+- any new database migration, RPC, or modification to an existing
+  migration or pgTAP test file
+- any change to `assign_booking_team_member`'s or
+  `get_booking_team_assignment_candidates`'s signature, behavior, ACL, or
+  security configuration
+
+### Existing RPC contract reused (unmodified)
+
+`public.assign_booking_team_member(p_booking_id uuid, p_assignment_role text, p_member_id uuid, p_is_assigned boolean, p_change_reason text DEFAULT NULL)`
+
+Returns the full `booking_team_assignments` row. `SECURITY DEFINER`,
+authenticated-only, empty `search_path`. Slice 7N calls this RPC with a
+fixed `p_assignment_role = 'lead_photographer'`, `p_is_assigned = true`,
+and `p_change_reason = NULL`, and with no other argument combination.
+
+`public.get_booking_team_assignment_candidates(p_booking_id uuid)` and
+`public.get_booking_team_assignment_history(p_booking_id uuid)` are reused
+exactly as already wired by Slice 7L and Slice 7M, with no signature or
+behavior change.
+
+### Permission model
+
+Identical to Slice 7M: `booking.team.assign`, independently checked by the
+RPC itself, currently granted to Founder, Studio Manager, and Client
+Coordinator. Slice 7N introduces no new permission and does not widen the
+grant of `booking.team.assign`. The UI's submit control must only render
+for an actor for whom `data.canAssignBookingTeam` is true (the same
+derived boolean Slice 7M already threads through
+`listBookingWorkspace`); this is a UI convenience only; the RPC's own
+`has_permission` check remains the sole authorization boundary.
+
+### Stage 8-10 lifecycle gate
+
+Identical to Slice 7M's candidate directory: Stage 8 (`booking_confirmed`),
+Stage 9 (`pre_shoot_preparation`), Stage 10 (`shoot_scheduled`) only. The
+RPC re-validates this server-side on every call regardless of what stage
+the UI last observed. Slice 7N introduces no new stage-window logic and
+does not duplicate the RPC's own gate in application code beyond what is
+needed to decide whether to render the submit control.
+
+### Branch/org isolation
+
+Identical to Slice 7M: booking-derived branch scope and active
+organization membership, enforced by the RPC independent of the UI. Slice
+7N introduces no new isolation logic.
+
+### Concurrency/idempotency behavior
+
+Idempotency and concurrency control remain entirely owned by
+`assign_booking_team_member`:
+
+- a repeat submission with the identical candidate for `lead_photographer`
+  on a booking that already has that exact member as current holder is a
+  no-op that returns the existing row; the UI must treat this as success,
+  not as an error
+- two actors submitting different candidates for the same booking's
+  `lead_photographer` role concurrently are serialized by the RPC's
+  existing row locking; the UI must not attempt client-side conflict
+  resolution and must surface whatever the RPC returns
+- if a current Lead Photographer assignment is created by another actor
+  between candidate-directory load and this actor's submission, the RPC's
+  own replacement-reason gate applies (raising an error, since
+  `p_change_reason` is fixed to `NULL` in this slice); the UI must surface
+  that error rather than attempting to resubmit with a reason, since
+  supplying a reason is out of scope for Slice 7N
+
+### UI states
+
+The submit control and its containing row must implement:
+
+- idle/default state (submit control visible, enabled)
+- loading state during the mutation (submit control disabled, loading
+  indicator shown)
+- success state (candidate directory, read/history surface, and any other
+  booking-team-derived state for the booking refresh; no full page reload)
+- error state (the RPC's error message is shown to the actor; the row
+  returns to idle/default so the actor may retry or choose a different
+  candidate)
+- empty/no-control state: no submit control renders for a candidate whose
+  `eligible_assignment_roles` excludes `lead_photographer`, or for the
+  booking as a whole when `lead_photographer` is present in the booking's
+  `roles_requiring_change_reason`, or when `data.canAssignBookingTeam` is
+  false, or when the booking is outside Stage 8-10
+
+### Error behavior
+
+All errors originate from the RPC and are surfaced verbatim or in a
+minimally wrapped form; the UI must not swallow, retry automatically, or
+reinterpret an RPC error as success. No new error-classification logic is
+introduced beyond what is needed to render the message.
+
+### Exact allowed implementation files
+
+1. `src/lib/booking.functions.ts`
+2. `src/routes/_authenticated/bookings.tsx`
+
+`src/integrations/supabase/types.ts` is not authorized for this slice. If
+implementation discovers the existing generated type for
+`assign_booking_team_member` is in fact insufficient, implementation must
+stop, document the discrepancy, and this freeze must be amended before
+that file may be touched.
+
+No package manifest, lockfile, or configuration file change is authorized.
+No existing Sprint 10 migration or pgTAP test file may be edited.
+`src/routeTree.gen.ts` may be regenerated transiently by TanStack tooling
+during build validation but must be restored to its committed state before
+implementation containment checks and commit; it is not part of the
+implementation commit.
+
+### Frozen files
+
+- all `supabase/migrations/*.sql`
+- all `supabase/tests/*.sql`
+- `docs/SPRINT_MASTER_REGISTER.md` Slice 7L and Slice 7M sections
+- `src/integrations/supabase/types.ts` (unless the exception above is
+  triggered and this freeze is amended)
+- `src/routeTree.gen.ts` (no hand-edit)
+- every Sprint 1-9 file
+- every other Sprint 10 slice's implementation files
+
+### Runtime acceptance cases
+
+Runtime Case A - eligible assignment:
+
+- authorized Stage 8-10 actor viewing the candidate picker for a booking
+  with no current Lead Photographer sees a submit control on a candidate
+  whose eligible roles include `lead_photographer`
+- submitting succeeds; the new assignment becomes the current Lead
+  Photographer
+- the candidate directory, the Slice 7L history surface, and
+  `roles_requiring_change_reason` for that booking reflect the change
+  without a full page reload
+- the canonical assignment audit/history evidence produced by the existing
+  RPC is recorded once for the real assignment
+- journey stage/version does not change
+
+Runtime Case B - already-assigned exclusion:
+
+- a booking with a current Lead Photographer assignment renders no
+  Lead-Photographer submit control anywhere in its candidate picker
+- a direct RPC call attempting `p_change_reason = NULL` against that
+  booking's `lead_photographer` role from a different subject fails with
+  the RPC's existing replacement-reason error; the UI does not attempt
+  this call
+
+Runtime Case C - idempotent replay:
+
+- if `assign_booking_team_member` is invoked again with the same booking,
+  same current Lead Photographer member, `assignment_role =
+  lead_photographer`, `p_is_assigned = true`, and `p_change_reason = NULL`,
+  the existing RPC returns the current assignment as a no-op
+- no duplicate assignment row is created
+- no duplicate assignment audit/history effect is created
+- the application does not need to expose a UI control for this replay case
+
+Runtime Case D - authorization/stage/branch containment:
+
+- actor without `booking.team.assign` sees no submit control anywhere,
+  and a direct RPC call is denied server-side
+- out-of-scope branch is denied
+- pre-Stage-8 booking has no submit control
+- post-Stage-10 booking has no submit control
+- read/history evidence remains independent of assignment authority
+
+Runtime Case E - exact mutation containment:
+
+- only `assign_booking_team_member` is invoked, with
+  `p_assignment_role = 'lead_photographer'`, `p_is_assigned = true`,
+  `p_change_reason = NULL`, and no other argument combination
+- no direct `booking_team_assignments` table write exists in application
+  code
+- no Stylist, Lead Videographer, Assistant, Supporting Videographer, or
+  external-creative assignment control exists anywhere in the touched UI
+- no assignment mutation advances Stage 9 -> 10
+- no safety/preparation state is changed
+
+### Verification commands
+
+- `supabase test db --local supabase/tests` — must remain 18 files / 1155
+  tests / PASS (no new test file is added by this slice)
+- `supabase db lint --local` — must remain clean on the `public` schema
+- `npx tsc --noEmit` — must be clean
+- `npm run build` — must succeed; `src/routeTree.gen.ts` must be restored
+  to its committed state afterward if regenerated
+- targeted Prettier and ESLint on the two allowed files — must be clean
+- `git status --porcelain` before commit — must show changes in exactly
+  the two allowed files
+- manual E2E: assign a Lead Photographer to a real local Stage 8 booking
+  with no current holder; confirm it appears in the Slice 7L history
+  surface and that `roles_requiring_change_reason` for that booking now
+  includes `lead_photographer` on subsequent candidate-directory loads
+
+### Freeze/implementation/checkpoint commit sequence
+
+Technical design freeze commit subject:
+
+`docs: freeze sprint 10 slice 7n lead photographer assignment`
+
+Implementation commit subject:
+
+`feat: add controlled lead photographer assignment`
+
+Checkpoint commit subject:
+
+`docs: checkpoint sprint 10 slice 7n`
+
+### Production containment
+
+Slice 7N does not authorize:
+
+- merge to Git `main`
+- Supabase branch merge
+- production database mutation
+- production deployment
+- production promotion
+- production release
+
+All implementation and validation remain non-production until separately
+authorized.
+
+Production remains HOLD.
