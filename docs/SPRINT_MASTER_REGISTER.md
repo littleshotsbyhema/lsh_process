@@ -16453,3 +16453,211 @@ Freeze, implementation, and checkpoint remain separate commits.
 The freeze documentation itself does NOT authorize implementation.
 
 **TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+
+---
+
+## Claude Sprint Automation Framework — Phase 1 — Implementation Checkpoint
+
+**Permanent checkpoint status:**
+
+**IMPLEMENTATION VALIDATED / TOOLING ACCEPTANCE VERIFIED / PRODUCTION HOLD**
+
+### 1. Governed identities
+
+- Technical Design Freeze:
+  `d33b5f3` — `docs: freeze claude sprint automation phase 1`
+- Implementation:
+  `76fbe8b` — `chore: add claude sprint automation phase 1`
+- Working branch:
+  `architecture-rebuild`
+
+Freeze and implementation are committed locally. They have NOT yet been
+pushed. No remote verification is claimed by this checkpoint.
+
+### 2. Business / governance outcome
+
+Phase 1 captures already-proven sprint-governance procedures — demonstrated
+across Sprint 10 Slices 7N and 7O — as reusable repository tooling.
+
+It introduces:
+
+- a reusable pre-push verification prompt
+- a reusable post-push verification prompt
+- a deterministic checkpoint verification script
+
+It does NOT alter Sprint 10 product behavior, booking lifecycle, database
+behavior, RBAC/RLS, business semantics, or production state.
+
+### 3. Exact implementation boundary
+
+- `prompts/05-pre-push-verification.md`
+- `prompts/06-post-push-verification.md`
+- `scripts/verify-checkpoint.sh`
+
+Three new files only. `scripts/verify-checkpoint.sh` is committed as
+executable mode `100755`. No existing product file changed. No existing
+`prompts/01`–`04` file changed. No `.claude` repository framework was
+introduced.
+
+### 4. Framework capabilities
+
+`scripts/verify-checkpoint.sh` implements exactly these governed profiles:
+
+- `tooling`
+- `implementation`
+- `checkpoint`
+- `pre-push`
+- `post-push`
+
+There is no implicit/default profile. The mode is explicitly selected by
+governed invocation; the script does not infer a policy profile from diff
+shape. Expected SHAs are explicit inputs. The file boundary is supplied
+explicitly via `--boundary-file`. Freeze Markdown is never mechanically
+parsed into authority.
+
+### 5. Product implementation verification standard
+
+`implementation` mode preserves the existing proven PRODUCT IMPLEMENTATION
+final standard. Full verification remains mandatory for governed product
+implementation slices:
+
+- targeted Prettier
+- targeted ESLint
+- local TypeScript typecheck
+- `npm run build`
+- routeTree containment when applicable
+- full local pgTAP
+- Supabase DB lint
+- `git diff --check`
+- exact frozen boundary
+- secret/fixture hygiene
+
+pgTAP and DB lint did not become optional based on migration presence.
+
+### 6. Tooling profile
+
+`tooling` mode exists separately for framework/tooling changes. It
+validates: branch/HEAD/origin; exact tooling boundary; `git diff --check`;
+Markdown formatting; shell syntax; acceptance-test behavior; secret
+scanner; final containment.
+
+It does not pretend application pgTAP/db-lint are inherently required
+merely because a tooling framework itself was implemented. This
+distinction does NOT weaken product implementation verification.
+
+### 7. Safety / trust boundaries
+
+- local binaries only for Prettier/ESLint/TypeScript (`./node_modules/.bin/*`)
+- a missing local dependency fails closed
+- the verification script never installs dependencies
+- no lockfile mutation
+- no shell tracing with `set -x`
+- Supabase capability restricted to exactly:
+  `supabase test db --local supabase/tests`,
+  `supabase db lint --local`
+- no `--linked` code path
+- no Supabase reset
+- no Supabase push
+- no remote mutation
+- no deployment capability
+- no `git add`/`commit`/`push` capability inside the verifier
+
+Manual gates remain Manual.
+
+### 8. Secret / fixture hygiene
+
+- the scanner never prints matched secret values
+- output is restricted to safe category/count/file information
+- the synthetic secret self-test used fake data only
+- no real credentials were used
+- the synthetic test did not modify tracked repository files
+- temporary test material was removed
+- final git containment remained clean
+
+No synthetic secret value is reproduced in this documentation.
+
+### 9. Pre-push / post-push governance
+
+`prompts/05-pre-push-verification.md` codifies read-only payload
+verification before a separately Manual-authorized push.
+
+`prompts/06-post-push-verification.md` codifies remote/origin verification
+after a separately Manual-authorized push.
+
+- the pre-push prompt never performs a push
+- the post-push prompt never mutates documentation
+- Git/origin is authoritative for actual remote state
+- `docs/CURRENT_MILESTONE.md` may be reported as possibly stale for human
+  review
+- historical `docs/SPRINT_MASTER_REGISTER.md` checkpoint prose is not
+  rewritten merely because state changed later
+- no automatic documentation repair occurs
+
+### 10. Acceptance verification
+
+All results below are as actually observed during implementation
+verification, not invented or predicted:
+
+| Check | Result |
+|---|---|
+| Tooling mode | PASS |
+| Shell syntax | PASS |
+| Prompt format | PASS |
+| Implementation mode retro test | PASS |
+| Wrong-boundary negative | PASS |
+| Checkpoint mode retro test | PASS |
+| Pre-push mode retro test | PASS |
+| Post-push mode retro test | PASS |
+| Secret self-test | PASS |
+| Full pgTAP during implementation retro test | PASS |
+| DB lint during implementation retro test | PASS |
+| Diff check | PASS |
+| Tracked file containment | PASS |
+
+Implementation-mode regression verification reused the known Slice 7O
+implementation commit (`d140a67`) and its exact two-file boundary
+(`src/lib/booking.functions.ts`, `src/routes/_authenticated/bookings.tsx`),
+and preserved the full verification standard, including the complete local
+pgTAP suite and `supabase db lint --local`, both passing.
+
+### 11. Containment
+
+- database change: NO
+- migration change: NO
+- pgTAP file change: NO
+- generated type change: NO
+- product code change: NO
+- dependency change: NO
+- package-lock change: NO
+- bun lock change: NO
+- CI change: NO
+- Playwright change: NO
+- `.claude` directory change: NO
+- remote Supabase change: NO
+- production change: NO
+
+### 12. Phase 2
+
+Phase 2 is NOT authorized by this checkpoint. Playwright/browser automation
+and reusable fixture provisioning remain deferred to a separate discovery /
+reconciliation / Technical Design Freeze.
+
+### 13. Next product work
+
+The next Sprint 10 product slice is neither named nor authorized here. The
+product milestone remains governed separately by `docs/CURRENT_MILESTONE.md`.
+The next product checkpoint still requires repository discovery against the
+remaining canonical Stage 9–10 prerequisites. Automation Phase 1 does not
+alter that product dependency decision.
+
+### 14. Push status
+
+- Freeze commit: LOCAL / NOT YET PUSHED
+- Implementation commit: LOCAL / NOT YET PUSHED
+- Checkpoint documentation: UNCOMMITTED (recorded by this section prior to
+  its own commit)
+- Production: HOLD
+
+No push outcome is predicted.
+
+**IMPLEMENTATION VALIDATED / TOOLING ACCEPTANCE VERIFIED / PRODUCTION HOLD**
