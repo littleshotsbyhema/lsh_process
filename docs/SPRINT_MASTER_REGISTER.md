@@ -15938,3 +15938,186 @@ Production remains HOLD.
 The freeze itself does NOT authorize implementation.
 
 **TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+
+---
+
+## Sprint 10 Slice 7O — Controlled Stylist Assignment — Implementation Checkpoint
+
+**Status:** IMPLEMENTATION VALIDATED / LOCAL BROWSER E2E VERIFIED / PRODUCTION HOLD
+
+### Governed identities
+
+- Technical design freeze commit:
+  `a960589`
+- Implementation commit:
+  `d140a67`
+- Implementation parent:
+  `a960589`
+- Implementation subject:
+  `feat: add controlled stylist assignment`
+- Working branch:
+  `architecture-rebuild`
+
+Implementation is committed locally. It has not been pushed.
+
+### Business outcome
+
+An authorized actor can add an eligible Stylist to an eligible Stage 8-10
+booking using either an internal organization member or an already-registered
+external creative.
+
+Stylist remains **ADDITIVE / MULTIPLE-CURRENT**. The implementation preserves
+multiple simultaneous current Stylist subjects. No replacement or
+unassignment semantics were introduced.
+
+### Exact implementation boundary
+
+The Slice 7O implementation commit changes exactly:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+No other implementation file changed. No migration, test, or generated-file
+change is part of this commit.
+
+### Server action
+
+`assignStylist`
+
+Input: `bookingId`, `subjectType`, `subjectId`.
+
+`subjectType` is exactly one of `internal_member` or `external_creative`.
+
+The server function fixes `assignment_role = 'stylist'`, `is_assigned =
+true`, `change_reason = NULL` / `undefined` — the browser cannot supply any
+of these.
+
+Internal subjects route through `assign_booking_team_member`; external
+subjects route through `assign_booking_external_creative`. No arbitrary-role
+browser mutation exists. No external creative registration is wired through
+this action.
+
+### UI / cardinality behavior
+
+- existing booking-team history is reused; no new query or read RPC was
+  introduced
+- the exact already-current Stylist subject is excluded from another
+  Stylist-add control
+- one current Stylist does NOT globally disable other candidates
+- multiple different current Stylists remain supported, both internal and
+  external
+- pending identity uses `subjectType` + `subjectId`
+- success state refreshes canonical candidate/workspace state via the
+  existing role-agnostic query invalidation
+- no full-page reload
+- Lead Photographer behavior remains unchanged
+
+### Database / type / test containment
+
+- database migration change: NO
+- new RPC: NO
+- existing RPC behavior change: NO
+- pgTAP file change: NO
+- generated Supabase type change: NO
+- `routeTree.gen.ts` change: NO
+- package/config change: NO
+
+### Automated verification
+
+The final clean verification pass, taken after local browser E2E fixtures
+were removed, confirmed:
+
+- targeted Prettier: clean
+- targeted ESLint: clean
+- `npx tsc --noEmit`: clean
+- `npm run build`: succeeded
+- `src/routeTree.gen.ts`: unchanged
+- `supabase test db --local supabase/tests`: 18 files / 1155 tests / PASS
+- `supabase db lint --local`: zero `public`-schema issues
+- `git diff --check`: clean
+- exact two-file implementation containment confirmed
+
+Build warnings observed were limited to pre-existing, non-blocking categories
+(Nitro/Rollup platform-option warning, dependency `"use client"` directive
+warnings, Wrangler config override warning) — none originating from either
+touched file. These are unrelated to Slice 7O and were not addressed as part
+of this checkpoint's scope.
+
+### Local browser E2E
+
+All runtime acceptance cases from the Technical Design Freeze passed.
+
+Case A: first eligible internal Stylist assigned successfully; pending/success
+state worked; current history refreshed; exact subject add control
+disappeared; journey remained Stage 8.
+
+Case B: second different internal Stylist remained assignable while the first
+was current; assignment succeeded; both remained simultaneously current.
+
+Case C: an already-registered external creative Stylist was assignable and
+successfully became current without any external-registration UI; existing
+internal Stylists remained current.
+
+Case D: all exact-current Stylist subjects had no duplicate add control after
+refresh.
+
+Case E: a restricted booking reader without `booking.team.assign` could read
+permitted booking/team evidence but had no "Manage team assignments"
+mutation entry point.
+
+Case F: a pre-Stage-8 booking exposed no team-assignment mutation entry
+point.
+
+Case G: read-only canonical database verification confirmed exactly three
+current Stylist rows produced by browser E2E — two internal, one external —
+with no ended rows for those subjects, no unauthorized role mutations, the
+journey remaining at Stage 8 with no new journey transition, and the
+pre-Stage-8 booking remaining at Stage 7.
+
+Case H: a full browser refresh preserved all three current Stylist
+assignments and the exact-current exclusion; journey remained Stage 8.
+
+### Local fixture cleanup
+
+After browser E2E, local-only runtime fixtures were removed with an
+explicitly authorized local Supabase reset. The clean migration baseline was
+restored. Final pgTAP then passed: 18 files / 1155 tests.
+
+### Security / containment
+
+`booking.team.assign` remains the canonical permission. The canonical RPCs
+remain authoritative for authentication, active membership, branch/org
+isolation, Stage 8-10 containment, target eligibility, locking, idempotency
+and audit. The browser cannot supply an arbitrary assignment role.
+
+No remote Supabase mutation occurred. No production mutation occurred. No
+Git `main` merge occurred. No deployment occurred.
+
+Production remains HOLD.
+
+### Unresolved
+
+No unresolved Slice 7O implementation defect exists. The previously
+identified NICE-TO-HAVE Stylist-specific database regression coverage gaps
+(additive-cardinality and exact-subject-replay assertions using the literal
+`'stylist'` role string, and external-Stylist pgTAP coverage) remain
+non-gating technical-test depth. They were not introduced by 7O and are not
+promoted to a blocker here.
+
+### Next checkpoint
+
+Lead Photographer (Slice 7N) and Stylist (Slice 7O) were the two roles
+unconditionally required by `mark_booking_shoot_scheduled`'s Stage 9-10
+staffing gate; both are now implemented. The gate's remaining staffing
+requirement — a current, operationally eligible Lead Videographer — is
+conditional, gated by structured commercial evidence
+(`commercial_operational_requirements` tied to the booking's specific
+accepted package/add-on version), not unconditional the way Lead
+Photographer and Stylist were. The existing repository evidence does not
+unambiguously establish Lead Videographer assignment as *the* next
+dependency in the same sense 7N and 7O were, since it does not apply to
+every booking.
+
+Next checkpoint requires repository discovery against the remaining
+canonical Stage 9-10 prerequisites. No slice beyond 7O is authorized or
+labeled here.

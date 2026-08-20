@@ -10,19 +10,19 @@ Do not rewrite the broader roadmap just to advance the active task.
 
 Treat the existing organization isolation, authentication, RBAC/RLS, audit foundation, and all Sprint 1-9 modules (organizations, families, contacts, children, memory profiles, leads/CRM, lead workspace, AI Memory Guide, packages/quotations/booking conversion, advance payments, booking confirmation, KPI) as authoritative and Complete/Released. Do not rebuild them. See `docs/SPRINT_MASTER_REGISTER.md` for the full sprint-by-sprint delivered scope and acceptance state.
 
-Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is the active programme and is implemented through Slice 7N.
+Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is the active programme and is implemented through Slice 7O.
 
 ## Current Verified Checkpoint
 
-Sprint 10 Slice 7N — Controlled Lead Photographer Assignment is the current verified checkpoint. Technical design freeze commit `7b00c6a`; implementation commit `ca18132`. Automated verification (Prettier, ESLint, typecheck, build, full local pgTAP suite, database lint) and local browser E2E acceptance both passed. Full evidence is recorded in the Slice 7N Implementation Checkpoint section of `docs/SPRINT_MASTER_REGISTER.md`.
+Sprint 10 Slice 7O — Controlled Stylist Assignment is the current verified checkpoint. Technical design freeze commit `a960589`; implementation commit `d140a67`. The implementation is committed locally; it has not been pushed. Automated verification (Prettier, ESLint, typecheck, build, full local pgTAP suite of 18 files / 1155 tests, database lint) and local browser E2E acceptance both passed. Full evidence is recorded in the Slice 7O Implementation Checkpoint section of `docs/SPRINT_MASTER_REGISTER.md`. Stylist cardinality is established and implemented as **ADDITIVE / MULTIPLE-CURRENT** — multiple different internal and/or external subjects can hold a current Stylist assignment on the same booking simultaneously.
 
 Production remains HOLD for this and all Sprint 10 work unless separately authorized.
 
 ## Immediate Product Sequence
 
-The smallest dependency-correct next candidate is **controlled Stylist assignment**, because the canonical Stage 9 -> 10 gate (`mark_booking_shoot_scheduled`) still requires a current Stylist assignment in addition to the Lead Photographer assignment Slice 7N closed.
+Lead Photographer (Slice 7N) and Stylist (Slice 7O) were the two roles unconditionally required by the canonical Stage 9 -> 10 gate (`mark_booking_shoot_scheduled`); both are now implemented. The gate's remaining staffing requirement — a current, operationally eligible Lead Videographer — is conditional on structured commercial evidence tied to the booking's accepted package/add-on version, not unconditional the way Lead Photographer and Stylist were, so it does not apply to every booking.
 
-That next candidate is **not implementation-authorized**. Its exact cardinality, mutation semantics, file boundary, and acceptance contract must be established by a separate Technical Design Freeze before implementation. Do not assume Stylist cardinality, exclusivity, or replacement semantics, and do not copy the Lead Photographer design mechanically — Stylist's real semantics (e.g. whether it is single-holder like Lead Photographer or additive/non-exclusive) have not yet been established against the frozen Sprint 10 design and must be verified before any freeze is written.
+Next checkpoint requires repository discovery against the remaining canonical Stage 9 -> 10 prerequisites. No slice beyond 7O is implementation-authorized or labeled here.
 
 ## Known Debt Outside This Checkpoint's Boundary
 
