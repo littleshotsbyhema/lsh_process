@@ -42,6 +42,16 @@ export type BookingTeamAssignmentHistoryRow = Omit<
   subject_id: string | null;
 };
 
+type GeneratedBookingTeamAssignmentCandidateRow =
+  Database["public"]["Functions"]["get_booking_team_assignment_candidates"]["Returns"][number];
+
+export type BookingTeamAssignmentCandidateRow = Omit<
+  GeneratedBookingTeamAssignmentCandidateRow,
+  "subject_display_name"
+> & {
+  subject_display_name: string | null;
+};
+
 export type BookingQuotationSummary = {
   id: string;
   quotation_reference: string;
@@ -94,6 +104,7 @@ export type BookingWorkspaceData = {
   canWritePreparation: boolean;
   canAdvanceBookingStage: boolean;
   canSchedule: boolean;
+  canAssignBookingTeam: boolean;
 };
 
 function throwIfError(error: { message: string } | null) {
@@ -143,6 +154,10 @@ const updatePreShootPreparationItemSchema = z.object({
   satisfied: z.boolean(),
 });
 
+const bookingTeamAssignmentCandidatesSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
 export const listBookingWorkspace = createServerFn({
   method: "GET",
 })
@@ -175,6 +190,7 @@ export const listBookingWorkspace = createServerFn({
     const canWritePreparation = permissions.has("prep.write");
     const canAdvanceBookingStage = permissions.has("booking.stage.advance");
     const canSchedule = permissions.has("shoot.schedule");
+    const canAssignBookingTeam = permissions.has("booking.team.assign");
 
     if (bookings.length === 0) {
       const stagesResult = await context.supabase
@@ -209,6 +225,7 @@ export const listBookingWorkspace = createServerFn({
         canWritePreparation,
         canAdvanceBookingStage,
         canSchedule,
+        canAssignBookingTeam,
       };
     }
 
@@ -413,7 +430,23 @@ export const listBookingWorkspace = createServerFn({
       canWritePreparation,
       canAdvanceBookingStage,
       canSchedule,
+      canAssignBookingTeam,
     };
+  });
+
+export const listBookingTeamAssignmentCandidates = createServerFn({
+  method: "GET",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(bookingTeamAssignmentCandidatesSchema)
+  .handler(async ({ context, data }): Promise<BookingTeamAssignmentCandidateRow[]> => {
+    const result = await context.supabase.rpc("get_booking_team_assignment_candidates", {
+      p_booking_id: data.bookingId,
+    });
+
+    throwIfError(result.error);
+
+    return result.data ?? [];
   });
 
 export const proposeShootSchedule = createServerFn({

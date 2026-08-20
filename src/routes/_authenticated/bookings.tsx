@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { AppShell, Card, PageHeader } from "@/components/AppShell";
 import {
   confirmBookingAfterAdvance,
+  listBookingTeamAssignmentCandidates,
   listBookingWorkspace,
   proposeShootSchedule,
   recordBookingPayment,
@@ -21,6 +22,7 @@ import {
   type BookingPreparationRow,
   type BookingShootScheduleRow,
   type BookingStageTransitionRow,
+  type BookingTeamAssignmentCandidateRow,
   type BookingTeamAssignmentHistoryRow,
 } from "@/lib/booking.functions";
 
@@ -1045,6 +1047,114 @@ function BookingTeamReadSurface({
   );
 }
 
+function BookingTeamCandidatePicker({
+  bookingId,
+  onClose,
+}: {
+  bookingId: string;
+  onClose: () => void;
+}) {
+  const listCandidatesFn = useServerFn(listBookingTeamAssignmentCandidates);
+
+  const candidatesQuery = useQuery({
+    queryKey: ["booking-team-candidates", bookingId],
+    queryFn: () => listCandidatesFn({ data: { bookingId } }),
+  });
+
+  const candidates = candidatesQuery.data ?? [];
+
+  const rolesRequiringChangeReason = new Set(candidates[0]?.roles_requiring_change_reason ?? []);
+
+  return (
+    <div className="mt-5 rounded-lg border border-border bg-card p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Candidate directory
+          </div>
+          <h4 className="mt-1 font-serif text-lg text-primary">Eligible for this booking</h4>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-primary hover:bg-muted"
+        >
+          Close
+        </button>
+      </div>
+
+      {candidatesQuery.isPending ? (
+        <div className="mt-4 flex items-center gap-3 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading candidates…
+        </div>
+      ) : candidatesQuery.isError ? (
+        <p className="mt-4 text-sm text-destructive">
+          Unable to load candidates:{" "}
+          {candidatesQuery.error instanceof Error ? candidatesQuery.error.message : "Unknown error"}
+        </p>
+      ) : candidates.length === 0 ? (
+        <Card className="mt-4 p-5">
+          <p className="text-sm font-medium text-primary">
+            No eligible candidates were found for this booking.
+          </p>
+        </Card>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {candidates.map((candidate) => (
+            <div
+              key={candidate.subject_id}
+              className="rounded-lg border border-border bg-background px-4 py-4"
+            >
+              <div className="text-sm font-medium text-primary">
+                {candidate.subject_display_name ?? "Display name unavailable"}
+              </div>
+
+              <div className="mt-1 text-xs text-muted-foreground">
+                {candidate.subject_type === "internal_member"
+                  ? "Internal team member"
+                  : candidate.subject_type === "external_creative"
+                    ? "External creative"
+                    : candidate.subject_type}
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {candidate.eligible_assignment_roles.map((role) => (
+                  <span
+                    key={role}
+                    className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] uppercase tracking-wider text-primary"
+                  >
+                    {bookingTeamRoleLabel(role)}
+                  </span>
+                ))}
+              </div>
+
+              {candidate.eligible_assignment_roles.some((role) =>
+                rolesRequiringChangeReason.has(role),
+              ) ? (
+                <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                  Replacing the current{" "}
+                  {candidate.eligible_assignment_roles
+                    .filter((role) => rolesRequiringChangeReason.has(role))
+                    .map((role) => bookingTeamRoleLabel(role))
+                    .join(" or ")}{" "}
+                  requires a change reason.
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="mt-4 text-xs leading-5 text-muted-foreground">
+        This directory reports eligibility only. Assigning a candidate is a separate action
+        performed through the canonical assignment RPCs.
+      </p>
+    </div>
+  );
+}
+
 function TransitionHistory({
   transitions,
   stages,
@@ -1105,9 +1215,12 @@ function BookingsPage() {
 
   const [activePaymentBookingId, setActivePaymentBookingId] = useState<string | null>(null);
 
+  const [activeTeamPickerBookingId, setActiveTeamPickerBookingId] = useState<string | null>(null);
+
   const refreshBookingWorkspace = async () => {
     setActiveForm(null);
     setActivePaymentBookingId(null);
+    setActiveTeamPickerBookingId(null);
     await queryClient.invalidateQueries({ queryKey: ["booking-workspace"] });
   };
 
@@ -1236,6 +1349,9 @@ function BookingsPage() {
               currentOrder === 9 &&
               preparation !== null &&
               data.canWritePreparation;
+
+            const canManageBookingTeam =
+              data.canAssignBookingTeam && currentOrder >= 8 && currentOrder <= 10;
 
             const isActiveForm = (mode: ScheduleMutationMode) =>
               activeForm?.bookingId === booking.id && activeForm.mode === mode;
@@ -1542,6 +1658,23 @@ function BookingsPage() {
                 ) : null}
 
                 <BookingTeamReadSurface assignments={bookingTeamAssignmentHistory} />
+
+                {canManageBookingTeam && activeTeamPickerBookingId !== booking.id ? (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTeamPickerBookingId(booking.id)}
+                    className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                  >
+                    Manage team assignments
+                  </button>
+                ) : null}
+
+                {canManageBookingTeam && activeTeamPickerBookingId === booking.id ? (
+                  <BookingTeamCandidatePicker
+                    bookingId={booking.id}
+                    onClose={() => setActiveTeamPickerBookingId(null)}
+                  />
+                ) : null}
 
                 <div className="mt-7 border-t border-border pt-6">
                   <div className="flex flex-wrap items-end justify-between gap-4">

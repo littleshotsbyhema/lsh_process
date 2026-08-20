@@ -14226,6 +14226,12 @@ The function returns exactly:
 - `subject_id uuid`
 - `subject_display_name text`
 - `eligible_assignment_roles text[]`
+- `roles_requiring_change_reason text[]`
+
+`roles_requiring_change_reason` is a post-freeze addition (see "Lead-role
+replacement signal" below), carrying which lead roles already have a current
+holder for the booking. It is a booking-level fact, not a per-candidate one:
+every candidate row for a given call shares the identical array value.
 
 `subject_type` is exactly one of:
 
@@ -14346,6 +14352,31 @@ Display name is presentation identity only.
 Display name must not be treated as a unique identity key.
 
 Slice 7M adds no uniqueness constraint on external-creative display name.
+
+### Lead-role replacement signal
+
+Post-freeze amendment: code review of the Slice 7M migration found that
+`lead_photographer` / `lead_videographer` were listed as plain-eligible for
+any qualifying candidate even when a current holder already occupies that
+role for the booking. The canonical mutation RPCs
+(`assign_booking_team_member`, `assign_booking_external_creative`) require a
+non-null `change_reason` to replace an existing lead and raise `22023`
+otherwise; the original four-column candidate projection had no way to
+signal this precondition to callers.
+
+`roles_requiring_change_reason text[]` is added to the return projection to
+close this gap. It is computed by checking `booking_team_assignments` for
+rows matching the booking's `organization_id` / `booking_id`, an
+`assignment_role` of `lead_photographer` or `lead_videographer`, and
+`ended_at IS NULL` — the identical predicate shape used by the canonical
+mutation RPCs' own current-holder lookup. The array contains only role keys
+with a current holder; it is `ARRAY[]::text[]`, never `NULL`, when no lead
+role is currently held.
+
+This is additive and read-only: it introduces no new authorization
+condition, no new table access beyond `booking_team_assignments` (already a
+Slice 7M precondition dependency), and does not change which candidates or
+which `eligible_assignment_roles` are returned.
 
 ### Candidate ordering
 
@@ -14737,7 +14768,7 @@ The dedicated Slice 7M pgTAP suite must cover at minimum:
 
 1. candidate function exists
 2. exact function signature
-3. exact four-column return projection
+3. exact five-column return projection
 4. exact return types
 5. `SECURITY DEFINER`
 6. `STABLE`
@@ -14771,6 +14802,18 @@ The dedicated Slice 7M pgTAP suite must cover at minimum:
 34. candidate read creates no audit evidence
 35. candidate read creates no assignment evidence
 36. candidate read creates no journey mutation
+37. `roles_requiring_change_reason` is `ARRAY[]::text[]` when no lead role is
+    currently held
+38. `roles_requiring_change_reason` includes `lead_photographer` when a
+    current, unended `lead_photographer` assignment exists for the booking
+39. `roles_requiring_change_reason` includes `lead_videographer` when a
+    current, unended `lead_videographer` assignment exists for the booking
+40. `roles_requiring_change_reason` is identical across every candidate row
+    returned for the same call (booking-level fact, not per-candidate)
+41. an ended (`ended_at IS NOT NULL`) lead assignment does not appear in
+    `roles_requiring_change_reason`
+42. `roles_requiring_change_reason` reflects only the calling booking's
+    organization/booking scope, not another booking's lead assignments
 
 The dedicated suite must additionally prove the existing three mutation RPCs
 remain present with unchanged public signatures.

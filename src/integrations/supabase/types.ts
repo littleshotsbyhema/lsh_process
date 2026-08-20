@@ -5677,6 +5677,16 @@ export type Database = {
           valid_collected_inr: number;
         }[];
       };
+      get_booking_team_assignment_candidates: {
+        Args: { p_booking_id: string };
+        Returns: {
+          eligible_assignment_roles: string[];
+          roles_requiring_change_reason: string[];
+          subject_display_name: string;
+          subject_id: string;
+          subject_type: string;
+        }[];
+      };
       get_booking_team_assignment_history: {
         Args: { p_booking_id: string };
         Returns: {
