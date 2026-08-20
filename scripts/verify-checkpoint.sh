@@ -371,12 +371,34 @@ check_secrets_stdin() {
     fi
   }
 
+  # email and uuid are inherently value-shaped: the pattern can only match
+  # an actual email-looking or UUID-looking string, never a bare word, so
+  # no additional tightening is needed for these two categories.
   scan_category "email" '[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}'
   scan_category "uuid" '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
-  scan_category "credential-keyword" 'password|secret|service_role|api_key|apikey|bearer|credential|jwt|token'
-  scan_category "tmp-path" '/tmp/'
-  scan_category "local-url" 'localhost|127\.0\.0\.1|54321|54322|54323'
-  scan_category "admin-marker" 'openssl|psql|admin/users|DB_URL|SERVICE_ROLE'
+
+  # The remaining four categories previously matched on bare keyword/marker
+  # mention alone (e.g. the word "secret" or the identifier "SERVICE_ROLE"
+  # appearing anywhere in a line), which fires on legitimate governance
+  # prose and on this script's own pattern definitions/documentation - text
+  # that names a sensitive concept without disclosing any value. Tightened
+  # here to require the keyword/marker to be followed by an
+  # assignment-shaped value (an `=` or `:` and then a plausible token of at
+  # least 8 characters, with the keyword's own identifier suffix such as
+  # "_KEY" tolerated in between) or, for tool invocations, by a real
+  # argument (a `-flag`, a quoted string, or a `://` connection string) -
+  # what an actual leaked credential, path, URL, or command invocation
+  # with a real argument looks like. A bare mention of the identifier NAME
+  # or tool NAME alone no longer matches; evidence of its VALUE or a real
+  # invocation still does.
+  # [A-Za-z0-9_]* after the keyword allows for a real-world credential
+  # identifier like SERVICE_ROLE_KEY or API_SECRET_TOKEN (keyword plus
+  # trailing suffix) to still be recognized as the same identifier before
+  # checking for a following assignment.
+  scan_category "credential-keyword" '(password|secret|service_role|api_key|apikey|bearer|credential|jwt|token)[A-Za-z0-9_]*[[:space:]]*[:=][[:space:]]*[A-Za-z0-9+/_.-]{8,}'
+  scan_category "tmp-path" '/tmp/[A-Za-z0-9_./-]{4,}'
+  scan_category "local-url" '(localhost|127\.0\.0\.1):[0-9]{2,5}|(localhost|127\.0\.0\.1)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9+/_.:-]{4,}|(5432[123])[[:space:]]*[:=][[:space:]]*[A-Za-z0-9+/_.-]{4,}'
+  scan_category "admin-marker" '(DB_URL|SERVICE_ROLE)[A-Za-z0-9_]*[[:space:]]*[:=][[:space:]]*[A-Za-z0-9+/_.:-]{8,}|(openssl|psql)([[:space:]]+[A-Za-z0-9_]+){0,2}[[:space:]]+-[A-Za-z]|(openssl|psql)[[:space:]]+["'"'"']|(openssl|psql)[[:space:]].*://'
 
   rm -f "$input_tmp"
 
