@@ -16765,3 +16765,241 @@ any prior commit.
 
 No unresolved Phase 1 blocking defect remains at this point. Phase 2 remains
 unauthorized. Production remains HOLD.
+
+---
+
+## Sprint 10 — Slice 7P — Lead Videographer Assignment — Technical Design Freeze
+
+**Status:**
+
+**TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+
+### 1. Objective
+
+Introduce a controlled application mutation allowing an authorized actor to
+assign a Lead Videographer to an eligible Stage 8-10 booking, following the
+exact governed pattern established by Slice 7N (Lead Photographer) and
+Slice 7O (Stylist).
+
+### 2. Canonical prerequisite served
+
+Lead Videographer is one of the staffing preconditions checked by the
+canonical Stage 9 -> 10 gate, `mark_booking_shoot_scheduled`
+(`supabase/migrations/20260816161000_sprint10_stage9_10_gate_foundation.sql`).
+
+### 3. Conditional Stage 9 -> 10 semantics
+
+Lead Videographer is a **conditional**, not unconditional, staffing
+requirement — it applies only when `commercial_operational_requirements`
+links the booking's specific accepted package or add-on version to
+`requirement_key = 'lead_videographer'`. This linkage is genuinely populated
+today (real seeded rows for specific Maternity/Newborn/Sitter package tiers
+and a `cinematic_reel` add-on), not hypothetical. Bookings without a linked
+requirement advance through Stage 9 -> 10 with zero Lead Videographer
+evidence, exactly as today.
+
+### 4. Exact role identifier
+
+`'lead_videographer'` — a literal text value (the `assignment_role` column is
+`text` with a CHECK constraint, not a Postgres enum), confirmed identical
+across `booking_team_assignments_role_chk`, both write RPCs' role-validation
+lists, the candidate-eligibility read model, and every pgTAP fixture and
+assertion that exercises it. No new identifier is introduced.
+
+### 5. Resolved subject model — INTERNAL + EXTERNAL
+
+Both `assign_booking_team_member` (internal-member path) and
+`assign_booking_external_creative` (external-creative path) already fully
+implement `lead_videographer` identically in structure to `lead_photographer`
+— same "already current, idempotent" check, same "replacement requires a
+change reason" business rule with a role-specific error message, same
+locking discipline. This is not merely reachable code: real, passing pgTAP
+test #45 in `supabase/tests/sprint10_stage9_10_gate_test.sql` proves an
+external creative becomes the current Lead Videographer for a real booking,
+verified through the actual Stage 9 -> 10 gate end to end. Separately, the
+mutation-surface test establishes its "current Lead Videographer" fixture
+via the internal-member RPC, proving that path equally real. Slice 7N's own
+exclusion of external-creative assignment was confirmed to be a deliberate
+initial-scope reduction specific to that slice (consistent with the earlier
+Slice 7M mutation-UI deferral pattern), not role-specific evidence bearing on
+Lead Photographer's or Lead Videographer's actual subject-type validity —
+this freeze does not copy Slice 7N's narrower scope, since the evidence for
+Lead Videographer specifically supports both subject types.
+
+### 6. Resolved cardinality — SINGULAR CURRENT HOLDER
+
+Exactly one current Lead Videographer per booking is permitted, matching
+Lead Photographer's cardinality, not Stylist's additive/multiple-current
+model. Both write RPCs' `lead_videographer` branch queries for "does a
+current assignment already exist" with no subject-id filter — any existing
+current holder, regardless of who, must be explicitly replaced (with a
+change reason) before a different subject can become current. This is
+additionally enforced by the pre-existing partial unique index
+`booking_team_assignments_current_lead_videographer_uidx`. Reassigning the
+same already-current subject is idempotent and returns the existing row
+with no mutation.
+
+### 7. Server-function contract
+
+New export `assignLeadVideographer` in `src/lib/booking.functions.ts`,
+placed after `assignStylist`:
+
+- Input: `bookingId: uuid`, `subjectType: "internal_member" |
+  "external_creative"`, `subjectId: uuid` — the same schema shape as
+  `assignStylist`, since both roles share the internal+external subject
+  model.
+- `subjectType === "internal_member"` routes to `assign_booking_team_member`
+  with `p_assignment_role: "lead_videographer"` hard-coded,
+  `p_member_id: subjectId`, `p_is_assigned: true`, `p_change_reason:
+  undefined`.
+- `subjectType === "external_creative"` routes to
+  `assign_booking_external_creative` with the same hard-coded role,
+  `p_external_creative_id: subjectId`, `p_is_assigned: true`,
+  `p_change_reason: undefined`.
+- `p_change_reason` is always `undefined` because this slice's UI will never
+  invoke this function for a replacement (see section 9) — the button is
+  excluded, not merely disabled-with-a-form, whenever a change reason would
+  be required.
+- Reuses the existing `throwIfError` and no-row-returned error pattern
+  unchanged.
+- No new validation logic beyond what `assignStylist`'s schema already
+  establishes.
+
+### 8. RPC paths
+
+`internal_member -> assign_booking_team_member`
+`external_creative -> assign_booking_external_creative`
+
+Both RPCs are reused entirely unmodified — no signature change, no new
+migration.
+
+### 9. UI behavior
+
+In `BookingTeamCandidatePicker` (`src/routes/_authenticated/bookings.tsx`):
+
+- `assignLeadVideographerMutation`, structurally identical to
+  `assignStylistMutation` — mutation variables are `{subjectType,
+  subjectId}`, not a bare id, to avoid pending-state collision across
+  multiple role buttons on the same candidate.
+- `canAssignLeadVideographer = !rolesRequiringChangeReason.has
+  ("lead_videographer")`, reusing the existing `rolesRequiringChangeReason`
+  set already computed from the candidate directory's
+  `roles_requiring_change_reason` array (already includes
+  `lead_videographer` today — confirmed by an existing, passing pgTAP
+  assertion — no read-model change required).
+- Button renders when: `(candidate.subject_type === "internal_member" ||
+  candidate.subject_type === "external_creative") &&
+  candidate.eligible_assignment_roles.includes("lead_videographer") &&
+  canAssignLeadVideographer`.
+- No per-subject "current holder" exclusion helper is required (unlike
+  Stylist's `isCurrentStylistSubject`) because cardinality is singular —
+  `roles_requiring_change_reason` already correctly hides the button
+  booking-wide once any current holder exists, exactly matching how
+  `canAssignLeadPhotographer` already behaves today.
+- Success/error handling: identical toast-plus-`onAssigned()` pattern as
+  the two existing mutations.
+- No new component, no new route, no layout redesign — one additional
+  button in the existing per-candidate button group, after the Stylist
+  button.
+
+### 10. Permission / stage behavior
+
+Reused entirely unmodified from the existing RPC layer: `booking.team.assign`
+permission, Stage 8 (`booking_confirmed`) through Stage 10
+(`shoot_scheduled`) containment, active-membership and branch-scope checks,
+authenticated-actor requirement. No new application-level authorization
+logic is introduced. Negative paths (unauthorized caller, invalid stage,
+ineligible subject, duplicate-without-reason) are already exercised by the
+existing pgTAP suite for this exact role.
+
+### 11. Exact implementation file boundary
+
+```
+src/lib/booking.functions.ts
+src/routes/_authenticated/bookings.tsx
+```
+
+Identical two-file boundary to Slices 7N and 7O. Confirmed sufficient by
+direct inspection — no other file contains Lead Videographer scaffolding
+beyond the pure display-label case already present in
+`bookingTeamRoleLabel()` (`bookings.tsx`), which this slice does not modify.
+No database file, no migration file, no package/lockfile, no generated
+file. `routeTree.gen.ts` is not expected to drift, since no new route is
+introduced — only the existing `/bookings` route's component tree changes.
+
+If either file proves insufficient during implementation: **STOP.** Do not
+broaden scope. Amend this Technical Design Freeze separately.
+
+### 12. Database / migration decision
+
+**SCHEMA CHANGE EXPECTED: NO. MIGRATION EXPECTED: NO.** Verified directly:
+the CHECK constraint, both write RPCs, the unique index, and the candidate-
+eligibility read model already fully support `lead_videographer` with zero
+modification required. This is a pure application-layer addition against an
+already-complete database contract.
+
+### 13. Verification requirements
+
+Governed PRODUCT IMPLEMENTATION profile, unweakened by the "no migration"
+finding above: targeted Prettier, targeted ESLint, TypeScript typecheck,
+`npm run build`, routeTree containment check (expected unchanged, verified
+not assumed), **full** local pgTAP suite, **full** `supabase db lint
+--local`, `git diff --check`, exact two-file boundary verification,
+secret/fixture hygiene. No check is skipped or downgraded because no
+migration is expected for this slice.
+
+### 14. Browser acceptance cases
+
+- **A.** Eligible Lead Videographer candidate (internal member with a live
+  `videographer` role grant, or an already-registered external creative)
+  visible with the correct role badge and an "Assign as Lead Videographer"
+  button.
+- **B.** Successful internal assignment persists after full browser
+  refresh; the button disappears for all candidates booking-wide once a
+  current holder exists.
+- **C.** Canonical database assignment verified read-only.
+- **D.** Singular cardinality correctly enforced — no assignable button
+  anywhere once a current Lead Videographer exists.
+- **E.** Not applicable — cardinality is singular, not additive; no
+  simultaneous-multiple-current case exists for this role.
+- **F.** A restricted user without `booking.team.assign` has no assignment
+  control visible.
+- **G.** A pre-Stage-8 or post-Stage-10 booking exposes no Lead
+  Videographer assignment control.
+- **H.** External-creative subject assignment succeeds and becomes current,
+  verified the same way as Case C.
+
+### 15. Explicit exclusions
+
+Not implemented by Slice 7P: replacing an existing current Lead
+Videographer through the UI; unassigning a current Lead Videographer;
+Assistant assignment UI; Supporting Videographer assignment UI; external
+creative registration UI; any Safety Readiness read or write behavior; any
+database migration, RPC, or pgTAP modification; any change to
+`assign_booking_team_member`'s, `assign_booking_external_creative`'s, or
+`get_booking_team_assignment_candidates`'s signature, behavior, ACL, or
+security configuration; CI changes; Playwright introduction; automation
+framework Phase 2; any other booking-workflow redesign.
+
+### 16. Safety Readiness remains separate and unresolved
+
+Slice 7P does not solve Safety Readiness evidence, Newborn formal sign-off,
+restricted safety-field visibility, legacy `safety.tsx` reconciliation, or
+Safety Readiness UI placement. Safety Readiness remains an **unconditional**
+Stage 10 blocker per the canonical gate's own logic (no category filter on
+the existence check). Completing Slice 7P does not by itself establish
+Stage 10 readiness for any booking whose safety-readiness evidence is
+missing.
+
+### 17. Production containment
+
+No remote Supabase mutation. No production mutation. No Git `main` merge.
+No deployment.
+
+**Production remains HOLD.**
+
+### 18. Implementation authorization status
+
+The freeze itself does NOT authorize implementation.
+
+**TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
