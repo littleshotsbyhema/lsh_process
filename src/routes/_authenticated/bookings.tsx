@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { AppShell, Card, PageHeader } from "@/components/AppShell";
 import {
+  assignLeadPhotographer,
   confirmBookingAfterAdvance,
   listBookingTeamAssignmentCandidates,
   listBookingWorkspace,
@@ -1050,11 +1051,14 @@ function BookingTeamReadSurface({
 function BookingTeamCandidatePicker({
   bookingId,
   onClose,
+  onAssigned,
 }: {
   bookingId: string;
   onClose: () => void;
+  onAssigned: () => Promise<void>;
 }) {
   const listCandidatesFn = useServerFn(listBookingTeamAssignmentCandidates);
+  const assignLeadPhotographerFn = useServerFn(assignLeadPhotographer);
 
   const candidatesQuery = useQuery({
     queryKey: ["booking-team-candidates", bookingId],
@@ -1064,6 +1068,24 @@ function BookingTeamCandidatePicker({
   const candidates = candidatesQuery.data ?? [];
 
   const rolesRequiringChangeReason = new Set(candidates[0]?.roles_requiring_change_reason ?? []);
+
+  const canAssignLeadPhotographer = !rolesRequiringChangeReason.has("lead_photographer");
+
+  const assignLeadPhotographerMutation = useMutation({
+    mutationFn: (memberId: string) =>
+      assignLeadPhotographerFn({
+        data: {
+          bookingId,
+          memberId,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Lead Photographer assigned.");
+      await onAssigned();
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not assign Lead Photographer."),
+  });
 
   return (
     <div className="mt-5 rounded-lg border border-border bg-card p-5">
@@ -1141,6 +1163,22 @@ function BookingTeamCandidatePicker({
                     .join(" or ")}{" "}
                   requires a change reason.
                 </p>
+              ) : null}
+
+              {candidate.subject_type === "internal_member" &&
+              candidate.eligible_assignment_roles.includes("lead_photographer") &&
+              canAssignLeadPhotographer ? (
+                <button
+                  type="button"
+                  onClick={() => assignLeadPhotographerMutation.mutate(candidate.subject_id)}
+                  disabled={assignLeadPhotographerMutation.isPending}
+                  className="mt-3 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+                >
+                  {assignLeadPhotographerMutation.isPending &&
+                  assignLeadPhotographerMutation.variables === candidate.subject_id
+                    ? "Assigning…"
+                    : "Assign as Lead Photographer"}
+                </button>
               ) : null}
             </div>
           ))}
@@ -1222,6 +1260,13 @@ function BookingsPage() {
     setActivePaymentBookingId(null);
     setActiveTeamPickerBookingId(null);
     await queryClient.invalidateQueries({ queryKey: ["booking-workspace"] });
+  };
+
+  const refreshBookingTeamAssignment = async (bookingId: string) => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["booking-team-candidates", bookingId] }),
+      queryClient.invalidateQueries({ queryKey: ["booking-workspace"] }),
+    ]);
   };
 
   return (
@@ -1673,6 +1718,7 @@ function BookingsPage() {
                   <BookingTeamCandidatePicker
                     bookingId={booking.id}
                     onClose={() => setActiveTeamPickerBookingId(null)}
+                    onAssigned={() => refreshBookingTeamAssignment(booking.id)}
                   />
                 ) : null}
 

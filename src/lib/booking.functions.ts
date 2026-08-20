@@ -17,6 +17,9 @@ export type BookingStageTransitionRow =
 export type BookingShootScheduleRow =
   Database["public"]["Tables"]["booking_shoot_schedules"]["Row"];
 
+export type BookingTeamAssignmentRow =
+  Database["public"]["Tables"]["booking_team_assignments"]["Row"];
+
 export type BookingPaymentRow = Database["public"]["Tables"]["booking_payments"]["Row"];
 
 export type BookingPreparationRow = Database["public"]["Tables"]["booking_preparations"]["Row"];
@@ -156,6 +159,11 @@ const updatePreShootPreparationItemSchema = z.object({
 
 const bookingTeamAssignmentCandidatesSchema = z.object({
   bookingId: z.string().uuid(),
+});
+
+const assignLeadPhotographerSchema = z.object({
+  bookingId: z.string().uuid(),
+  memberId: z.string().uuid(),
 });
 
 export const listBookingWorkspace = createServerFn({
@@ -447,6 +455,29 @@ export const listBookingTeamAssignmentCandidates = createServerFn({
     throwIfError(result.error);
 
     return result.data ?? [];
+  });
+
+export const assignLeadPhotographer = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(assignLeadPhotographerSchema)
+  .handler(async ({ context, data }): Promise<BookingTeamAssignmentRow> => {
+    const result = await context.supabase.rpc("assign_booking_team_member", {
+      p_booking_id: data.bookingId,
+      p_assignment_role: "lead_photographer",
+      p_member_id: data.memberId,
+      p_is_assigned: true,
+      p_change_reason: undefined,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Lead Photographer assignment returned no row.");
+    }
+
+    return result.data;
   });
 
 export const proposeShootSchedule = createServerFn({
