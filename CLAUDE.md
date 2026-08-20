@@ -94,6 +94,210 @@ For each module:
 
 Never mark a module complete only because the UI renders.
 
+## Claude Code Execution Modes and Human Gates
+
+### Prompt mode declaration
+
+Every substantial Claude Code task must explicitly declare:
+
+MODE: Plan
+MODE: Auto
+or
+MODE: Manual
+
+The human/operator sets the corresponding Claude Code UI mode before the task.
+
+Claude must respect both:
+1. the declared execution mode
+2. the task's explicit file/action boundary
+
+A mode never silently expands scope.
+
+### MODE: Plan
+
+Use Plan for:
+- repository discovery
+- architecture investigation
+- reconciliation
+- dependency analysis
+- technical-design exploration
+- scope analysis before implementation authorization
+
+Plan means:
+- inspect
+- reason
+- report evidence
+- do not edit files
+- do not mutate databases
+- do not stage
+- do not commit
+- do not push
+- do not merge
+- do not deploy
+
+Plan tasks should normally end with:
+- conclusions
+- evidence
+- unresolved questions
+- proposed next boundary
+- FILES CHANGED: none
+
+### MODE: Auto
+
+Use Auto for:
+- read-only repository inspection
+- tightly bounded documentation edits
+- implementation after an exact Technical Design Freeze exists
+- formatting
+- typecheck
+- build
+- lint
+- automated tests
+- other local verification commands that stay within the authorized boundary
+
+Auto is authorized only inside the exact files/actions named by the prompt.
+
+Auto DOES NOT authorize:
+- expanding the allowed file boundary
+- opportunistic refactors
+- unrelated technical-debt cleanup
+- inventing migrations
+- architecture changes outside the freeze
+- staging
+- committing
+- pushing
+- merging
+- deployment
+- remote Supabase mutation
+- production mutation
+- exposing secrets
+
+If a required change falls outside an Auto task's authorized boundary,
+STOP and report the discrepancy.
+
+Do not silently broaden the slice.
+
+### MODE: Manual
+
+Use Manual for explicit human-controlled gates, including:
+- git staging for a governed commit
+- git commit
+- git push
+- destructive/reset commands
+- local database mutations that materially alter runtime/test data
+- migration creation or migration application when separately authorized
+- remote Supabase operations
+- Supabase branch merge
+- Git main-branch merge
+- production database mutation
+- deployment
+- promotion
+- production release
+
+A previous Plan or Auto authorization never authorizes a Manual action.
+
+Manual operations require an explicit human decision at that checkpoint.
+
+### One-time approval discipline
+
+When Manual approval is required, prefer the narrowest exact one-time
+authorization.
+
+Do not request persistent broad permissions merely to eliminate prompts.
+
+Never interpret:
+- continue
+- go ahead
+- previous implementation approval
+- previous Auto mode
+- previous successful verification
+
+as permission to:
+- commit
+- push
+- merge
+- deploy
+- mutate remote infrastructure
+- mutate production
+
+### Governed feature sequence
+
+The normal governed feature sequence is:
+
+Discovery
+-> Reconciliation when required
+-> Technical Design Freeze
+-> Freeze Commit
+-> Implementation
+-> Automated Verification
+-> Manual/E2E Verification when applicable
+-> Implementation Commit
+-> Checkpoint Documentation
+-> Final Baseline Verification
+-> Push
+
+Freeze, implementation, and checkpoint documentation remain separate commits
+when milestone governance requires that structure.
+
+Do not mix unrelated cleanup or technical debt into a governed feature commit.
+
+### Database trust boundaries
+
+Local Supabase and remote Supabase are separate trust boundaries.
+
+Permission to use local Supabase never implies permission to:
+- use --linked
+- mutate a remote Supabase project
+- merge a Supabase branch
+- mutate production data
+- deploy production database changes
+
+Local E2E/test fixture data must never be described as production data.
+
+Production remains HOLD unless the active governing milestone explicitly
+authorizes production activity.
+
+### Secret handling
+
+Never deliberately print or expose secret values including:
+- SUPABASE_SERVICE_ROLE_KEY
+- private API keys
+- access tokens
+- passwords
+- secret environment-variable contents
+
+Prefer commands that pass required secrets without echoing them.
+
+Public/local URLs, non-secret identifiers, and safe debugging metadata may be
+shown when appropriate.
+
+### Verification-failure classification
+
+Do not push while a required verification is failing.
+
+First classify failures using evidence as one of:
+- implementation regression
+- dirty local runtime/test fixture contamination
+- pre-existing technical debt
+- non-fatal tooling warning
+- environmental/tooling failure
+
+Do not call a warning a failure merely because it appears in output.
+
+Do not call verification clean when a required command actually exits nonzero.
+
+### Prompt reporting requirement
+
+Whenever recommending or preparing a Claude Code task, state its intended
+mode clearly before the task:
+
+MODE: Plan
+MODE: Auto
+or
+MODE: Manual
+
+Treat that declaration as part of the operating contract.
+
 ## Change-Control Rules
 
 Do not silently change:
