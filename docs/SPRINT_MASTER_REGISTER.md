@@ -16121,3 +16121,335 @@ every booking.
 Next checkpoint requires repository discovery against the remaining
 canonical Stage 9-10 prerequisites. No slice beyond 7O is authorized or
 labeled here.
+
+---
+
+## Claude Sprint Automation Framework — Phase 1 — Technical Design Freeze
+
+**Permanent status:**
+
+**TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+
+This section records an approved `MODE: Plan` Technical Design Freeze
+Proposal for repository governance/tooling infrastructure, reconstructed
+faithfully from the final approved Plan-mode proposal. It is a standalone
+governance section, not a Sprint 10 product slice, and is recorded here
+because `docs/SPRINT_MASTER_REGISTER.md` is this repository's canonical,
+append-only governance ledger.
+
+### 1. Purpose
+
+Phase 1 captures already-proven Claude Code sprint-governance procedures —
+demonstrated across Sprint 10 Slices 7N and 7O — as reusable repository
+tooling.
+
+This is governance/tooling infrastructure. It is NOT a Sprint 10 product
+slice. It must not alter product behavior, database behavior, business
+lifecycle semantics, RBAC/RLS, booking semantics, or production state.
+
+### 2. Exact implementation boundary
+
+Future Phase 1 implementation is frozen to exactly three new files:
+
+- `prompts/05-pre-push-verification.md`
+- `prompts/06-post-push-verification.md`
+- `scripts/verify-checkpoint.sh`
+
+No existing implementation file is authorized for modification.
+
+If these three files prove insufficient: **STOP.** Do not broaden scope.
+Amend this Technical Design Freeze separately.
+
+### 3. No parallel state authority
+
+- No committed sprint-state JSON is introduced.
+- Workflow state remains derived from Git plus governing docs.
+- `docs/SPRINT_MASTER_REGISTER.md` remains historical governance evidence.
+- `docs/CURRENT_MILESTONE.md` remains the mutable current execution pointer.
+- No second mutable source of truth is introduced.
+- No `.claude` repository framework is introduced in Phase 1.
+
+### 4. Existing prompt convention
+
+Phase 1 extends the existing git-tracked `prompts/` convention. It does not
+replace or modify:
+
+- `prompts/01-repository-reconciliation.md`
+- `prompts/02-implement-current-checkpoint.md`
+- `prompts/03-security-review.md`
+- `prompts/04-checkpoint.md`
+
+No `prompts/00-baseline-check.md` is introduced. Baseline checks remain
+inline in `prompts/05` and `prompts/06`.
+
+### 5. Verification script modes
+
+Exactly these modes are frozen:
+
+- `tooling`
+- `implementation`
+- `checkpoint`
+- `pre-push`
+- `post-push`
+
+No implicit/default mode. Unknown or missing mode must fail nonzero with
+usage. The script must never infer which profile applies from the diff — the
+operator/Claude invocation explicitly selects the mode.
+
+### 6. Tooling mode
+
+Applies to a commit that changes files under `prompts/` or `scripts/` and
+touches nothing else — the framework's own artifacts. It exists to close the
+category error of running pgTAP/db-lint against files with no RPC/schema
+surface. It does not exempt product code from anything: the moment a change
+under these directories also touches application/server/database code, that
+commit is `implementation` mode, full stop.
+
+`tooling` mode covers:
+
+- expected branch
+- expected HEAD
+- expected origin
+- exact three-file tooling boundary
+- `git diff --check`
+- Markdown Prettier checks for the two prompt files
+- shell syntax validation of `scripts/verify-checkpoint.sh` (`bash -n`)
+- retroactive acceptance tests for `implementation` mode
+- retroactive acceptance tests for `checkpoint` mode
+- retroactive acceptance tests for `pre-push` mode
+- post-push verification test
+- secret-scanner synthetic self-test
+- final working-tree containment
+
+Tooling mode must not run application pgTAP/db-lint merely because this
+framework implementation itself is called an implementation. **This
+distinction must NOT weaken product implementation verification.**
+
+### 7. Product implementation mode
+
+For governed PRODUCT IMPLEMENTATION slices, the proven final standard is
+preserved. Full final verification remains mandatory regardless of whether a
+migration changed:
+
+- targeted Prettier
+- targeted ESLint
+- local TypeScript typecheck
+- `npm run build`
+- routeTree containment when applicable
+- full local pgTAP suite
+- `supabase db lint --local`
+- `git diff --check`
+- exact frozen file-boundary verification
+- secret/fixture hygiene as applicable
+
+pgTAP and DB lint are never downgraded to optional based on touched-file
+heuristics.
+
+### 8. Checkpoint mode
+
+Checkpoint mode is for governed documentation-only checkpoint commits. It
+verifies:
+
+- branch/HEAD/origin baseline
+- exact documentation boundary
+- `git diff --check`
+- secret/fixture hygiene
+- commit/diff containment
+
+It does not pretend that code-specific checks apply to a docs-only
+checkpoint. The distinction is based on the human-selected governed mode,
+not script guesswork.
+
+### 9. CLI contract
+
+```
+scripts/verify-checkpoint.sh <mode> [options]
+```
+
+Safety-critical values are explicit, never inferred:
+
+- `--branch <name>`
+- `--expect-head <full 40-character SHA>`
+- `--expect-origin <full 40-character SHA>`
+- `--boundary-file <path>`
+- `--commit <sha>`
+- `--range <rev>..<rev>`
+
+Which modes require which options is documented at implementation time.
+Expected SHAs are never inferred from `docs/CURRENT_MILESTONE.md`.
+
+### 10. Boundary-file safety
+
+- Read-only input.
+- Preferably created outside the repository for governed runs.
+- One normalized repo-relative path per line.
+- Reject absolute paths.
+- Reject `..`.
+- Reject duplicates.
+- Reject an empty effective boundary.
+- Never mechanically parse Markdown freeze prose to create authority.
+
+The approved freeze remains the human-reviewed source of the file boundary.
+
+### 11. Allowed command surface
+
+Read-only verification command families that may be used:
+
+Git: `git status`, `git branch`, `git rev-parse`, `git log`, `git show`,
+`git diff`, `git rev-list`, `git merge-base`.
+
+Verification: local Prettier binary, local ESLint binary, local TypeScript
+binary, `npm run build`, `supabase test db --local supabase/tests`,
+`supabase db lint --local`.
+
+The script itself must never execute: `git add`, `git commit`, `git push`,
+`git reset`, `git clean`, `git rebase`, `git merge`, destructive checkout,
+`supabase db reset`, `supabase db push`, any `--linked` Supabase command,
+`npm install`, `npm add`, `bun install`, `bun add`, deployment, or remote
+mutation.
+
+### 12. Local dependency requirement
+
+Plain `npx` is not used for Prettier/ESLint/TypeScript. Already-installed
+local executables only:
+
+- `./node_modules/.bin/prettier`
+- `./node_modules/.bin/eslint`
+- `./node_modules/.bin/tsc`
+
+Existence is checked before invocation. If missing: **FAIL CLOSED.** Report
+that local dependency installation is not authorized. Do not install. Do not
+repair via package registry. Do not modify lockfiles.
+
+`npm run build` may use the existing package script.
+
+Shell tracing with `set -x` is prohibited.
+
+### 13. Supabase containment
+
+Supabase-facing verification capability is hard-coded to local operations
+only:
+
+- `supabase test db --local supabase/tests`
+- `supabase db lint --local`
+
+No flag passthrough capable of adding `--linked`. No remote project
+mutation. No database reset from the verification script. If cleanup/reset
+appears necessary: STOP and return to a separate `MODE: Manual` human gate.
+
+### 14. Secret scanning
+
+Secret/fixture scanning must never print matched values.
+
+Permitted output: count, filename, category, STOP message.
+
+Not permitted: matched secret substring, secret-bearing line, password,
+token, service-role value.
+
+No `set -x`.
+
+The synthetic self-test uses fake/non-real secret material only, in an
+outside-repository temporary location such as `mktemp`. The synthetic secret
+must: be detected; never be printed; never modify a tracked file; never be
+staged; never appear in `git status`; be removed after the test.
+
+### 15. Failure classification
+
+The script reports: check name, command, exit status, PASS/FAIL. It must not
+make contextual policy classifications itself. It must not autonomously
+decide implementation regression, pre-existing debt, fixture contamination,
+tooling warning, or environmental failure. Those remain governed
+interpretation one layer above the script.
+
+### 16. Pre-push verification
+
+`prompts/05` must codify the proven read-only pre-push sequence: branch
+state, working-tree state, HEAD/origin baseline, expected commits above
+origin, per-commit file boundary, complete push delta, diff check,
+implementation/checkpoint contract cross-check, secret/fixture hygiene,
+production HOLD, final re-check. No push is performed by pre-push
+verification.
+
+### 17. Post-push verification
+
+`prompts/06` must codify: expected branch, expected local HEAD, expected
+remote/origin HEAD, remote match, expected pushed commit ancestry, clean
+working tree, production HOLD.
+
+Git/origin is authoritative for whether the push actually landed.
+`docs/CURRENT_MILESTONE.md` may be checked for a possible contradictory
+CURRENT push-state statement. If reliable classification would require
+fragile prose parsing, the script reports only:
+
+`CURRENT MILESTONE POSSIBLE STALENESS — HUMAN REVIEW REQUIRED`
+
+It does not guess.
+
+`docs/SPRINT_MASTER_REGISTER.md` remains historical append-only evidence. A
+historical checkpoint sentence saying "not pushed" may have been correct at
+checkpoint-commit time and is not automatically an error after a later push.
+Post-push verification must never rewrite either document.
+
+### 18. Shell compatibility
+
+Target the actual development environment: macOS operator environment,
+verified this session as stock `/bin/bash` 3.2.57(1), `grep` resolving to
+`ugrep` in grep-compatible mode, BSD-style `sed` and `mktemp`. Shell
+constructs must be compatible with that environment. Silent dependence on
+GNU-only grep/sed behavior or unsupported modern Bash features is avoided
+unless availability is first verified. Implementation stays simple and
+auditable.
+
+### 19. Acceptance tests
+
+Frozen acceptance tests, at minimum:
+
+- **A.** `tooling` mode validates the new Phase 1 artifacts without
+  tracked-file drift.
+- **B.** `implementation` mode is exercised retroactively against the known
+  Slice 7O implementation commit (`d140a67`) and correct two-file boundary.
+- **C.** A deliberately incorrect implementation boundary fails
+  specifically.
+- **D.** `checkpoint` mode is exercised retroactively against the known
+  Slice 7O checkpoint commit (`6413bee`) and correct two-doc boundary.
+- **E.** `pre-push` mode reproduces the known Slice 7O two-commit /
+  four-file push delta.
+- **F.** `post-push` mode confirms the current remote match and handles
+  mutable `CURRENT_MILESTONE.md` staleness conservatively.
+- **G.** Secret scanner self-test detects synthetic fake secret material and
+  does not print its value.
+- **H.** All tests leave tracked repository state unchanged except for the
+  three authorized Phase 1 implementation files while they are under
+  development.
+
+### 20. Exclusions
+
+Explicitly excluded: Playwright; Cypress; browser automation;
+fixture-provisioning framework; CI; GitHub Actions; git hooks; package
+dependency additions; package-manager normalization; `package-lock.json`
+changes; `bun.lock` changes; `bunfig.toml` changes; `.claude` framework
+files; state JSON; changes to `prompts/01`-`04`; `CURRENT_MILESTONE.md`
+changes during implementation; product code; migrations; pgTAP test-file
+modifications; generated Supabase type changes; production changes.
+
+### 21. Commit sequence
+
+1. Technical Design Freeze documentation
+2. Freeze commit — Manual
+3. Phase 1 implementation — Auto, exact three-file boundary
+4. Tooling verification — Auto
+5. Implementation commit — Manual
+6. Checkpoint documentation — Auto
+7. Checkpoint commit — Manual
+8. Pre-push verification — Auto
+9. Push — Manual
+10. Post-push verification — Auto
+11. Close Phase 1 only after remote verification succeeds
+
+Freeze, implementation, and checkpoint remain separate commits.
+
+### 22. Implementation authorization
+
+The freeze documentation itself does NOT authorize implementation.
+
+**TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
