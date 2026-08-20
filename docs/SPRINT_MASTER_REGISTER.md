@@ -16661,3 +16661,107 @@ alter that product dependency decision.
 No push outcome is predicted.
 
 **IMPLEMENTATION VALIDATED / TOOLING ACCEPTANCE VERIFIED / PRODUCTION HOLD**
+
+---
+
+## Claude Sprint Automation Framework — Phase 1 — Checkpoint Reconciliation
+
+**Status:**
+
+**IMPLEMENTATION VALIDATED / FIRST REAL PRE-PUSH DEFECT CORRECTED / MECHANIZED PRE-PUSH VERIFIED / PRODUCTION HOLD**
+
+This section reconciles the Phase 1 Implementation Checkpoint above against
+what actually happened on the first real governed use of the new pre-push
+framework. The original checkpoint section is preserved unchanged as
+historical evidence of the state before that first real pre-push run; it is
+not rewritten or deleted.
+
+### 1. Why reconciliation was required
+
+After the initial Phase 1 checkpoint commit, the first real governed use of
+the new pre-push framework was executed against the actual Phase 1 payload.
+
+The first mechanized pre-push run returned FAIL solely in the secret/fixture
+scanner. All other pre-push checks passed. Manual evidence review
+established that the push payload contained no real credential or fixture
+leak. The failure was therefore classified as a tooling false positive, not
+a real secret exposure.
+
+The original failing mechanized result was FAIL, not PASS.
+
+### 2. Root cause
+
+The original scanner contained keyword/marker detectors that could trigger
+on bare mentions of sensitive identifiers or policy/tooling terms without
+requiring evidence of an actual value-bearing credential. This caused
+legitimate governance/tooling prose and scanner-source text to trigger the
+detector.
+
+No real or synthetic secret value is included in this record.
+
+### 3. Correction
+
+Correction commit:
+`90f2c71` — `fix: tighten phase 1 secret scanner`
+
+Changed file exactly: `scripts/verify-checkpoint.sh`
+
+The correction:
+
+- preserves the script executable mode
+- narrows the detector at the pattern level
+- does not whitelist whole files/directories
+- does not remove secret scanning
+- distinguishes benign identifier-only references from value-bearing
+  evidence
+- preserves detection of synthetic value-bearing secret patterns
+- preserves non-disclosure of matched secret values
+
+### 4. Correction verification
+
+- Shell syntax: PASS
+- Real value detection self-test: PASS
+- Identifier-only negative test: PASS
+- Secret value printed: NO
+- Phase 1 push delta secret hygiene: PASS
+- Full pre-push mode: PASS
+- Other pre-push checks: PASS
+- Diff check: PASS
+- Product code change: NO
+- Database change: NO
+- Dependency change: NO
+- Push performed: NO
+
+### 5. Acceptance interpretation
+
+The first real run exposed a genuine defect in Phase 1 tooling. That defect
+was corrected before any push. The final mechanized pre-push result after
+correction is PASS.
+
+The framework checkpoint remains valid only with correction commit `90f2c71`
+included in the final Phase 1 payload.
+
+Both are preserved:
+
+- initial failure evidence (this section, section 1)
+- final corrected PASS evidence (this section, section 4, and the original
+  Implementation Checkpoint above for pre-correction context)
+
+### 6. Implementation identity after correction
+
+Complete local Phase 1 implementation history:
+
+- Freeze: `d33b5f3`
+- Initial implementation: `76fbe8b`
+- Initial checkpoint: `4516f4a`
+- Scanner correction: `90f2c71`
+
+All are local and NOT YET PUSHED. The correction does not amend or rewrite
+any prior commit.
+
+### 7. Permanent Phase 1 status
+
+**IMPLEMENTATION VALIDATED / FIRST REAL PRE-PUSH DEFECT CORRECTED / MECHANIZED PRE-PUSH VERIFIED / PRODUCTION HOLD**
+
+No unresolved Phase 1 blocking defect remains at this point. Phase 2 remains
+unauthorized. Production remains HOLD.
