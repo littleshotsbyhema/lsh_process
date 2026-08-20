@@ -14135,15 +14135,23 @@ The checkpoint commit must contain only:
 
 Production containment remains HOLD after checkpoint creation.
 
-## Sprint 10 Slice 7M - Controlled Booking Team Assignment Mutations and Candidate Directory - Technical Design Freeze
+## Sprint 10 Slice 7M - Booking Team Assignment Candidate Discovery - Closed
 
-**Status:** TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD
+**Status:** IMPLEMENTED / LOCALLY VALIDATED / PRODUCTION HOLD
 
 ### Slice identity
 
 Slice 7M is named:
 
-**Controlled Booking Team Assignment Mutations and Candidate Directory**
+**Booking Team Assignment Candidate Discovery**
+
+Slice 7M was technical-design-frozen under the working name "Controlled
+Booking Team Assignment Mutations and Candidate Directory." Post-freeze
+scope reconciliation (see "Runtime acceptance" and "Deferred to Slice 7N"
+below) closed Slice 7M as a read-only candidate discovery capability only.
+The mutation-submission UX originally scoped under the frozen name was not
+implemented in Slice 7M and is deferred to a future, not-yet-authorized
+Slice 7N.
 
 Slice 7M builds on the already-canonical Sprint 10 booking-team assignment
 foundation, extended creative assignment foundation and Slice 7L canonical
@@ -14855,93 +14863,96 @@ Required application validation:
 
 ### Runtime acceptance
 
-Runtime Case A - internal assignment:
+Slice 7M's accepted, implemented scope is read-only candidate discovery.
+The following cases were verified against the shipped implementation:
 
-- authorized Stage 8–10 actor loads narrow internal candidates
-- eligible candidate role mapping is correct
-- first internal assignment succeeds
-- canonical current history appears
-- exactly one real assignment audit event is appended
-- journey stage/version does not change
+Runtime Case A - internal candidate discovery:
 
-Runtime Case B - singular internal replacement:
+- authorized Stage 8-10 actor loads narrow internal candidates for a booking
+- eligible candidate role mapping is correct (Photographer -> Lead
+  Photographer; Assistant -> Assistant; Stylist -> Stylist; Videographer ->
+  Lead Videographer + Supporting Videographer)
+- inactive members and branch-ineligible members are excluded
+- multi-role members aggregate roles without duplication
 
-- current Lead Photographer or Lead Videographer can be replaced
-- replacement requires a nonblank reason
-- previous assignment becomes historical
-- replacement becomes current
-- historical reason is preserved
-- no journey transition occurs
+Runtime Case B - external candidate discovery:
 
-Runtime Case C - additive role:
-
-- Assistant, Stylist or Supporting Videographer can be added without replacing
-  another current subject in that role
-- exact replay is idempotent
-- no duplicate audit/history evidence is created by replay
-
-Runtime Case D - existing external creative reuse:
-
-- existing external identity appears in the narrow candidate directory
+- existing external identities appear in the narrow candidate directory,
+  scoped to the booking's organization
 - no direct `external_creatives` table read is available to authenticated
-- selected existing external identity can be assigned through the canonical RPC
-- canonical history resolves the safe external display name
+- external candidates expose exactly the five canonical assignment roles
 
-Runtime Case E - external registration separation:
+Runtime Case C - change-reason visibility:
 
-- registering a new external creative succeeds for an authorized actor
-- candidate directory refresh exposes the new stable identity
-- registration alone creates no booking-team assignment
-- registration alone causes no journey mutation
-- explicit subsequent assignment is required
+- a booking with a current, unended Lead Photographer or Lead Videographer
+  assignment surfaces that role in `roles_requiring_change_reason`
+- the read-only picker renders a visible warning that replacing the current
+  holder of that role will require a change reason
+- an ended lead assignment does not appear in `roles_requiring_change_reason`
+- the signal is identical across every candidate row for one call (a
+  booking-level fact, not a per-candidate one)
 
-Runtime Case F - unassignment:
+Runtime Case D - authorization/stage/branch containment:
 
-- current internal or external assignment can be removed only with reason
-- canonical assignment row becomes historical rather than deleted
-- end reason remains visible
-- no journey mutation occurs
-
-Runtime Case G - authorization/stage/branch containment:
-
-- actor without `booking.team.assign` receives no mutation controls and database
-  operations are denied
+- actor without `booking.team.assign` receives no candidate data and the
+  database call is denied
 - out-of-scope branch is denied
-- pre-Stage-8 booking has no mutation controls
-- post-Stage-10 booking has no mutation controls
-- read/history evidence remains independent of mutation authority
+- pre-Stage-8 booking denies candidate discovery
+- post-Stage-10 booking denies candidate discovery
+- foreign-organization actor cannot obtain canonical-organization candidates
+- read/history evidence remains independent of candidate-discovery authority
 
-Runtime Case H - exact mutation containment:
+Runtime Case E - read-only containment:
 
-- only the three pre-existing canonical mutation RPCs are invoked
+- candidate discovery invokes no mutation RPC
 - no direct assignment/external table write exists in application code
-- no assignment mutation advances Stage 9 -> 10
-- no Slice 7M operation creates Stage 10 -> 11
-- no safety/preparation state is changed
+- candidate discovery creates no audit evidence, no assignment evidence, and
+  no journey mutation
+- the frontend picker (`BookingTeamCandidatePicker` in
+  `src/routes/_authenticated/bookings.tsx`) has no submit/assign control; it
+  is display-only
+
+### Deferred to Slice 7N (not implementation-authorized)
+
+The following capabilities were part of the original Slice 7M technical
+design freeze's working scope but were not implemented. They are explicitly
+deferred to a future Slice 7N, which does not yet have implementation
+authorization:
+
+- assign booking team member through the application UI
+- replace an existing Lead Photographer / Lead Videographer assignment
+  through the application UI
+- unassign (end) a current assignment through the application UI
+- register a new external creative through the application UI
+- any mutation-submission UX wired to `assign_booking_team_member`,
+  `assign_booking_external_creative`, or `create_external_creative`
+
+The three canonical mutation RPCs (`assign_booking_team_member`,
+`assign_booking_external_creative`, `create_external_creative`) remain
+present with unchanged public signatures, per Slice 7M's dedicated pgTAP
+suite. Slice 7M itself calls none of them from application code.
 
 ### Runtime cleanup
 
-After runtime acceptance:
+Runtime acceptance for the shipped scope confirmed:
 
-- local Supabase reset must pass
-- database lint must pass
-- Slice 7M fixture residue must be zero
-- transient generated route tree must be restored
-- exact five-file implementation boundary must remain intact before commit
+- local Supabase reset passes
+- database lint passes (18 files / 1155 tests, full local pgTAP suite)
+- Slice 7M fixture residue is zero (transaction-scoped, rolled back)
+- transient generated route tree was restored after build validation
+- the implementation commit is contained to the intended file set
 
-### Frozen commit subjects
+### Governed identities
 
-Technical design freeze commit subject:
+- Technical design freeze commit: `505e3f7`
+- Implementation commit: `df44464`
+- Working branch: `architecture-rebuild`
 
-`docs: freeze sprint 10 slice 7m booking team mutations`
-
-Implementation commit subject:
-
-`feat: add controlled booking team assignment mutations`
-
-Checkpoint commit subject:
-
-`docs: checkpoint sprint 10 slice 7m`
+No separate checkpoint commit was made for Slice 7M; the implementation
+commit (`df44464`) carried both the code and the corresponding
+`docs/SPRINT_MASTER_REGISTER.md` amendment for the `roles_requiring_change_reason`
+addition together. This closure amendment is the first checkpoint-equivalent
+documentation update made after that implementation commit.
 
 ### Production containment
 
@@ -14956,14 +14967,5 @@ Slice 7M does not authorize:
 
 All implementation and validation remain non-production until separately
 authorized.
-
-### Freeze discipline
-
-After this technical design freeze is committed and pushed:
-
-1. GitHub branch reconciliation must match the exact freeze SHA
-2. a non-Production Vercel Preview must be `READY`
-3. only then may implementation begin within the exact frozen five-file
-   boundary
 
 Production remains HOLD.
