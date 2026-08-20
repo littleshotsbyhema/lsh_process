@@ -8,21 +8,34 @@ Do not rewrite the broader roadmap just to advance the active task.
 
 ## Current Architecture State
 
-Treat the existing organization isolation, authentication, RBAC/RLS, audit foundation, families/contacts/children/memory-profile work, and current CRM rebuild as authoritative where present in the repository.
+Treat the existing organization isolation, authentication, RBAC/RLS, audit foundation, and all Sprint 1-9 modules (organizations, families, contacts, children, memory profiles, leads/CRM, lead workspace, AI Memory Guide, packages/quotations/booking conversion, advance payments, booking confirmation, KPI) as authoritative and Complete/Released. Do not rebuild them. See `docs/SPRINT_MASTER_REGISTER.md` for the full sprint-by-sprint delivered scope and acceptance state.
+
+Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is the active programme and is implemented through Slice 7M.
+
+## Current Verified Checkpoint
+
+Sprint 10 Slice 7M is closed as **"Booking Team Assignment Candidate Discovery"**, implemented and committed as `df44464`. The scope amendment closing Slice 7M to its actual shipped (read-only) scope, and formally deferring mutation-submission UX, is documented in `docs/SPRINT_MASTER_REGISTER.md`.
+
+Slice 7N is **not implementation-authorized**. Its scope is not yet defined in this file; do not infer or plan it here.
 
 ## Immediate Product Sequence
 
-1. Reconcile and complete Leads / CRM against the approved architecture.
-2. Verify lead lifecycle, ownership, permissions, RLS, audit history, and historical protection.
-3. Complete conversion path from lead into family/client context without duplication or tenant leakage.
-4. Complete tasks and consultations if not already production-verified.
-5. Before freezing commercial schema, finalize package catalogue and add-on details.
-6. Then implement package catalogue -> quotations -> bookings -> payments.
-7. Then implement privacy/consent/safety/terms integration into booking readiness.
+No new feature work may begin until both of the following are complete:
+
+1. This reconciliation checkpoint (`docs/CURRENT_MILESTONE.md` and `docs/SPRINT_MASTER_REGISTER.md` accurately reflecting repository reality) is committed.
+2. The known stale `src/routeTree.gen.ts` is regenerated and committed as its own isolated mechanical checkpoint.
+
+Only after both are complete may Slice 7N (or any other new checkpoint) be scoped and authorized.
 
 ## Current Hard Rule
 
-Do not freeze or scatter package constants throughout the application until the commercial package catalogue is explicitly approved.
+Do not begin implementation of Slice 7N, or any other new feature work, until the reconciliation checkpoint and route-tree repair above are both committed.
+
+## Known Debt Outside This Checkpoint's Boundary
+
+Repository-wide ESLint/Prettier formatting debt exists in pre-Sprint-10 files (concentrated in `src/lib/leads.functions.ts`, `src/lib/lead-workspace.functions.ts`, and several `src/routes/_authenticated/*.tsx` files). This debt is acknowledged and tracked but is explicitly not part of this reconciliation checkpoint or the route-tree repair checkpoint. It must not be expanded into a repository-wide cleanup without a separately authorized checkpoint.
+
+Production remains on HOLD for all Sprint 10 work unless separately authorized.
 
 ## Completion Report Required
 
