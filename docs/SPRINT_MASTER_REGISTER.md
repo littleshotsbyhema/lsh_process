@@ -15383,3 +15383,558 @@ All implementation and validation remain non-production until separately
 authorized.
 
 Production remains HOLD.
+
+---
+
+## Sprint 10 Slice 7O — Controlled Stylist Assignment — Technical Design Freeze
+
+**Status:** TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD
+
+### 1. Slice identity
+
+Slice 7O is named:
+
+**Controlled Stylist Assignment**
+
+It builds on:
+
+- the canonical Sprint 10 booking-team assignment foundation
+- Slice 7L booking-team read/history surface
+- Slice 7M booking-team candidate directory
+- Slice 7N controlled Lead Photographer assignment
+
+It does not redefine canonical booking-team lifecycle truth.
+
+Canonical assignment evidence remains:
+
+`public.booking_team_assignments`
+
+Canonical internal identity remains:
+
+`public.organization_members`
+
+Canonical external creative identity remains:
+
+`public.external_creatives`
+
+Canonical candidate discovery remains:
+
+`public.get_booking_team_assignment_candidates(uuid)`
+
+Canonical read/history evidence remains:
+
+`public.get_booking_team_assignment_history(uuid)`
+
+### 2. Business outcome
+
+For an eligible Stage 8-10 booking, an authorized actor can add an eligible
+Stylist from either of the two already-canonical subject types:
+
+- internal organization member
+- already-registered external creative
+
+The operation is addition-only.
+
+Stylist is **ADDITIVE / MULTIPLE-CURRENT**.
+
+The slice must never impose Lead-Photographer-style singularity on Stylist.
+
+A booking may have multiple different current Stylist assignments
+simultaneously.
+
+The application must preserve that canonical cardinality.
+
+### 3. Discovery / reconciliation truth
+
+The following is recorded as established pre-freeze truth, proven by direct
+schema/RPC inspection and existing pgTAP evidence during this session's
+Stylist discovery and reconciliation passes:
+
+- no database constraint makes Stylist singular
+- singular current-role indexes exist for Lead Photographer
+  (`booking_team_assignments_current_lead_uidx`) and Lead Videographer
+  (`booking_team_assignments_current_lead_videographer_uidx`), not Stylist
+- internal Stylist uniqueness is exact-subject/role scoped
+  (`booking_team_assignments_current_member_role_uidx`, keyed on
+  `assigned_member_id`)
+- external Stylist uniqueness is exact-subject/role scoped
+  (`booking_team_assignments_current_external_role_uidx`, keyed on
+  `assigned_external_creative_id`)
+- `assign_booking_team_member` already accepts `assignment_role='stylist'`
+- `assign_booking_external_creative` already accepts
+  `assignment_role='stylist'`
+- both RPCs support addition of a new different Stylist (the non-lead-role
+  branch performs an exact-subject-only lookup, with no check for any other
+  subject already holding the role)
+- same-subject assignment replay is owned by the RPC and is idempotent
+- Stylist addition does NOT require `p_change_reason`
+- Stylist unassignment DOES require `p_change_reason`, but unassignment UI is
+  outside this slice
+- Stage 8-10 is the canonical assignment mutation window
+- `booking.team.assign` is the canonical permission
+- branch/org isolation remains RPC-enforced
+- `mark_booking_shoot_scheduled` requires AT LEAST ONE currently
+  operationally eligible Stylist (a dedicated `EXISTS(...) INTO v_stylist_ok`
+  check with its own error message, distinct from the lead-role checks)
+- that Stage 9 -> 10 requirement accepts either internal or external Stylist
+  evidence, proven directly by a passing `mark_booking_shoot_scheduled` call
+  against a fully-external-staffed booking in the existing gate test
+- `get_booking_team_assignment_candidates` already maps internal org role
+  `stylist` -> assignment role `stylist`
+- already-registered external creatives are already surfaced by the
+  candidate directory as eligible Stylist subjects
+- `roles_requiring_change_reason` intentionally cannot contain `stylist`
+  (the underlying CTE is hardcoded to lead roles only)
+- `candidates[0]?.roles_requiring_change_reason` is safe by the current RPC
+  contract because the value is booking-level and `CROSS JOIN`ed identically
+  onto every candidate row
+- that `candidates[0]` code is left untouched in 7O
+- current read/history UI is already plural/cardinality-safe (renders every
+  assignment row independently via `.map()`, keyed by `assignment_id`, with
+  no singular-holder assumption anywhere)
+- generated Supabase types already support both canonical assignment RPCs
+  sufficiently (`p_assignment_role` is typed as plain `string`, not a literal
+  union)
+- no migration is required
+- no generated-type change is required
+- no pgTAP modification is required for this application-only slice
+
+Additional additive/replay regression tests are acknowledged as
+**NICE-TO-HAVE** database regression depth, not a 7O requirement. The
+existing pgTAP suite does not directly assert every Stylist additive/replay
+scenario with the literal string `'stylist'` — canonical additive behavior
+for that literal role string is proven by direct code inspection of the RPC
+body and by an existing, passing analogous test for the `assistant` role
+(which shares the identical non-lead-role code branch), not by a
+stylist-labeled assertion itself. This distinction is preserved accurately
+here rather than overstating existing coverage.
+
+### 4. Exact in-scope mutation
+
+Slice 7O introduces ONE Stylist-specific application mutation capability.
+
+Add a server function conceptually named:
+
+`assignStylist`
+
+The exact exported name is frozen as `assignStylist` — no naming collision
+was found against this name anywhere in `src/` or `docs/` during this
+documentation pass.
+
+Input must contain ONLY:
+
+- `bookingId`
+- `subjectType`
+- `subjectId`
+
+`subjectType` must be server-validated as exactly one of:
+
+- `internal_member`
+- `external_creative`
+
+`bookingId` and `subjectId` must be UUID-validated with Zod.
+
+The browser must NOT supply `assignment_role`.
+
+The browser must NOT supply `p_is_assigned`.
+
+The browser must NOT supply `p_change_reason`.
+
+The server function itself fixes:
+
+- `assignment_role = 'stylist'`
+- `is_assigned = true`
+- `change_reason = NULL` / `undefined`
+
+This preserves least privilege and prevents the browser from using this
+surface to submit arbitrary booking-team roles.
+
+### 5. Internal subject routing
+
+If `subjectType = 'internal_member'`, the server function calls:
+
+`public.assign_booking_team_member(...)`
+
+with exactly:
+
+- `p_booking_id = bookingId`
+- `p_assignment_role = 'stylist'`
+- `p_member_id = subjectId`
+- `p_is_assigned = true`
+- `p_change_reason = NULL` / `undefined`
+
+No other argument combination is authorized by Slice 7O.
+
+### 6. External subject routing
+
+If `subjectType = 'external_creative'`, the server function calls:
+
+`public.assign_booking_external_creative(...)`
+
+with exactly:
+
+- `p_booking_id = bookingId`
+- `p_assignment_role = 'stylist'`
+- `p_external_creative_id = subjectId`
+- `p_is_assigned = true`
+- `p_change_reason = NULL` / `undefined`
+
+The external creative MUST already exist.
+
+Slice 7O does NOT call `create_external_creative`.
+
+Slice 7O does NOT add external creative registration UI.
+
+### 7. Current-subject UI exclusion
+
+Because Stylist is additive, the UI must NOT hide Stylist assignment controls
+merely because SOME current Stylist already exists.
+
+Instead, it must suppress the Stylist assignment control only for a
+candidate who is already a CURRENT Stylist subject on that booking.
+
+Use the existing canonical Slice 7L booking-team history/read data already
+available to the booking workspace.
+
+A subject is already current Stylist when all are true:
+
+- `assignment_role = 'stylist'`
+- `is_current = true`
+- `subject_type` equals the candidate `subject_type`
+- `subject_id` equals the candidate `subject_id`
+
+The current booking's already-loaded `bookingTeamAssignmentHistory` may be
+passed into `BookingTeamCandidatePicker`, or an equivalently narrow
+within-file derivation may be used.
+
+Do NOT introduce a new database/read RPC.
+
+Required behavior:
+
+- Candidate A assigned as Stylist: Candidate A's Stylist submit control
+  disappears after successful refresh.
+- Candidate B: remains assignable as Stylist if otherwise eligible.
+- Candidate C: remains independently assignable.
+- Existing current Stylist presence never globally disables Stylist
+  assignment.
+
+This is the key UI distinction from the singular Lead Photographer design.
+
+### 8. Candidate eligibility
+
+Render a Stylist assignment control only when:
+
+- `canManageBookingTeam` is already true through the existing
+  permission/stage containment
+- `candidate.subject_type` is exactly `internal_member` or
+  `external_creative`
+- `candidate.eligible_assignment_roles` includes `'stylist'`
+- candidate is NOT already a current Stylist subject for that booking
+
+Do NOT gate Stylist on `roles_requiring_change_reason`.
+
+Stylist is additive and does not use replacement-reason semantics for
+addition.
+
+Leave the existing Lead Photographer control and its
+`roles_requiring_change_reason` behavior unchanged.
+
+### 9. Pending / mutation state
+
+Do NOT reuse the current bare-member-id Lead Photographer mutation variables
+for Stylist.
+
+The Stylist mutation variables must carry both:
+
+- `subjectType`
+- `subjectId`
+
+This provides an exact canonical subject identity for pending-state
+rendering.
+
+Conceptual mutation variable shape:
+
+```ts
+{
+  subjectType: "internal_member" | "external_creative",
+  subjectId: string,
+}
+```
+
+The exact clicked Stylist control may show `Assigning…` when both
+`subjectType` and `subjectId` match the in-flight Stylist mutation.
+
+While the Stylist mutation is pending, Stylist submission controls should be
+disabled sufficiently to prevent accidental duplicate submission.
+
+Do not generalize the existing Lead Photographer server action into an
+arbitrary-role browser API.
+
+Do not change Lead Photographer semantics merely to share abstraction.
+
+A dedicated Stylist-specific server action is the frozen design.
+
+### 10. Success / error / refresh
+
+On success:
+
+- show a Stylist-assigned success state/toast
+- invalidate/refetch the existing booking-team candidate query
+- invalidate/refetch the booking workspace
+- current/history surface must update
+- current-subject Stylist button must disappear
+- other eligible Stylist candidates must remain available
+- no full page reload
+
+The existing query invalidation —
+
+- `["booking-team-candidates", bookingId]`
+- `["booking-workspace"]`
+
+— is already role-agnostic and should be reused.
+
+On RPC failure:
+
+- surface the RPC error
+- do not silently retry
+- do not reinterpret failure as success
+- restore usable idle state
+
+### 11. Permission / stage / tenant containment
+
+No new permission.
+
+Use existing: `booking.team.assign`
+
+The existing outer application containment remains:
+
+`data.canAssignBookingTeam` AND Stage 8-10
+
+The RPC remains authoritative for:
+
+- authentication
+- active organization membership
+- permission
+- branch scope
+- organization isolation
+- valid Stage 8-10 window
+- target eligibility
+- row locking
+- idempotency
+- canonical evidence/audit mutation
+
+UI checks are convenience only.
+
+### 12. Explicit exclusions
+
+Slice 7O must NOT implement:
+
+- Stylist replacement semantics
+- Stylist unassignment
+- change-reason UI
+- external creative registration
+- `create_external_creative` application wiring
+- Assistant assignment
+- Lead Videographer assignment
+- Supporting Videographer assignment
+- changes to Lead Photographer semantics
+- generic arbitrary-role assignment from browser input
+- Stage 9 -> 10 advancement UI
+- safety-readiness changes
+- preparation changes
+- any new database migration
+- any new RPC
+- any modification to existing RPC behavior
+- any modification to existing migration files
+- any pgTAP test change
+- any generated Supabase type change
+- `candidates[0]` cleanup/refactor
+- unrelated UI refactors
+- repository-wide formatting/debt cleanup
+
+### 13. Existing RPC contracts reused unmodified
+
+`public.assign_booking_team_member(p_booking_id uuid, p_assignment_role text, p_member_id uuid, p_is_assigned boolean, p_change_reason text DEFAULT NULL)`
+
+`public.assign_booking_external_creative(p_booking_id uuid, p_assignment_role text, p_external_creative_id uuid, p_is_assigned boolean, p_change_reason text DEFAULT NULL)`
+
+Also reused, unmodified:
+
+- `public.get_booking_team_assignment_candidates(uuid)`
+- `public.get_booking_team_assignment_history(uuid)`
+
+No signature / ACL / behavior change is authorized.
+
+### 14. Exact allowed implementation files
+
+Freeze implementation to exactly:
+
+1. `src/lib/booking.functions.ts`
+2. `src/routes/_authenticated/bookings.tsx`
+
+No other implementation file is authorized.
+
+`src/integrations/supabase/types.ts` is frozen.
+
+All `supabase/migrations/*.sql` are frozen.
+
+All `supabase/tests/*.sql` are frozen.
+
+`src/routeTree.gen.ts` is frozen and must not be hand-edited. It may be
+regenerated transiently by tooling during build but must be restored to
+committed state before containment verification and the implementation
+commit.
+
+No package manifest, lockfile, config, or documentation file belongs in the
+implementation commit.
+
+If implementation proves either allowed file is insufficient: **STOP**. Do
+not expand scope. Report the discrepancy and amend the Technical Design
+Freeze separately.
+
+### 15. Runtime acceptance cases
+
+Case A — First internal Stylist assignment:
+
+- authorized actor
+- Stage 8-10 booking
+- eligible internal candidate
+- candidate not already current Stylist
+- Stylist control visible
+- submit succeeds
+- pending control shows `Assigning…`
+- new current Stylist appears in canonical history/read surface
+- journey stage/version does not change
+- assigned candidate's Stylist control disappears after refresh
+
+Case B — Additive second internal Stylist:
+
+- booking already has current Stylist A
+- eligible different internal candidate B still has Stylist control
+- assigning B succeeds
+- A remains current
+- B becomes current
+- both appear current in read/history
+- existence of A did not globally disable Stylist assignment
+
+Case C — Already-registered external Stylist:
+
+- existing external creative is returned by candidate directory
+- external candidate is eligible for stylist
+- Stylist control visible
+- assignment routes through `assign_booking_external_creative`
+- succeeds
+- external subject appears current in read/history
+- no external creative registration is performed
+
+Case D — Current exact-subject exclusion / replay safety:
+
+- candidate already current as Stylist has no Stylist assignment control
+  after refreshed canonical read state
+- direct/local canonical replay of the same assignment, if exercised during
+  acceptance verification, remains an RPC-owned no-op and creates no
+  duplicate current evidence
+- UI does not require a replay button
+
+Case E — Permission containment:
+
+- actor without `booking.team.assign` has no team mutation entry point
+- direct canonical RPC remains denied server-side
+- read/history authority remains separate from assignment authority
+
+Case F — Stage containment:
+
+- pre-Stage-8 booking has no assignment entry point
+- Stage 8-10 behavior works
+- do not manufacture Stage 10 -> 11
+- no post-Stage-10 mutation UI is introduced
+
+Case G — Exact mutation containment:
+
+Application code must only invoke:
+
+- internal: `assign_booking_team_member`, role=`'stylist'`, assigned=`true`,
+  reason=`NULL`
+- external: `assign_booking_external_creative`, role=`'stylist'`,
+  assigned=`true`, reason=`NULL`
+
+No:
+
+- unassignment
+- replacement
+- direct table write
+- external registration
+- other role mutation
+- journey advancement
+
+Case H — Refresh/persistence:
+
+- assignment remains visible after full browser refresh
+- multiple current Stylists remain independently visible
+- current subject remains excluded from another Stylist-add control
+- other eligible subjects remain assignable
+
+### 16. Automated verification contract
+
+No pgTAP file changes are authorized.
+
+Verification must include:
+
+- targeted Prettier on the two allowed implementation files
+- targeted ESLint on the two allowed implementation files
+- `npx tsc --noEmit`
+- `npm run build`
+- `src/routeTree.gen.ts` restored/unchanged after build
+- `supabase test db --local supabase/tests`
+- `supabase db lint --local`
+- implementation containment diff
+- no migration diff
+- no pgTAP test diff
+- no generated type diff
+
+The existing full local pgTAP baseline is expected to remain:
+
+18 files / 1155 tests / PASS
+
+If local browser fixtures contaminate deterministic pgTAP counts, classify
+that as fixture contamination only after evidence proves it, restore/reset
+local test state as separately authorized, and re-run the suite.
+
+Do not weaken tests to make a fixture-contaminated run pass.
+
+### 17. Commit sequence
+
+Technical design freeze commit subject:
+
+`docs: freeze sprint 10 slice 7o stylist assignment`
+
+Implementation commit subject:
+
+`feat: add controlled stylist assignment`
+
+Checkpoint commit subject:
+
+`docs: checkpoint sprint 10 slice 7o`
+
+Freeze, implementation, and checkpoint remain separate governed commits.
+
+### 18. Production containment
+
+Slice 7O does not authorize:
+
+- Git main merge
+- Supabase branch merge
+- production database mutation
+- production deployment
+- promotion
+- production release
+
+All work remains non-production.
+
+Production remains HOLD.
+
+### 19. Implementation authorization status
+
+The freeze itself does NOT authorize implementation.
+
+**TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
