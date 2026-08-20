@@ -15295,3 +15295,91 @@ All implementation and validation remain non-production until separately
 authorized.
 
 Production remains HOLD.
+
+---
+
+## Sprint 10 Slice 7N — Controlled Lead Photographer Assignment — Implementation Checkpoint
+
+**Status:** IMPLEMENTATION VALIDATED / LOCAL BROWSER E2E VERIFIED / PRODUCTION HOLD
+
+### Governed identities
+
+- Technical design freeze commit:
+  `7b00c6a`
+- Implementation commit:
+  `ca18132`
+- Implementation parent:
+  `7b00c6a`
+- Implementation subject:
+  `feat: add controlled lead photographer assignment`
+- Working branch:
+  `architecture-rebuild`
+
+### Exact implementation boundary
+
+The Slice 7N implementation commit changes exactly:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+77 insertions, 0 deletions. No migration, test, or generated-file change is
+part of this commit.
+
+### Automated verification
+
+- targeted Prettier: clean
+- targeted ESLint: clean
+- `npx tsc --noEmit`: clean
+- `npm run build`: succeeded
+- `src/routeTree.gen.ts`: unchanged
+- `supabase test db --local supabase/tests`:
+  18 files / 1155 tests / PASS
+- `supabase db lint --local`:
+  zero `public`-schema issues
+
+### Runtime/browser acceptance
+
+Case A PASS: authorized Stage 8 first Lead Photographer assignment
+succeeded; pending state and success feedback observed; canonical
+current/history state refreshed without a full reload.
+
+Case B PASS: assignment persisted after a full browser refresh;
+first-assignment control suppressed; replacement/change-reason state
+surfaced.
+
+Authorization negative PASS: an actor with `booking.read` but without
+`booking.team.assign` could read booking and team evidence but had no
+mutation entry point.
+
+Stage negative PASS: a canonical Stage 7 (`advance_pending`) booking
+exposed no mutation entry point.
+
+Pending/duplicate protection PASS: pending disabled state observed and
+exactly one resulting current assignment recorded.
+
+Post-Stage-10 negative: NOT APPLICABLE UNDER CURRENT CANONICAL PRODUCT
+BOUNDARY — no canonical Stage 10 -> 11 transition exists in current
+Sprint 10 scope, and no direct journey-state manipulation was used to
+manufacture one.
+
+### Local fixture note
+
+Controlled local Supabase runtime fixtures were used for browser
+acceptance verification. They were not committed, seeded, deployed, or
+treated as production data.
+
+### Production containment
+
+Slice 7N does not authorize:
+
+- merge to Git `main`
+- Supabase branch merge
+- production database mutation
+- production deployment
+- production promotion
+- production release
+
+All implementation and validation remain non-production until separately
+authorized.
+
+Production remains HOLD.
