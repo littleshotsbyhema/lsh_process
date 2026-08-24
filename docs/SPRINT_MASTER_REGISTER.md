@@ -18975,3 +18975,110 @@ The only authorized compatibility update in that file is the repository-wide rol
 No additional permission, role grant, schema behavior, RPC behavior, application surface, journey transition or remote/Production operation is authorized by this amendment.
 
 Production remains HOLD.
+
+---
+
+## Sprint 11 Slice 1 Implementation Closeout — 2026-08-24
+
+Sprint 11 Slice 1 — **Canonical Shoot Completion Evidence Foundation** is implemented, fully validated locally and pushed to `origin/architecture-rebuild`.
+
+### Commit evidence
+
+- Technical Design Freeze: `ee2ad819472657a35142cfb22a8bafa2e12999ce` — `docs: freeze sprint 11 slice 1`
+- Regression-boundary amendment: `2a44d67d393d5703d087b26aa43d694f0cce59e6` — `docs: amend sprint 11 slice 1 regression boundary`
+- Implementation: `ba07f6d7717e8bcf9c8e1ff8a17fe24ae2231c02` — `feat: add shoot completion evidence foundation`
+
+Remote `architecture-rebuild` was independently reconciled to exact implementation SHA `ba07f6d7717e8bcf9c8e1ff8a17fe24ae2231c02`.
+
+### Implemented database foundation
+
+Slice 1 introduced:
+
+- exactly one new permission: `shoot.complete`;
+- `shoot.complete` granted exactly to Founder, Studio Manager and Photographer;
+- immutable `public.booking_shoot_completions` evidence with one canonical row per organization + booking;
+- database-controlled `recorded_at` and current-member `recorded_by` attribution;
+- tenant-safe booking and recorder foreign keys;
+- completion timestamp integrity requiring `completed_at <= recorded_at`;
+- immutable lifecycle enforcement rejecting normal UPDATE and DELETE;
+- forced RLS;
+- authenticated SELECT only through canonical `booking.read` plus booking-derived branch scope;
+- no authenticated direct INSERT, UPDATE or DELETE path;
+- controlled `public.record_booking_shoot_completion(uuid,timestamptz)` RPC;
+- authenticated actor, active-membership, `shoot.complete`, branch-scope, exact Stage 10 and current authoritative reserved-schedule gates;
+- exact same-timestamp replay returning the canonical existing row without duplicate evidence or audit;
+- conflicting completion timestamp replay rejection;
+- first-success audit action `booking.shoot_completion_recorded`;
+- generated Supabase type synchronization for the completion table and RPC.
+
+### Journey containment
+
+Slice 1 performs no:
+
+- `booking_journey_states` update;
+- `booking_stage_transitions` insert;
+- Stage 10 -> 11 advancement;
+- `mark_booking_shoot_completed` RPC;
+- generic journey mutation;
+- Stage 11 -> 12 advancement.
+
+A successfully recorded completion therefore leaves the booking at exact Stage 10 / `shoot_scheduled`.
+
+### Application and Safety containment
+
+Slice 1 introduced no:
+
+- `/bookings` completion control;
+- application server-function wrapper;
+- route-tree change;
+- `/safety` or `/prep` release;
+- shoot-day incident evidence;
+- post-session Safety or medical notes;
+- Safety Readiness mutation;
+- team-assignment mutation change;
+- shoot-schedule mutation change;
+- selection, editing, QC, gallery, delivery, heirloom, marketing, KPI, payment or revenue workflow.
+
+### Validation evidence
+
+Local verification completed successfully:
+
+- clean database reset through the Slice 1 migration: PASS;
+- dedicated Sprint 11 Slice 1 pgTAP: 54/54 PASS;
+- Sprint 10 extended-creative compatibility pgTAP after the authorized count amendment: 85/85 PASS;
+- full local pgTAP regression: 1209/1209 PASS across 19 files;
+- local database lint: PASS with no schema errors;
+- generated Supabase types regenerated from the local database;
+- targeted generated-type Prettier check: PASS;
+- `npx tsc --noEmit`: PASS;
+- production build: PASS with only known non-blocking pre-existing warnings;
+- `git diff --check`: PASS;
+- exact four-file implementation boundary after the separately committed governance amendment: PASS;
+- explicit Stage 10 -> 11 / later-slice containment scan: PASS.
+
+### Regression-boundary amendment
+
+The first full regression exposed one stale historical repository-wide assertion expecting 230 `role_permissions` mappings.
+
+Slice 1 intentionally adds three `shoot.complete` mappings, making the canonical total 233. The governance boundary was amended before modifying the Sprint 10 test. The compatibility change was limited exactly to:
+
+- `230::bigint` -> `233::bigint`;
+- assertion wording updated from the historical Slice 6A total to the current repository-wide total.
+
+No pgTAP plan, fixture, role grant or other Sprint 10 behavior was changed.
+
+### Known design boundary carried forward
+
+Completion evidence remains booking-level evidence and does not bind a `shoot_schedule_id`. Existing shoot-schedule mutation semantics remain unchanged in Slice 1. The controlled Stage 10 -> 11 design must consume the evidence conservatively and must not silently broaden Slice 1 semantics.
+
+### Next checkpoint
+
+The next bounded checkpoint is:
+
+**Sprint 11 Slice 2 — Controlled Stage 10 -> 11 / `shoot_completed` Advancement Gate**
+
+Slice 2 requires fresh repository discovery and a separate Technical Design Freeze before implementation.
+
+Production migration, deployment and release remain unauthorized.
+
+**SPRINT 11 SLICE 1 — IMPLEMENTED / LOCALLY VALIDATED / PUSHED / NOT RELEASED / PRODUCTION HOLD**
