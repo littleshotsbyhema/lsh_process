@@ -6001,6 +6001,28 @@ export type Database = {
         };
         Returns: undefined;
       };
+      mark_booking_shoot_completed: {
+        Args: { p_booking_id: string };
+        Returns: {
+          booking_reference: string;
+          branch_id: string | null;
+          created_at: string;
+          created_by: string;
+          family_id: string | null;
+          id: string;
+          lead_id: string | null;
+          organization_id: string;
+          source_quotation_id: string;
+          updated_at: string;
+          updated_by: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "bookings";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       mark_booking_shoot_scheduled: {
         Args: { p_booking_id: string };
         Returns: {
