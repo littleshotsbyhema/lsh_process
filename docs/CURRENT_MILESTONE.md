@@ -10,52 +10,98 @@ Do not rewrite the broader roadmap just to advance the active task.
 
 Treat the existing organization isolation, authentication, RBAC/RLS, audit foundation, and all Sprint 1-9 modules (organizations, families, contacts, children, memory profiles, leads/CRM, lead workspace, AI Memory Guide, packages/quotations/booking conversion, advance payments, booking confirmation, KPI) as authoritative and Complete/Released. Do not rebuild them. See `docs/SPRINT_MASTER_REGISTER.md` for the full sprint-by-sprint delivered scope and acceptance state.
 
-Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released. Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slice 1 — Canonical Shoot Completion Evidence Foundation is implemented, validated and remotely closed. Sprint 11 Slice 2 — Controlled Stage 10 -> 11 / `shoot_completed` Advancement Gate is now Technical Design Frozen only; implementation is not yet authorized. Production remains HOLD.
+Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released. Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slice 1 — Canonical Shoot Completion Evidence Foundation is implemented, validated and remotely closed. Sprint 11 Slice 2 — Controlled Stage 10 -> 11 / `shoot_completed` Advancement Gate is implemented, fully validated locally and pushed to `origin/architecture-rebuild`. It remains not released. The next bounded checkpoint is Sprint 11 Slice 3 — authenticated `/bookings` application integration, which requires fresh discovery and a separate Technical Design Freeze. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
-Sprint 11 Slice 2 — **Controlled Stage 10 -> 11 / `shoot_completed` Advancement Gate** is Technical Design Frozen from exact baseline `b2b016a3e0464d90b0c14cbb72453e0412a02f7e`.
+Sprint 11 Slice 2 — **Controlled Stage 10 -> 11 / `shoot_completed` Advancement Gate** is implemented, fully validated locally and pushed to `origin/architecture-rebuild`.
 
-Fresh repository discovery after the remotely closed Slice 1 confirmed:
+Governance freeze:
 
-- canonical Stage 10 is `shoot_scheduled`;
-- canonical Stage 11 is `shoot_completed`;
-- canonical Stage 12 is `selection_pending`;
-- Slice 1 provides one immutable `booking_shoot_completions` row per booking;
-- `record_booking_shoot_completion(uuid,timestamptz)` records evidence at exact Stage 10 but intentionally performs no journey advancement;
-- no Stage 10 -> 11 RPC, migration, generated API surface or dedicated pgTAP suite currently exists;
-- `booking.stage.advance` remains the canonical journey-advancement permission;
-- `shoot.complete` remains independently granted to Founder, Studio Manager and Photographer;
-- Photographer therefore records canonical completion evidence but does not gain generic journey-advancement authority;
-- Client Coordinator retains journey-advancement authority without gaining `shoot.complete`;
-- existing shoot rescheduling remains legal through exact Stage 10;
-- Slice 1 completion evidence is booking-level and does not bind a `shoot_schedule_id`.
+- `067a6a6b4f54a8acd0a12c66c36d4bb42072266b` — `docs: freeze sprint 11 slice 2`
 
-The frozen Slice 2 design resolves that final schedule ambiguity by making canonical completion evidence terminal for future shoot-schedule evidence. Once `booking_shoot_completions` exists for a booking, no new `booking_shoot_schedules` row may be appended. Existing immutable schedule history remains unchanged, and exact RPC replay that performs no new schedule insert remains outside that prohibition.
+Implementation:
 
-Slice 2 will introduce one controlled authenticated `mark_booking_shoot_completed(uuid)` RPC. It will consume Slice 1 completion evidence, require exact Stage 10 for first advancement, append the canonical `shoot_completed` transition, advance the canonical journey state to exact Stage 11 with optimistic version enforcement, emit one structural audit event, and support strict Stage 11 replay.
+- `aa4a1985a6cb3d1074b764a9a33a6e258c1d10de` — `feat: add shoot completed advancement gate`
 
-The advancing actor must hold `booking.stage.advance`; the actor is not required to hold `shoot.complete` and is not required to be the member who recorded completion evidence.
+Delivered Slice 2 behavior:
 
-Slice 2 will not re-run Stage 9 preparation, staffing, safety-readiness or signoff gates. It will not modify Slice 1 completion evidence, introduce shoot-day Safety evidence, expose application UI, or advance Stage 11 -> 12.
+- canonical completion evidence now terminalizes future shoot-schedule inserts;
+- immutable historical shoot-schedule evidence remains unchanged;
+- exact existing reschedule replay that performs no new insert remains valid;
+- no `shoot_schedule_id` was added to Slice 1 completion evidence;
+- no timestamp heuristic was introduced to bind completion to a schedule version;
+- `public.mark_booking_shoot_completed(uuid)` is the controlled authenticated Stage 10 -> 11 operation;
+- first advancement requires exact Stage 10 / `shoot_scheduled`;
+- exactly one canonical `booking_shoot_completions` row is required;
+- the current authoritative shoot-schedule tip must remain `reserved`;
+- the advancing actor must hold `booking.stage.advance`;
+- the advancing actor does not need `shoot.complete`;
+- Photographer therefore remains able to record completion evidence without gaining journey-advance authority;
+- Client Coordinator remains able to advance valid completion evidence without gaining `shoot.complete`;
+- first success appends exactly one `shoot_completed` transition;
+- canonical journey state advances to exact Stage 11 / `shoot_completed`;
+- journey version increments exactly once under optimistic identity/version enforcement;
+- first success emits one structural `booking.shoot_completed` audit event;
+- exact Stage 11 replay succeeds only with canonical completion evidence and exactly one valid Stage 10 -> 11 transition;
+- valid replay creates no additional transition, journey update or audit event;
+- Stage 9 readiness, staffing, Safety Readiness and signoff gates are not re-run;
+- Stage 11 -> 12 / `selection_pending` remains unimplemented.
 
-Implementation is not yet authorized.
+Frozen implementation files:
+
+1. `supabase/migrations/20260824234000_sprint11_stage10_11_gate_foundation.sql`
+2. `supabase/tests/sprint11_stage10_11_gate_test.sql`
+3. `src/integrations/supabase/types.ts`
+
+Validation evidence:
+
+- clean local database reset: PASS;
+- dedicated Sprint 11 Slice 2 pgTAP: **52/52 PASS**;
+- complete local pgTAP regression: **20 files / 1261 tests PASS**;
+- `npx supabase db lint --local`: PASS — `No schema errors found`;
+- generated Supabase types: exactly **22 insertions / 0 deletions**, limited to `mark_booking_shoot_completed`;
+- generated-types Prettier check: PASS;
+- `npx tsc --noEmit`: PASS;
+- production build: PASS;
+- `git diff --check`: PASS;
+- explicit Stage 11 -> 12 / later-stage implementation scan: PASS;
+- exact implementation-boundary review: PASS.
+
+Known build warnings remain pre-existing and non-blocking:
+
+- deprecated TanStack `createServerFn().inputValidator()` usage in older modules;
+- client chunk larger than 500 kB;
+- module-level `"use client"` directives ignored by Rollup in dependencies;
+- unknown Rollup `platform` input option warning;
+- Wrangler `main` override warning.
+
+No new permission or role grant was introduced.
+
+Slice 1 completion evidence schema was not changed.
+
+No application/UI code was changed in Slice 2.
+
+No remote Supabase migration, `--linked` operation, Production migration or Production deployment was performed.
+
+The next checkpoint is Sprint 11 Slice 3 — authenticated `/bookings` integration for the existing completion-recording operation and the new Stage 10 -> 11 advancement operation. Slice 3 requires fresh repository discovery and its own Technical Design Freeze before implementation.
 
 Production remains HOLD.
 
 ## Immediate Product Sequence
 
-Sprint 10 Slice 7R ends at exact Stage 10 / `shoot_scheduled`. Fresh repository discovery has now established the next dependency boundary.
+Sprint 11 Slice 1 provides canonical immutable Shoot Completion evidence.
 
-Sprint 11 Slice 1 — Canonical Shoot Completion Evidence Foundation is implemented, fully validated locally and pushed. It introduces completion evidence only and remains not released. It does not move a booking from Stage 10 to Stage 11 and it does not expose a browser control.
+Sprint 11 Slice 2 now provides the controlled Stage 10 -> 11 / `shoot_completed` advancement gate consuming that evidence, together with the completion-terminal shoot-schedule boundary. Slice 2 is implemented, fully validated locally and pushed, but remains not released.
 
-The intended sequence is:
+The intended next sequence is:
 
-1. Sprint 11 Slice 1 — canonical immutable Shoot Completion evidence;
-2. Sprint 11 Slice 2 — separately frozen controlled Stage 10 -> 11 / `shoot_completed` gate consuming that evidence;
-3. Sprint 11 Slice 3 — separately frozen authenticated `/bookings` integration.
+1. fresh discovery for Sprint 11 Slice 3;
+2. Sprint 11 Slice 3 Technical Design Freeze;
+3. authenticated `/bookings` application integration for completion recording and Stage 10 -> 11 advancement;
+4. separate later discovery for any Stage 11 -> 12 / selection workflow.
 
-Shoot-day Safety incidents, post-session restricted Safety notes, Stage 11 -> 12, selection, editing, QC, delivery, `/safety` release, `/prep` release, legacy-store reconciliation, Production migration and deployment remain outside Slice 1.
+Shoot-day Safety incidents, post-session restricted Safety notes, Stage 11 -> 12, selection, editing, QC, delivery, `/safety` release, `/prep` release, legacy-store reconciliation, Production migration and deployment remain outside the current checkpoint.
 
 Production remains HOLD.
 
