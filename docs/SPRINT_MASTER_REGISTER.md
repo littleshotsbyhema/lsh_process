@@ -17003,3 +17003,156 @@ No deployment.
 The freeze itself does NOT authorize implementation.
 
 **TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+
+---
+
+## Sprint 10 Slice 7P — Controlled Lead Videographer Assignment — Implementation Checkpoint
+
+**Status:** IMPLEMENTATION VALIDATED / LOCAL FIXTURE CLEANUP VERIFIED / PUSHED / PRODUCTION HOLD
+
+### Governed identities
+
+- Technical Design Freeze commit:
+  `11d9cc4` — `docs: freeze sprint 10 slice 7p`
+- Implementation commit:
+  `566fcbe` — `feat: add lead videographer booking assignment`
+- Working branch:
+  `architecture-rebuild`
+
+Implementation has been pushed and is confirmed present on
+`origin/architecture-rebuild`.
+
+### Business outcome
+
+An authorized actor can assign an eligible Lead Videographer to an eligible
+Stage 8-10 booking using either an internal organization member or an
+already-registered external creative, through the canonical
+`assign_booking_team_member` / `assign_booking_external_creative` RPC paths.
+
+Lead Videographer cardinality is **SINGULAR CURRENT HOLDER** — exactly one
+current Lead Videographer per booking, matching Lead Photographer's model,
+not Stylist's additive/multiple-current model. Any existing current holder
+must be explicitly replaced (with a change reason) before a different
+subject can become current; this slice's UI does not expose replacement.
+
+### Exact implementation boundary
+
+The Slice 7P implementation commit changes exactly:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+No other implementation file changed. No migration, test, or generated-file
+change is part of this commit, consistent with the Technical Design Freeze's
+"SCHEMA CHANGE EXPECTED: NO. MIGRATION EXPECTED: NO." determination.
+
+### Server action
+
+`assignLeadVideographer` in `src/lib/booking.functions.ts`.
+
+Input: `bookingId`, `subjectType` (`internal_member` | `external_creative`),
+`subjectId`. The server function fixes `assignment_role =
+'lead_videographer'`, `is_assigned = true`, `change_reason = undefined` —
+the browser cannot supply any of these. Internal subjects route through
+`assign_booking_team_member`; external subjects route through
+`assign_booking_external_creative`. Both RPCs are reused entirely
+unmodified.
+
+### UI / eligibility behavior
+
+In `BookingTeamCandidatePicker` (`src/routes/_authenticated/bookings.tsx`):
+an "Assign as Lead Videographer" button renders per candidate when
+`(candidate.subject_type === "internal_member" || candidate.subject_type
+=== "external_creative") && candidate.eligible_assignment_roles.includes
+("lead_videographer") && canAssignLeadVideographer`, where
+`canAssignLeadVideographer = !rolesRequiringChangeReason.has
+("lead_videographer")` — reusing the existing `rolesRequiringChangeReason`
+set unchanged. The button disappears booking-wide once any current holder
+exists, matching Lead Photographer's existing behavior. Success/error
+handling follows the identical toast-plus-`onAssigned()` pattern as the
+existing Lead Photographer and Stylist mutations.
+
+### Local Browser Acceptance
+
+Browser acceptance cases A-H were performed and recorded in the prior
+Slice 7P project session. This resumed session did not re-run the browser
+acceptance pass; it independently reconfirmed the resulting database state
+before cleanup (Booking A held exactly one current Lead Videographer via an
+internal `assigned_member_id`; Booking B held exactly one current Lead
+Videographer via an external `assigned_external_creative_id`; Booking C
+held zero), which is consistent with Cases A, B, D, and H below.
+
+- **Case A — PASS.** Eligible Lead Videographer candidate was visible with
+  the correct assignment control.
+- **Case B — PASS.** Internal Lead Videographer assignment succeeded and
+  persisted.
+- **Case C — PASS.** Canonical database assignment was verified read-only.
+- **Case D — PASS.** Singular-current-holder cardinality was verified in UI
+  and database state.
+- **Case E — N/A.** Lead Videographer cardinality is singular, so
+  simultaneous multiple-current holders is not an applicable acceptance
+  case.
+- **Case F — PASS.** A restricted actor was shown "Waiting for your studio
+  role", with no assignment controls available.
+- **Case G — PASS.** An invalid-stage booking was verified with zero
+  current assignments / no valid assignment state.
+- **Case H — PASS.** External-creative Lead Videographer assignment
+  succeeded and became current.
+
+### Local validation
+
+Local implementation review confirmed the two-file boundary, the RPC
+routing, and the eligibility-gating logic exactly as specified in the
+Technical Design Freeze. Final diff review, commit, and push all passed.
+
+### Local fixture cleanup
+
+After local browser E2E acceptance, local-only runtime fixtures created
+under Slice 7P's Technical Design Freeze evidence gathering were fully
+removed:
+
+- **SQL fixture cleanup:** PASS. A fixture-scoped, dependency-ordered local
+  SQL cleanup script executed inside a single transaction, using a
+  transaction-local trigger bypass only where required by immutable-
+  evidence guard triggers, with every delete scoped to exact fixture UUIDs
+  (no broad delete, no TRUNCATE, no DROP, no schema mutation). All
+  post-delete zero-state assertions passed, and the script's own
+  baseline/non-fixture data integrity assertion passed. The transaction
+  COMMITTED.
+- **Auth fixture cleanup:** PASS. Three local Supabase Auth fixture users
+  were removed via the local Admin API (loopback-only, `127.0.0.1:54321`),
+  using `jq` structural exact-email matching to validate exactly one
+  matching user per fixture email for all three emails before any deletion
+  began (fail-closed as a complete set), then deleting only the three
+  structurally resolved UUIDs. Post-cleanup verification independently
+  confirmed all three exact fixture emails resolve to zero local auth
+  users.
+- During this session's helper review, revision, execution, and cleanup,
+  no `SERVICE_ROLE_KEY`, bearer/JWT value, password, or auth UUID was
+  printed at any point.
+- No remote Supabase project was accessed or mutated at any point in this
+  session. No `--linked` flag was used.
+
+### Security / containment
+
+`booking.team.assign` remains the canonical permission. The canonical RPCs
+remain authoritative for authentication, active membership, branch/org
+isolation, Stage 8-10 containment, target eligibility, locking, idempotency,
+and audit. The browser cannot supply an arbitrary assignment role.
+
+No remote Supabase mutation occurred. No production mutation occurred. No
+Git `main` merge occurred. No deployment occurred.
+
+**Production remains HOLD.**
+
+### Unresolved
+
+No unresolved Slice 7P implementation defect is recorded as part of this
+checkpoint.
+
+### Next checkpoint
+
+Lead Photographer (Slice 7N), Stylist (Slice 7O), and Lead Videographer
+(Slice 7P) are now implemented. Next checkpoint requires repository
+discovery against the remaining canonical Stage 9 -> 10 prerequisites. No
+slice beyond 7P is authorized or labeled here.
