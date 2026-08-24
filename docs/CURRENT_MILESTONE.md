@@ -22,7 +22,11 @@ Production remains HOLD for this and all Sprint 10 work unless separately author
 
 Lead Photographer (Slice 7N), Stylist (Slice 7O), Lead Videographer (Slice 7P), and controlled Safety Readiness / Newborn formal sign-off (Slice 7Q) are now implemented in the canonical booking workspace. The existing database `mark_booking_shoot_scheduled(uuid)` gate already consumes the authoritative schedule, preparation, staffing, commercial Video/Reels requirement, category-specific readiness, and qualifying Newborn sign-off evidence, but Slice 7Q deliberately does not expose that Stage 9 -> 10 mutation through the application.
 
-Next checkpoint requires a separate repository discovery and Technical Design Freeze for controlled application exposure of the canonical Stage 9 -> 10 advancement operation. No Stage 9 -> 10 application mutation or UI is implementation-authorized by Slice 7Q.
+Repository discovery for the next checkpoint is complete. **Sprint 10 Slice 7R — Controlled Stage 9 -> 10 Shoot Scheduled Advancement** is technically frozen for application exposure of the already-canonical `mark_booking_shoot_scheduled(uuid)` operation.
+
+The frozen implementation boundary is exactly `src/lib/booking.functions.ts` and `src/routes/_authenticated/bookings.tsx`. No database, migration, RPC, RLS, permission, generated-type, route-tree, legacy-route, or Production change is authorized. The browser must not reproduce the Stage 9 -> 10 eligibility gate; exact evidence evaluation remains authoritative inside the existing database RPC.
+
+Slice 7R implementation is not yet authorized. Production remains HOLD.
 
 ## Known Debt Outside This Checkpoint's Boundary
 

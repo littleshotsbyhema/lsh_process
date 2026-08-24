@@ -17772,3 +17772,345 @@ No remote Supabase command, linked database mutation, Production migration, depl
 The next checkpoint must be separately discovered and technically frozen before exposing the existing canonical `mark_booking_shoot_scheduled(uuid)` Stage 9 -> 10 operation through application server functions or UI.
 
 Slice 7Q does not authorize Stage 10 -> 11 behavior, shoot-completion workflow, `/safety` release, `/prep` release, legacy-store reconciliation, or broader Production release.
+
+## Sprint 10 Slice 7R — Controlled Stage 9 -> 10 Shoot Scheduled Advancement — Technical Design Freeze
+
+Technical design frozen on 2026-08-24.
+
+Slice 7R is the controlled application exposure of the already-implemented canonical Stage 9 -> 10 journey operation:
+
+`mark_booking_shoot_scheduled(uuid)`
+
+This slice does not create a new journey gate. It exposes the existing server-authoritative gate through the canonical authenticated `/bookings` workspace.
+
+### 1. Discovery baseline
+
+Repository discovery after Slice 7Q established:
+
+- `public.mark_booking_shoot_scheduled(uuid)` already exists canonically;
+- the RPC already returns `public.bookings`;
+- the RPC already appears in generated Supabase types;
+- `src/lib/booking.functions.ts` has no application wrapper for the RPC;
+- `src/routes/_authenticated/bookings.tsx` has no invocation or Stage 9 -> 10 control;
+- the booking workspace already resolves `booking.stage.advance` into `canAdvanceBookingStage`;
+- the existing Stage 9 workspace already exposes canonical preparation, team-assignment and restricted Safety Readiness operations;
+- Slice 7Q intentionally left final Stage 9 -> 10 advancement unexposed.
+
+No schema discovery identified a need for a migration, generated-type regeneration, permission change, or new read-model RPC.
+
+### 2. Canonical database gate remains authoritative
+
+Slice 7R must not duplicate, approximate, predict, or weaken the Stage 9 -> 10 eligibility rules in browser code.
+
+The existing `mark_booking_shoot_scheduled(uuid)` RPC remains the sole authority for determining whether advancement is allowed.
+
+The RPC already enforces, among its canonical conditions:
+
+- authenticated actor;
+- active organization membership;
+- `booking.stage.advance`;
+- booking-derived branch scope;
+- exact Stage 9 / `pre_shoot_preparation`;
+- canonical Stage 10 replay semantics;
+- exactly one authoritative accepted-package service category;
+- current authoritative reserved shoot schedule;
+- exactly one canonical preparation instance;
+- exact canonical preparation checklist structure;
+- all required preparation items satisfied;
+- current Lead Photographer;
+- at least one current Stylist;
+- conditional current Lead Videographer when structured accepted-quotation Video/Reels evidence requires it;
+- live operational eligibility for required internal assignees;
+- current same-organization external creative validity where external assignment is used;
+- current category-matching Safety Readiness;
+- the RPC's explicit readiness-state checks for Newborn, Maternity, and Sitter;
+- qualifying current-revision Newborn formal sign-off;
+- exact Stage 9 -> 10 transition;
+- optimistic journey version update;
+- one structural `booking.shoot_scheduled` audit event.
+
+Application code must not reimplement those rules as an authorization decision.
+
+### 3. Least-privilege application rule
+
+Application visibility for the advancement control is intentionally narrower than reproducing the database evidence gate.
+
+The browser may require only:
+
+- current journey stage exactly `stage_order = 9`;
+- current journey stage exactly `stage_key = 'pre_shoot_preparation'`;
+- workspace permission signal `canAdvanceBookingStage = true`.
+
+The application must NOT additionally require any of the following merely to expose or invoke the controlled Stage 9 -> 10 operation:
+
+- `prep.read`;
+- `prep.write`;
+- `safety.read`;
+- `safety.write`;
+- `safety.signoff`;
+- `booking.team.assign`;
+- `shoot.schedule`;
+- browser-derived preparation completeness;
+- browser-derived staffing completeness;
+- browser-derived Video/Reels requirement;
+- browser-derived Safety readiness state;
+- browser-derived Newborn sign-off validity.
+
+This preserves least privilege. An actor permitted to advance the journey must not be forced to receive restricted Safety evidence merely so browser code can decide whether the database operation may be attempted.
+
+The canonical RPC evaluates all required evidence independently.
+
+### 4. Server-function contract
+
+`src/lib/booking.functions.ts` adds one new application schema:
+
+`markBookingShootScheduledSchema`
+
+Its only field is:
+
+- `bookingId: uuid`
+
+The application adds one authenticated POST server function:
+
+`markBookingShootScheduled`
+
+The handler:
+
+1. runs through existing `requireSupabaseAuth`;
+2. validates only `bookingId`;
+3. invokes `mark_booking_shoot_scheduled` with:
+   - `p_booking_id: data.bookingId`;
+4. uses the existing canonical authenticated user-scoped Supabase client;
+5. surfaces the canonical RPC error through the existing `throwIfError` pattern;
+6. fails if the RPC unexpectedly returns no row;
+7. returns the authoritative `BookingRow`.
+
+The browser must not send:
+
+- expected journey version;
+- service category;
+- preparation state;
+- schedule state/version;
+- team-assignment state;
+- Video/Reels requirement;
+- Safety state;
+- Comfort state;
+- readiness revision;
+- sign-off identity;
+- sign-off authority;
+- actor/member identity;
+- branch identity;
+- destination stage.
+
+Those values remain server-derived canonical evidence.
+
+### 5. Booking-workspace control
+
+All Slice 7R UI is contained within:
+
+`src/routes/_authenticated/bookings.tsx`
+
+A dedicated Stage 9 -> 10 control is exposed only when:
+
+- `currentOrder === 9`;
+- `currentStage?.stage_key === 'pre_shoot_preparation'`;
+- `data.canAdvanceBookingStage === true`.
+
+The control must not appear at Stage 8 or earlier.
+
+The control must not appear at Stage 10 or later.
+
+The control must remain independent of whether restricted Safety values are visible to the current actor.
+
+### 6. Control semantics and copy
+
+The control is a dedicated workflow action, not a generic journey editor.
+
+Recommended primary action label:
+
+`Mark shoot scheduled`
+
+Recommended supporting copy must state that:
+
+- the action attempts the exact canonical Stage 9 -> 10 transition;
+- the database revalidates the complete shoot-readiness gate;
+- clicking the action does not bypass incomplete preparation, staffing, commercial Video/Reels, Safety Readiness, or Newborn sign-off requirements;
+- no Stage 10 -> 11 transition is performed.
+
+No generic stage dropdown, destination-stage input, or arbitrary transition control is authorized.
+
+### 7. Mutation behavior
+
+The UI uses the existing TanStack mutation pattern.
+
+On success:
+
+- show a success toast such as `Shoot marked scheduled.`;
+- invalidate/refetch the canonical `booking-workspace` query;
+- resolve the resulting journey stage from canonical workspace data.
+
+The RPC returns the booking row, but application state must not infer Stage 10 from that return value alone. The journey workspace refetch remains authoritative for the visible stage transition.
+
+On failure:
+
+- surface the existing canonical RPC error through the normal error-toast pattern;
+- do not reinterpret the error as a client-side readiness decision;
+- do not mutate local journey state optimistically;
+- do not manufacture missing evidence;
+- do not automatically retry by changing evidence.
+
+### 8. Replay semantics
+
+The existing canonical RPC already supports authorized exact Stage 10 replay only when the canonical Stage 9 -> 10 transition history is valid.
+
+Slice 7R UI normally hides the control after canonical workspace refresh because the booking is no longer at Stage 9.
+
+No special browser replay button is required.
+
+Direct/replayed server invocation continues to rely entirely on the RPC's canonical idempotency and integrity behavior.
+
+### 9. Restricted Safety privacy boundary
+
+Slice 7R does not expand Safety visibility.
+
+An actor with `booking.stage.advance` but without `safety.read` may be allowed to invoke the Stage 9 -> 10 operation without seeing Safety Readiness values.
+
+The database may consume restricted Safety evidence internally because the canonical gate already owns that evaluation.
+
+Application errors may surface the canonical RPC's generic gate-failure messages. For an actor without `safety.read`, such a message may indicate that the readiness gate is unmet, but application code must not enrich that message with restricted readiness values, revision data, sign-off data, signer identity, or other Safety evidence.
+
+### 10. Exact implementation file boundary
+
+Slice 7R implementation is frozen to exactly:
+
+- `src/lib/booking.functions.ts`;
+- `src/routes/_authenticated/bookings.tsx`.
+
+No other implementation file is expected to change.
+
+If either file proves insufficient during implementation: **STOP.**
+
+Do not broaden scope. Amend this Technical Design Freeze separately before continuing.
+
+### 11. Database / migration decision
+
+**SCHEMA CHANGE EXPECTED: NO. MIGRATION EXPECTED: NO.**
+
+Slice 7R does not change:
+
+- `mark_booking_shoot_scheduled(uuid)`;
+- booking journey tables;
+- booking transition tables;
+- preparation tables;
+- booking-team tables;
+- external-creative tables;
+- commercial operational requirements;
+- Safety Readiness tables;
+- Safety sign-off tables;
+- RLS;
+- ACLs;
+- role grants;
+- permissions;
+- audit functions;
+- generated Supabase types.
+
+No new database read-model RPC is authorized.
+
+### 12. Route and legacy containment
+
+Slice 7R does not add, remove, or rename a route.
+
+Therefore no route-tree regeneration is expected.
+
+The following remain outside the implementation boundary:
+
+- `src/routes/_authenticated/safety.tsx`;
+- `src/routes/_authenticated/prep.tsx`;
+- `src/lib/access.ts`;
+- `src/lib/mock-data.ts`;
+- `src/store/useStore.ts`;
+- `src/routeTree.gen.ts`.
+
+`/safety` and `/prep` remain contained legacy routes.
+
+### 13. Browser acceptance cases
+
+- **A — Eligible Stage 9 control.** A Stage-9 booking viewed by an actor with `booking.stage.advance` exposes the dedicated `Mark shoot scheduled` control.
+- **B — Successful advancement.** With all canonical database gate requirements satisfied, invoking the control advances exactly to Stage 10 / `shoot_scheduled`; workspace refresh shows the new canonical stage.
+- **C — Incomplete preparation rejection.** With an unsatisfied required preparation item, the control may still be visible to an authorized advancing actor, but the canonical RPC rejects advancement and the booking remains Stage 9.
+- **D — Staffing rejection.** Missing or invalid required staffing causes canonical RPC rejection without journey movement.
+- **E — Safety/readiness rejection.** For the categories whose Stage 9 -> 10 readiness-state rules are explicitly enforced by the RPC (Newborn, Maternity, and Sitter), invalid or incomplete applicable readiness causes canonical RPC rejection without journey movement. The application adds no restricted Safety evidence to the canonical error.
+- **F — Restricted-reader least privilege.** An actor with `booking.stage.advance` but without `safety.read` receives no restricted Safety values, revisions, or sign-off evidence yet may invoke the Stage 9 -> 10 operation; the database gate remains authoritative. If the RPC rejects the attempt, the application surfaces only the canonical gate error and does not add the underlying restricted Safety evidence.
+- **G — Permission containment.** A Stage-9 actor without `booking.stage.advance` receives no Stage 9 -> 10 control; direct RPC invocation remains server-denied.
+- **H — Stage containment.** Stage 8 and Stage 10 bookings expose no Stage 9 -> 10 control.
+- **I — Canonical refresh.** Successful mutation does not optimistically invent Stage 10; the visible stage is obtained from refreshed canonical workspace state.
+- **J — No Stage 10 -> 11.** Slice 7R performs no Shoot Scheduled -> Shoot Completed transition and exposes no Stage 10 -> 11 control.
+
+### 14. Verification requirements
+
+Use the governed PRODUCT IMPLEMENTATION verification profile without reduction:
+
+- targeted formatting check for changed implementation files only;
+- targeted ESLint;
+- `npx tsc --noEmit`;
+- `npm run build`;
+- full local pgTAP suite;
+- `npx supabase db lint --local`;
+- `git diff --check`;
+- exact two-file implementation-boundary verification;
+- route-tree unchanged verification;
+- legacy/non-boundary containment verification;
+- secret/fixture hygiene;
+- browser acceptance A–J;
+- server-side permission/stage enforcement checks where browser visibility alone cannot prove the invariant.
+
+No remote Supabase command and no `--linked` command is authorized.
+
+### 15. Explicit exclusions
+
+Slice 7R does not implement:
+
+- a new Stage 9 -> 10 database gate;
+- changes to the existing Stage 9 -> 10 rules;
+- client-side readiness aggregation;
+- client-side staffing aggregation;
+- client-side Video/Reels requirement inference;
+- client-side Newborn sign-off qualification;
+- generic booking-stage mutation;
+- arbitrary destination-stage selection;
+- Stage 10 -> 11;
+- Shoot Completed workflow;
+- shoot-day Safety evidence;
+- capacity rules;
+- availability rules;
+- schedule-overlap rules;
+- external calendar-provider integration;
+- `/safety` runtime release;
+- `/prep` runtime release;
+- legacy store reconciliation;
+- permission expansion;
+- role-grant expansion;
+- new RLS;
+- new RPCs;
+- generated-type changes;
+- database migrations;
+- Production backfill;
+- CI changes;
+- deployment.
+
+### 16. Production containment
+
+No remote Supabase mutation.
+No Production mutation.
+No Git `main` merge.
+No deployment.
+
+**Production remains HOLD.**
+
+### 17. Implementation authorization status
+
+This Technical Design Freeze records the approved architecture boundary only.
+
+It does not itself authorize implementation.
+
+**TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
