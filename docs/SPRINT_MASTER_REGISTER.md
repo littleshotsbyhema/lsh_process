@@ -19082,3 +19082,492 @@ Slice 2 requires fresh repository discovery and a separate Technical Design Free
 Production migration, deployment and release remain unauthorized.
 
 **SPRINT 11 SLICE 1 — IMPLEMENTED / LOCALLY VALIDATED / PUSHED / NOT RELEASED / PRODUCTION HOLD**
+
+---
+
+## Sprint 11 Slice 2 Technical Design Freeze — 2026-08-24
+
+### Checkpoint
+
+**Sprint 11 Slice 2 — Controlled Stage 10 -> 11 / `shoot_completed` Advancement Gate**
+
+Technical Design Freeze baseline:
+
+`b2b016a3e0464d90b0c14cbb72453e0412a02f7e` — `docs: close sprint 11 slice 1`
+
+This checkpoint is a design freeze only.
+
+Implementation is not yet authorized.
+
+Production remains HOLD.
+
+### Fresh repository discovery
+
+Discovery from the exact Slice 1 closeout baseline confirms:
+
+1. The canonical journey catalogue already defines:
+   - Stage 10 — `shoot_scheduled`;
+   - Stage 11 — `shoot_completed`;
+   - Stage 12 — `selection_pending`.
+
+2. Sprint 11 Slice 1 introduced:
+   - `shoot.complete`;
+   - immutable `public.booking_shoot_completions`;
+   - controlled `public.record_booking_shoot_completion(uuid,timestamptz)`;
+   - authenticated read containment;
+   - one completion row per organization + booking;
+   - no journey advancement.
+
+3. There is currently no:
+   - `mark_booking_shoot_completed(uuid)` RPC;
+   - Stage 10 -> 11 migration;
+   - Stage 10 -> 11 dedicated pgTAP suite;
+   - generated Stage 10 -> 11 RPC type;
+   - application wrapper or `/bookings` completion-advancement control.
+
+4. `booking.stage.advance` is already the canonical permission for journey advancement.
+
+5. `booking.stage.advance` and `shoot.complete` intentionally represent different authorities:
+   - Founder: both;
+   - Studio Manager: both;
+   - Client Coordinator: `booking.stage.advance`, not `shoot.complete`;
+   - Photographer: `shoot.complete`, not `booking.stage.advance`.
+
+6. Current shoot-schedule mutation semantics allow authoritative rescheduling while a booking is at Stage 10 / `shoot_scheduled`.
+
+7. Slice 1 completion evidence intentionally does not store a `shoot_schedule_id`.
+
+Therefore, without additional containment, a booking could record canonical completion evidence and then append a later reserved schedule while remaining at Stage 10. A Stage 10 -> 11 gate could not determine which immutable schedule version the booking-level completion row represented.
+
+### Frozen architectural decision — completion terminalizes scheduling
+
+Once canonical `public.booking_shoot_completions` evidence exists for an organization + booking, no new `public.booking_shoot_schedules` row may be appended for that booking.
+
+This is a scheduling-write terminality rule, not a historical rewrite.
+
+The Slice 2 migration will harden the existing internal `public.lsh_booking_shoot_schedule_guard()` so that an INSERT for a booking with canonical completion evidence raises and no new schedule version is created.
+
+The following remain unchanged:
+
+- all existing schedule rows;
+- immutable schedule lineage;
+- schedule schema;
+- schedule version numbering;
+- reserved/proposed state vocabulary;
+- existing authorization;
+- existing Stage 8 through 10 rescheduling semantics before completion exists;
+- exact replay behavior where an existing canonical RPC returns already-existing schedule evidence without performing a new INSERT.
+
+No `shoot_schedule_id` will be added to Slice 1 completion evidence.
+
+No timestamp inference will be introduced to manufacture a schedule/completion binding.
+
+No evidence repair or backfill is authorized.
+
+### Frozen Stage 10 -> 11 RPC
+
+Slice 2 will introduce:
+
+`public.mark_booking_shoot_completed(p_booking_id uuid)`
+
+Return type:
+
+`public.bookings`
+
+Function properties:
+
+- `LANGUAGE plpgsql`;
+- `SECURITY DEFINER`;
+- `SET search_path = ''`.
+
+Execution boundary:
+
+- revoke from `PUBLIC`;
+- revoke from `anon`;
+- revoke from `authenticated` before explicit grant;
+- revoke from `service_role`;
+- grant EXECUTE only to `authenticated`.
+
+No new permission is introduced.
+
+No role-permission mapping is changed.
+
+### Frozen authorization semantics
+
+For first-time Stage 10 -> 11 advancement, the RPC must require:
+
+1. non-null `p_booking_id`;
+2. authenticated `auth.uid()`;
+3. existing canonical booking;
+4. current active organization membership;
+5. `booking.stage.advance` for the booking branch;
+6. canonical branch scope when the booking has a branch.
+
+The RPC must **not** require:
+
+- `shoot.complete`;
+- the advancing actor to equal `booking_shoot_completions.recorded_by`;
+- Photographer role;
+- Client Coordinator role directly;
+- any direct role-name test.
+
+Authorization is capability-based.
+
+This preserves separation of duties:
+
+- an authorized Photographer may record immutable completion evidence;
+- an authorized Client Coordinator may subsequently advance the booking;
+- neither capability silently implies the other.
+
+### Frozen synchronization and lock order
+
+First-success mutation must serialize on the booking as the synchronization root.
+
+Required lock order:
+
+1. authoritative `bookings` row — `FOR UPDATE`;
+2. exactly one `booking_journey_states` row — `FOR UPDATE`;
+3. canonical Slice 1 `booking_shoot_completions` row — `FOR UPDATE`;
+4. current authoritative shoot-schedule tip — `FOR UPDATE`.
+
+The booking lock must remain the cross-operation serialization root shared with existing schedule/completion mutations.
+
+### Frozen current-state semantics
+
+The RPC must resolve exactly one canonical current journey state and one active current stage.
+
+First advancement is legal only when:
+
+- `stage_order = 10`; and
+- `stage_key = 'shoot_scheduled'`.
+
+Any other first-call source stage must fail.
+
+The RPC must not use a generic “next stage” calculation.
+
+The destination must be resolved explicitly as:
+
+- `stage_order = 11`;
+- `stage_key = 'shoot_completed'`;
+- active.
+
+### Frozen completion-evidence gate
+
+Before first Stage 10 -> 11 advancement, exactly one canonical Slice 1 completion row must exist for the booking.
+
+The RPC must consume that row as evidence only.
+
+It must not:
+
+- rewrite it;
+- supersede it;
+- delete it;
+- duplicate it;
+- alter `completed_at`;
+- alter `recorded_at`;
+- alter `recorded_by`.
+
+The RPC must not re-run `record_booking_shoot_completion`.
+
+### Frozen schedule gate
+
+For first Stage 10 -> 11 advancement, the current authoritative schedule tip must still exist and must be `reserved`.
+
+Because Slice 2 terminalizes future schedule inserts after completion evidence exists, this check consumes the stable current schedule state without inventing a schedule-version binding.
+
+The RPC must not compare timestamps to infer which schedule was completed.
+
+The RPC must not add a schedule foreign key to completion evidence.
+
+### Frozen Stage 11 replay semantics
+
+If the booking is already exact Stage 11 / `shoot_completed`, the RPC may return successfully only as strict canonical replay.
+
+Replay must prove:
+
+- exactly one canonical completion evidence row exists;
+- exactly one Stage 10 -> 11 transition exists for this booking;
+- the transition has:
+  - source Stage 10 / `shoot_scheduled`;
+  - destination Stage 11 / `shoot_completed`;
+  - `transition_key = 'shoot_completed'`.
+
+If replay history is missing, duplicated, malformed or points to different stage identities, the RPC must fail.
+
+A valid replay must:
+
+- return the booking;
+- append no transition;
+- update no journey state;
+- append no audit event.
+
+The RPC must not re-run Stage 9 readiness or staffing evidence during replay.
+
+### Frozen transition mutation
+
+On first success, Slice 2 must append exactly one `public.booking_stage_transitions` row:
+
+- organization = booking organization;
+- booking = target booking;
+- from stage = current exact Stage 10;
+- to stage = canonical exact Stage 11;
+- `transition_key = 'shoot_completed'`;
+- `transitioned_at` = one function-controlled timestamp;
+- `transitioned_by` = current active organization member.
+
+No generic transition key is authorized.
+
+### Frozen journey-state mutation
+
+After appending the transition, update the canonical `booking_journey_states` row:
+
+- `current_stage_id` -> canonical Stage 11;
+- `stage_entered_at` -> the same transition timestamp;
+- `version` -> current version + 1;
+- `updated_by` -> advancing member.
+
+The update must use optimistic identity/version predicates against the state loaded under lock and must verify exactly one row changed.
+
+No booking shell identity field may be rewritten.
+
+### Frozen audit semantics
+
+First success appends exactly one non-sensitive structural audit event:
+
+`booking.shoot_completed`
+
+Audit entity:
+
+- entity type: `booking`;
+- entity id: booking id;
+- booking branch scope preserved.
+
+Permitted structural context includes:
+
+- booking id;
+- completion id;
+- completion timestamp;
+- transition key `shoot_completed`;
+- prior journey version;
+- resulting journey version.
+
+The audit payload must not contain:
+
+- Safety notes;
+- medical information;
+- family free text;
+- session incident narratives;
+- arbitrary user-supplied notes;
+- selection/editing/delivery data.
+
+Valid replay appends no duplicate audit event.
+
+### Explicit non-revalidation boundary
+
+The Stage 10 -> 11 gate must not re-evaluate the Stage 9 -> 10 readiness package.
+
+Specifically, it must not re-run:
+
+- preparation taxonomy;
+- preparation checklist satisfaction;
+- Safety Readiness;
+- newborn signoff;
+- maternity/sitter readiness semantics;
+- current Lead Photographer eligibility;
+- Stylist eligibility;
+- Videographer requirements;
+- commercial operational requirements.
+
+Those conditions established entry into Stage 10.
+
+Slice 2 consumes only canonical completion evidence plus the stable reserved schedule boundary needed for Shoot Completed advancement.
+
+### Frozen implementation files
+
+Implementation is limited to exactly:
+
+1. `supabase/migrations/20260824234000_sprint11_stage10_11_gate_foundation.sql`
+2. `supabase/tests/sprint11_stage10_11_gate_test.sql`
+3. `src/integrations/supabase/types.ts`
+
+If implementation proves that any fourth file is required, the governance boundary must be amended before that file is modified.
+
+### Frozen generated type surface
+
+Local Supabase type generation is authorized only after the migration and dedicated regression are green.
+
+Expected generated API addition:
+
+`mark_booking_shoot_completed`
+
+with:
+
+- Args: `{ p_booking_id: string }`;
+- Returns: canonical `bookings` row;
+- no unrelated generated type changes.
+
+### Dedicated pgTAP acceptance matrix
+
+The Slice 2 dedicated suite must cover, at minimum:
+
+A. migration objects exist with exact signature;
+
+B. no new permission is introduced;
+
+C. no role-permission mapping is added or removed;
+
+D. authenticated EXECUTE exists for `mark_booking_shoot_completed(uuid)`;
+
+E. PUBLIC EXECUTE denied;
+
+F. anon EXECUTE denied;
+
+G. service-role application EXECUTE denied;
+
+H. SECURITY DEFINER present;
+
+I. empty search path present;
+
+J. null booking id rejected;
+
+K. unauthenticated call rejected;
+
+L. missing booking rejected;
+
+M. inactive member rejected;
+
+N. actor without `booking.stage.advance` rejected;
+
+O. branch-scope violation rejected;
+
+P. zero current journey states rejected;
+
+Q. malformed/multiple current-state structure rejected where structurally reproducible;
+
+R. Stage 9 first-call source rejected;
+
+S. Stage 12 or later first-call source rejected;
+
+T. exact Stage 10 without completion evidence rejected;
+
+U. exact Stage 10 with malformed/missing authoritative reserved schedule rejected;
+
+V. Photographer can record canonical completion evidence but cannot advance solely from `shoot.complete`;
+
+W. Client Coordinator can advance valid completion evidence without holding `shoot.complete`;
+
+X. Founder valid advancement succeeds;
+
+Y. Studio Manager valid advancement succeeds;
+
+Z. success resolves exact Stage 11 / `shoot_completed`;
+
+AA. success appends exactly one `shoot_completed` transition;
+
+AB. transition source is exact Stage 10;
+
+AC. transition destination is exact Stage 11;
+
+AD. journey version increments exactly once;
+
+AE. `stage_entered_at` matches transition timestamp;
+
+AF. advancing actor attribution is canonical;
+
+AG. exactly one `booking.shoot_completed` audit event is added;
+
+AH. audit remains structural/non-sensitive;
+
+AI. completion evidence remains byte-for-byte logically unchanged after advancement;
+
+AJ. shoot schedule history remains unchanged after advancement;
+
+AK. no Stage 11 -> 12 transition is created;
+
+AL. valid Stage 11 replay returns successfully;
+
+AM. valid Stage 11 replay adds no transition;
+
+AN. valid Stage 11 replay adds no audit;
+
+AO. Stage 11 replay with missing transition history rejected;
+
+AP. Stage 11 replay with malformed transition history rejected;
+
+AQ. Stage 11 replay with missing completion evidence rejected where structurally reproducible;
+
+AR. after completion evidence is recorded, a new shoot-schedule row cannot be appended;
+
+AS. completion-before-schedule-terminalization does not rewrite historical schedule evidence;
+
+AT. pre-completion Stage 10 rescheduling semantics remain available;
+
+AU. exact replay of already-existing schedule evidence does not create a post-completion schedule row;
+
+AV. no timestamp-based completion-to-schedule inference is introduced;
+
+AW. no `shoot_schedule_id` is added to `booking_shoot_completions`;
+
+AX. no Stage 12 / selection surface is introduced;
+
+AY. complete local regression remains green.
+
+### Full verification required
+
+Before implementation acceptance:
+
+- clean local database reset;
+- dedicated Slice 2 pgTAP PASS;
+- complete local pgTAP regression PASS;
+- `npx supabase db lint --local` PASS;
+- regenerate Supabase types locally;
+- generated-types semantic diff review;
+- targeted formatting check for generated types;
+- `npx tsc --noEmit` PASS;
+- production build PASS;
+- `git diff --check` PASS;
+- exact implementation-boundary review;
+- explicit forbidden-surface scan for Stage 11 -> 12 / `selection_pending` implementation.
+
+Any unrelated regression requires a separately documented boundary amendment before repair.
+
+### Explicit exclusions
+
+Slice 2 does not authorize:
+
+- `/bookings` UI changes;
+- `src/lib/booking.functions.ts`;
+- route changes;
+- browser buttons or forms;
+- a new permission;
+- role-grant changes;
+- changes to `shoot.complete`;
+- changes to `booking.stage.advance`;
+- changes to completion evidence schema;
+- addition of `shoot_schedule_id`;
+- timestamp-based evidence inference;
+- shoot-day Safety incidents or notes;
+- post-session Safety evidence;
+- Stage 11 -> 12 advancement;
+- selection workflow;
+- editing workflow;
+- QC;
+- gallery;
+- delivery;
+- heirloom;
+- marketing;
+- KPI;
+- payment or revenue changes;
+- remote Supabase operations;
+- `--linked`;
+- Production migration;
+- Production deployment;
+- release.
+
+### Follow-on boundary
+
+After Slice 2 is implemented, validated, pushed and closed, the next bounded checkpoint is expected to be application integration for the existing Slice 1 completion-recording operation and Slice 2 Stage 10 -> 11 advancement through `/bookings`.
+
+That application checkpoint requires separate discovery and Technical Design Freeze.
+
+**SPRINT 11 SLICE 2 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
