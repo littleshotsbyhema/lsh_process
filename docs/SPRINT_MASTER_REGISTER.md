@@ -18434,3 +18434,526 @@ The next checkpoint must not assume that Slice 7R authorizes:
 - deployment.
 
 Perform fresh repository discovery before defining the next technical boundary.
+
+## Sprint 11 Slice 1 — Canonical Shoot Completion Evidence Foundation — Technical Design Freeze
+
+Design frozen on 2026-08-24.
+
+### 1. Baseline and authority
+
+Repository baseline:
+
+`fbe53afb64bb314c91c6430204b717183b815582`
+
+Baseline commit:
+
+`docs: close sprint 10 slice 7r`
+
+Branch:
+
+`architecture-rebuild`
+
+Production state:
+
+**HOLD**
+
+This freeze starts a new Sprint 11 design programme. It does not reopen or extend the approved Sprint 10 boundary.
+
+### 2. Discovery findings
+
+Fresh repository discovery established the following facts.
+
+The canonical 21-stage journey already contains:
+
+- Stage 10 — `shoot_scheduled` — `Shoot Scheduled`;
+- Stage 11 — `shoot_completed` — `Shoot Completed`;
+- Stage 12 — `selection_pending` — `Selection Pending`.
+
+However the repository currently has:
+
+- no `booking_shoot_completions` relation;
+- no canonical Shoot Completion evidence model;
+- no `record_booking_shoot_completion(...)` RPC;
+- no `mark_booking_shoot_completed(...)` RPC;
+- no generated Supabase function signature for Shoot Completion;
+- no Stage 10 -> 11 application server function;
+- no Stage 10 -> 11 application control;
+- no dedicated Stage 10 -> 11 pgTAP test.
+
+The existing migration chain ends at:
+
+`20260819170000_sprint10_booking_team_assignment_candidates.sql`
+
+The existing Stage 9 -> 10 RPC deliberately excludes Stage 10 -> 11.
+
+Current shoot-rescheduling and booking-team-assignment mutation surfaces already stop at Stage 10 / `shoot_scheduled`.
+
+Sprint 10 governance explicitly excluded:
+
+- Stage 10 -> 11 / `Shoot Completed`;
+- shoot-completion evidence;
+- shoot-day Safety-event evidence;
+- post-session Safety notes.
+
+Therefore Shoot Completion requires a separately governed programme boundary rather than another Sprint 10 implementation slice.
+
+### 3. Slice objective
+
+Slice 1 establishes authoritative evidence that an exact Stage-10 booking's photography session has been completed.
+
+Slice 1 records the operational fact only.
+
+It does not itself advance the canonical booking journey.
+
+The resulting evidence becomes a prerequisite that a later separately frozen Stage 10 -> 11 gate may consume.
+
+### 4. Exact implementation boundary
+
+Authorized implementation files for Slice 1 are exactly:
+
+- `supabase/migrations/20260824223000_sprint11_shoot_completion_evidence_foundation.sql`
+- `supabase/tests/sprint11_shoot_completion_evidence_test.sql`
+- `src/integrations/supabase/types.ts`
+
+No application route or application server-function file is part of Slice 1.
+
+If implementation requires any additional file, implementation must stop and this freeze must be amended separately before continuing.
+
+### 5. Narrow completion permission
+
+Introduce exactly one new permission:
+
+`shoot.complete`
+
+Frozen catalogue semantics:
+
+- domain: `bookings`;
+- label: `Record shoot completion`;
+- server enforcement required: `true`.
+
+Exact canonical role grants:
+
+- Founder;
+- Studio Manager;
+- Photographer.
+
+Do not grant `shoot.complete` to:
+
+- Client Coordinator;
+- Sales;
+- Assistant;
+- Stylist;
+- Editor;
+- Album / Print Coordinator;
+- Marketing;
+- Accounts;
+- any external creative identity.
+
+`shoot.complete` records completion evidence only.
+
+It does not grant `booking.stage.advance`.
+
+No existing permission is widened.
+
+### 6. Canonical Shoot Completion evidence
+
+Introduce:
+
+`public.booking_shoot_completions`
+
+Required columns:
+
+- `id uuid`;
+- `organization_id uuid`;
+- `booking_id uuid`;
+- `completed_at timestamptz`;
+- `recorded_at timestamptz`;
+- `recorded_by uuid`.
+
+Frozen invariants:
+
+- `id` is the primary key;
+- one canonical completion row per organization + booking;
+- booking reference is tenant-safe;
+- recorder reference is tenant-safe;
+- `recorded_at` defaults to database `now()`;
+- `completed_at` must not be later than `recorded_at`;
+- completion evidence is append-once and immutable;
+- physical DELETE is forbidden;
+- UPDATE is forbidden;
+- no unrestricted free-text note column exists;
+- no Safety/incident text or structured Safety state is stored in this relation;
+- no selection/editing/delivery fields are stored in this relation.
+
+The relation represents only:
+
+**this booking's scheduled photography session was completed at this time and this authenticated operational actor recorded that fact.**
+
+### 7. Lifecycle guard
+
+Add a dedicated lifecycle guard for `booking_shoot_completions`.
+
+The guard must reject:
+
+- UPDATE;
+- DELETE;
+- authenticated insertion whose `recorded_by` does not resolve to the current active organization member;
+- malformed immutable attribution.
+
+The guard is not an application mutation API.
+
+Application roles receive no direct INSERT/UPDATE/DELETE path through the table.
+
+### 8. RLS and direct-table access
+
+`booking_shoot_completions` must have:
+
+- RLS enabled;
+- RLS forced.
+
+Authenticated users may SELECT completion evidence only when they already have canonical `booking.read` access to the booking and satisfy the booking's branch scope.
+
+Authenticated direct mutation is prohibited.
+
+`anon` receives no table access.
+
+No browser direct-write path is authorized.
+
+### 9. Controlled recording RPC
+
+Introduce exactly one mutation RPC:
+
+`public.record_booking_shoot_completion(uuid,timestamptz)`
+
+Canonical arguments:
+
+- `p_booking_id uuid`;
+- `p_completed_at timestamptz`.
+
+Return:
+
+`public.booking_shoot_completions`
+
+The RPC must be:
+
+- `SECURITY DEFINER`;
+- `SET search_path = ''`;
+- callable only by `authenticated`;
+- unavailable to `anon`;
+- unavailable as an application mutation surface to `service_role`.
+
+### 10. Recording authorization
+
+The RPC must require:
+
+- non-null booking id;
+- non-null completion timestamp;
+- authenticated `auth.uid()`;
+- existing canonical booking;
+- active organization membership;
+- `shoot.complete`;
+- canonical branch scope when the booking has a branch;
+- exactly one canonical current journey state;
+- exact Stage 10;
+- exact stage key `shoot_scheduled`.
+
+The RPC must not accept:
+
+- organization id;
+- branch id;
+- actor/member id;
+- destination stage;
+- expected stage;
+- journey version;
+- schedule state;
+- schedule id;
+- staffing state;
+- Safety state;
+- free-text notes.
+
+Those values are resolved server-side or are outside Slice 1.
+
+### 11. Schedule integrity
+
+Recording completion requires the booking to retain a current authoritative reserved shoot schedule.
+
+The RPC must resolve the latest schedule version server-side and reject if no current reserved schedule exists.
+
+The browser/caller does not supply schedule identity or state.
+
+This check protects structural integrity without re-running the Stage 9 -> 10 readiness gate.
+
+### 12. Completion timestamp rule
+
+`p_completed_at` must represent an already-completed event.
+
+Frozen rule:
+
+`p_completed_at <= database now()`
+
+The stored row must also satisfy:
+
+`completed_at <= recorded_at`
+
+No additional invented timing policy is introduced in Slice 1.
+
+Specifically, Slice 1 does not invent:
+
+- grace windows;
+- minimum shoot duration;
+- required alignment with scheduled end time;
+- early-arrival tolerance;
+- automatic completion from calendar time.
+
+### 13. Idempotency and conflict handling
+
+Exactly one completion row may exist per booking.
+
+Replay semantics:
+
+- if a completion row already exists and `p_completed_at` exactly matches the immutable stored `completed_at`, return the existing row;
+- do not create a duplicate row;
+- do not append a second audit event for exact replay.
+
+Conflict semantics:
+
+- if a completion row already exists with a different `completed_at`, reject;
+- do not modify the original row.
+
+Historical completion evidence cannot be rewritten through replay.
+
+### 14. Audit evidence
+
+First successful completion recording must append one canonical audit event.
+
+Frozen action key:
+
+`booking.shoot_completion_recorded`
+
+Audit evidence must identify:
+
+- organization;
+- booking;
+- actor/member;
+- branch where applicable;
+- completion timestamp.
+
+Audit metadata must not contain:
+
+- Safety notes;
+- restricted readiness values;
+- private family notes;
+- external creative personal details;
+- arbitrary unrestricted user text.
+
+Exact idempotent replay must not produce duplicate audit evidence.
+
+### 15. Journey containment
+
+Slice 1 must not:
+
+- update `booking_journey_states`;
+- insert `booking_stage_transitions`;
+- advance to Stage 11;
+- create `shoot_completed` transition history;
+- expose a generic journey mutation;
+- change `booking.stage.advance`.
+
+After successful Slice 1 recording the booking remains:
+
+- Stage order `10`;
+- stage key `shoot_scheduled`.
+
+Journey advancement belongs only to a later separately frozen Slice 2.
+
+### 16. Safety containment
+
+Shoot Completion evidence is not a Safety incident record.
+
+Slice 1 must not introduce:
+
+- shoot-day Safety incidents;
+- post-session medical notes;
+- newborn incident notes;
+- comfort/safety outcome notes;
+- generic sensitive free text;
+- changes to `booking_safety_readiness`;
+- changes to `booking_safety_signoffs`;
+- `/safety` application release.
+
+The existing domain rule remains authoritative: Safety and comfort information must stay restricted and auditable rather than being buried in unrestricted generic notes.
+
+Any shoot-day Safety-event workflow requires a separate Technical Design Freeze.
+
+### 17. Application containment
+
+Slice 1 introduces no application UI.
+
+Do not change:
+
+- `src/lib/booking.functions.ts`;
+- `src/routes/_authenticated/bookings.tsx`;
+- `src/routes/_authenticated/safety.tsx`;
+- `src/routes/_authenticated/prep.tsx`;
+- `src/routeTree.gen.ts`;
+- `src/lib/access.ts`;
+- `src/lib/mock-data.ts`;
+- `src/store/useStore.ts`.
+
+No browser control may record completion in Slice 1.
+
+### 18. Generated types
+
+After the local migration is implemented and verified, regenerate:
+
+`src/integrations/supabase/types.ts`
+
+The generated types must expose exactly the new canonical table/function surface produced by the migration.
+
+Do not hand-author unrelated generated-type changes.
+
+### 19. Dedicated pgTAP acceptance coverage
+
+Add:
+
+`supabase/tests/sprint11_shoot_completion_evidence_test.sql`
+
+The dedicated suite must prove at minimum:
+
+A. permission catalogue contains exactly one `shoot.complete` permission with server enforcement;
+
+B. exact grants are Founder, Studio Manager and Photographer only;
+
+C. completion table structure, tenant-safe foreign keys and one-row-per-booking uniqueness;
+
+D. RLS enabled and forced;
+
+E. authenticated SELECT follows canonical booking.read + branch-scope containment;
+
+F. authenticated direct INSERT/UPDATE/DELETE denied;
+
+G. RPC is `SECURITY DEFINER` with empty search path;
+
+H. authenticated EXECUTE available; anon execution denied; service-role application execution denied;
+
+I. unauthenticated invocation rejected;
+
+J. inactive/non-member invocation rejected;
+
+K. actor lacking `shoot.complete` rejected;
+
+L. cross-branch invocation rejected;
+
+M. wrong-stage booking rejected;
+
+N. exact Stage 10 / `shoot_scheduled` booking accepted;
+
+O. missing/non-reserved current authoritative schedule rejected;
+
+P. future `completed_at` rejected;
+
+Q. successful insert attributes `recorded_by` to current active member;
+
+R. exact replay returns the same completion row and does not duplicate evidence;
+
+S. conflicting replay with different `completed_at` rejected;
+
+T. completion row UPDATE rejected;
+
+U. completion row DELETE rejected;
+
+V. successful recording appends exactly one `booking.shoot_completion_recorded` audit event;
+
+W. exact replay does not duplicate audit evidence;
+
+X. successful completion recording leaves journey state at Stage 10 and inserts no Stage 10 -> 11 transition;
+
+Y. organization/tenant isolation remains intact.
+
+### 20. Full verification requirements
+
+Use the governed product/database verification profile without reduction:
+
+- exact baseline guard;
+- exact implementation-file boundary;
+- local Supabase reset;
+- new dedicated pgTAP suite;
+- full local pgTAP regression;
+- `npx supabase db lint --local`;
+- generated Supabase types;
+- targeted formatting only where appropriate;
+- targeted ESLint if generated TypeScript requires it;
+- `npx tsc --noEmit`;
+- `npm run build`;
+- `git diff --check`;
+- migration/test/generated-type containment review;
+- RLS/ACL/function-security inspection;
+- permission/grant matrix inspection;
+- no unexpected route-tree change;
+- no application code change;
+- no secrets or fixture credentials committed.
+
+No remote Supabase command is part of Slice 1 verification.
+
+No `--linked` command is authorized.
+
+### 21. Explicit exclusions
+
+Slice 1 does not include:
+
+- Stage 10 -> 11 journey advancement;
+- `mark_booking_shoot_completed(...)`;
+- Stage 11 -> 12;
+- Shoot Completed application UI;
+- booking-workspace completion control;
+- shoot-day Safety incidents;
+- post-session Safety notes;
+- Safety Readiness changes;
+- booking-team mutation changes;
+- schedule mutation changes;
+- automatic completion based on elapsed time;
+- selection workflow;
+- editing workflow;
+- QC;
+- Pixieset;
+- delivery;
+- heirloom production;
+- marketing;
+- KPI expansion;
+- payment/revenue changes;
+- generic journey mutation;
+- `/safety` release;
+- `/prep` release;
+- legacy-store reconciliation;
+- Production migration;
+- deployment.
+
+### 22. Expected subsequent boundary
+
+After Slice 1 is implemented, fully verified and separately closed, fresh discovery may define:
+
+**Sprint 11 Slice 2 — Controlled Stage 10 -> 11 Shoot Completed Gate**
+
+That future slice is expected to consume canonical completion evidence and fixed destination Stage 11, but no Slice 2 implementation is authorized by this freeze.
+
+A later separately frozen application slice may expose the controlled operation through `/bookings`.
+
+### 23. Production containment
+
+No remote Supabase mutation.
+
+No Production mutation.
+
+No deployment.
+
+No Git `main` merge.
+
+**Production remains HOLD.**
+
+### 24. Implementation authorization status
+
+This document records the Technical Design Freeze only.
+
+It does not authorize implementation.
+
+**SPRINT 11 SLICE 1 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
