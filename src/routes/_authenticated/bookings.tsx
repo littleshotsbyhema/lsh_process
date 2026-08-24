@@ -13,6 +13,7 @@ import {
   confirmBookingAfterAdvance,
   listBookingTeamAssignmentCandidates,
   listBookingWorkspace,
+  markBookingShootScheduled,
   proposeShootSchedule,
   recordBookingPayment,
   recordBookingSafetyReadiness,
@@ -792,6 +793,60 @@ function BookingConfirmationControl({
       >
         {confirmBookingMutation.isPending ? "Confirming…" : "Confirm booking & reserve shoot"}
       </button>
+    </div>
+  );
+}
+
+function ShootScheduledAdvancementControl({
+  bookingId,
+  onSuccess,
+}: {
+  bookingId: string;
+  onSuccess: () => Promise<void>;
+}) {
+  const markShootScheduledFn = useServerFn(markBookingShootScheduled);
+
+  const markShootScheduledMutation = useMutation({
+    mutationFn: () =>
+      markShootScheduledFn({
+        data: {
+          bookingId,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Shoot marked scheduled.");
+      await onSuccess();
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not mark the shoot scheduled."),
+  });
+
+  return (
+    <div className="mt-7 border-t border-border pt-6">
+      <div className="rounded-lg border border-border bg-card p-5">
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+          Controlled journey advancement
+        </div>
+
+        <h3 className="mt-1 font-serif text-xl text-primary">Mark shoot scheduled</h3>
+
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">
+          This dedicated action attempts only the canonical Stage 9 to Stage 10 transition. The
+          database revalidates the complete shoot-readiness gate, including the reserved schedule,
+          required preparation, required staffing, commercial Video/Reels requirements, applicable
+          Safety Readiness and qualifying Newborn sign-off when required. It does not advance beyond
+          Stage 10.
+        </p>
+
+        <button
+          type="button"
+          onClick={() => markShootScheduledMutation.mutate()}
+          disabled={markShootScheduledMutation.isPending}
+          className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+        >
+          {markShootScheduledMutation.isPending ? "Checking readiness..." : "Mark shoot scheduled"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -1849,6 +1904,11 @@ function BookingsPage() {
               preparation !== null &&
               data.canWritePreparation;
 
+            const canMarkShootScheduled =
+              currentOrder === 9 &&
+              currentStage?.stage_key === "pre_shoot_preparation" &&
+              data.canAdvanceBookingStage;
+
             const canManageBookingTeam =
               data.canAssignBookingTeam && currentOrder >= 8 && currentOrder <= 10;
 
@@ -2189,6 +2249,13 @@ function BookingsPage() {
                     assignmentHistory={bookingTeamAssignmentHistory}
                     onClose={() => setActiveTeamPickerBookingId(null)}
                     onAssigned={() => refreshBookingTeamAssignment(booking.id)}
+                  />
+                ) : null}
+
+                {canMarkShootScheduled ? (
+                  <ShootScheduledAdvancementControl
+                    bookingId={booking.id}
+                    onSuccess={refreshBookingWorkspace}
                   />
                 ) : null}
 

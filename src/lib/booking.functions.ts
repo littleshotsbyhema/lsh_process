@@ -180,6 +180,10 @@ const signoffBookingSafetyReadinessSchema = z.object({
   bookingId: z.string().uuid(),
 });
 
+const markBookingShootScheduledSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
 const bookingTeamAssignmentCandidatesSchema = z.object({
   bookingId: z.string().uuid(),
 });
@@ -795,6 +799,25 @@ export const signoffBookingSafetyReadiness = createServerFn({
 
     if (!result.data) {
       throw new Error("Safety readiness sign-off returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const markBookingShootScheduled = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(markBookingShootScheduledSchema)
+  .handler(async ({ context, data }): Promise<BookingRow> => {
+    const result = await context.supabase.rpc("mark_booking_shoot_scheduled", {
+      p_booking_id: data.bookingId,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Shoot scheduled advancement returned no row.");
     }
 
     return result.data;
