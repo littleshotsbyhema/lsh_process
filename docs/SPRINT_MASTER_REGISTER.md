@@ -18114,3 +18114,323 @@ This Technical Design Freeze records the approved architecture boundary only.
 It does not itself authorize implementation.
 
 **TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+
+## Sprint 10 Slice 7R — Controlled Stage 9 -> 10 Shoot Scheduled Advancement — Implementation Checkpoint
+
+Implementation accepted and remotely landed on 2026-08-24.
+
+### 1. Checkpoint identity
+
+- Technical Design Freeze commit: `3f9b43031d01e8ffd08d898a3a3afe36889b47d9` — `docs: freeze sprint 10 slice 7r`
+- Implementation commit: `2543d1383641e2af85045e7a458b543993136e19` — `feat: expose shoot scheduled advancement`
+- Remote branch: `origin/architecture-rebuild`
+- Remote implementation presence: independently confirmed after push
+- Production state: **HOLD**
+
+The implementation commit is the direct child of the Slice 7R freeze commit.
+
+### 2. What existed before
+
+Before Slice 7R application implementation:
+
+- `public.mark_booking_shoot_scheduled(uuid)` already existed as the canonical Stage 9 -> 10 database operation;
+- the RPC already enforced the authoritative shoot-readiness gate;
+- generated Supabase types already contained the RPC;
+- the authenticated booking workspace already resolved `booking.stage.advance` to `canAdvanceBookingStage`;
+- Stage 9 preparation, staffing, shoot schedule, restricted Safety Readiness, and qualifying Newborn sign-off foundations already existed;
+- no application server-function wrapper invoked `mark_booking_shoot_scheduled(uuid)`;
+- no Stage 9 -> 10 application control was exposed in `/bookings`;
+- Slice 7Q deliberately ended before exposing final Stage 9 -> 10 advancement.
+
+### 3. Exact implementation change
+
+Exactly two implementation files changed:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+Implementation commit statistics:
+
+- 2 files changed
+- 90 insertions
+- no other implementation file changed
+
+`src/lib/booking.functions.ts` added:
+
+- `markBookingShootScheduledSchema`;
+- validation of exactly one input field: `bookingId: uuid`;
+- authenticated POST server function `markBookingShootScheduled`;
+- invocation of `mark_booking_shoot_scheduled` with only `p_booking_id`;
+- existing `throwIfError` canonical error propagation;
+- failure on an unexpected empty RPC result;
+- authoritative `BookingRow` return.
+
+`src/routes/_authenticated/bookings.tsx` added:
+
+- import of `markBookingShootScheduled`;
+- dedicated `ShootScheduledAdvancementControl`;
+- TanStack mutation invocation;
+- success toast `Shoot marked scheduled.`;
+- canonical booking-workspace refetch after success;
+- error toast using the canonical RPC error;
+- dedicated `Mark shoot scheduled` UI and explanatory copy;
+- exact visibility condition:
+  - `currentOrder === 9`;
+  - `currentStage?.stage_key === 'pre_shoot_preparation'`;
+  - `data.canAdvanceBookingStage`.
+
+The browser does not pass destination stage, readiness state, preparation state, staffing state, schedule state/version, commercial Video/Reels state, readiness revision, sign-off evidence, actor/member identity, branch identity, or expected journey version.
+
+### 4. Database / schema / authorization decision
+
+No database migration was added.
+
+No change was made to:
+
+- `mark_booking_shoot_scheduled(uuid)`;
+- database schema;
+- journey tables;
+- journey-stage definitions;
+- preparation tables or RPCs;
+- team-assignment tables or RPCs;
+- Safety Readiness tables or RPCs;
+- commercial operational-requirement tables;
+- RLS;
+- RPC ACLs;
+- permissions;
+- role-permission mappings;
+- member role grants;
+- generated Supabase types;
+- audit foundations.
+
+The existing database gate remained the sole authority for Stage 9 -> 10 eligibility.
+
+### 5. Least-privilege verification
+
+The Stage 9 -> 10 control visibility depends only on:
+
+- exact Stage 9;
+- exact `pre_shoot_preparation`;
+- `canAdvanceBookingStage`.
+
+Application code does not additionally require:
+
+- `prep.read`;
+- `prep.write`;
+- `safety.read`;
+- `safety.write`;
+- `safety.signoff`;
+- `booking.team.assign`;
+- `shoot.schedule`;
+- browser-derived preparation completeness;
+- browser-derived staffing completeness;
+- browser-derived commercial Video/Reels requirement;
+- browser-derived Safety Readiness;
+- browser-derived Newborn sign-off validity.
+
+Runtime role-matrix discovery found no current canonical role having `booking.stage.advance = true` while `safety.read = false`.
+
+Therefore Acceptance F was recorded as:
+
+**STRUCTURAL PASS / RUNTIME N/A UNDER CURRENT ROLE TAXONOMY**
+
+This does not weaken the frozen contract. The implementation itself remains independent of `safety.read` and does not expose restricted Safety evidence merely to decide whether the canonical database operation may be attempted.
+
+### 6. Static verification
+
+Targeted verification passed:
+
+- Prettier check on the exact two implementation files: PASS
+- targeted ESLint on the exact two implementation files: PASS
+- `npx tsc --noEmit`: PASS
+- `npm run build`: PASS
+- `git diff --check`: PASS
+
+Build output retained known unrelated warnings including pre-existing TanStack `inputValidator()` deprecation warnings, dependency `"use client"` bundling warnings, chunk-size warnings, and Cloudflare/Nitro configuration warnings. These warnings did not originate in the Slice 7R implementation and did not fail the production build.
+
+### 7. Full local database regression
+
+A complete local Supabase reset succeeded with migrations replayed through:
+
+`20260819170000_sprint10_booking_team_assignment_candidates.sql`
+
+Full local pgTAP regression:
+
+- Files: 18
+- Tests: 1155
+- Result: PASS
+
+The suite included the existing `sprint10_stage9_10_gate_test.sql`.
+
+Local database lint:
+
+- `npx supabase db lint --local`
+- Result: `No schema errors found`
+
+No remote Supabase command and no `--linked` command was used.
+
+### 8. Boundary and containment verification
+
+Final containment checks passed:
+
+- exact changed implementation files: PASS
+- `src/routeTree.gen.ts` unchanged: PASS
+- `src/routes/_authenticated/safety.tsx` unchanged: PASS
+- `src/routes/_authenticated/prep.tsx` unchanged: PASS
+- `src/lib/access.ts` unchanged: PASS
+- `src/lib/mock-data.ts` unchanged: PASS
+- `src/store/useStore.ts` unchanged: PASS
+- `src/integrations/supabase/types.ts` unchanged: PASS
+- no generic stage-mutation input introduced: PASS
+- no Stage 10 -> 11 control introduced: PASS
+- no migration or permission-model expansion: PASS
+
+### 9. Local browser fixture construction
+
+After a clean local reset, browser fixtures were constructed against local loopback Supabase only.
+
+The fixture process:
+
+- verified application and CLI Supabase URLs were local loopback;
+- verified the application publishable key matched the local project without printing credentials;
+- created confirmed local auth identities;
+- bootstrapped the canonical Founder through `lsh_bootstrap_canonical_founder`;
+- created Photographer and Stylist candidates through `create_organization_invitation`;
+- accepted each invitation under the invited user's own authenticated identity through `accept_organization_invitation`;
+- did not directly insert invited `organization_members`;
+- created canonical families, quotations, accepted bookings, payments, shoot schedules, preparation, staffing and Safety Readiness evidence;
+- created exact Stage 8, Stage 9 and Stage 10 acceptance fixtures;
+- independently verified direct Stage 9 -> 10 RPC denial for an authenticated Photographer lacking `booking.stage.advance`.
+
+Fixture stages were verified before browser testing:
+
+- `7R A-B READY` -> `pre_shoot_preparation`
+- `7R C INCOMPLETE PREP` -> `pre_shoot_preparation`
+- `7R D MISSING STYLIST` -> `pre_shoot_preparation`
+- `7R E MISSING READINESS` -> `pre_shoot_preparation`
+- `7R H STAGE 8` -> `booking_confirmed`
+- `7R H-J STAGE 10` -> `shoot_scheduled`
+
+### 10. Browser acceptance A-J
+
+**A — PASS — Eligible Stage 9 control**
+
+An exact Stage-9 booking viewed by an actor with `booking.stage.advance` exposed the dedicated `Mark shoot scheduled` action. No generic journey-stage editor was exposed.
+
+**B — PASS — Successful advancement**
+
+`7R A-B READY` satisfied the canonical gate. Invoking `Mark shoot scheduled` succeeded, showed `Shoot marked scheduled.`, and the refreshed workspace resolved the journey to Stage 10 / `shoot_scheduled`.
+
+**C — PASS — Incomplete preparation rejection**
+
+`7R C INCOMPLETE PREP` retained the advancement control for the authorized actor. Invocation was rejected by the canonical RPC because all required preparation items were not satisfied. The booking remained at Stage 9.
+
+**D — PASS — Staffing rejection**
+
+`7R D MISSING STYLIST` was rejected by the canonical RPC because a current operationally eligible Stylist was required. The booking remained at Stage 9.
+
+**E — PASS — Safety/readiness rejection**
+
+`7R E MISSING READINESS` was rejected by the canonical RPC because current Safety Readiness evidence was required. The booking remained at Stage 9. Application code added no restricted readiness values, revision identifiers, signer identity, or other Safety evidence to the canonical error.
+
+**F — STRUCTURAL PASS / RUNTIME N/A — Restricted-reader least privilege**
+
+The current canonical role taxonomy contains no role with `booking.stage.advance = true` and `safety.read = false`, so the literal browser persona cannot be instantiated without changing the authorization model.
+
+The implementation structurally satisfies the frozen least-privilege requirement because control visibility depends only on exact Stage 9 plus `canAdvanceBookingStage` and contains no `safety.read` dependency.
+
+No role or permission mapping was modified merely to manufacture this acceptance persona.
+
+**G — PASS — Permission containment**
+
+An actor without `booking.stage.advance` received no Stage 9 -> 10 application authorization path. The local fixture independently verified direct RPC denial under the Photographer identity.
+
+**H — PASS — Stage containment**
+
+Stage 8 and Stage 10 fixtures exposed no Stage 9 -> 10 control.
+
+**I — PASS — Canonical refresh**
+
+Successful advancement did not optimistically invent Stage 10 in application state. The success path awaited canonical booking-workspace refetch, after which the visible journey resolved to `shoot_scheduled`.
+
+**J — PASS — No Stage 10 -> 11**
+
+Slice 7R exposed no Shoot Scheduled -> Shoot Completed action and no generic journey transition mechanism.
+
+### 11. Security and privacy verification
+
+Verified:
+
+- user-authenticated canonical Supabase client remains used for the application wrapper;
+- no service-role client was introduced into the Slice 7R application files;
+- no privileged credential material was added to the implementation diff;
+- no browser-derived authorization decision reproduces the database readiness gate;
+- canonical errors are not enriched with restricted Safety evidence;
+- permission enforcement remains server-side;
+- tenant / organization membership and branch-scope enforcement remain inside the existing canonical RPC;
+- local fixture credentials were not committed;
+- temporary browser fixtures were removed after acceptance through a final local `supabase db reset`.
+
+### 12. Git review and remote evidence
+
+Final staged review contained exactly:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+`git diff --cached --check` passed.
+
+Implementation commit:
+
+`2543d1383641e2af85045e7a458b543993136e19`
+
+Message:
+
+`feat: expose shoot scheduled advancement`
+
+The commit was pushed:
+
+`3f9b430..2543d13  architecture-rebuild -> architecture-rebuild`
+
+Remote GitHub verification confirmed `architecture-rebuild` points exactly to implementation commit `2543d1383641e2af85045e7a458b543993136e19`.
+
+### 13. Final local cleanup state
+
+After remote verification:
+
+- `npx supabase db reset` completed successfully;
+- temporary local browser identities and booking fixtures were removed;
+- worktree was clean;
+- local `HEAD` and `origin/architecture-rebuild` both resolved to `2543d13`.
+
+### 14. Slice 7R final decision
+
+**SPRINT 10 SLICE 7R — IMPLEMENTATION ACCEPTED / REMOTELY LANDED / CHECKPOINT COMPLETE**
+
+The authenticated booking workspace now exposes a controlled exact Stage 9 -> 10 Shoot Scheduled operation while preserving the existing database gate as the sole eligibility authority.
+
+No generic journey mutation has been introduced.
+
+No Stage 10 -> 11 behavior is authorized or implemented.
+
+No Production mutation has occurred.
+
+**Production remains HOLD.**
+
+### 15. Recommended next checkpoint
+
+Any work after exact Stage 10 / `shoot_scheduled` requires a separately discovered and separately frozen checkpoint.
+
+The next checkpoint must not assume that Slice 7R authorizes:
+
+- Shoot Scheduled -> Shoot Completed;
+- Stage 10 -> 11;
+- shoot-day execution;
+- additional Safety workflows;
+- `/safety` release;
+- `/prep` release;
+- legacy-store reconciliation;
+- Production migration;
+- deployment.
+
+Perform fresh repository discovery before defining the next technical boundary.
