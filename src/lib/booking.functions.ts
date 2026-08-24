@@ -17,6 +17,9 @@ export type BookingStageTransitionRow =
 export type BookingShootScheduleRow =
   Database["public"]["Tables"]["booking_shoot_schedules"]["Row"];
 
+export type BookingShootCompletionRow =
+  Database["public"]["Tables"]["booking_shoot_completions"]["Row"];
+
 export type BookingTeamAssignmentRow =
   Database["public"]["Tables"]["booking_team_assignments"]["Row"];
 
@@ -102,6 +105,7 @@ export type BookingWorkspaceData = {
   journeyStages: BookingJourneyStageRow[];
   transitions: BookingStageTransitionRow[];
   schedules: BookingShootScheduleRow[];
+  shootCompletions: BookingShootCompletionRow[];
   leads: BookingLeadSummary[];
   families: BookingFamilySummary[];
   paymentSummaries: BookingPaymentSummary[];
@@ -116,6 +120,7 @@ export type BookingWorkspaceData = {
   canReadPreparation: boolean;
   canWritePreparation: boolean;
   canAdvanceBookingStage: boolean;
+  canRecordShootCompletion: boolean;
   canSchedule: boolean;
   canAssignBookingTeam: boolean;
   canReadSafety: boolean;
@@ -184,6 +189,15 @@ const markBookingShootScheduledSchema = z.object({
   bookingId: z.string().uuid(),
 });
 
+const recordBookingShootCompletionSchema = z.object({
+  bookingId: z.string().uuid(),
+  completedAt: z.string().datetime({ offset: true }),
+});
+
+const markBookingShootCompletedSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
 const bookingTeamAssignmentCandidatesSchema = z.object({
   bookingId: z.string().uuid(),
 });
@@ -236,6 +250,7 @@ export const listBookingWorkspace = createServerFn({
     const canReadPreparation = permissions.has("prep.read");
     const canWritePreparation = permissions.has("prep.write");
     const canAdvanceBookingStage = permissions.has("booking.stage.advance");
+    const canRecordShootCompletion = permissions.has("shoot.complete");
     const canSchedule = permissions.has("shoot.schedule");
     const canAssignBookingTeam = permissions.has("booking.team.assign");
     const canReadSafety = permissions.has("safety.read");
@@ -262,6 +277,7 @@ export const listBookingWorkspace = createServerFn({
         journeyStages: stagesResult.data ?? [],
         transitions: [],
         schedules: [],
+        shootCompletions: [],
         leads: [],
         families: [],
         paymentSummaries: [],
@@ -276,6 +292,7 @@ export const listBookingWorkspace = createServerFn({
         canReadPreparation,
         canWritePreparation,
         canAdvanceBookingStage,
+        canRecordShootCompletion,
         canSchedule,
         canAssignBookingTeam,
         canReadSafety,
@@ -304,6 +321,7 @@ export const listBookingWorkspace = createServerFn({
       stagesResult,
       transitionsResult,
       schedulesResult,
+      shootCompletionsResult,
     ] = await Promise.all([
       context.supabase
         .from("quotations")
@@ -352,6 +370,15 @@ export const listBookingWorkspace = createServerFn({
         .order("schedule_version", {
           ascending: true,
         }),
+
+      context.supabase
+        .from("booking_shoot_completions")
+        .select("*")
+        .eq("organization_id", ORGANIZATION_ID)
+        .in("booking_id", bookingIds)
+        .order("recorded_at", {
+          ascending: true,
+        }),
     ]);
 
     throwIfError(quotationsResult.error);
@@ -360,6 +387,7 @@ export const listBookingWorkspace = createServerFn({
     throwIfError(stagesResult.error);
     throwIfError(transitionsResult.error);
     throwIfError(schedulesResult.error);
+    throwIfError(shootCompletionsResult.error);
 
     let leads: BookingLeadSummary[] = [];
 
@@ -509,6 +537,7 @@ export const listBookingWorkspace = createServerFn({
       journeyStages: stagesResult.data ?? [],
       transitions: transitionsResult.data ?? [],
       schedules: schedulesResult.data ?? [],
+      shootCompletions: shootCompletionsResult.data ?? [],
       leads,
       families,
       paymentSummaries,
@@ -523,6 +552,7 @@ export const listBookingWorkspace = createServerFn({
       canReadPreparation,
       canWritePreparation,
       canAdvanceBookingStage,
+      canRecordShootCompletion,
       canSchedule,
       canAssignBookingTeam,
       canReadSafety,
@@ -818,6 +848,45 @@ export const markBookingShootScheduled = createServerFn({
 
     if (!result.data) {
       throw new Error("Shoot scheduled advancement returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const recordBookingShootCompletion = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(recordBookingShootCompletionSchema)
+  .handler(async ({ context, data }): Promise<BookingShootCompletionRow> => {
+    const result = await context.supabase.rpc("record_booking_shoot_completion", {
+      p_booking_id: data.bookingId,
+      p_completed_at: data.completedAt,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Shoot completion recording returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const markBookingShootCompleted = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(markBookingShootCompletedSchema)
+  .handler(async ({ context, data }): Promise<BookingRow> => {
+    const result = await context.supabase.rpc("mark_booking_shoot_completed", {
+      p_booking_id: data.bookingId,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Shoot completed advancement returned no row.");
     }
 
     return result.data;
