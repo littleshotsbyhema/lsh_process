@@ -17661,6 +17661,114 @@ No deployment.
 
 ### 22. Implementation authorization status
 
-The freeze itself does NOT authorize implementation.
+The freeze itself did not authorize implementation. Implementation was subsequently executed, validated, committed, and pushed under the checkpoint below.
 
-**TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+**TECHNICAL DESIGN FROZEN / IMPLEMENTATION COMPLETE / PRODUCTION HOLD**
+
+## Sprint 10 Slice 7Q — Controlled Safety Readiness & Newborn Sign-off — Implementation Checkpoint
+
+Slice 7Q application implementation completed, fully accepted locally, committed, and pushed to `origin/architecture-rebuild` on 2026-08-24.
+
+### Implementation evidence
+
+- Technical Design Freeze commit: `7bedd7b56269806eb707d7ca555f13a967395538` (`docs: freeze sprint 10 slice 7q`);
+- implementation commit: `f114fd8f23dd3f9a8d6279df6cd7d565de8cca7c` (`feat: add booking safety readiness controls`);
+- implementation commit pushed to `origin/architecture-rebuild`;
+- local and remote tracking refs reconciled to the exact implementation commit;
+- final worktree clean after implementation commit;
+- implementation boundary exactly:
+  - `src/lib/booking.functions.ts`;
+  - `src/routes/_authenticated/bookings.tsx`;
+- final implementation diff: 480 insertions / 3 deletions across exactly two files.
+
+### Application behavior implemented
+
+`src/lib/booking.functions.ts` now:
+
+- exposes typed canonical `booking_safety_readiness` and `booking_safety_signoffs` rows;
+- resolves `safety.read`, `safety.write`, and `safety.signoff` from effective permissions;
+- fetches restricted Safety data only when the authenticated actor has `safety.read`;
+- loads only current readiness revisions where `superseded_at IS NULL`;
+- loads sign-off evidence only for current readiness revision IDs;
+- exposes controlled server-function wrappers for `record_booking_safety_readiness(...)` and `signoff_booking_safety_readiness(...)`;
+- accepts no browser-selected service category, readiness revision, signer identity, sign-off authority, role, or assignment identity.
+
+`src/routes/_authenticated/bookings.tsx` now:
+
+- renders the restricted Safety Readiness surface only at exact Stage 9 / `pre_shoot_preparation`;
+- renders no Safety evidence for actors lacking `safety.read`;
+- resolves category from current readiness first, otherwise exactly one distinct canonical preparation-item category, failing closed when missing or ambiguous;
+- fixes Maternity Safety to `not_applicable` while keeping Comfort applicable;
+- exposes Newborn formal sign-off only for current `ready / ready` evidence and a caller with the coarse `safety.signoff` permission;
+- leaves contextual sign-off authority and eligibility to the canonical RPC;
+- refreshes canonical booking workspace state after successful mutation;
+- exposes no application control for `mark_booking_shoot_scheduled(uuid)`.
+
+### Acceptance evidence
+
+All frozen Slice 7Q acceptance cases A–J passed.
+
+- **A — Canonical read:** PASS.
+- **B — First readiness record:** PASS.
+- **C — Readiness revision:** PASS.
+- **D — Exact readiness replay:** PASS.
+- **E — Maternity applicability:** PASS. Current evidence persisted as Safety `not_applicable`, Comfort `ready`, with zero sign-offs.
+- **F — Newborn sign-off:** PASS.
+- **G — Same-signer replay:** PASS with no duplicate sign-off.
+- **H — Restricted read:** PASS. An actor with `booking.read` but without Safety permissions received no restricted readiness/sign-off values or controls.
+- **I — Invalid-stage containment:** PASS. Stage 8 exposed no Safety mutation controls and the readiness RPC rejected the direct Stage-8 invocation.
+- **J — Non-Newborn sign-off containment:** PASS. Maternity exposed no sign-off control and the sign-off RPC rejected the direct invocation.
+
+Local-only browser fixtures and disposable authentication identities were removed by the final clean database reset.
+
+### Final verification evidence
+
+Post-acceptance clean verification passed:
+
+- `npx supabase db reset`: PASS;
+- full local pgTAP regression: **18 files / 1155 tests PASS**;
+- `npx supabase db lint --local`: PASS with `No schema errors found`;
+- targeted ESLint: PASS;
+- `npx tsc --noEmit`: PASS;
+- `npm run build`: PASS;
+- `git diff --check`: PASS;
+- route-tree containment: PASS;
+- legacy/non-boundary containment: PASS;
+- secret-hygiene check: PASS;
+- forbidden Stage 9 -> 10 application-exposure check: PASS.
+
+Known unrelated build warnings remained non-blocking and outside Slice 7Q.
+
+### Database / security containment
+
+Slice 7Q introduces no migration or schema change.
+
+It does not modify:
+
+- `booking_safety_readiness`;
+- `booking_safety_signoffs`;
+- `record_booking_safety_readiness(...)`;
+- `signoff_booking_safety_readiness(...)`;
+- `mark_booking_shoot_scheduled(uuid)`;
+- RLS policies;
+- permission or role grants;
+- generated Supabase types;
+- audit functions;
+- `src/routes/_authenticated/safety.tsx`;
+- `src/routes/_authenticated/prep.tsx`;
+- `src/lib/access.ts`;
+- `src/lib/mock-data.ts`;
+- `src/store/useStore.ts`;
+- `src/routeTree.gen.ts`.
+
+Restricted Safety evidence remains protected by the existing canonical database authorization boundary.
+
+### Production and next checkpoint
+
+No remote Supabase command, linked database mutation, Production migration, deployment, Git `main` merge, or Production backfill was performed for Slice 7Q.
+
+**Production remains HOLD.**
+
+The next checkpoint must be separately discovered and technically frozen before exposing the existing canonical `mark_booking_shoot_scheduled(uuid)` Stage 9 -> 10 operation through application server functions or UI.
+
+Slice 7Q does not authorize Stage 10 -> 11 behavior, shoot-completion workflow, `/safety` release, `/prep` release, legacy-store reconciliation, or broader Production release.
