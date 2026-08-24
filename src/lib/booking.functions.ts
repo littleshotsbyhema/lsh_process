@@ -27,6 +27,14 @@ export type BookingPreparationRow = Database["public"]["Tables"]["booking_prepar
 export type BookingPreparationItemRow =
   Database["public"]["Tables"]["booking_preparation_items"]["Row"];
 
+export type BookingSafetyReadinessRow =
+  Database["public"]["Tables"]["booking_safety_readiness"]["Row"];
+
+export type BookingSafetySignoffRow =
+  Database["public"]["Tables"]["booking_safety_signoffs"]["Row"];
+
+export type BookingSafetyState = "pending" | "ready" | "not_ready" | "not_applicable";
+
 export type BookingPaymentMethod = Database["public"]["Enums"]["booking_payment_method"];
 
 export type BookingPaymentSummary =
@@ -99,6 +107,8 @@ export type BookingWorkspaceData = {
   paymentSummaries: BookingPaymentSummary[];
   bookingPreparations: BookingPreparationRow[];
   bookingPreparationItems: BookingPreparationItemRow[];
+  bookingSafetyReadiness: BookingSafetyReadinessRow[];
+  bookingSafetySignoffs: BookingSafetySignoffRow[];
   bookingTeamAssignmentHistory: BookingTeamAssignmentHistoryRow[];
   canReadPayment: boolean;
   canRecordPayment: boolean;
@@ -108,6 +118,9 @@ export type BookingWorkspaceData = {
   canAdvanceBookingStage: boolean;
   canSchedule: boolean;
   canAssignBookingTeam: boolean;
+  canReadSafety: boolean;
+  canWriteSafety: boolean;
+  canSignoffSafety: boolean;
 };
 
 function throwIfError(error: { message: string } | null) {
@@ -155,6 +168,16 @@ const startPreShootPreparationSchema = z.object({
 const updatePreShootPreparationItemSchema = z.object({
   preparationItemId: z.string().uuid(),
   satisfied: z.boolean(),
+});
+
+const recordBookingSafetyReadinessSchema = z.object({
+  bookingId: z.string().uuid(),
+  safetyState: z.enum(["pending", "ready", "not_ready", "not_applicable"]),
+  comfortState: z.enum(["pending", "ready", "not_ready", "not_applicable"]),
+});
+
+const signoffBookingSafetyReadinessSchema = z.object({
+  bookingId: z.string().uuid(),
 });
 
 const bookingTeamAssignmentCandidatesSchema = z.object({
@@ -211,6 +234,9 @@ export const listBookingWorkspace = createServerFn({
     const canAdvanceBookingStage = permissions.has("booking.stage.advance");
     const canSchedule = permissions.has("shoot.schedule");
     const canAssignBookingTeam = permissions.has("booking.team.assign");
+    const canReadSafety = permissions.has("safety.read");
+    const canWriteSafety = permissions.has("safety.write");
+    const canSignoffSafety = permissions.has("safety.signoff");
 
     if (bookings.length === 0) {
       const stagesResult = await context.supabase
@@ -237,6 +263,8 @@ export const listBookingWorkspace = createServerFn({
         paymentSummaries: [],
         bookingPreparations: [],
         bookingPreparationItems: [],
+        bookingSafetyReadiness: [],
+        bookingSafetySignoffs: [],
         bookingTeamAssignmentHistory: [],
         canReadPayment,
         canRecordPayment,
@@ -246,6 +274,9 @@ export const listBookingWorkspace = createServerFn({
         canAdvanceBookingStage,
         canSchedule,
         canAssignBookingTeam,
+        canReadSafety,
+        canWriteSafety,
+        canSignoffSafety,
       };
     }
 
@@ -414,6 +445,43 @@ export const listBookingWorkspace = createServerFn({
       }
     }
 
+    let bookingSafetyReadiness: BookingSafetyReadinessRow[] = [];
+    let bookingSafetySignoffs: BookingSafetySignoffRow[] = [];
+
+    if (canReadSafety) {
+      const readinessResult = await context.supabase
+        .from("booking_safety_readiness")
+        .select("*")
+        .eq("organization_id", ORGANIZATION_ID)
+        .in("booking_id", bookingIds)
+        .is("superseded_at", null)
+        .order("revision_number", {
+          ascending: true,
+        });
+
+      throwIfError(readinessResult.error);
+
+      bookingSafetyReadiness = readinessResult.data ?? [];
+
+      const currentReadinessIds = bookingSafetyReadiness.map((readiness) => readiness.id);
+
+      if (currentReadinessIds.length > 0) {
+        const signoffsResult = await context.supabase
+          .from("booking_safety_signoffs")
+          .select("*")
+          .eq("organization_id", ORGANIZATION_ID)
+          .in("booking_id", bookingIds)
+          .in("readiness_id", currentReadinessIds)
+          .order("signed_at", {
+            ascending: true,
+          });
+
+        throwIfError(signoffsResult.error);
+
+        bookingSafetySignoffs = signoffsResult.data ?? [];
+      }
+    }
+
     const bookingTeamAssignmentHistory: BookingTeamAssignmentHistoryRow[] = [];
 
     const bookingTeamHistoryResults = await Promise.all(
@@ -442,6 +510,8 @@ export const listBookingWorkspace = createServerFn({
       paymentSummaries,
       bookingPreparations,
       bookingPreparationItems,
+      bookingSafetyReadiness,
+      bookingSafetySignoffs,
       bookingTeamAssignmentHistory,
       canReadPayment,
       canRecordPayment,
@@ -451,6 +521,9 @@ export const listBookingWorkspace = createServerFn({
       canAdvanceBookingStage,
       canSchedule,
       canAssignBookingTeam,
+      canReadSafety,
+      canWriteSafety,
+      canSignoffSafety,
     };
   });
 
@@ -682,6 +755,46 @@ export const updatePreShootPreparationItem = createServerFn({
 
     if (!result.data) {
       throw new Error("Preparation item update returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const recordBookingSafetyReadiness = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(recordBookingSafetyReadinessSchema)
+  .handler(async ({ context, data }): Promise<BookingSafetyReadinessRow> => {
+    const result = await context.supabase.rpc("record_booking_safety_readiness", {
+      p_booking_id: data.bookingId,
+      p_safety_state: data.safetyState,
+      p_comfort_state: data.comfortState,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Safety readiness recording returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const signoffBookingSafetyReadiness = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(signoffBookingSafetyReadinessSchema)
+  .handler(async ({ context, data }): Promise<BookingSafetySignoffRow> => {
+    const result = await context.supabase.rpc("signoff_booking_safety_readiness", {
+      p_booking_id: data.bookingId,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Safety readiness sign-off returned no row.");
     }
 
     return result.data;

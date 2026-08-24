@@ -15,7 +15,9 @@ import {
   listBookingWorkspace,
   proposeShootSchedule,
   recordBookingPayment,
+  recordBookingSafetyReadiness,
   rescheduleShoot,
+  signoffBookingSafetyReadiness,
   startPreShootPreparation,
   updatePreShootPreparationItem,
   type BookingJourneyStageRow,
@@ -23,6 +25,9 @@ import {
   type BookingPaymentSummary,
   type BookingPreparationItemRow,
   type BookingPreparationRow,
+  type BookingSafetyReadinessRow,
+  type BookingSafetySignoffRow,
+  type BookingSafetyState,
   type BookingShootScheduleRow,
   type BookingStageTransitionRow,
   type BookingTeamAssignmentCandidateRow,
@@ -121,6 +126,54 @@ function formatScheduleDateTime(value: string, timeZone: string) {
 function scheduleStateLabel(state: BookingShootScheduleRow["schedule_state"]) {
   return state === "reserved" ? "Reserved" : "Proposed · not reserved";
 }
+
+function isBookingSafetyState(value: string | null | undefined): value is BookingSafetyState {
+  return (
+    value === "pending" || value === "ready" || value === "not_ready" || value === "not_applicable"
+  );
+}
+
+function safetyStateLabel(state: string) {
+  switch (state) {
+    case "pending":
+      return "Pending";
+    case "ready":
+      return "Ready";
+    case "not_ready":
+      return "Not ready";
+    case "not_applicable":
+      return "Not applicable";
+    default:
+      return state;
+  }
+}
+
+function safetySignoffAuthorityLabel(authority: string) {
+  switch (authority) {
+    case "founder":
+      return "Founder";
+    case "studio_manager":
+      return "Studio Manager";
+    case "lead_photographer":
+      return "Lead Photographer";
+    default:
+      return authority;
+  }
+}
+
+function isSafetyServiceCategory(
+  value: string | null,
+): value is "newborn" | "maternity" | "sitter" | "baby" | "child" {
+  return (
+    value === "newborn" ||
+    value === "maternity" ||
+    value === "sitter" ||
+    value === "baby" ||
+    value === "child"
+  );
+}
+
+const editableSafetyStates: BookingSafetyState[] = ["pending", "ready", "not_ready"];
 
 function ScheduleHistory({ schedules }: { schedules: BookingShootScheduleRow[] }) {
   if (schedules.length === 0) {
@@ -949,6 +1002,279 @@ function PreparationReadSurface({
   );
 }
 
+function SafetyReadinessSurface({
+  bookingId,
+  serviceCategory,
+  currentReadiness,
+  currentSignoffs,
+  canWrite,
+  canSignoff,
+  onSuccess,
+}: {
+  bookingId: string;
+  serviceCategory: string | null;
+  currentReadiness: BookingSafetyReadinessRow | null;
+  currentSignoffs: BookingSafetySignoffRow[];
+  canWrite: boolean;
+  canSignoff: boolean;
+  onSuccess: () => Promise<void>;
+}) {
+  const initialSafetyState: BookingSafetyState =
+    serviceCategory === "maternity"
+      ? "not_applicable"
+      : isBookingSafetyState(currentReadiness?.safety_state) &&
+          currentReadiness?.safety_state !== "not_applicable"
+        ? currentReadiness.safety_state
+        : "pending";
+
+  const initialComfortState: BookingSafetyState =
+    isBookingSafetyState(currentReadiness?.comfort_state) &&
+    currentReadiness?.comfort_state !== "not_applicable"
+      ? currentReadiness.comfort_state
+      : "pending";
+
+  const [safetyState, setSafetyState] = useState<BookingSafetyState>(initialSafetyState);
+  const [comfortState, setComfortState] = useState<BookingSafetyState>(initialComfortState);
+
+  const recordSafetyFn = useServerFn(recordBookingSafetyReadiness);
+  const signoffSafetyFn = useServerFn(signoffBookingSafetyReadiness);
+
+  const effectiveSafetyState: BookingSafetyState =
+    serviceCategory === "maternity" ? "not_applicable" : safetyState;
+
+  const recordMutation = useMutation({
+    mutationFn: () =>
+      recordSafetyFn({
+        data: {
+          bookingId,
+          safetyState: effectiveSafetyState,
+          comfortState,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Safety & comfort readiness recorded.");
+      await onSuccess();
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not record Safety Readiness."),
+  });
+
+  const signoffMutation = useMutation({
+    mutationFn: () =>
+      signoffSafetyFn({
+        data: {
+          bookingId,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Newborn Safety Readiness signed off.");
+      await onSuccess();
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not sign off Safety Readiness."),
+  });
+
+  const canRecord = canWrite && isSafetyServiceCategory(serviceCategory);
+
+  const canCreateNewbornSignoff =
+    canSignoff &&
+    serviceCategory === "newborn" &&
+    currentReadiness?.safety_state === "ready" &&
+    currentReadiness.comfort_state === "ready";
+
+  return (
+    <div className="mt-7 border-t border-border pt-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Restricted canonical evidence
+          </div>
+
+          <h3 className="mt-1 font-serif text-xl text-primary">Safety & comfort readiness</h3>
+        </div>
+
+        <span className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] uppercase tracking-wider text-primary">
+          {serviceCategory ? serviceCategory.replaceAll("_", " ") : "Category unavailable"}
+        </span>
+      </div>
+
+      {currentReadiness ? (
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Revision
+            </div>
+
+            <div className="mt-1 font-serif text-xl text-primary">
+              {currentReadiness.revision_number}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Safety</div>
+
+            <div className="mt-1 text-sm font-medium text-primary">
+              {safetyStateLabel(currentReadiness.safety_state)}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Comfort
+            </div>
+
+            <div className="mt-1 text-sm font-medium text-primary">
+              {safetyStateLabel(currentReadiness.comfort_state)}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Recorded
+            </div>
+
+            <div className="mt-1 text-sm font-medium text-primary">
+              {formatDateTime(currentReadiness.recorded_at)}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <Card className="mt-5 p-5">
+          <p className="text-sm font-medium text-primary">
+            No current canonical Safety Readiness revision is recorded.
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Readiness is not inferred from legacy safety state, preparation completion, or staffing.
+          </p>
+        </Card>
+      )}
+
+      {canRecord ? (
+        <div className="mt-5 rounded-lg border border-border bg-card p-4">
+          <div className="text-sm font-medium text-primary">
+            {currentReadiness ? "Record revised readiness" : "Record readiness"}
+          </div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <label className="text-xs text-muted-foreground">
+              Safety state
+              {serviceCategory === "maternity" ? (
+                <div className="mt-2 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-primary">
+                  Not applicable
+                </div>
+              ) : (
+                <select
+                  value={safetyState}
+                  onChange={(event) => setSafetyState(event.target.value as BookingSafetyState)}
+                  className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-primary"
+                >
+                  {editableSafetyStates.map((state) => (
+                    <option key={state} value={state}>
+                      {safetyStateLabel(state)}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </label>
+
+            <label className="text-xs text-muted-foreground">
+              Comfort state
+              <select
+                value={comfortState}
+                onChange={(event) => setComfortState(event.target.value as BookingSafetyState)}
+                className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-primary"
+              >
+                {editableSafetyStates.map((state) => (
+                  <option key={state} value={state}>
+                    {safetyStateLabel(state)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => recordMutation.mutate()}
+            disabled={recordMutation.isPending}
+            className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+          >
+            {recordMutation.isPending
+              ? "Recording..."
+              : currentReadiness
+                ? "Record revised readiness"
+                : "Record readiness"}
+          </button>
+
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            Saving changed values creates the next canonical revision. Exact replay remains a
+            server-governed no-op.
+          </p>
+        </div>
+      ) : canWrite ? (
+        <Card className="mt-5 p-5">
+          <p className="text-xs leading-5 text-muted-foreground">
+            Canonical service category could not be resolved unambiguously, so readiness mutation is
+            unavailable.
+          </p>
+        </Card>
+      ) : null}
+
+      {serviceCategory === "newborn" ? (
+        <div className="mt-5 rounded-lg border border-border bg-card p-4">
+          <div className="text-sm font-medium text-primary">Newborn formal sign-off</div>
+
+          {currentSignoffs.length === 0 ? (
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">
+              No formal sign-off is recorded for the current readiness revision.
+            </p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {currentSignoffs.map((signoff) => (
+                <div
+                  key={signoff.id}
+                  className="rounded-lg border border-border bg-muted px-3 py-2 text-xs text-primary"
+                >
+                  {safetySignoffAuthorityLabel(signoff.signoff_authority)}
+                  {" · "}
+                  {formatDateTime(signoff.signed_at)}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {canCreateNewbornSignoff ? (
+            <button
+              type="button"
+              onClick={() => signoffMutation.mutate()}
+              disabled={signoffMutation.isPending}
+              className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+            >
+              {signoffMutation.isPending ? "Signing off..." : "Sign off Newborn readiness"}
+            </button>
+          ) : null}
+
+          <p className="mt-3 text-xs leading-5 text-muted-foreground">
+            Formal sign-off is accepted only through canonical server authority. Founder, Studio
+            Manager and qualifying current internal Lead Photographer eligibility is revalidated by
+            the RPC.
+          </p>
+        </div>
+      ) : (
+        <p className="mt-4 text-xs leading-5 text-muted-foreground">
+          Formal Safety Readiness sign-off is Newborn-only.
+        </p>
+      )}
+
+      <p className="mt-4 text-xs leading-5 text-muted-foreground">
+        This restricted evidence does not independently authorize Stage 9 to Stage 10 advancement.
+        The final journey gate remains a separate canonical operation.
+      </p>
+    </div>
+  );
+}
+
 function BookingTeamReadSurface({
   assignments,
 }: {
@@ -1454,6 +1780,28 @@ function BookingsPage() {
                   .sort((left, right) => left.sort_order - right.sort_order)
               : [];
 
+            const currentSafetyReadiness =
+              data.bookingSafetyReadiness.find(
+                (readiness) =>
+                  readiness.booking_id === booking.id && readiness.superseded_at === null,
+              ) ?? null;
+
+            const preparationServiceCategories = Array.from(
+              new Set(preparationItems.map((item) => item.service_category)),
+            );
+
+            const safetyServiceCategory =
+              currentSafetyReadiness?.service_category ??
+              (preparationServiceCategories.length === 1 ? preparationServiceCategories[0] : null);
+
+            const currentSafetySignoffs = currentSafetyReadiness
+              ? data.bookingSafetySignoffs.filter(
+                  (signoff) =>
+                    signoff.booking_id === booking.id &&
+                    signoff.readiness_id === currentSafetyReadiness.id,
+                )
+              : [];
+
             const bookingTeamAssignmentHistory = data.bookingTeamAssignmentHistory.filter(
               (assignment) => assignment.booking_id === booking.id,
             );
@@ -1808,6 +2156,21 @@ function BookingsPage() {
                   />
                 ) : null}
 
+                {data.canReadSafety &&
+                currentOrder === 9 &&
+                currentStage?.stage_key === "pre_shoot_preparation" ? (
+                  <SafetyReadinessSurface
+                    key={currentSafetyReadiness?.id ?? `${booking.id}-none`}
+                    bookingId={booking.id}
+                    serviceCategory={safetyServiceCategory}
+                    currentReadiness={currentSafetyReadiness}
+                    currentSignoffs={currentSafetySignoffs}
+                    canWrite={data.canWriteSafety}
+                    canSignoff={data.canSignoffSafety}
+                    onSuccess={refreshBookingWorkspace}
+                  />
+                ) : null}
+
                 <BookingTeamReadSurface assignments={bookingTeamAssignmentHistory} />
 
                 {canManageBookingTeam && activeTeamPickerBookingId !== booking.id ? (
@@ -1906,9 +2269,10 @@ function BookingsPage() {
                     exists, an actor with booking.confirm can use the dedicated confirmation control
                     above. That operation confirms the booking, reserves the current proposal and
                     advances exactly to Stage 8. Authorized users may read canonical pre-shoot
-                    preparation evidence above when it exists. Preparation mutation, payment
-                    reversal, safety, team assignment and general journey advancement remain
-                    controlled by separate authoritative gates and are not exposed on this screen.
+                    preparation evidence above when it exists. At exact Stage 9, authorized actors
+                    may also read and record restricted canonical Safety Readiness evidence above.
+                    Payment reversal and general journey advancement remain controlled by separate
+                    authoritative gates and are not exposed on this screen.
                   </p>
                 </Card>
               </Card>
