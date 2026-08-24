@@ -19757,4 +19757,224 @@ Slice 3 is expected to integrate:
 
 Slice 3 requires fresh repository discovery and a separate Technical Design Freeze before implementation.
 
-**SPRINT 11 SLICE 2 — IMPLEMENTED / VALIDATED / PUSHED / GOVERNANCE CLOSEOUT IN PROGRESS / PRODUCTION HOLD**
+**SPRINT 11 SLICE 2 — IMPLEMENTED / VALIDATED / PUSHED / GOVERNANCE CLOSED / PRODUCTION HOLD**
+
+---
+
+## Sprint 11 Slice 3 Technical Design Freeze — 2026-08-25
+
+### Checkpoint
+
+**Sprint 11 Slice 3 — Authenticated `/bookings` Shoot Completion Integration**
+
+Exact baseline:
+
+`8b1e9527a20962904962f890d746afbd5f0ccdb7` — `docs: close sprint 11 slice 2`
+
+Production remains HOLD.
+
+### Discovery findings
+
+Fresh read-only repository discovery established that both required database operations already exist:
+
+- `record_booking_shoot_completion(uuid,timestamptz)`;
+- `mark_booking_shoot_completed(uuid)`.
+
+Generated Supabase types already contain:
+
+- `booking_shoot_completions`;
+- `record_booking_shoot_completion`;
+- `mark_booking_shoot_completed`.
+
+The existing `/bookings` application layer does not yet integrate any of those Sprint 11 surfaces.
+
+The booking workspace already obtains canonical effective permissions and exposes `canAdvanceBookingStage`.
+
+It does not currently expose `shoot.complete`.
+
+The canonical completion table already grants authenticated SELECT through RLS constrained by:
+
+- `booking.read`;
+- organization ownership;
+- booking identity;
+- branch scope.
+
+No additional completion-read permission is required.
+
+### Frozen implementation boundary
+
+Exactly two files:
+
+1. `src/lib/booking.functions.ts`
+2. `src/routes/_authenticated/bookings.tsx`
+
+Any third implementation file requires a governance amendment.
+
+No database migration is authorized.
+
+No generated-type change is authorized.
+
+### Server integration
+
+`src/lib/booking.functions.ts` will add:
+
+- a `BookingShootCompletionRow` alias from existing generated table types;
+- `shootCompletions` to `BookingWorkspaceData`;
+- `canRecordShootCompletion`, derived from existing `shoot.complete`;
+- canonical completion SELECT for visible booking IDs;
+- empty completion data on the no-bookings path;
+- `recordBookingShootCompletion`;
+- `markBookingShootCompleted`.
+
+Both server functions remain authenticated through the existing `requireSupabaseAuth` middleware.
+
+Recording input:
+
+- `bookingId`: UUID;
+- `completedAt`: ISO date/time with offset.
+
+Advancement input:
+
+- `bookingId`: UUID.
+
+The wrappers call the existing RPCs directly and surface RPC failure.
+
+No application wrapper may substitute for database authorization or journey validation.
+
+### Completion evidence read surface
+
+Canonical completion evidence will be shown in `/bookings`.
+
+Visible evidence includes the existing canonical fields needed for operational understanding:
+
+- completed time;
+- recorded time;
+- recording member identifier.
+
+Evidence remains immutable and read-only in the application.
+
+Historical completion evidence remains visible after Stage 10.
+
+No completion-to-schedule relationship is inferred.
+
+### Completion recording control
+
+Recording is an exact Stage 10 / `shoot_scheduled` application action.
+
+The browser control requires the existing `shoot.complete` capability.
+
+Once canonical completion evidence is visible, the recording form is no longer shown.
+
+The timestamp control uses required `datetime-local` input and converts a valid parsed value to ISO.
+
+The browser does not reproduce:
+
+- future-time rejection;
+- current reserved-schedule validation;
+- branch enforcement;
+- exact canonical state validation beyond control placement;
+- immutable replay/conflict rules.
+
+Those remain canonical RPC responsibilities.
+
+### Stage 10 -> 11 advancement control
+
+The application uses existing `booking.stage.advance` authority.
+
+Advancement is exposed only for the Stage 10 / `shoot_scheduled` workflow and after canonical completion evidence is visible.
+
+The control calls only `mark_booking_shoot_completed` through its authenticated server wrapper.
+
+The browser does not reproduce:
+
+- completion row cardinality checks;
+- current authoritative reserved-schedule checks;
+- transition-history validation;
+- optimistic journey-state enforcement;
+- branch authorization;
+- audit behavior.
+
+The database remains final authority.
+
+Successful advancement refetches the booking workspace and exposes exact Stage 11 / `shoot_completed`.
+
+No repeated Stage 11 replay control is exposed.
+
+### Separation of duties
+
+Existing authority remains unchanged.
+
+Founder:
+
+- may record completion where `shoot.complete` applies;
+- may advance where `booking.stage.advance` applies.
+
+Studio Manager:
+
+- may record completion where `shoot.complete` applies;
+- may advance where `booking.stage.advance` applies.
+
+Photographer:
+
+- may record canonical completion evidence;
+- cannot advance solely from `shoot.complete`.
+
+Client Coordinator:
+
+- cannot record completion solely from journey authority;
+- may advance valid completion evidence through `booking.stage.advance`.
+
+No new permission is introduced.
+
+No role grant changes.
+
+### Explicit exclusions
+
+Slice 3 does not implement or modify:
+
+- database schema;
+- database RPC behavior;
+- RLS;
+- permission catalogue;
+- role-permission mappings;
+- generated Supabase types;
+- Slice 1 completion schema;
+- shoot schedule schema;
+- `shoot_schedule_id`;
+- Stage 11 -> 12;
+- `selection_pending`;
+- shoot-day Safety incidents;
+- post-session restricted Safety notes;
+- selection;
+- editing;
+- QC;
+- gallery;
+- delivery;
+- any remote Supabase operation;
+- `--linked`;
+- any Production database mutation;
+- Production migration;
+- Production deployment.
+
+### Validation contract
+
+Implementation acceptance will require:
+
+- exact two-file implementation boundary;
+- targeted Prettier;
+- targeted ESLint with pre-existing debt distinguished from new regressions;
+- TypeScript PASS;
+- production build PASS;
+- `git diff --check` PASS;
+- no database/generated-type/later-stage implementation diff;
+- authenticated local browser validation for Founder, Studio Manager, Photographer and Client Coordinator capability behavior where fixtures permit;
+- successful completion recording/refetch;
+- immutable completion evidence display;
+- successful authorized Stage 10 -> 11 advancement/refetch;
+- no unauthorized record or advancement control;
+- no Stage 11 replay control;
+- no Stage 11 -> 12 control.
+
+### Implementation status
+
+**TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
