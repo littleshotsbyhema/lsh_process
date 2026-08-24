@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { AppShell, Card, PageHeader } from "@/components/AppShell";
 import {
   assignLeadPhotographer,
+  assignLeadVideographer,
   assignStylist,
   confirmBookingAfterAdvance,
   listBookingTeamAssignmentCandidates,
@@ -1063,6 +1064,7 @@ function BookingTeamCandidatePicker({
   const listCandidatesFn = useServerFn(listBookingTeamAssignmentCandidates);
   const assignLeadPhotographerFn = useServerFn(assignLeadPhotographer);
   const assignStylistFn = useServerFn(assignStylist);
+  const assignLeadVideographerFn = useServerFn(assignLeadVideographer);
 
   const candidatesQuery = useQuery({
     queryKey: ["booking-team-candidates", bookingId],
@@ -1074,6 +1076,8 @@ function BookingTeamCandidatePicker({
   const rolesRequiringChangeReason = new Set(candidates[0]?.roles_requiring_change_reason ?? []);
 
   const canAssignLeadPhotographer = !rolesRequiringChangeReason.has("lead_photographer");
+
+  const canAssignLeadVideographer = !rolesRequiringChangeReason.has("lead_videographer");
 
   const isCurrentStylistSubject = (candidate: BookingTeamAssignmentCandidateRow) =>
     assignmentHistory.some(
@@ -1118,6 +1122,26 @@ function BookingTeamCandidatePicker({
     },
     onError: (error: unknown) =>
       toast.error(error instanceof Error ? error.message : "Could not assign Stylist."),
+  });
+
+  const assignLeadVideographerMutation = useMutation({
+    mutationFn: (vars: {
+      subjectType: "internal_member" | "external_creative";
+      subjectId: string;
+    }) =>
+      assignLeadVideographerFn({
+        data: {
+          bookingId,
+          subjectType: vars.subjectType,
+          subjectId: vars.subjectId,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Lead Videographer assigned.");
+      await onAssigned();
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not assign Lead Videographer."),
   });
 
   return (
@@ -1235,6 +1259,31 @@ function BookingTeamCandidatePicker({
                   assignStylistMutation.variables?.subjectId === candidate.subject_id
                     ? "Assigning…"
                     : "Assign as Stylist"}
+                </button>
+              ) : null}
+
+              {(candidate.subject_type === "internal_member" ||
+                candidate.subject_type === "external_creative") &&
+              candidate.eligible_assignment_roles.includes("lead_videographer") &&
+              canAssignLeadVideographer ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    assignLeadVideographerMutation.mutate({
+                      subjectType: candidate.subject_type as
+                        "internal_member" | "external_creative",
+                      subjectId: candidate.subject_id,
+                    })
+                  }
+                  disabled={assignLeadVideographerMutation.isPending}
+                  className="mt-3 ml-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+                >
+                  {assignLeadVideographerMutation.isPending &&
+                  assignLeadVideographerMutation.variables?.subjectType ===
+                    candidate.subject_type &&
+                  assignLeadVideographerMutation.variables?.subjectId === candidate.subject_id
+                    ? "Assigning…"
+                    : "Assign as Lead Videographer"}
                 </button>
               ) : null}
             </div>

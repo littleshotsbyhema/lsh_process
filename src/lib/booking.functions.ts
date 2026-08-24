@@ -172,6 +172,12 @@ const assignStylistSchema = z.object({
   subjectId: z.string().uuid(),
 });
 
+const assignLeadVideographerSchema = z.object({
+  bookingId: z.string().uuid(),
+  subjectType: z.enum(["internal_member", "external_creative"]),
+  subjectId: z.string().uuid(),
+});
+
 export const listBookingWorkspace = createServerFn({
   method: "GET",
 })
@@ -513,6 +519,38 @@ export const assignStylist = createServerFn({
 
     if (!result.data) {
       throw new Error("Stylist assignment returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const assignLeadVideographer = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(assignLeadVideographerSchema)
+  .handler(async ({ context, data }): Promise<BookingTeamAssignmentRow> => {
+    const result =
+      data.subjectType === "internal_member"
+        ? await context.supabase.rpc("assign_booking_team_member", {
+            p_booking_id: data.bookingId,
+            p_assignment_role: "lead_videographer",
+            p_member_id: data.subjectId,
+            p_is_assigned: true,
+            p_change_reason: undefined,
+          })
+        : await context.supabase.rpc("assign_booking_external_creative", {
+            p_booking_id: data.bookingId,
+            p_assignment_role: "lead_videographer",
+            p_external_creative_id: data.subjectId,
+            p_is_assigned: true,
+            p_change_reason: undefined,
+          });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Lead Videographer assignment returned no row.");
     }
 
     return result.data;
