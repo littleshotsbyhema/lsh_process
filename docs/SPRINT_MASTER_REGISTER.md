@@ -18957,3 +18957,21 @@ This document records the Technical Design Freeze only.
 It does not authorize implementation.
 
 **SPRINT 11 SLICE 1 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+
+---
+
+## Sprint 11 Slice 1 Regression Boundary Amendment — 2026-08-24
+
+During Slice 1 implementation verification, the dedicated shoot-completion evidence pgTAP suite passed 54/54. The subsequent complete local pgTAP regression ran 1209 assertions across 19 files and exposed exactly one stale historical assertion in `supabase/tests/sprint10_extended_creative_assignments_test.sql`.
+
+That assertion records the Sprint 10 Slice 6A application catalogue as 230 role-permission mappings. Sprint 11 Slice 1 deliberately adds exactly three `shoot.complete` mappings for Founder, Studio Manager and Photographer, making the current repository-wide canonical total 233.
+
+The frozen Slice 1 implementation boundary is amended by exactly one file:
+
+- `supabase/tests/sprint10_extended_creative_assignments_test.sql`
+
+The only authorized compatibility update in that file is the repository-wide role-permission count assertion from 230 to 233 together with its assertion description. Its pgTAP plan, fixtures and all other assertions remain unchanged.
+
+No additional permission, role grant, schema behavior, RPC behavior, application surface, journey transition or remote/Production operation is authorized by this amendment.
+
+Production remains HOLD.

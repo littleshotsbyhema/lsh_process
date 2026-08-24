@@ -38,6 +38,35 @@ Production remains HOLD.
 
 Repository-wide ESLint/Prettier formatting debt exists in pre-Sprint-10 files (concentrated in `src/lib/leads.functions.ts`, `src/lib/lead-workspace.functions.ts`, and several `src/routes/_authenticated/*.tsx` files). This debt is acknowledged and tracked but remains outside every Sprint 10 slice's acceptance boundary. It must not be expanded into a repository-wide cleanup without a separately authorized checkpoint.
 
+## Sprint 11 Slice 1 Regression Boundary Amendment — 2026-08-24
+
+Full local pgTAP regression after the dedicated Sprint 11 Slice 1 suite passed 54/54 exposed one stale pre-existing global catalogue-count assertion in `supabase/tests/sprint10_extended_creative_assignments_test.sql`.
+
+That Sprint 10 assertion expects exactly 230 `role_permissions` rows. Sprint 11 Slice 1 intentionally adds exactly three new `shoot.complete` grants — Founder, Studio Manager and Photographer — so the canonical total is now 233. The full regression result was 1208 passing assertions out of 1209, with this count assertion as the sole failure.
+
+The Slice 1 implementation boundary is therefore amended by exactly one compatibility-regression file:
+
+- `supabase/tests/sprint10_extended_creative_assignments_test.sql`
+
+The permitted change in that file is limited to:
+
+- changing the global canonical role-permission mapping expectation from 230 to 233;
+- updating that assertion's description so it no longer represents the historical Slice 6A total as the current repository-wide total.
+
+This amendment does not authorize:
+
+- any change to the pgTAP plan count;
+- any other Sprint 10 test behavior or fixture;
+- any additional permission or role grant;
+- any migration behavior change;
+- any application/runtime/UI change;
+- any Stage 10 -> 11 implementation;
+- any remote Supabase or Production mutation.
+
+The original Slice 1 migration, dedicated pgTAP suite and generated Supabase types remain the canonical implementation artifacts. Generated types remain deferred until the complete local regression is green.
+
+Production remains HOLD.
+
 ## Completion Report Required
 
 For each checkpoint report:
