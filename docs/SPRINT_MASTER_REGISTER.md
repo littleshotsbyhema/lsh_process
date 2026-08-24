@@ -17156,3 +17156,511 @@ Lead Photographer (Slice 7N), Stylist (Slice 7O), and Lead Videographer
 (Slice 7P) are now implemented. Next checkpoint requires repository
 discovery against the remaining canonical Stage 9 -> 10 prerequisites. No
 slice beyond 7P is authorized or labeled here.
+
+---
+
+## Sprint 10 Slice 7Q — Controlled Safety Readiness & Newborn Sign-off — Technical Design Freeze
+
+**Status:**
+
+**TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+
+### 1. Objective
+
+Reconcile the already-canonical Sprint 10 Safety Readiness and Newborn
+formal-sign-off backend into the canonical booking workspace so an
+authorized actor can read current restricted readiness evidence, record or
+revise readiness during Stage 9, and perform a qualifying Newborn formal
+sign-off through the existing governed RPCs.
+
+This slice is an application-layer reconciliation. It does not create a new
+safety domain, a new checklist model, or a new Stage 9 -> 10 transition.
+
+### 2. Discovery conclusion
+
+Repository discovery after Slice 7P established:
+
+- `booking_safety_readiness` already exists as the canonical revisioned
+  Safety/Comfort readiness evidence table.
+- `booking_safety_signoffs` already exists as immutable,
+  readiness-revision-bound Newborn formal-sign-off evidence.
+- `record_booking_safety_readiness(uuid,text,text)` already exists as the
+  canonical Stage-9 readiness mutation.
+- `signoff_booking_safety_readiness(uuid)` already exists as the canonical
+  Stage-9 Newborn formal-sign-off mutation.
+- `mark_booking_shoot_scheduled(uuid)` already consumes the canonical
+  readiness/sign-off evidence as part of the Stage 9 -> 10 gate.
+- `src/integrations/supabase/types.ts` already contains generated table and
+  RPC types for the canonical safety model.
+- no application server function currently invokes either Safety RPC.
+- `src/routes/_authenticated/safety.tsx` remains a legacy implementation
+  backed by `mock-data`, `useStore`, and `submitSafety`.
+- `/safety` remains in `temporarilyUnavailablePaths`, whose documented
+  purpose is to keep legacy seeded-store rooms non-operational until they
+  are reconciled with canonical booking/journey records.
+- the canonical `/bookings` workspace already owns the real scheduling,
+  preparation, staffing, and Stage-9 booking context.
+
+Therefore the correct first operational Safety Readiness surface is the
+canonical `/bookings` workspace. This slice does not release or rewrite the
+legacy `/safety` route.
+
+### 3. Canonical evidence model
+
+`booking_safety_readiness` is authoritative.
+
+Readiness is revisioned rather than updated in place. At most one revision
+per booking is current (`superseded_at IS NULL`), with historical revisions
+preserved.
+
+Canonical fields used by this slice are:
+
+- `booking_id`
+- `service_category`
+- `revision_number`
+- `safety_state`
+- `comfort_state`
+- `recorded_at`
+- `recorded_by`
+- `superseded_at`
+- `superseded_by`
+
+`booking_safety_signoffs` is immutable evidence tied to one exact readiness
+revision through `readiness_id`. Canonical fields used by this slice are:
+
+- `booking_id`
+- `readiness_id`
+- `signed_at`
+- `signed_by`
+- `signoff_authority`
+- `lead_assignment_id`
+
+This slice does not invent a parallel boolean such as `safety_complete`,
+does not persist application-local checklist state, and does not write
+either table directly.
+
+### 4. Canonical authorization boundary
+
+The application will consume the existing canonical permissions returned by
+`effective_permissions`:
+
+- `safety.read`
+- `safety.write`
+- `safety.signoff`
+
+`BookingWorkspaceData` will expose:
+
+- `canReadSafety`
+- `canWriteSafety`
+- `canSignoffSafety`
+
+No legacy `src/lib/access.ts` action mapping is authoritative for these
+mutations.
+
+The canonical RPCs remain authoritative for authentication, active
+organization membership, organization/branch containment, Stage-9
+containment, service-category applicability, live role grants, locking,
+revision lifecycle, idempotency, and audit.
+
+Application visibility is an additional UX boundary, never a substitute for
+RPC authorization.
+
+### 5. Restricted read behavior
+
+New exported row aliases in `src/lib/booking.functions.ts`:
+
+- `BookingSafetyReadinessRow`
+- `BookingSafetySignoffRow`
+
+`BookingWorkspaceData` will additionally contain:
+
+- `bookingSafetyReadiness`
+- `bookingSafetySignoffs`
+- the three canonical safety permission booleans
+
+The workspace loader will query the canonical safety tables only when
+`canReadSafety` is true.
+
+When `canReadSafety` is false:
+
+- readiness state values are not queried for the application response;
+- sign-off rows are not queried for the application response;
+- no restricted Safety/Comfort values are rendered;
+- no Safety mutation controls are rendered.
+
+The browser does not infer protected state from missing rows.
+
+### 6. Current-readiness resolution
+
+For a booking, the application treats only a row with
+`superseded_at IS NULL` as current readiness evidence.
+
+Historical readiness revisions are not mutation targets.
+
+Sign-off display for the operational Stage-9 surface is scoped to rows whose
+`readiness_id` matches that exact current readiness revision. Historical
+sign-offs attached to superseded readiness revisions do not satisfy the UI's
+current-evidence display.
+
+The database remains authoritative for uniqueness and lifecycle invariants.
+
+### 7. Service-category resolution
+
+The browser must not use legacy seeded booking categories from
+`useStore`/`mock-data`.
+
+For the Stage-9 workspace:
+
+1. if current canonical readiness exists, its `service_category` is the
+   displayed readiness category;
+2. otherwise, the application derives the display category from the
+   canonical preparation snapshot already loaded in the booking workspace;
+3. derivation succeeds only when the booking's canonical preparation items
+   resolve to exactly one distinct `service_category`;
+4. missing or ambiguous category evidence fails closed: no readiness
+   mutation control is shown.
+
+The readiness RPC independently resolves the authoritative category from the
+accepted quotation package and remains the final authority.
+
+### 8. Readiness mutation contract
+
+New server-function export:
+
+`recordBookingSafetyReadiness`
+
+Input:
+
+- `bookingId: uuid`
+- `safetyState: "pending" | "ready" | "not_ready" | "not_applicable"`
+- `comfortState: "pending" | "ready" | "not_ready" | "not_applicable"`
+
+The function calls only:
+
+`record_booking_safety_readiness`
+
+with:
+
+- `p_booking_id = bookingId`
+- `p_safety_state = safetyState`
+- `p_comfort_state = comfortState`
+
+The browser does not supply:
+
+- organization id;
+- branch id;
+- service category;
+- revision number;
+- recorded actor;
+- supersession metadata;
+- audit metadata.
+
+The existing RPC resolves and enforces all of those concerns.
+
+Exact replay remains the RPC's governed no-op behavior. A changed readiness
+state creates the next canonical revision and supersedes the prior current
+revision according to the existing database contract.
+
+### 9. Category-specific readiness UI
+
+The UI exposes only combinations compatible with the existing readiness RPC.
+
+For `maternity`:
+
+- Safety is fixed to `not_applicable`;
+- Comfort may be `pending`, `ready`, or `not_ready`;
+- the browser does not offer `not_applicable` for Comfort.
+
+For `newborn`, `sitter`, `baby`, and `child`:
+
+- Safety may be `pending`, `ready`, or `not_ready`;
+- Comfort may be `pending`, `ready`, or `not_ready`;
+- the browser does not offer `not_applicable` for either field.
+
+The RPC remains authoritative and rejects an invalid applicability
+combination even if a caller bypasses the UI.
+
+This freeze does not strengthen or reinterpret the separate Stage 9 -> 10
+gate's category-specific readiness semantics beyond what that gate itself
+currently enforces.
+
+### 10. Newborn formal-sign-off contract
+
+New server-function export:
+
+`signoffBookingSafetyReadiness`
+
+Input:
+
+- `bookingId: uuid`
+
+The function calls only:
+
+`signoff_booking_safety_readiness`
+
+with:
+
+- `p_booking_id = bookingId`
+
+The browser cannot choose:
+
+- signer;
+- sign-off authority;
+- readiness revision;
+- Lead Photographer assignment;
+- organization;
+- branch;
+- signed timestamp.
+
+The RPC resolves all of those values.
+
+The canonical RPC is Newborn-only and requires current Newborn readiness to
+be `safety_state = 'ready'` and `comfort_state = 'ready'`.
+
+Signer authority is resolved server-side in deterministic order:
+
+1. Founder;
+2. Studio Manager;
+3. qualifying Photographer.
+
+A Photographer is accepted only when that actor is the current internal
+Lead Photographer for the booking and still holds the required live,
+branch-valid Photographer role grant.
+
+Same-signer replay for the same current readiness revision is idempotent and
+returns the existing sign-off only after authorization and readiness are
+revalidated.
+
+### 11. Sign-off UI semantics
+
+The Newborn sign-off control renders only when all application-visible
+conditions are true:
+
+- booking is exactly canonical Stage 9 `pre_shoot_preparation`;
+- `canReadSafety` is true;
+- `canSignoffSafety` is true;
+- resolved service category is `newborn`;
+- current readiness exists;
+- current readiness is `ready / ready`.
+
+The application does not attempt to duplicate the RPC's contextual
+Founder/Studio-Manager/current-Lead-Photographer authority resolver.
+
+Therefore `safety.signoff` is a coarse application permission signal;
+contextual eligibility remains server-enforced. If the RPC rejects a caller
+who holds the permission but lacks qualifying current authority, the
+canonical error is surfaced through the existing mutation error pattern.
+
+Existing sign-off rows for the current revision are displayed as recorded
+evidence, not as an unconditional claim that the final Stage 9 -> 10 gate
+will pass. In particular, the canonical advancement gate may revalidate a
+Lead-Photographer sign-off against current staffing and live role state.
+
+### 12. Booking-workspace UI placement
+
+All new operational UI is contained within:
+
+`src/routes/_authenticated/bookings.tsx`
+
+The Safety Readiness section appears only for a booking whose current
+canonical journey stage is exactly:
+
+- `stage_order = 9`
+- `stage_key = 'pre_shoot_preparation'`
+
+It sits within the existing booking card alongside the canonical
+preparation/team operational controls.
+
+The section shows, when authorized:
+
+- canonical service category;
+- current readiness revision number;
+- current Safety state;
+- current Comfort state;
+- recorded-at evidence;
+- current-revision sign-off evidence;
+- readiness mutation controls when `canWriteSafety`;
+- Newborn sign-off control under section 11's conditions.
+
+Mutation success follows the established booking-workspace pattern:
+success toast followed by canonical workspace invalidation/refetch.
+Mutation failure uses the existing error-toast pattern.
+
+No separate Safety route is introduced.
+
+### 13. Legacy-route containment
+
+The following files are deliberately not part of the implementation:
+
+- `src/routes/_authenticated/safety.tsx`
+- `src/routes/_authenticated/prep.tsx`
+- `src/lib/access.ts`
+- `src/lib/mock-data.ts`
+- `src/store/useStore.ts`
+- `src/routeTree.gen.ts`
+
+`/safety` and `/prep` remain temporarily unavailable legacy rooms.
+
+This slice neither deletes nor modernizes those routes. Their broader
+reconciliation remains separate work.
+
+No route-tree regeneration is expected because no route is added, removed,
+or renamed.
+
+### 14. Exact implementation file boundary
+
+The Slice 7Q implementation is frozen to exactly these two files:
+
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+
+No other implementation file is expected to change.
+
+If either file proves insufficient during implementation: **STOP.** Do not
+broaden scope. Amend this Technical Design Freeze separately before
+continuing.
+
+### 15. Database / migration decision
+
+**SCHEMA CHANGE EXPECTED: NO. MIGRATION EXPECTED: NO.**
+
+The canonical tables, RLS, ACLs, permission grants, lifecycle guards,
+readiness RPC, sign-off RPC, generated types, and Stage 9 -> 10 consumer
+already exist.
+
+This slice does not change:
+
+- `record_booking_safety_readiness`;
+- `signoff_booking_safety_readiness`;
+- `mark_booking_shoot_scheduled`;
+- any Safety table;
+- any RLS policy;
+- any role/permission grant;
+- any audit function;
+- generated Supabase types.
+
+No new database read-model RPC is authorized by this freeze.
+
+### 16. Stage 9 -> 10 advancement remains separate
+
+Although `mark_booking_shoot_scheduled(uuid)` already exists canonically,
+Slice 7Q does not add an application server function or UI control for it.
+
+Slice 7Q only makes one of that gate's remaining evidence domains
+operationally writable/readable from the canonical application.
+
+Final Stage 9 -> 10 advancement remains a later separately discovered and
+frozen checkpoint.
+
+### 17. Verification requirements
+
+Use the governed PRODUCT IMPLEMENTATION verification profile without
+reduction because the slice has no migration:
+
+- targeted Prettier;
+- targeted ESLint;
+- TypeScript typecheck;
+- `npm run build`;
+- route-tree containment check, expected unchanged and verified rather than
+  assumed;
+- full local pgTAP suite;
+- full `npx supabase db lint --local`;
+- `git diff --check`;
+- exact two-file implementation-boundary verification;
+- secret/fixture hygiene;
+- local browser acceptance.
+
+No remote Supabase command and no `--linked` command is authorized.
+
+### 18. Browser acceptance cases
+
+- **A — Canonical read PASS target.** A Stage-9 booking with current
+  readiness evidence shows the exact current canonical revision and states
+  after full browser refresh.
+- **B — First readiness record PASS target.** An authorized `safety.write`
+  actor records first readiness evidence; the canonical row persists after
+  full browser refresh.
+- **C — Readiness revision PASS target.** Changing readiness creates a new
+  current revision and the UI resolves that revision rather than the
+  superseded one.
+- **D — Exact replay PASS target.** Re-submitting the exact current
+  readiness values does not create an additional revision.
+- **E — Maternity applicability PASS target.** Safety is fixed to
+  `not_applicable`; Comfort remains applicable; invalid combinations are not
+  offered by the UI.
+- **F — Newborn sign-off PASS target.** With current Newborn readiness at
+  `ready / ready`, a qualifying Founder, Studio Manager, or current internal
+  Lead Photographer can create formal sign-off evidence, which persists
+  after refresh.
+- **G — Same-signer sign-off replay PASS target.** Repeating the sign-off by
+  the same still-authorized actor for the same current readiness revision
+  does not create a duplicate sign-off.
+- **H — Restricted-read PASS target.** An actor without `safety.read`
+  receives no restricted readiness/sign-off values and no Safety mutation
+  controls in the booking workspace.
+- **I — Invalid-stage containment PASS target.** A booking outside exact
+  Stage 9 exposes no readiness or sign-off mutation controls; canonical RPC
+  stage enforcement remains unchanged.
+- **J — Non-Newborn sign-off containment PASS target.** No formal sign-off
+  control is exposed for a non-Newborn booking; the canonical RPC remains
+  Newborn-only.
+
+### 19. Explicit exclusions
+
+Slice 7Q does not implement:
+
+- `mark_booking_shoot_scheduled` application mutation or UI;
+- Stage 10 -> 11 behavior;
+- `/safety` runtime release;
+- `/prep` runtime release;
+- legacy store reconciliation;
+- free-text medical or sensitive notes;
+- shoot-day safety evidence;
+- Safety template editing;
+- Safety taxonomy redesign;
+- sign-off deletion or amendment;
+- readiness-history management UI;
+- direct table writes;
+- permission expansion;
+- role-grant expansion;
+- new RLS;
+- new RPCs;
+- database migrations;
+- generated-type changes;
+- external integrations;
+- production backfill;
+- CI changes;
+- Playwright introduction;
+- automation-framework Phase 2;
+- deployment.
+
+### 20. Security / privacy boundary
+
+Safety Readiness remains restricted operational evidence.
+
+The application must not:
+
+- place Safety state into unrestricted booking summaries;
+- expose restricted readiness/sign-off rows to actors lacking `safety.read`;
+- use client-side role assumptions as authorization;
+- accept signer identity or sign-off authority from the browser;
+- accept service category or readiness revision number from the browser;
+- write Safety tables directly;
+- persist canonical Safety state into the legacy seeded store.
+
+All mutations pass through the existing canonical RPCs.
+
+### 21. Production containment
+
+No remote Supabase mutation.
+No production mutation.
+No Git `main` merge.
+No deployment.
+
+**Production remains HOLD.**
+
+### 22. Implementation authorization status
+
+The freeze itself does NOT authorize implementation.
+
+**TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
