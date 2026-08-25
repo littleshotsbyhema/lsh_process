@@ -719,6 +719,77 @@ export type Database = {
           },
         ];
       };
+      booking_selection_reconciliations: {
+        Row: {
+          booking_id: string;
+          calculation_rule: string;
+          excess_image_count: number;
+          id: string;
+          included_image_count: number;
+          organization_id: string;
+          recorded_at: string;
+          recorded_by: string;
+          selected_image_count: number;
+          source_quotation_id: string;
+          source_selection_confirmation_id: string;
+        };
+        Insert: {
+          booking_id: string;
+          calculation_rule: string;
+          excess_image_count: number;
+          id?: string;
+          included_image_count: number;
+          organization_id: string;
+          recorded_at?: string;
+          recorded_by: string;
+          selected_image_count: number;
+          source_quotation_id: string;
+          source_selection_confirmation_id: string;
+        };
+        Update: {
+          booking_id?: string;
+          calculation_rule?: string;
+          excess_image_count?: number;
+          id?: string;
+          included_image_count?: number;
+          organization_id?: string;
+          recorded_at?: string;
+          recorded_by?: string;
+          selected_image_count?: number;
+          source_quotation_id?: string;
+          source_selection_confirmation_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_selection_reconciliations_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_selection_reconciliations_confirmation_fkey";
+            columns: ["organization_id", "booking_id", "source_selection_confirmation_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_selection_confirmations";
+            referencedColumns: ["organization_id", "booking_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_selection_reconciliations_quote_fkey";
+            columns: ["organization_id", "source_quotation_id"];
+            isOneToOne: false;
+            referencedRelation: "quotations";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_selection_reconciliations_recorded_by_fkey";
+            columns: ["recorded_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
       booking_shoot_completions: {
         Row: {
           booking_id: string;
@@ -6342,6 +6413,28 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "booking_selection_confirmations";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      record_booking_selection_reconciliation: {
+        Args: { p_booking_id: string };
+        Returns: {
+          booking_id: string;
+          calculation_rule: string;
+          excess_image_count: number;
+          id: string;
+          included_image_count: number;
+          organization_id: string;
+          recorded_at: string;
+          recorded_by: string;
+          selected_image_count: number;
+          source_quotation_id: string;
+          source_selection_confirmation_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_selection_reconciliations";
           isOneToOne: true;
           isSetofReturn: false;
         };
