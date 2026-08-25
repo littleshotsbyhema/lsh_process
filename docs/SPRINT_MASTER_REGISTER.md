@@ -21794,10 +21794,98 @@ Acceptance requires exact provenance, binding, price, RLS, ACL, immutability, re
 - production build;
 - whitespace validation.
 
-Implementation is not yet authorized.
+### Implementation and governance closeout — 2026-08-25
+
+Implementation:
+
+`8ab0ab4e6fe0d3bae4084a66ab2999fed03abace` — `feat: add additional image pricing basis authority`
+
+Exact parent:
+
+`2e2fa624c1b2106fceeb0c46ca4a579d693f4d48` — `docs: freeze sprint 11 slice 8`
+
+The implementation commit contains exactly:
+
+1. `supabase/migrations/20260825220600_sprint11_additional_image_pricing_basis_authority_foundation.sql`;
+2. `supabase/tests/sprint11_additional_image_pricing_basis_authority_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+Commit delta: 4963 insertions / 0 deletions.
+
+Delivered commercial authority:
+
+- exactly 12 immutable package-version additional-image terms;
+- all current package v1 authorities bind exact `additional_image` v1 at INR 500;
+- all bound add-on authority carries exact one-retouched-image-per-unit entitlement;
+- exactly one immutable booking pricing basis per organization + booking;
+- exact accepted-quote, package-version, selection-confirmation and reconciliation provenance;
+- protected A basis resolved only through explicit relational authority;
+- optional exact B version with approval-time, service-category, fixed-INR and one-image-entitlement validation;
+- `commercial.price.override` required when B is supplied;
+- canonical `client_favorable_quote_or_selection_v1`;
+- lower B wins, while absent/equal/higher B resolves to A;
+- no arbitrary caller-entered price;
+- no runtime source-revision or latest-version inference;
+- exact replay idempotent;
+- conflicting persisted evidence fails closed.
+
+Security and authorization:
+
+- no new permission;
+- no role-permission mapping changes;
+- canonical counts remain 68 permissions / 241 role-permission mappings;
+- both new relations use forced RLS;
+- authenticated reads require existing `payment.read`;
+- controlled recording requires existing `payment.record`;
+- B selection additionally requires existing `commercial.price.override`;
+- booking branch scope enforced;
+- authenticated direct INSERT / UPDATE / DELETE denied;
+- RPC is authenticated-only, `SECURITY DEFINER`, with empty `search_path`;
+- PUBLIC, anon and service_role RPC execution denied;
+- no service-role application mutation path.
+
+Local validation evidence:
+
+- clean local migration/reset contract: PASS;
+- exact package-term count: 12;
+- persisted booking pricing-basis rows after clean reset: 0;
+- dedicated Slice 8 pgTAP: 103 / 103 PASS;
+- complete local pgTAP regression: 1614 / 1614 PASS across 25 files;
+- local database lint: PASS with no schema errors;
+- generated Supabase types: 211 additions / 0 deletions;
+- generated-type Prettier: PASS;
+- targeted generated-types ESLint: PASS;
+- TypeScript `--noEmit`: PASS;
+- production build: PASS with existing non-blocking warnings only;
+- whitespace / `git diff --check`: PASS;
+- implementation boundary: exact three frozen artifacts;
+- post-implementation-commit worktree: clean.
+
+Containment preserved:
+
+- no accepted-quotation or quotation-line mutation;
+- no payment-requirement mutation;
+- no booking-payment mutation;
+- no excess-charge multiplication or charge-total persistence;
+- no adjusted financial obligation;
+- no amount-due or balance-due authority;
+- no settlement/full-balance model;
+- no journey-state mutation;
+- no Stage 12 -> 13 / `editing_pending`;
+- no editing/QC/delivery/Pixieset;
+- no privacy/consent change;
+- no application route/UI;
+- no remote Supabase mutation;
+- no Production migration/deployment/release.
+
+Slice 8 is implemented, fully validated locally, committed and governance closed.
+
+The implementation and governance-closeout commits remain local pending explicit Git push authorization.
+
+The next programme action is fresh read-only discovery for adjusted financial-obligation semantics using the immutable positive-excess reconciliation quantity plus the immutable applied per-unit pricing basis. No adjusted obligation, settlement model or Stage 13 gate is frozen by this closeout.
 
 Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 8 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+**SPRINT 11 SLICE 8 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSH PENDING / PRODUCTION HOLD**

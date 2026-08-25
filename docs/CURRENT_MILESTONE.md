@@ -12,41 +12,56 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 7 are implemented, fully validated locally, committed, pushed and remotely reconciled. Slice 7 remote-state reconciliation is recorded by `e02e81aacb77b2d9dbcffe8267c2e5fe55ee20a6` — `docs: reconcile sprint 11 slice 7 remote state`, with local/remote branch parity confirmed at divergence `0 0`. Sprint 11 Slice 8 — Client-Favorable Additional-Image Pricing Basis Authority Foundation — is now technically frozen against that exact baseline; implementation is not yet authorized. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 7 are implemented, fully validated locally, committed, pushed and remotely reconciled. Slice 7 remote-state reconciliation is recorded by `e02e81aacb77b2d9dbcffe8267c2e5fe55ee20a6` — `docs: reconcile sprint 11 slice 7 remote state`, with local/remote branch parity confirmed at divergence `0 0`. Sprint 11 Slice 8 — Client-Favorable Additional-Image Pricing Basis Authority Foundation — is implemented, fully validated locally and committed at `8ab0ab4e6fe0d3bae4084a66ab2999fed03abace`; this governance closeout records the completed local checkpoint. The Slice 8 implementation and closeout remain unpushed pending explicit push authorization. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
-Sprint 11 Slice 7 — **Booking-Level Selection Entitlement Reconciliation Evidence Foundation** is implemented, fully validated locally and committed.
+Sprint 11 Slice 8 — **Client-Favorable Additional-Image Pricing Basis Authority Foundation** is implemented, fully validated locally and committed.
 
 Technical-design freeze:
 
-`ed1118130acbf12c9cafbd1a7acbe78453c00270` — `docs: freeze sprint 11 slice 7`
+`2e2fa624c1b2106fceeb0c46ca4a579d693f4d48` — `docs: freeze sprint 11 slice 8`
 
 Frozen baseline:
 
-`6e37919e207ddfc629373ee6dbe38c80459aa3a0` — `docs: reconcile sprint 11 slice 6 remote state`
+`e02e81aacb77b2d9dbcffe8267c2e5fe55ee20a6` — `docs: reconcile sprint 11 slice 7 remote state`
 
 Implementation:
 
-`8930475cdb2b3bd374c973f4d615f9e99eea64e9` — `feat: add selection entitlement reconciliation foundation`
+`8ab0ab4e6fe0d3bae4084a66ab2999fed03abace` — `feat: add additional image pricing basis authority`
 
-The implementation commit contains exactly the three frozen implementation artifacts. Clean local reset, dedicated Slice 7 pgTAP, full local regression, database lint, generated types, TypeScript and production build validation all passed.
+The implementation commit has exact parent `2e2fa624c1b2106fceeb0c46ca4a579d693f4d48` and contains exactly the three frozen implementation artifacts:
 
-Governance closeout:
+1. `supabase/migrations/20260825220600_sprint11_additional_image_pricing_basis_authority_foundation.sql`;
+2. `supabase/tests/sprint11_additional_image_pricing_basis_authority_test.sql`;
+3. `src/integrations/supabase/types.ts`.
 
-`3fd398aababf846b1beda06c1bd9e74e71f8dfbd` — `docs: close sprint 11 slice 7`
+Validation evidence:
 
-The implementation and governance-closeout commits are pushed to `origin/architecture-rebuild`. First local/remote reconciliation is confirmed at `3fd398aababf846b1beda06c1bd9e74e71f8dfbd` with divergence `0 0`.
+- clean local migration/reset contract: PASS;
+- dedicated Slice 8 pgTAP: 103 / 103 PASS;
+- full local pgTAP regression: 25 files / 1614 tests PASS;
+- local database lint: PASS with no schema errors;
+- canonical permission count: 68;
+- canonical role-permission mapping count: 241;
+- canonical image-entitlement count: 13;
+- canonical package additional-image term count: 12;
+- persisted booking pricing-basis rows after clean reset: 0;
+- all 12 protected package terms resolve package v1 -> `additional_image` v1 -> INR 500 -> one retouched image per unit;
+- generated Supabase types: 211 additions / 0 deletions;
+- generated-type Prettier: PASS;
+- targeted generated-types ESLint: PASS;
+- TypeScript `--noEmit`: PASS;
+- production build: PASS with existing non-blocking dependency, deprecation, bundle and Wrangler warnings only;
+- `git diff --check`: PASS;
+- implementation commit contains exactly three frozen artifacts and 4963 insertions / 0 deletions;
+- post-implementation-commit worktree: clean.
 
-Active design checkpoint:
+The founder-approved commercial rule remains `client_favorable_quote_or_selection_v1`: accepted-booking A is the protected ceiling; an explicitly supplied valid selection-time B may improve the rate; lower B wins; equal or higher B resolves to A.
 
-Sprint 11 Slice 8 — **Client-Favorable Additional-Image Pricing Basis Authority Foundation** is technically frozen against `e02e81aacb77b2d9dbcffe8267c2e5fe55ee20a6`.
+Slice 8 establishes immutable commercial package/additional-image term authority and immutable booking-level per-unit pricing-basis evidence only. It does not create an excess-image charge total, adjusted financial obligation, amount due, balance due, settlement result or Stage 12 -> 13 transition.
 
-The founder-approved commercial rule is `client_favorable_quote_or_selection_v1`: the accepted-booking commercial basis is the protected ceiling, an explicitly selected valid selection-time commercial version may improve the client's rate, and the lower valid unit price governs. Equal prices resolve to the accepted-booking basis for deterministic provenance.
-
-Slice 8 establishes immutable commercial-version and pricing-basis authority only. It does not create an adjusted financial obligation, calculate an excess-image charge total, determine settlement or advance Stage 12 -> 13.
-
-Implementation is not yet authorized.
+This governance closeout records Slice 8 as implemented, fully validated locally, committed and governance closed. The implementation and this closeout remain local until explicit push authorization.
 
 Remote Supabase remains HOLD.
 
@@ -1505,7 +1520,98 @@ Implementation acceptance will require:
 - production build PASS;
 - `git diff --check` PASS.
 
-Implementation is not yet authorized.
+## Sprint 11 Slice 8 Implementation Verification and Governance Closeout — 2026-08-25
+
+### Implementation commit
+
+`8ab0ab4e6fe0d3bae4084a66ab2999fed03abace` — `feat: add additional image pricing basis authority`
+
+Exact parent:
+
+`2e2fa624c1b2106fceeb0c46ca4a579d693f4d48` — `docs: freeze sprint 11 slice 8`
+
+The implementation commit contains exactly the three frozen artifacts and no fourth implementation artifact:
+
+1. `supabase/migrations/20260825220600_sprint11_additional_image_pricing_basis_authority_foundation.sql`;
+2. `supabase/tests/sprint11_additional_image_pricing_basis_authority_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+Commit delta is exactly 4963 insertions / 0 deletions.
+
+### Delivered authority
+
+Slice 8 delivers:
+
+- immutable `public.commercial_package_additional_image_terms`;
+- exactly one explicit additional-image commercial term per organization + package version;
+- exactly 12 current package-v1 bindings;
+- exact `additional_image` v1 authority at INR 500 for all 12 current package versions;
+- exact one-retouched-image-per-unit add-on entitlement compatibility;
+- immutable `public.booking_additional_image_pricing_bases`;
+- exactly one pricing-basis row per organization + booking;
+- exact accepted quotation, package version, selection confirmation and Slice 7 reconciliation provenance;
+- exact protected A authority through the explicit package-term binding;
+- optional exact selection-time B authority;
+- B approval-time containment against immutable selection confirmation;
+- B requires approved, active-parent, fixed-amount, INR, positive-price, one-image-entitlement commercial authority;
+- B requires `commercial.price.override`;
+- recording requires `payment.record`;
+- authenticated reads require `payment.read`;
+- exact `client_favorable_quote_or_selection_v1`;
+- B absent -> A;
+- B lower than A -> B;
+- B equal to A -> A;
+- B higher than A -> A;
+- exact replay idempotence;
+- conflicting immutable evidence fails closed;
+- structural `booking.additional_image_pricing_basis_recorded` audit evidence;
+- no caller-entered arbitrary monetary value;
+- no runtime `source_revision` or latest/current-version inference.
+
+### Local validation evidence
+
+- clean local migration/reset contract: PASS;
+- canonical counts after reset: permissions 68, role-permission mappings 241, image entitlements 13, package terms 12, booking pricing bases 0;
+- dedicated Slice 8 pgTAP: 103 / 103 PASS;
+- full local pgTAP regression: 25 files / 1614 tests PASS;
+- local database lint: PASS with no schema errors;
+- both Slice 8 relations: RLS enabled and forced;
+- authenticated direct INSERT / UPDATE / DELETE denied;
+- controlled RPC: `SECURITY DEFINER`, empty `search_path`, authenticated execution only;
+- PUBLIC, anon and service_role RPC execution denied;
+- generated Supabase types: 211 additions / 0 deletions;
+- generated-type Prettier: PASS;
+- targeted generated-types ESLint: PASS;
+- TypeScript `--noEmit`: PASS;
+- production build: PASS with existing non-blocking warnings only;
+- `git diff --check`: PASS;
+- implementation commit boundary: exact three artifacts;
+- post-implementation-commit worktree: clean.
+
+### Containment preserved
+
+Slice 8 creates no:
+
+- accepted-quotation mutation;
+- quotation-line mutation;
+- payment-requirement mutation;
+- booking-payment mutation;
+- excess-image charge multiplication;
+- excess-image charge total;
+- adjusted booking total;
+- adjusted financial obligation;
+- amount-due or balance-due authority;
+- settlement/full-balance determination;
+- journey-state mutation;
+- Stage 12 -> 13 / `editing_pending` transition;
+- editing, QC, delivery or Pixieset behavior;
+- application route or UI;
+- remote Supabase mutation;
+- Production migration, deployment or release.
+
+Slice 8 is therefore **implemented, fully validated locally, committed and governance closed**.
+
+The implementation and governance-closeout commits remain local pending explicit Git push authorization.
 
 Remote Supabase remains HOLD.
 
@@ -1513,14 +1619,12 @@ Production remains HOLD.
 
 ## Immediate Product Sequence
 
-1. governance-commit the Sprint 11 Slice 8 technical-design freeze;
-2. implement only the frozen additional-image pricing-basis authority after separate explicit implementation authorization;
-3. validate and governance-close Slice 8 independently;
-4. perform fresh read-only discovery for the adjusted financial-obligation boundary using immutable positive excess quantity plus immutable applied unit-price basis;
-5. separately establish full-settlement semantics using the existing canonical booking payment ledger;
-6. only then design Stage 12 -> 13 / `editing_pending`.
+1. perform fresh read-only discovery for the adjusted financial-obligation boundary using immutable positive excess quantity plus immutable applied per-unit pricing basis;
+2. only after that discovery, separately govern and freeze any adjusted financial-obligation design before implementation;
+3. separately establish full-settlement semantics using the existing canonical booking payment ledger;
+4. only then design Stage 12 -> 13 / `editing_pending`.
 
-No adjusted financial obligation, excess-charge total, settlement model or Stage 13 gate is authorized by the Slice 8 freeze.
+No adjusted financial obligation, excess-charge total, settlement model or Stage 13 gate is authorized by this Slice 8 closeout.
 
 Remote Supabase remains HOLD.
 
