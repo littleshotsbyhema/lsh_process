@@ -19978,3 +19978,203 @@ Implementation acceptance will require:
 ### Implementation status
 
 **TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+
+---
+
+## Sprint 11 Slice 3 Closeout — 2026-08-25
+
+### Checkpoint
+
+**Sprint 11 Slice 3 — Authenticated `/bookings` Shoot Completion Integration**
+
+Technical Design Freeze baseline:
+
+`8b1e9527a20962904962f890d746afbd5f0ccdb7` — `docs: close sprint 11 slice 2`
+
+Implementation commit:
+
+`0dfa357630be8714759d4663e00259b18dafe2bb` — `feat: integrate shoot completion workflow`
+
+Remote branch:
+
+`origin/architecture-rebuild` -> `0dfa357630be8714759d4663e00259b18dafe2bb`
+
+Production remains HOLD.
+
+### Delivered scope
+
+The implementation remained inside the frozen two-file application boundary:
+
+1. `src/lib/booking.functions.ts`
+2. `src/routes/_authenticated/bookings.tsx`
+
+Delivered behavior:
+
+- canonical `booking_shoot_completions` reads through authenticated Supabase access and existing RLS;
+- `canRecordShootCompletion` derived only from existing `shoot.complete`;
+- authenticated server wrapper for `record_booking_shoot_completion(uuid,timestamptz)`;
+- authenticated server wrapper for `mark_booking_shoot_completed(uuid)`;
+- immutable completion-evidence display;
+- exact Stage 10 completion-recording control;
+- controlled Stage 10 -> 11 advancement after canonical completion evidence;
+- mutation success/error feedback;
+- booking-workspace refetch after successful mutation;
+- historical completion evidence retained at Stage 11;
+- no completion replay control after evidence exists;
+- no repeated Stage-11 advancement control;
+- no general journey-stage mutation surface.
+
+### Boundary reconciliation
+
+Slice 3 introduced no:
+
+- Supabase migration;
+- database schema change;
+- database RPC behavior change;
+- RLS change;
+- permission-catalogue change;
+- role-permission change;
+- generated Supabase type change;
+- completion-schema change;
+- shoot-schedule schema change;
+- `shoot_schedule_id`;
+- Stage 11 -> 12 implementation;
+- selection workflow;
+- editing, QC, gallery or delivery workflow;
+- remote Supabase mutation;
+- Production database mutation;
+- Production deployment.
+
+### Static and build validation
+
+PASS:
+
+- exact two-file implementation diff;
+- production build;
+- TypeScript;
+- targeted ESLint;
+- targeted Prettier;
+- commit whitespace check;
+- clean final worktree.
+
+Repository-wide historical lint/formatting debt remained outside the Slice 3 boundary and was not expanded into unrelated cleanup.
+
+### Authenticated role/capability validation
+
+Local browser validation proved:
+
+- Founder can record canonical completion evidence and has existing journey authority, but no advancement control appears before evidence;
+- Studio Manager has the same bounded behavior;
+- Photographer can record completion evidence but cannot advance the journey;
+- Client Coordinator cannot record completion evidence but can advance valid canonical evidence through existing `booking.stage.advance`;
+- Stylist can neither record completion evidence nor advance the journey.
+
+No new permission or role grant was required.
+
+### Canonical end-to-end validation
+
+Fresh fixture:
+
+- booking reference: `LSH-BK-F3E6566E`;
+- booking id: `f3e6566e-aff1-497c-80c3-19995b7496af`.
+
+Initial state:
+
+- Stage 10 — `shoot_scheduled`;
+- journey version 4;
+- authoritative schedule tip `reserved`;
+- zero completion rows.
+
+Completion recording:
+
+- performed through the authenticated Photographer UI;
+- Photographer organization-member id: `b0758201-5c12-4392-b99b-938066750a2e`;
+- exactly one completion row created;
+- completed timestamp persisted as `2026-08-23 10:30:00+00`;
+- journey remained Stage 10 / version 4;
+- completion id: `bea1f2fd-7b49-4a96-8bf5-ab80df49af80`;
+- exactly one `booking.shoot_completion_recorded` audit exists;
+- audit actor matches the Photographer;
+- completion audit is non-sensitive and contains bounded canonical completion metadata.
+
+Stage advancement:
+
+- performed through the authenticated Client Coordinator UI;
+- Client Coordinator organization-member id: `39cbe79e-2009-4648-a816-05f0c2087345`;
+- journey advanced exactly Stage 10 `shoot_scheduled` -> Stage 11 `shoot_completed`;
+- journey version advanced exactly 4 -> 5;
+- completion id, completed timestamp and Photographer recorder remained unchanged;
+- exactly one `booking.shoot_completed` audit exists;
+- audit actor matches the Client Coordinator;
+- exactly one `shoot_completed` row exists in `booking_stage_transitions`;
+- transition actor matches the Client Coordinator.
+
+### Stage-11 regression evidence
+
+The following four bookings were verified together:
+
+- `LSH-BK-54DA3C5E`;
+- `LSH-BK-BF75CB36`;
+- `LSH-BK-D8CBC467`;
+- `LSH-BK-F3E6566E`.
+
+Every booking remained:
+
+- Stage 11 — `shoot_completed`;
+- journey version 5;
+- schedule tip `reserved`;
+- exactly one canonical completion row.
+
+### Security and authority conclusion
+
+Slice 3 preserves the database as final authority.
+
+The browser does not substitute for:
+
+- permission enforcement;
+- branch scope;
+- completion immutability;
+- future-time validity;
+- reserved-schedule validity;
+- completion cardinality;
+- journey optimistic versioning;
+- transition-history rules;
+- audit behavior.
+
+The validated separation remains:
+
+**Photographer records canonical completion evidence; Client Coordinator may perform the separately authorized journey advancement.**
+
+### Remote landing
+
+Normal fast-forward push succeeded:
+
+`c9d87af..0dfa357  architecture-rebuild -> architecture-rebuild`
+
+Remote verification returned:
+
+`0dfa357630be8714759d4663e00259b18dafe2bb refs/heads/architecture-rebuild`
+
+### Next checkpoint
+
+Do not infer or pre-authorize a Slice 4 implementation from the Stage-11 destination alone.
+
+The next checkpoint is fresh read-only repository and local-database discovery against the canonical post-shoot state beginning at Stage 11.
+
+Discovery must establish the actual existing authority, schema, prerequisites, privacy boundary, and operational ownership before any separate Technical Design Freeze for:
+
+- Stage 11 -> 12 / `selection_pending`;
+- image-selection intake;
+- client selection;
+- editing;
+- QC;
+- gallery;
+- delivery;
+- shoot-day Safety incidents;
+- post-session restricted Safety notes.
+
+No implementation beyond Slice 3 is authorized by this closeout.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 3 — IMPLEMENTED / VALIDATED / PUSHED / GOVERNANCE CLOSED / PRODUCTION HOLD**
