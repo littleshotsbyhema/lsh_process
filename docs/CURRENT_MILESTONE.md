@@ -12,7 +12,7 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 5 are implemented, fully validated locally, committed, pushed to `origin/architecture-rebuild`, and remotely reconciled. Sprint 11 Slice 6 is implemented, fully validated locally, and committed locally at `fc96e30f261bca291ebbec4805fd7dbc9cfe20db`; governance closeout is being recorded by the current documentation checkpoint. Slice 6 has not yet been pushed or remotely reconciled. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 6 are implemented, fully validated locally, committed, pushed to `origin/architecture-rebuild`, and remotely reconciled. Sprint 11 Slice 6 implementation is `fc96e30f261bca291ebbec4805fd7dbc9cfe20db` and governance closeout is `fea4f34e54543ebf057b8c2278c49e9aa54c3c05`. Local and remote branch parity is confirmed. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
@@ -26,7 +26,7 @@ Implementation:
 
 `fc96e30f261bca291ebbec4805fd7dbc9cfe20db` — `feat: add image entitlement authority foundation`
 
-The implementation commit contains exactly the three frozen implementation artifacts. This documentation checkpoint records the local governance closeout. Remote push and remote reconciliation remain pending explicit release.
+The implementation commit contains exactly the three frozen implementation artifacts. Governance closeout is recorded by `fea4f34e54543ebf057b8c2278c49e9aa54c3c05` — `docs: close sprint 11 slice 6`. Both commits are pushed to `origin/architecture-rebuild`, and local/remote branch parity is confirmed at the closeout SHA with divergence `0 0`.
 
 Remote Supabase remains HOLD.
 
@@ -365,7 +365,7 @@ Containment preserved:
 - no remote Supabase mutation;
 - no Production migration or deployment.
 
-Slice 6 is therefore **implemented and fully validated locally**. Governance is closed locally by this documentation checkpoint. Remote branch reconciliation remains pending explicit push authorization.
+Slice 6 is therefore **implemented, fully validated locally, governance closed, pushed and remotely reconciled**. `origin/architecture-rebuild` is confirmed at `fea4f34e54543ebf057b8c2278c49e9aa54c3c05` with local/remote divergence `0 0`.
 
 Remote Supabase remains HOLD.
 
@@ -373,15 +373,14 @@ Production remains HOLD.
 
 ## Immediate Product Sequence
 
-1. commit the Slice 6 governance closeout documentation;
-2. after separate explicit release, push the Slice 6 implementation and closeout commits and reconcile `origin/architecture-rebuild`;
-3. perform fresh read-only discovery for booking-level post-selection commercial reconciliation;
-4. establish and separately freeze the canonical reconciliation boundary only after discovery resolves source-version quantities, no-overage evidence, additional-image overage semantics and applicable pricing-timing rules;
-5. separately establish immutable adjusted financial-obligation semantics;
-6. separately establish full-settlement semantics using the canonical booking payment ledger;
-7. only then design Stage 12 -> 13 / `editing_pending`.
+1. perform fresh read-only discovery for booking-level post-selection commercial reconciliation;
+2. establish and separately freeze a canonical reconciliation boundary only after discovery resolves source-version quantities, no-overage evidence, additional-image overage semantics and applicable pricing-timing rules;
+3. implement reconciliation only after separate explicit authorization;
+4. separately establish immutable adjusted financial-obligation semantics;
+5. separately establish full-settlement semantics using the canonical booking payment ledger;
+6. only then design Stage 12 -> 13 / `editing_pending`.
 
-No booking-commercial reconciliation implementation, adjusted financial obligation, settlement model or Stage 13 gate is authorized by the Slice 6 closeout. Fresh read-only discovery is the next product step after remote reconciliation.
+No booking-commercial reconciliation implementation, adjusted financial obligation, settlement model or Stage 13 gate is authorized by the Slice 6 closeout. The next product action is fresh read-only discovery; no next implementation slice is named or frozen yet.
 
 Remote Supabase remains HOLD.
 

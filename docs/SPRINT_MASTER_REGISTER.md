@@ -21165,10 +21165,10 @@ Explicitly not delivered:
 - remote Supabase mutation;
 - Production migration/deployment/release.
 
-Slice 6 is implemented and fully validated locally. This documentation checkpoint closes Slice 6 governance locally. Remote branch push/reconciliation remains separately controlled.
+Slice 6 is implemented, fully validated locally and governance closed. The implementation commit `fc96e30f261bca291ebbec4805fd7dbc9cfe20db` and closeout commit `fea4f34e54543ebf057b8c2278c49e9aa54c3c05` are pushed to `origin/architecture-rebuild`. Local and remote branch heads are reconciled at `fea4f34e54543ebf057b8c2278c49e9aa54c3c05` with divergence `0 0`.
 
 Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 6 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED LOCALLY / REMOTE RECONCILIATION PENDING / PRODUCTION HOLD**
+**SPRINT 11 SLICE 6 — IMPLEMENTED / FULLY VALIDATED LOCALLY / PUSHED / REMOTELY RECONCILED / GOVERNANCE CLOSED / PRODUCTION HOLD**
