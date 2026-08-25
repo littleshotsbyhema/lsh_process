@@ -12,7 +12,7 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 7 are implemented, fully validated locally and committed. Slice 7 implementation `8930475cdb2b3bd374c973f4d615f9e99eea64e9` and governance closeout `3fd398aababf846b1beda06c1bd9e74e71f8dfbd` are pushed to `origin/architecture-rebuild` and first remote reconciliation is confirmed at the closeout SHA with divergence `0 0`. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 7 are implemented, fully validated locally, committed, pushed and remotely reconciled. Slice 7 remote-state reconciliation is recorded by `e02e81aacb77b2d9dbcffe8267c2e5fe55ee20a6` — `docs: reconcile sprint 11 slice 7 remote state`, with local/remote branch parity confirmed at divergence `0 0`. Sprint 11 Slice 8 — Client-Favorable Additional-Image Pricing Basis Authority Foundation — is now technically frozen against that exact baseline; implementation is not yet authorized. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
@@ -38,9 +38,15 @@ Governance closeout:
 
 The implementation and governance-closeout commits are pushed to `origin/architecture-rebuild`. First local/remote reconciliation is confirmed at `3fd398aababf846b1beda06c1bd9e74e71f8dfbd` with divergence `0 0`.
 
-Next discovery checkpoint:
+Active design checkpoint:
 
-Perform fresh read-only discovery for adjusted financial-obligation semantics governing a positive reconciled `excess_image_count`. No additional-image price-version rule, adjusted financial obligation, full-settlement model or Stage 12 -> 13 gate is yet technically frozen or authorized.
+Sprint 11 Slice 8 — **Client-Favorable Additional-Image Pricing Basis Authority Foundation** is technically frozen against `e02e81aacb77b2d9dbcffe8267c2e5fe55ee20a6`.
+
+The founder-approved commercial rule is `client_favorable_quote_or_selection_v1`: the accepted-booking commercial basis is the protected ceiling, an explicitly selected valid selection-time commercial version may improve the client's rate, and the lower valid unit price governs. Equal prices resolve to the accepted-booking basis for deterministic provenance.
+
+Slice 8 establishes immutable commercial-version and pricing-basis authority only. It does not create an adjusted financial obligation, calculate an excess-image charge total, determine settlement or advance Stage 12 -> 13.
+
+Implementation is not yet authorized.
 
 Remote Supabase remains HOLD.
 
@@ -921,14 +927,600 @@ Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
+## Sprint 11 Slice 8 Technical Design Freeze — 2026-08-25
+
+### Checkpoint
+
+**Sprint 11 Slice 8 — Client-Favorable Additional-Image Pricing Basis Authority Foundation**
+
+Exact baseline:
+
+`e02e81aacb77b2d9dbcffe8267c2e5fe55ee20a6` — `docs: reconcile sprint 11 slice 7 remote state`
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+### Discovery conclusion
+
+Post-Slice-7 read-only discovery established:
+
+- `booking_selection_reconciliations` supplies immutable positive or zero excess-image quantity evidence;
+- no adjusted-obligation, invoice, balance-due or settlement relation currently exists;
+- `booking_payment_requirements` remains the immutable accepted-quotation 50%-advance snapshot and must not be repurposed;
+- the append-only `booking_payments` ledger can later capture further valid INR payment evidence without changing its current semantics;
+- `get_booking_payment_summary(uuid)` remains advance-oriented and does not represent full settlement;
+- approved commercial add-on versions are immutable;
+- `commercial_addon_versions` has explicit version identity but no `effective_from`, `effective_until`, supersession pointer or canonical current-version marker;
+- multiple approved add-on versions are structurally possible even though all current add-ons presently have exactly one approved v1;
+- the canonical `additional_image` v1 is active, approved, fixed-amount INR 500 and has exact image-entitlement authority of one retouched image per unit;
+- quotation add-on pricing requires the caller to supply an exact add-on version id;
+- that exact quotation add-on version must be approved;
+- quotation lines snapshot exact source version, catalogue unit price, quoted unit price and pricing source;
+- quotation pricing never requires runtime "latest approved version" resolution;
+- current package v1 records and `additional_image` v1 share source revision `2026-06-client-pdfs`;
+- every current package v1 therefore has exactly one matching current INR 500 `additional_image` v1 provenance source;
+- `source_revision` is provenance text rather than a relational commercial binding and must not become a runtime join rule;
+- `booking_selection_confirmations.confirmed_at` is immutable selection-event timestamp authority;
+- an add-on version's `approved_at` can prove that an explicitly chosen version was already approved by selection confirmation time, but must not be treated as an automatic commercial-effective-from rule;
+- `payment.record`, `payment.read` and `commercial.price.override` already exist;
+- current grants make those financial/commercial authorities Founder-controlled;
+- no new permission is required for this checkpoint.
+
+### Founder commercial policy
+
+The approved pricing doctrine is:
+
+`client_favorable_quote_or_selection_v1`
+
+It combines two commercial bases.
+
+**A — accepted-booking protected basis**
+
+The commercial additional-image rate bound to the booking's exact accepted package version is the protected ceiling.
+
+A later catalogue change must never retrospectively increase that booking's additional-image unit price.
+
+**B — optional selection-time favorable basis**
+
+At selection confirmation, an exact approved `additional_image` commercial version may be explicitly selected as a client-favorable concession.
+
+B is optional.
+
+B must never be resolved implicitly from:
+
+- highest version number;
+- latest approval timestamp;
+- latest creation timestamp;
+- current database row order;
+- matching source-revision text;
+- a future "current" catalogue assumption.
+
+If B is supplied, it must be an exact approved commercial version that was already approved no later than the immutable selection-confirmation timestamp.
+
+### Applied pricing rule
+
+Canonical pricing rule:
+
+`client_favorable_quote_or_selection_v1`
+
+Applied unit price:
+
+- if B is absent -> A;
+- if B unit price is lower than A -> B;
+- if B equals A -> A;
+- if B is higher than A -> A.
+
+Therefore B can improve the client's price but can never increase the protected accepted-booking price.
+
+The applied source version and price become immutable evidence once recorded.
+
+### Canonical package additional-image term authority
+
+Introduce:
+
+`public.commercial_package_additional_image_terms`
+
+Canonical fields:
+
+- `id` uuid;
+- `organization_id` uuid;
+- `package_version_id` uuid;
+- `additional_image_addon_version_id` uuid;
+- `currency` text;
+- `unit_price_inr` integer;
+- `binding_rule` text;
+- `created_at` timestamptz.
+
+Canonical binding rule:
+
+`explicit_package_additional_image_term_v1`
+
+Exactly one row may exist per organization + package version.
+
+Tenant-safe organization-scoped foreign keys must bind:
+
+- exact commercial package version;
+- exact commercial add-on version.
+
+A valid term row must require:
+
+- exact package version exists in the same organization;
+- package version is approved;
+- exact add-on version exists in the same organization;
+- its parent add-on key is exactly `additional_image`;
+- the add-on is active at authority creation;
+- the add-on version is approved;
+- pricing type is exactly `fixed_amount`;
+- currency is exactly `INR`;
+- `amount_inr` is positive;
+- snapshotted `unit_price_inr` exactly equals the add-on version's immutable `amount_inr`;
+- the exact add-on version has `commercial_image_entitlements` authority;
+- that entitlement is exactly one retouched image per unit;
+- the package service category is supported by the `additional_image` add-on.
+
+The authority is immutable.
+
+No runtime matching by `source_revision` is permitted.
+
+### Canonical current authority seed
+
+The Slice 8 migration must establish exactly 12 current package-version bindings:
+
+- maternity_bronze v1 -> additional_image v1 -> INR 500;
+- maternity_gold v1 -> additional_image v1 -> INR 500;
+- maternity_diamond v1 -> additional_image v1 -> INR 500;
+- maternity_emerald v1 -> additional_image v1 -> INR 500;
+- newborn_bronze v1 -> additional_image v1 -> INR 500;
+- newborn_gold v1 -> additional_image v1 -> INR 500;
+- newborn_diamond v1 -> additional_image v1 -> INR 500;
+- newborn_emerald v1 -> additional_image v1 -> INR 500;
+- sitter_bronze v1 -> additional_image v1 -> INR 500;
+- sitter_gold v1 -> additional_image v1 -> INR 500;
+- sitter_diamond v1 -> additional_image v1 -> INR 500;
+- sitter_emerald v1 -> additional_image v1 -> INR 500.
+
+The migration may use the currently established shared source revision as a fail-closed migration precondition/provenance check.
+
+The persisted bindings must resolve by stable natural commercial identity:
+
+- organization;
+- package key;
+- package version number;
+- add-on key;
+- add-on version number.
+
+Reset-generated UUID values must never be hardcoded.
+
+After authority creation, runtime code must use exact relational ids and must never perform a `source_revision` join.
+
+No application mutation RPC for this global authority is introduced by Slice 8.
+
+Future package/add-on commercial generations require separately governed exact bindings rather than runtime inference.
+
+### Canonical booking pricing-basis evidence
+
+Introduce:
+
+`public.booking_additional_image_pricing_bases`
+
+Canonical fields:
+
+- `id` uuid;
+- `organization_id` uuid;
+- `booking_id` uuid;
+- `source_reconciliation_id` uuid;
+- `source_quotation_id` uuid;
+- `source_selection_confirmation_id` uuid;
+- `source_package_version_id` uuid;
+- `source_package_additional_image_term_id` uuid;
+- `quote_acceptance_addon_version_id` uuid;
+- `quote_acceptance_unit_price_inr` integer;
+- `selection_addon_version_id` uuid nullable;
+- `selection_unit_price_inr` integer nullable;
+- `applied_addon_version_id` uuid;
+- `applied_unit_price_inr` integer;
+- `currency` text;
+- `pricing_rule` text;
+- `recorded_at` timestamptz;
+- `recorded_by` uuid.
+
+Exactly one pricing-basis row may exist per organization + booking.
+
+A pricing-basis row is permitted only when the canonical Slice 7 reconciliation has:
+
+`excess_image_count > 0`
+
+Zero-excess bookings must not create pricing-basis evidence because no additional-image commercial obligation can arise from that reconciliation.
+
+Tenant-safe organization-scoped foreign keys must bind:
+
+- booking;
+- source reconciliation;
+- accepted source quotation;
+- source selection confirmation;
+- accepted source package version;
+- source package additional-image term;
+- A-side add-on version;
+- optional B-side add-on version;
+- applied add-on version;
+- recording organization member.
+
+### A-side protected-basis resolution
+
+A must be resolved only through this exact chain:
+
+booking
+-> exact `bookings.source_quotation_id`
+-> accepted quotation
+-> exact package quotation line
+-> exact `source_package_version_id`
+-> exact `commercial_package_additional_image_terms` row
+-> exact bound `additional_image` add-on version and snapshotted unit price.
+
+Requirements:
+
+- source quotation must remain accepted;
+- the quotation must contain exactly one canonical package line;
+- package line source version must exactly match the persisted source package version;
+- exactly one package additional-image term must exist;
+- term currency must be INR;
+- term unit price must remain positive;
+- term add-on source must remain the exact immutable approved `additional_image` version.
+
+Missing or ambiguous A authority fails closed.
+
+No latest-version lookup is permitted.
+
+No source-revision lookup is permitted at runtime.
+
+### B-side optional favorable-basis resolution
+
+The caller may supply one nullable exact commercial add-on version id.
+
+If null:
+
+- no B basis exists;
+- selection version and price fields remain null;
+- A is applied.
+
+If non-null, the exact B version must:
+
+- belong to the same organization;
+- belong to add-on key `additional_image`;
+- have an active parent add-on;
+- be approved;
+- be `fixed_amount`;
+- use currency `INR`;
+- have positive `amount_inr`;
+- have exact image-entitlement authority of one retouched image per unit;
+- support the accepted package's service category;
+- have non-null `approved_at`;
+- satisfy:
+  `approved_at <= booking_selection_confirmations.confirmed_at`.
+
+The B price is always the exact immutable catalogue `amount_inr` of the supplied version.
+
+Slice 8 does not permit a caller-entered arbitrary unit price.
+
+Supplying B requires existing:
+
+`commercial.price.override`
+
+This permission authorizes the discretionary client-favorable commercial choice; it does not authorize a free-form monetary value.
+
+### Controlled recording RPC
+
+Introduce:
+
+`public.record_booking_additional_image_pricing_basis(uuid, uuid)`
+
+Inputs:
+
+- `p_booking_id uuid`;
+- `p_selection_addon_version_id uuid` nullable.
+
+The RPC must:
+
+1. reject null booking id;
+2. require an authenticated actor;
+3. lock the canonical booking as synchronization root;
+4. require active organization membership;
+5. require existing `payment.record`;
+6. require booking branch scope where the booking has a branch;
+7. require exactly one canonical current journey state;
+8. require exact active Stage 12:
+   - `stage_order = 12`;
+   - `stage_key = 'selection_pending'`;
+9. require exactly one canonical immutable selection confirmation;
+10. require exactly one canonical immutable Slice 7 reconciliation;
+11. require the reconciliation to belong to the same organization + booking;
+12. require `excess_image_count > 0`;
+13. require the exact accepted source quotation;
+14. require exactly one accepted package line;
+15. resolve exact A authority only through the package-term binding;
+16. validate optional exact B authority when supplied;
+17. require `commercial.price.override` when B is supplied;
+18. apply `client_favorable_quote_or_selection_v1`;
+19. persist exactly one immutable pricing-basis row;
+20. append one structural audit event;
+21. leave `booking_selection_reconciliations` unchanged;
+22. leave accepted quotation and quotation lines unchanged;
+23. leave `booking_payment_requirements` unchanged;
+24. create no `booking_payments`;
+25. create no financial obligation/charge total;
+26. leave journey state unchanged;
+27. create no Stage 12 -> 13 transition.
+
+### Replay and conflict semantics
+
+The booking lock serializes competing pricing-basis attempts.
+
+If pricing-basis evidence already exists:
+
+- recompute A from immutable accepted-booking sources;
+- recompute/validate B from the supplied exact optional version;
+- recompute the applied source and unit price;
+- if every persisted source and derived value matches exactly, return the existing row idempotently;
+- otherwise fail closed as structural/commercial inconsistency.
+
+No update or correction path is introduced.
+
+If a basis is originally recorded without B, replay with a later B is a conflict rather than a correction.
+
+The commercial decision must therefore be complete when immutable pricing-basis evidence is first recorded.
+
+### Audit semantics
+
+Append one structural financial audit event:
+
+`booking.additional_image_pricing_basis_recorded`
+
+The audit may include:
+
+- booking id;
+- pricing-basis id;
+- reconciliation id;
+- source quotation id;
+- package version id;
+- A-side add-on version id;
+- A-side unit price;
+- optional B-side add-on version id;
+- optional B-side unit price;
+- applied add-on version id;
+- applied unit price;
+- pricing rule;
+- actor.
+
+The audit must not contain:
+
+- image identifiers;
+- gallery/proof contents;
+- filenames;
+- free-text selection notes;
+- payment credentials;
+- arbitrary invented prices;
+- privacy/consent content.
+
+### Security and access
+
+No new permission is introduced.
+
+No role-permission mappings change.
+
+Canonical totals remain:
+
+- permissions: 68;
+- role-permission mappings: 241.
+
+`commercial_package_additional_image_terms`:
+
+- forced RLS;
+- authenticated SELECT requires existing `payment.read`;
+- authenticated direct INSERT / UPDATE / DELETE denied;
+- no application mutation RPC;
+- no service-role application mutation path.
+
+`booking_additional_image_pricing_bases`:
+
+- forced RLS;
+- authenticated SELECT requires existing `payment.read`;
+- booking branch scope enforced for reads;
+- authenticated direct INSERT / UPDATE / DELETE denied.
+
+Controlled recording requires:
+
+`payment.record`
+
+When B is supplied it additionally requires:
+
+`commercial.price.override`
+
+The recording RPC must be:
+
+- `SECURITY DEFINER`;
+- `SET search_path = ''`;
+- executable by `authenticated` only;
+- not executable by `PUBLIC`;
+- not executable by `anon`;
+- not executable by `service_role`.
+
+No service-role application mutation path is introduced.
+
+### Immutability
+
+Both Slice 8 relations are append-once immutable authority.
+
+After insertion:
+
+- UPDATE is rejected;
+- DELETE is rejected.
+
+Commercial source ids, prices, rule, actor and timestamps must never be rewritten.
+
+Approved package/add-on catalogue versions remain untouched.
+
+### Pricing containment
+
+Slice 8 records only per-unit commercial pricing basis.
+
+It must not calculate or persist:
+
+- `excess_charge_inr`;
+- `adjusted_total_inr`;
+- `amount_due`;
+- `balance_due`;
+- `settlement_status`;
+- full-settlement result.
+
+In particular, Slice 8 must not perform:
+
+`excess_image_count * applied_unit_price_inr`
+
+as a persisted financial obligation.
+
+That multiplication belongs to the separately discovered and frozen adjusted-financial-obligation checkpoint that follows this authority foundation.
+
+### Frozen implementation boundary
+
+Exactly three implementation artifacts are authorized by this technical freeze:
+
+1. one new migration whose filename ends in
+   `sprint11_additional_image_pricing_basis_authority_foundation.sql`;
+2. `supabase/tests/sprint11_additional_image_pricing_basis_authority_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+No fourth implementation artifact is authorized without a governance amendment.
+
+No existing compatibility/regression test file is pre-authorized for modification.
+
+If full regression exposes a genuinely stale repository-global assertion, stop and govern that compatibility change separately.
+
+No application route or UI is authorized.
+
+### Explicit exclusions
+
+Slice 8 does not implement or modify:
+
+- existing approved package versions;
+- existing approved add-on versions;
+- package inclusion rows;
+- `commercial_image_entitlements`;
+- selection-confirmation evidence;
+- selection-reconciliation evidence;
+- accepted quotation contents;
+- quotation totals;
+- supplemental quotations;
+- invoices;
+- arbitrary/custom additional-image prices;
+- adjusted financial obligation;
+- excess-image charge total;
+- `booking_payment_requirements`;
+- booking payment ledger behavior;
+- payment-summary semantics;
+- settlement/full-balance determination;
+- Stage 12 -> 13 / `editing_pending`;
+- editing jobs;
+- QC;
+- delivery;
+- Pixieset;
+- privacy or consent;
+- application routes/UI;
+- remote Supabase;
+- Production migration;
+- Production deployment;
+- release.
+
+### Validation contract
+
+Implementation acceptance will require:
+
+- exact three-artifact implementation boundary;
+- clean local database reset;
+- canonical permission count remains exactly 68;
+- canonical role-permission mapping count remains exactly 241;
+- exactly 12 canonical current package additional-image term rows;
+- exact one term per current approved package v1;
+- every current term resolves `additional_image` v1;
+- every current term snapshots INR 500;
+- every bound add-on version has exact image entitlement one;
+- stable natural-identity seeding with no hardcoded reset-generated UUIDs;
+- `source_revision` used only as migration provenance/precondition, never runtime commercial resolution;
+- unique organization + package-version term;
+- tenant-safe package/add-on FKs;
+- package-term immutability;
+- exactly one booking pricing basis per organization + booking;
+- pricing basis requires positive canonical Slice 7 excess;
+- zero excess rejected;
+- exact accepted quotation lineage;
+- exact package-version lineage;
+- exact selection-confirmation lineage;
+- exact reconciliation lineage;
+- exact A-side package-term resolution;
+- missing A authority fails closed;
+- ambiguous A authority fails closed;
+- B absent -> A applied;
+- B lower than A -> B applied;
+- B equal to A -> A applied;
+- B higher than A -> A applied;
+- wrong add-on B rejected;
+- unapproved B rejected;
+- non-fixed-amount B rejected;
+- non-INR B rejected;
+- B without one-image entitlement rejected;
+- B approved after selection confirmation rejected;
+- B selection requires `commercial.price.override`;
+- A-only recording requires `payment.record`;
+- exact `client_favorable_quote_or_selection_v1` rule;
+- persisted applied version matches applied price source;
+- pricing-basis immutability;
+- exact replay idempotent;
+- conflicting replay fails closed;
+- forced RLS on both relations;
+- authenticated `payment.read` containment;
+- booking branch scope containment;
+- authenticated direct INSERT / UPDATE / DELETE denial;
+- recording RPC executable by authenticated only;
+- no service-role application mutation path;
+- structural audit event recorded;
+- no runtime latest-version lookup;
+- no runtime maximum-version-number selection;
+- no runtime source-revision matching;
+- no catalogue mutation;
+- no accepted-quotation mutation;
+- no payment-requirement mutation;
+- no booking-payment mutation;
+- no excess-charge multiplication/persistence;
+- no adjusted financial obligation;
+- no settlement determination;
+- no journey-state mutation;
+- no Stage 12 -> 13 transition;
+- zero pricing-basis rows after clean reset;
+- dedicated Slice 8 pgTAP PASS;
+- full local pgTAP regression PASS;
+- local database lint PASS;
+- freshly generated Supabase types with narrow semantic diff;
+- generated-type Prettier PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- `git diff --check` PASS.
+
+Implementation is not yet authorized.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
 ## Immediate Product Sequence
 
-1. perform fresh read-only discovery for adjusted financial-obligation semantics governing any positive reconciled `excess_image_count`;
-2. only if discovery establishes sufficient authority, separately freeze the exact immutable commercial version/price rule governing that obligation;
-3. separately establish full-settlement semantics using the existing canonical booking payment ledger;
-4. only then design Stage 12 -> 13 / `editing_pending`.
+1. governance-commit the Sprint 11 Slice 8 technical-design freeze;
+2. implement only the frozen additional-image pricing-basis authority after separate explicit implementation authorization;
+3. validate and governance-close Slice 8 independently;
+4. perform fresh read-only discovery for the adjusted financial-obligation boundary using immutable positive excess quantity plus immutable applied unit-price basis;
+5. separately establish full-settlement semantics using the existing canonical booking payment ledger;
+6. only then design Stage 12 -> 13 / `editing_pending`.
 
-No adjusted financial obligation, excess-image price resolution, settlement model or Stage 13 gate is authorized by the Slice 7 implementation or closeout.
+No adjusted financial obligation, excess-charge total, settlement model or Stage 13 gate is authorized by the Slice 8 freeze.
 
 Remote Supabase remains HOLD.
 
