@@ -22325,3 +22325,157 @@ Production remains HOLD.
 
 
 **SPRINT 11 SLICE 9 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**
+
+## Sprint 11 Slice 10 Technical Design Freeze — 2026-08-26
+
+**Sprint 11 Slice 10 — Current Full-Balance Settlement Read Authority Foundation**
+
+Exact baseline:
+
+`18f42662a2d89760ba20e51683b43723fdabce20` — `docs: reconcile sprint 11 slice 9 remote state`
+
+### Discovery basis
+
+Read-only discovery establishes:
+
+- generic positive-INR booking payment evidence already exists;
+- whole-payment reversal evidence already exists;
+- payment recording is uncapped against advance, accepted total and adjusted total;
+- existing payment summary derives valid non-reversed collections but is advance-oriented;
+- zero-excess settlement target and positive-excess settlement target require distinct immutable authority chains;
+- no current full-balance, settlement, overpayment, refund-due or paid-in-full authority exists;
+- no Stage 12 -> 13 function exists.
+
+### Founder policy
+
+Coverage settlement is canonical:
+
+`valid_collected_inr >= settlement_target_inr`
+
+means current full balance is satisfied.
+
+Collections above target do not automatically create a refund obligation.
+
+Later payment reversal may make the current summary unsatisfied.
+
+A later reversal must not automatically undo a historical journey transition.
+
+### Canonical read RPC
+
+Introduce:
+
+`public.get_booking_full_balance_summary(uuid)`
+
+No persistent settlement relation is introduced.
+
+Canonical target rule:
+
+`reconciled_accepted_or_adjusted_total_v1`
+
+Canonical collection rule:
+
+`non_reversed_booking_payments_v1`
+
+For exact zero excess, target is the immutable accepted quotation total from the payment requirement.
+
+For positive excess, target is the exact Slice 9 adjusted total.
+
+Absence of a Slice 9 obligation alone must never imply the zero-excess branch.
+
+Positive excess without exact adjusted-obligation authority fails closed.
+
+### Current collection calculation
+
+Valid collections are the sum of booking payment amounts whose exact payment id has no canonical reversal.
+
+Reversed payments contribute zero.
+
+### Balance rule
+
+`full_balance_outstanding_inr =
+ GREATEST(settlement_target_inr - valid_collected_inr, 0)`
+
+`full_balance_satisfied =
+ valid_collected_inr >= settlement_target_inr`
+
+No overpayment/refund business classification is introduced.
+
+### Authorization
+
+No new permission.
+
+No role-permission changes.
+
+Canonical totals remain 68 / 241.
+
+Aggregate full-balance read requires existing `finance.read` plus booking branch scope.
+
+Raw payment-ledger access remains unchanged and is not broadened.
+
+### Security
+
+RPC is authenticated-only, `SECURITY DEFINER`, empty search path, and unavailable to PUBLIC, anon and service_role.
+
+No service-role application path.
+
+### Persistence / journey containment
+
+No settlement table.
+
+No settlement-status field.
+
+No audit event for reading.
+
+No payment/reversal mutation.
+
+No obligation mutation.
+
+No current-stage dependency.
+
+No Stage 12 -> 13 transition.
+
+### Frozen implementation boundary
+
+Exactly three implementation artifacts:
+
+1. one migration ending `sprint11_full_balance_settlement_read_authority_foundation.sql`;
+2. `supabase/tests/sprint11_full_balance_settlement_read_authority_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+No fourth artifact without governance amendment.
+
+No UI, application route or server-function file.
+
+No permission migration.
+
+### Acceptance boundary
+
+Acceptance must prove:
+
+- exact source/provenance branching for zero vs positive excess;
+- deterministic target;
+- deterministic non-reversed collection total;
+- coverage-settlement rule;
+- under/equal/over-target behavior;
+- reversal behavior;
+- finance.read + branch authorization;
+- raw payment permissions unchanged;
+- no persistence;
+- no refund semantics;
+- no journey mutation;
+- permission totals 68 / 241;
+- dedicated/full pgTAP;
+- DB lint;
+- local generated types;
+- targeted formatting/lint;
+- TypeScript;
+- production build;
+- diff hygiene.
+
+Implementation is not yet authorized.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 10 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**

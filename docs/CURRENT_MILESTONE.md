@@ -12,7 +12,7 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 8 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Slice 8 remote-state reconciliation is recorded by `38b0d5c93d88a21d641f988d75054e178269926e` — `docs: reconcile sprint 11 slice 8 remote state`. Sprint 11 Slice 9 — Booking Adjusted Financial Obligation Authority Foundation — is implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Slice 9 implementation `80822a81a087fb0225338466b077ec0e01ce4bd5` and governance closeout `6527abb047ba003e9a253f5598ce018d9697b35a` are confirmed on `origin/architecture-rebuild`; local/remote parity was confirmed at divergence `0 0` before this reconciliation edit. Remote Supabase remains HOLD. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 9 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Slice 9 remote-state reconciliation is `18f42662a2d89760ba20e51683b43723fdabce20` — `docs: reconcile sprint 11 slice 9 remote state`. Sprint 11 Slice 10 — Current Full-Balance Settlement Read Authority Foundation — is technically frozen against that exact baseline; implementation is not yet authorized. Remote Supabase remains HOLD. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
@@ -2293,15 +2293,415 @@ Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
+
+## Sprint 11 Slice 10 Technical Design Freeze — 2026-08-26
+
+### Checkpoint
+
+**Sprint 11 Slice 10 — Current Full-Balance Settlement Read Authority Foundation**
+
+Exact baseline:
+
+`18f42662a2d89760ba20e51683b43723fdabce20` — `docs: reconcile sprint 11 slice 9 remote state`
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+### Discovery conclusion
+
+Post-Slice-9 read-only discovery establishes:
+
+- `booking_payment_requirements` remains the immutable accepted-booking principal authority;
+- `booking_selection_reconciliations` establishes whether finalized selection excess is exactly zero or positive;
+- `booking_adjusted_financial_obligations` exists only for positive excess and carries the exact immutable adjusted booking total;
+- no current settlement, amount-due, balance-due, overpayment, refund-due or paid-in-full field/relation exists;
+- `booking_payments` is a generic positive-INR whole-booking collection ledger;
+- payment recording is intentionally uncapped and does not inspect required advance, accepted total or adjusted total;
+- `booking_payment_reversals` reverses an exact whole payment and permits at most one reversal per payment;
+- existing `get_booking_payment_summary(uuid)` already derives valid non-reversed collections, but compares them only against `required_advance_inr`;
+- existing payment summary does not read the Slice 9 adjusted obligation and does not derive full settlement, overpayment or refund semantics;
+- Stage 12 `selection_pending` and Stage 13 `editing_pending` are both active;
+- no current function references `editing_pending`;
+- therefore no Stage 12 -> 13 implementation exists;
+- canonical permission totals remain 68 permissions / 241 role-permission mappings.
+
+### Founder policy decision
+
+Current full-balance satisfaction follows **coverage settlement**:
+
+`valid_collected_inr >= settlement_target_inr`
+
+is satisfied.
+
+Exact equality is not required.
+
+If collections exceed the target:
+
+- full balance is satisfied;
+- outstanding is zero;
+- Slice 10 does not label the difference as overpayment;
+- Slice 10 does not create `refund_due`;
+- Slice 10 does not initiate a refund workflow.
+
+A later payment reversal may make the current full-balance summary unsatisfied.
+
+A future historical journey transition must not be silently rolled back merely because a later reversal changes the current financial position.
+
+That historical-transition rule is frozen as forward policy only; Slice 10 itself creates no journey transition.
+
+### Design conclusion
+
+Slice 10 creates a deterministic **current-state read authority only**.
+
+It does not create a persistent settlement row.
+
+It does not create an immutable settlement event.
+
+It does not mutate payment evidence.
+
+It does not mutate the adjusted obligation.
+
+It does not advance Stage 12 -> 13.
+
+### Canonical RPC
+
+Introduce:
+
+`public.get_booking_full_balance_summary(uuid)`
+
+Input:
+
+- booking id only.
+
+Canonical result fields:
+
+- `booking_id uuid`;
+- `source_quotation_id uuid`;
+- `source_payment_requirement_id uuid`;
+- `source_reconciliation_id uuid`;
+- `source_adjusted_obligation_id uuid` nullable;
+- `excess_image_count integer`;
+- `currency text`;
+- `settlement_target_inr bigint`;
+- `target_rule text`;
+- `valid_collected_inr bigint`;
+- `collection_rule text`;
+- `full_balance_outstanding_inr bigint`;
+- `full_balance_satisfied boolean`;
+- `payment_count bigint`;
+- `reversal_count bigint`.
+
+No free text or arbitrary JSON output is required.
+
+### Exact settlement-target authority
+
+The canonical target rule is:
+
+`reconciled_accepted_or_adjusted_total_v1`
+
+The RPC must first require exactly one canonical Slice 7 reconciliation for the booking.
+
+Absence of a Slice 9 adjusted-obligation row must never by itself imply that the accepted quotation total is the settlement target.
+
+#### Zero-excess branch
+
+If:
+
+`booking_selection_reconciliations.excess_image_count = 0`
+
+then:
+
+`settlement_target_inr =
+ booking_payment_requirements.accepted_quotation_total_inr`
+
+Requirements:
+
+- exactly one canonical payment requirement;
+- same organization + booking;
+- exact booking source quotation;
+- INR;
+- positive accepted quotation total;
+- exact canonical reconciliation;
+- reconciliation uses the exact same source quotation;
+- no Slice 9 adjusted-obligation row may exist for that booking.
+
+If a zero-excess reconciliation and adjusted-obligation row coexist, fail closed as inconsistent authority.
+
+`source_adjusted_obligation_id` is NULL.
+
+#### Positive-excess branch
+
+If:
+
+`booking_selection_reconciliations.excess_image_count > 0`
+
+then exactly one canonical Slice 9 adjusted obligation is required.
+
+The target is:
+
+`settlement_target_inr =
+ booking_adjusted_financial_obligations.adjusted_total_inr`
+
+The obligation must match exactly:
+
+- organization;
+- booking;
+- source payment requirement;
+- source quotation;
+- source reconciliation;
+- accepted quotation total snapshot;
+- excess-image-count snapshot;
+- INR;
+- canonical Slice 9 calculation rule
+  `accepted_quote_plus_excess_image_charge_v1`.
+
+Missing, duplicate or inconsistent adjusted-obligation authority fails closed.
+
+`source_adjusted_obligation_id` is the exact Slice 9 row id.
+
+### Canonical collection authority
+
+The collection rule is:
+
+`non_reversed_booking_payments_v1`
+
+Current valid collections are:
+
+`SUM(booking_payments.amount_inr WHERE no canonical reversal exists)`
+
+with zero when no valid payments exist.
+
+A reversed payment contributes zero to current valid collections.
+
+Because each payment may have at most one canonical reversal, no partial-reversal arithmetic is introduced.
+
+`payment_count` is the total number of booking payment rows.
+
+`reversal_count` is the total number of canonical booking payment reversal rows.
+
+Slice 10 does not reinterpret payment method, external reference or note content.
+
+### Canonical balance calculation
+
+Use `bigint` arithmetic.
+
+`full_balance_outstanding_inr =
+ GREATEST(settlement_target_inr - valid_collected_inr, 0)`
+
+`full_balance_satisfied =
+ valid_collected_inr >= settlement_target_inr`
+
+Examples:
+
+- target 10,000 / collected 8,000 -> outstanding 2,000 / not satisfied;
+- target 10,000 / collected 10,000 -> outstanding 0 / satisfied;
+- target 10,000 / collected 12,000 -> outstanding 0 / satisfied.
+
+The extra 2,000 in the third example receives no refund or overpayment business classification in Slice 10.
+
+### Reversal semantics
+
+The RPC always computes current state from current non-reversed payment evidence.
+
+Therefore a later reversal can change:
+
+- `valid_collected_inr`;
+- `full_balance_outstanding_inr`;
+- `full_balance_satisfied`;
+- payment/reversal counts.
+
+No historical row is rewritten because Slice 10 persists no settlement state.
+
+A later separately governed Stage 12 -> 13 transition may snapshot or reference satisfaction at transition time, but a later reversal must not automatically delete or reverse that historical transition.
+
+### Authorization
+
+No new permission is introduced.
+
+No role-permission mapping changes are introduced.
+
+Canonical totals remain:
+
+- permissions: 68;
+- role-permission mappings: 241.
+
+The aggregate full-balance summary requires existing:
+
+`finance.read`
+
+plus booking branch scope.
+
+Current `finance.read` grant topology remains unchanged:
+
+- Accounts;
+- Founder;
+- Sales;
+- Studio Manager.
+
+This is intentionally an aggregate finance-read surface.
+
+It does not grant those roles raw `booking_payments` or `booking_payment_reversals` table access.
+
+Existing raw payment-ledger access and existing `get_booking_payment_summary(uuid)` authorization remain unchanged.
+
+### RPC security
+
+The RPC must:
+
+- reject null booking id;
+- require authenticated actor;
+- require active organization membership;
+- require `finance.read`;
+- require booking branch scope;
+- be `SECURITY DEFINER`;
+- use `SET search_path = ''`;
+- be executable by `authenticated`;
+- be unavailable to PUBLIC;
+- be unavailable to `anon`;
+- be unavailable to `service_role`.
+
+No service-role application path is introduced.
+
+### Current-state behavior
+
+The RPC is not restricted to current Stage 12.
+
+It derives financial current state from canonical immutable commercial/selection authorities plus current payment/reversal evidence.
+
+This is deliberate so the same read authority can remain meaningful after later journey progression.
+
+Slice 10 must not inspect or mutate the current journey state to determine settlement.
+
+### No persistence / no audit mutation
+
+Slice 10 introduces no settlement table.
+
+It introduces no settlement-status column.
+
+It appends no audit event merely for reading the summary.
+
+It creates no payment or reversal row.
+
+It creates no obligation row.
+
+It changes no existing source authority.
+
+### Frozen implementation boundary
+
+Exactly three implementation artifacts are authorized after a separate implementation-authorization checkpoint:
+
+1. one new migration whose filename ends in `sprint11_full_balance_settlement_read_authority_foundation.sql`;
+2. `supabase/tests/sprint11_full_balance_settlement_read_authority_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+No fourth implementation artifact is authorized without governance amendment.
+
+No application route, server-function file or UI is authorized.
+
+No new permission migration is authorized.
+
+No compatibility/regression test modification is pre-authorized.
+
+### Explicit exclusions
+
+Slice 10 does not implement or modify:
+
+- payment recording;
+- payment reversal;
+- payment caps;
+- partial reversals;
+- accepted quotation;
+- quotation line items;
+- booking payment requirement;
+- selection confirmation;
+- selection reconciliation;
+- additional-image pricing basis;
+- adjusted financial obligation;
+- settlement persistence;
+- settlement-history rows;
+- invoice workflow;
+- receipt workflow;
+- caller-entered financial adjustment;
+- overpayment business classification;
+- refund-due calculation;
+- refund workflow;
+- credit-note workflow;
+- Stage 12 -> 13 / `editing_pending`;
+- any journey transition;
+- editing;
+- QC;
+- delivery;
+- Pixieset;
+- privacy/consent;
+- application routes/UI;
+- remote Supabase;
+- Production migration/deployment/release.
+
+### Validation contract
+
+Implementation acceptance requires:
+
+- exact three-artifact implementation boundary;
+- exact `get_booking_full_balance_summary(uuid)` result shape;
+- exact `reconciled_accepted_or_adjusted_total_v1` target rule;
+- exact `non_reversed_booking_payments_v1` collection rule;
+- exact payment-requirement provenance;
+- exact reconciliation provenance;
+- zero-excess accepted-total target;
+- zero-excess adjusted-obligation coexistence fails closed;
+- positive-excess exact adjusted-obligation requirement;
+- positive-excess missing obligation fails closed;
+- exact adjusted-obligation lineage validation;
+- INR-only target and collections;
+- zero-payment behavior;
+- multiple-payment aggregation;
+- reversed payments excluded completely;
+- payment/reversal counts exact;
+- under-target calculation;
+- exact-target calculation;
+- over-target coverage satisfaction;
+- no refund or overpayment classification;
+- later reversal changes current summary deterministically;
+- no persistent settlement row;
+- no audit mutation for reads;
+- no payment/reversal mutation;
+- no obligation mutation;
+- no journey-state mutation;
+- no Stage 12 -> 13 transition;
+- no current-stage dependency;
+- authenticated `finance.read` authorization;
+- booking branch containment;
+- raw payment-ledger permissions unchanged;
+- PUBLIC / anon / service_role execution denied;
+- no new permission;
+- permission totals remain 68 / 241;
+- clean local database reset;
+- dedicated Slice 10 pgTAP PASS;
+- full local pgTAP regression PASS;
+- local database lint PASS;
+- freshly generated local Supabase types with narrow semantic diff;
+- generated-type Prettier PASS;
+- targeted generated-types ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- `git diff --check` PASS.
+
+Implementation is not yet authorized.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
 ## Immediate Product Sequence
 
-1. treat Sprint 11 Slice 9 adjusted financial-obligation authority as implemented, fully validated locally, governance closed, pushed and remotely reconciled;
-2. perform fresh read-only discovery for settlement/full-balance semantics using the immutable adjusted obligation plus canonical non-reversed booking-payment collections;
-3. freeze settlement authority only after discovery establishes the exact canonical boundary and provenance rules;
-4. implement settlement authority only after a separate explicit implementation-authorization checkpoint;
-5. only after settlement authority is separately frozen, implemented and validated, design the Stage 12 -> 13 / `editing_pending` gate.
+1. governance-commit the Sprint 11 Slice 10 technical-design freeze;
+2. implement only the frozen current full-balance settlement read authority after separate explicit implementation authorization;
+3. validate and governance-close Slice 10 independently;
+4. only after Slice 10 is implemented and validated, perform fresh discovery for the Stage 12 -> 13 / `editing_pending` transition gate;
+5. keep refund/overpayment workflow and historical settlement-event persistence separately governed unless later evidence proves they are required.
 
-Slice 9 does not itself authorize a settlement model, amount-due/balance-due authority or Stage 13 gate.
+Slice 10 is a current-state read authority only. It does not itself authorize a Stage 12 -> 13 transition, persistent settlement evidence, refund obligation or payment mutation.
 
 Remote Supabase remains HOLD.
 
