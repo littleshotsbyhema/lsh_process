@@ -104,6 +104,140 @@ export type Database = {
           },
         ];
       };
+      booking_additional_image_pricing_bases: {
+        Row: {
+          applied_addon_version_id: string;
+          applied_unit_price_inr: number;
+          booking_id: string;
+          currency: string;
+          id: string;
+          organization_id: string;
+          pricing_rule: string;
+          quote_acceptance_addon_version_id: string;
+          quote_acceptance_unit_price_inr: number;
+          recorded_at: string;
+          recorded_by: string;
+          selection_addon_version_id: string | null;
+          selection_unit_price_inr: number | null;
+          source_package_additional_image_term_id: string;
+          source_package_version_id: string;
+          source_quotation_id: string;
+          source_reconciliation_id: string;
+          source_selection_confirmation_id: string;
+        };
+        Insert: {
+          applied_addon_version_id: string;
+          applied_unit_price_inr: number;
+          booking_id: string;
+          currency: string;
+          id?: string;
+          organization_id: string;
+          pricing_rule: string;
+          quote_acceptance_addon_version_id: string;
+          quote_acceptance_unit_price_inr: number;
+          recorded_at?: string;
+          recorded_by: string;
+          selection_addon_version_id?: string | null;
+          selection_unit_price_inr?: number | null;
+          source_package_additional_image_term_id: string;
+          source_package_version_id: string;
+          source_quotation_id: string;
+          source_reconciliation_id: string;
+          source_selection_confirmation_id: string;
+        };
+        Update: {
+          applied_addon_version_id?: string;
+          applied_unit_price_inr?: number;
+          booking_id?: string;
+          currency?: string;
+          id?: string;
+          organization_id?: string;
+          pricing_rule?: string;
+          quote_acceptance_addon_version_id?: string;
+          quote_acceptance_unit_price_inr?: number;
+          recorded_at?: string;
+          recorded_by?: string;
+          selection_addon_version_id?: string | null;
+          selection_unit_price_inr?: number | null;
+          source_package_additional_image_term_id?: string;
+          source_package_version_id?: string;
+          source_quotation_id?: string;
+          source_reconciliation_id?: string;
+          source_selection_confirmation_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_additional_image_pricing_bases_applied_addon_fkey";
+            columns: ["organization_id", "applied_addon_version_id"];
+            isOneToOne: false;
+            referencedRelation: "commercial_addon_versions";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_additional_image_pricing_bases_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_additional_image_pricing_bases_confirmation_fkey";
+            columns: ["organization_id", "booking_id", "source_selection_confirmation_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_selection_confirmations";
+            referencedColumns: ["organization_id", "booking_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_additional_image_pricing_bases_package_term_fkey";
+            columns: ["organization_id", "source_package_additional_image_term_id"];
+            isOneToOne: false;
+            referencedRelation: "commercial_package_additional_image_terms";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_additional_image_pricing_bases_package_version_fkey";
+            columns: ["organization_id", "source_package_version_id"];
+            isOneToOne: false;
+            referencedRelation: "commercial_package_versions";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_additional_image_pricing_bases_quote_addon_fkey";
+            columns: ["organization_id", "quote_acceptance_addon_version_id"];
+            isOneToOne: false;
+            referencedRelation: "commercial_addon_versions";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_additional_image_pricing_bases_quote_fkey";
+            columns: ["organization_id", "source_quotation_id"];
+            isOneToOne: false;
+            referencedRelation: "quotations";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_additional_image_pricing_bases_reconciliation_fkey";
+            columns: ["organization_id", "booking_id", "source_reconciliation_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_selection_reconciliations";
+            referencedColumns: ["organization_id", "booking_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_additional_image_pricing_bases_recorded_by_fkey";
+            columns: ["recorded_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_additional_image_pricing_bases_selection_addon_fkey";
+            columns: ["organization_id", "selection_addon_version_id"];
+            isOneToOne: false;
+            referencedRelation: "commercial_addon_versions";
+            referencedColumns: ["organization_id", "id"];
+          },
+        ];
+      };
       booking_journey_stages: {
         Row: {
           created_at: string;
@@ -1572,6 +1706,54 @@ export type Database = {
             foreignKeyName: "commercial_operational_requirements_package_fkey";
             columns: ["organization_id", "package_version_id"];
             isOneToOne: false;
+            referencedRelation: "commercial_package_versions";
+            referencedColumns: ["organization_id", "id"];
+          },
+        ];
+      };
+      commercial_package_additional_image_terms: {
+        Row: {
+          additional_image_addon_version_id: string;
+          binding_rule: string;
+          created_at: string;
+          currency: string;
+          id: string;
+          organization_id: string;
+          package_version_id: string;
+          unit_price_inr: number;
+        };
+        Insert: {
+          additional_image_addon_version_id: string;
+          binding_rule: string;
+          created_at?: string;
+          currency: string;
+          id?: string;
+          organization_id: string;
+          package_version_id: string;
+          unit_price_inr: number;
+        };
+        Update: {
+          additional_image_addon_version_id?: string;
+          binding_rule?: string;
+          created_at?: string;
+          currency?: string;
+          id?: string;
+          organization_id?: string;
+          package_version_id?: string;
+          unit_price_inr?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "commercial_package_additional_image_terms_addon_fkey";
+            columns: ["organization_id", "additional_image_addon_version_id"];
+            isOneToOne: false;
+            referencedRelation: "commercial_addon_versions";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "commercial_package_additional_image_terms_package_fkey";
+            columns: ["organization_id", "package_version_id"];
+            isOneToOne: true;
             referencedRelation: "commercial_package_versions";
             referencedColumns: ["organization_id", "id"];
           },
@@ -6334,6 +6516,35 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "booking_shoot_schedules";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      record_booking_additional_image_pricing_basis: {
+        Args: { p_booking_id: string; p_selection_addon_version_id: string };
+        Returns: {
+          applied_addon_version_id: string;
+          applied_unit_price_inr: number;
+          booking_id: string;
+          currency: string;
+          id: string;
+          organization_id: string;
+          pricing_rule: string;
+          quote_acceptance_addon_version_id: string;
+          quote_acceptance_unit_price_inr: number;
+          recorded_at: string;
+          recorded_by: string;
+          selection_addon_version_id: string | null;
+          selection_unit_price_inr: number | null;
+          source_package_additional_image_term_id: string;
+          source_package_version_id: string;
+          source_quotation_id: string;
+          source_reconciliation_id: string;
+          source_selection_confirmation_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_additional_image_pricing_bases";
           isOneToOne: true;
           isSetofReturn: false;
         };
