@@ -12,27 +12,29 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 6 are implemented, fully validated locally, committed, pushed to `origin/architecture-rebuild`, and remotely reconciled. Sprint 11 Slice 7 — Booking-Level Selection Entitlement Reconciliation Evidence Foundation — is now technically frozen against baseline `6e37919e207ddfc629373ee6dbe38c80459aa3a0`; implementation is not yet authorized. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 6 are implemented, fully validated locally, committed, pushed to `origin/architecture-rebuild`, and remotely reconciled. Sprint 11 Slice 7 — Booking-Level Selection Entitlement Reconciliation Evidence Foundation — is implemented, fully validated locally and committed at `8930475cdb2b3bd374c973f4d615f9e99eea64e9`. Governance closeout is recorded by the current local documentation checkpoint. Slice 7 has not yet been pushed or remotely reconciled. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
-Sprint 11 Slice 6 — **Version-Bound Machine-Readable Image Entitlement Authority Foundation** is implemented, fully validated locally and committed.
+Sprint 11 Slice 7 — **Booking-Level Selection Entitlement Reconciliation Evidence Foundation** is implemented, fully validated locally and committed.
 
 Technical-design freeze:
 
-`96df8c22adce666cfa0be9518532f181942e1164` — `docs: freeze sprint 11 slice 6`
+`ed1118130acbf12c9cafbd1a7acbe78453c00270` — `docs: freeze sprint 11 slice 7`
+
+Frozen baseline:
+
+`6e37919e207ddfc629373ee6dbe38c80459aa3a0` — `docs: reconcile sprint 11 slice 6 remote state`
 
 Implementation:
 
-`fc96e30f261bca291ebbec4805fd7dbc9cfe20db` — `feat: add image entitlement authority foundation`
+`8930475cdb2b3bd374c973f4d615f9e99eea64e9` — `feat: add selection entitlement reconciliation foundation`
 
-The implementation commit contains exactly the three frozen implementation artifacts. Governance closeout is recorded by `fea4f34e54543ebf057b8c2278c49e9aa54c3c05` — `docs: close sprint 11 slice 6`. Both commits are pushed to `origin/architecture-rebuild`, and local/remote branch parity is confirmed at the closeout SHA with divergence `0 0`.
+The implementation commit contains exactly the three frozen implementation artifacts. Clean local reset, dedicated Slice 7 pgTAP, full local regression, database lint, generated types, TypeScript and production build validation all passed. Governance closeout is recorded by the current local documentation checkpoint. The Slice 7 implementation and governance closeout remain local and unpushed.
 
-Active design checkpoint:
+Next discovery checkpoint:
 
-Sprint 11 Slice 7 — **Booking-Level Selection Entitlement Reconciliation Evidence Foundation** is technically frozen against `6e37919e207ddfc629373ee6dbe38c80459aa3a0`.
-
-Implementation is not yet authorized.
+Perform fresh read-only discovery for adjusted financial-obligation semantics governing a positive reconciled `excess_image_count`. No additional-image price-version rule, adjusted financial obligation, full-settlement model or Stage 12 -> 13 gate is yet technically frozen or authorized.
 
 Remote Supabase remains HOLD.
 
@@ -795,7 +797,119 @@ Implementation acceptance will require:
 - production build PASS;
 - `git diff --check` PASS.
 
-Implementation is not yet authorized.
+Implementation was separately authorized after the technical-design freeze and is now complete.
+
+### Implementation closeout — 2026-08-25
+
+Technical-design freeze:
+
+`ed1118130acbf12c9cafbd1a7acbe78453c00270` — `docs: freeze sprint 11 slice 7`
+
+Frozen baseline:
+
+`6e37919e207ddfc629373ee6dbe38c80459aa3a0` — `docs: reconcile sprint 11 slice 6 remote state`
+
+Implementation:
+
+`8930475cdb2b3bd374c973f4d615f9e99eea64e9` — `feat: add selection entitlement reconciliation foundation`
+
+Implementation parent:
+
+`ed1118130acbf12c9cafbd1a7acbe78453c00270`
+
+Exact implementation artifacts:
+
+1. `supabase/migrations/20260825162200_sprint11_selection_entitlement_reconciliation_foundation.sql`;
+2. `supabase/tests/sprint11_selection_entitlement_reconciliation_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+Delivered authority:
+
+- immutable `public.booking_selection_reconciliations`;
+- exactly one reconciliation row per organization + booking;
+- tenant-safe booking, accepted-quotation, selection-confirmation and recording-member provenance;
+- canonical calculation rule `accepted_quote_version_entitlement_v1`;
+- `selected_image_count` snapshotted from immutable canonical selection confirmation;
+- `included_image_count` derived only from exact accepted quotation line quantities and exact version-bound `commercial_image_entitlements`;
+- package lines contribute through exact package-version entitlement authority;
+- entitlement-bearing accepted add-on lines contribute through their exact accepted add-on version and quantity;
+- unrelated add-ons contribute zero;
+- custom quotation lines contribute zero;
+- missing exact accepted package-version entitlement fails closed;
+- canonical `excess_image_count = GREATEST(selected_image_count - included_image_count, 0)`;
+- below-entitlement and exact-entitlement selections persist explicit zero-excess reconciliation evidence;
+- positive excess persists quantity evidence only;
+- accepted pre-purchased `additional_image` quantity increases included entitlement without creating a new quotation line;
+- exact reconciliation replay is idempotent;
+- structurally conflicting persisted reconciliation evidence fails closed;
+- one structural `booking.selection_reconciled` audit event per real reconciliation;
+- no runtime human-readable package-label parsing;
+- no latest-version or price inference.
+
+Security and tenancy validation:
+
+- RLS enabled and forced;
+- authenticated read containment uses existing `selection.read`;
+- controlled mutation uses existing `selection.record`;
+- booking-derived branch scope enforced;
+- authenticated direct INSERT / UPDATE / DELETE unavailable;
+- `record_booking_selection_reconciliation(uuid)` is `SECURITY DEFINER`;
+- RPC uses empty `search_path`;
+- authenticated RPC execution enabled;
+- PUBLIC, anon and service_role RPC execution denied;
+- no service-role application mutation path introduced;
+- immutable lifecycle guard validated;
+- canonical permission count remains 68;
+- canonical role-permission mapping count remains 241.
+
+Validation evidence:
+
+- clean local database reset: PASS;
+- Slice 7 migration applied last in canonical local migration order;
+- dedicated Slice 7 pgTAP: 82/82 PASS;
+- full local pgTAP regression: 24 files / 1511 tests PASS;
+- local database lint: PASS — no schema errors;
+- canonical image-entitlement rows after reset: 13;
+- persisted reconciliation rows after reset: 0;
+- generated Supabase types: exact 93 additions / 0 deletions after repository formatting;
+- generated type surface includes `booking_selection_reconciliations` and `record_booking_selection_reconciliation`;
+- generated-type Prettier: PASS;
+- targeted ESLint for changed generated `types.ts`: PASS;
+- repository-wide lint remains failing on acknowledged pre-existing formatting debt, with zero references to the changed generated `types.ts`;
+- TypeScript `--noEmit`: PASS;
+- production build: PASS with existing non-blocking dependency/deprecation/bundle warnings only;
+- SQL trailing-whitespace check: PASS;
+- SQL carriage-return check: PASS;
+- SQL final-newline check: PASS;
+- `git diff --check`: PASS;
+- implementation commit contains exactly three frozen artifacts;
+- implementation worktree after commit: clean.
+
+Containment preserved:
+
+- no package/add-on catalogue mutation;
+- no `commercial_image_entitlements` mutation;
+- no selection-confirmation mutation;
+- no accepted-quotation mutation;
+- no supplemental quotation or invoice;
+- no excess-image price resolution;
+- no additional-image price-version selection;
+- no INR 500 booking charge creation;
+- no adjusted financial obligation;
+- no payment-requirement mutation;
+- no booking-payment behavior change;
+- no full-settlement determination;
+- no journey-state mutation;
+- no Stage 12 -> 13 / `editing_pending`;
+- no editing, QC, delivery or Pixieset behavior;
+- no privacy/consent change;
+- no application route/UI implementation;
+- no remote Supabase mutation;
+- no Production migration or deployment.
+
+Slice 7 is therefore **implemented, fully validated locally, committed and governance closed locally**.
+
+The implementation commit and this governance closeout remain unpushed. Remote branch reconciliation has not yet been performed.
 
 Remote Supabase remains HOLD.
 
@@ -803,15 +917,13 @@ Production remains HOLD.
 
 ## Immediate Product Sequence
 
-1. governance-commit the Sprint 11 Slice 7 Technical Design Freeze;
-2. implement only the frozen booking-level selection-entitlement reconciliation after separate explicit implementation authorization;
-3. validate and governance-close Slice 7 independently;
-4. perform fresh discovery and separately freeze adjusted financial-obligation semantics for any positive reconciled excess;
-5. establish the exact immutable commercial version/price authority governing that obligation;
-6. separately establish full-settlement semantics using the existing canonical booking payment ledger;
-7. only then design Stage 12 -> 13 / `editing_pending`.
+1. after separate Git-push authorization, push the Slice 7 implementation and governance-closeout commits to `origin/architecture-rebuild` and verify local/remote parity;
+2. perform fresh read-only discovery for adjusted financial-obligation semantics governing any positive reconciled `excess_image_count`;
+3. only if discovery establishes sufficient authority, separately freeze the exact immutable commercial version/price rule governing that obligation;
+4. separately establish full-settlement semantics using the existing canonical booking payment ledger;
+5. only then design Stage 12 -> 13 / `editing_pending`.
 
-No adjusted financial obligation, excess-image price resolution, settlement model or Stage 13 gate is authorized by the Slice 7 freeze.
+No adjusted financial obligation, excess-image price resolution, settlement model or Stage 13 gate is authorized by the Slice 7 implementation or closeout.
 
 Remote Supabase remains HOLD.
 

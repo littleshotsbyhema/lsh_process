@@ -21382,10 +21382,115 @@ Acceptance requires exact structural, provenance, immutability, calculation, no-
 - production build;
 - whitespace validation.
 
-Implementation is not yet authorized.
+Implementation was separately authorized after the technical-design freeze and completed locally.
+
+### Slice 7 local implementation closeout — 2026-08-25
+
+Technical-design freeze:
+
+`ed1118130acbf12c9cafbd1a7acbe78453c00270` — `docs: freeze sprint 11 slice 7`
+
+Frozen baseline:
+
+`6e37919e207ddfc629373ee6dbe38c80459aa3a0` — `docs: reconcile sprint 11 slice 6 remote state`
+
+Implementation:
+
+`8930475cdb2b3bd374c973f4d615f9e99eea64e9` — `feat: add selection entitlement reconciliation foundation`
+
+Implementation parent:
+
+`ed1118130acbf12c9cafbd1a7acbe78453c00270`
+
+Exact implementation boundary:
+
+1. `supabase/migrations/20260825162200_sprint11_selection_entitlement_reconciliation_foundation.sql`;
+2. `supabase/tests/sprint11_selection_entitlement_reconciliation_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+Canonical authority delivered:
+
+- immutable `booking_selection_reconciliations`;
+- one row per organization + booking;
+- exact accepted quotation provenance;
+- exact canonical selection-confirmation provenance;
+- exact recording-member provenance;
+- deterministic `accepted_quote_version_entitlement_v1`;
+- exact selected-image snapshot;
+- exact accepted package-version entitlement calculation;
+- exact accepted entitlement-bearing add-on quantity contribution;
+- unrelated add-on contribution = zero;
+- custom-line contribution = zero;
+- explicit zero-excess reconciliation evidence;
+- exact positive-excess quantity evidence;
+- missing package entitlement fails closed;
+- exact replay idempotent;
+- conflicting persisted evidence fails closed;
+- structural `booking.selection_reconciled` audit evidence.
+
+Security and authorization:
+
+- no new permission;
+- no role-permission mapping changes;
+- permission count remains exactly 68;
+- role-permission mapping count remains exactly 241;
+- forced RLS;
+- authenticated reads require existing `selection.read`;
+- controlled recording requires existing `selection.record`;
+- booking branch scope enforced;
+- authenticated direct table INSERT / UPDATE / DELETE denied;
+- authenticated-only reconciliation RPC;
+- PUBLIC, anon and service_role RPC execution denied;
+- no service-role application mutation path.
+
+Local validation evidence:
+
+- clean local database reset: PASS;
+- dedicated Slice 7 pgTAP: 82 / 82 PASS;
+- complete local pgTAP regression: 1511 / 1511 PASS across 24 files;
+- local database lint: PASS with no schema errors;
+- canonical entitlement rows: 13;
+- persisted reconciliation rows after clean reset: 0;
+- generated Supabase types: 93 additions / 0 deletions;
+- generated-type Prettier: PASS;
+- targeted generated-types ESLint: PASS;
+- repository-wide lint remains blocked by acknowledged pre-existing formatting debt and contains zero references to the Slice 7 changed generated-types file;
+- TypeScript `--noEmit`: PASS;
+- production build: PASS with existing non-blocking warnings only;
+- SQL whitespace / CRLF / final-newline hygiene: PASS;
+- `git diff --check`: PASS;
+- implementation commit contains exactly the three frozen artifacts;
+- post-implementation-commit worktree: clean.
+
+Containment preserved:
+
+- no catalogue/version mutation;
+- no entitlement-authority mutation;
+- no selection-confirmation mutation;
+- no accepted-quotation mutation;
+- no supplemental quote or invoice;
+- no additional-image price selection;
+- no INR 500 booking charge creation;
+- no adjusted financial obligation;
+- no booking-payment-requirement mutation;
+- no payment-ledger behavior change;
+- no settlement/full-balance semantics;
+- no journey-state mutation;
+- no Stage 12 -> 13 / `editing_pending`;
+- no editing/QC/delivery/Pixieset;
+- no privacy/consent changes;
+- no application UI/runtime;
+- no remote Supabase mutation;
+- no Production migration/deployment/release.
+
+Slice 7 is implemented, fully validated locally, committed and governance closed locally.
+
+The implementation and governance-closeout commits remain unpushed pending separate Git-push authorization. Remote branch reconciliation has not yet been performed.
+
+The next programme action is fresh read-only discovery for adjusted financial-obligation semantics governing positive reconciled excess. No commercial price-version rule, adjusted obligation, settlement model or Stage 13 gate is frozen by this closeout.
 
 Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 7 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+**SPRINT 11 SLICE 7 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED LOCALLY / NOT YET PUSHED / PRODUCTION HOLD**
