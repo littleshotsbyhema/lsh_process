@@ -21172,3 +21172,220 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 6 — IMPLEMENTED / FULLY VALIDATED LOCALLY / PUSHED / REMOTELY RECONCILED / GOVERNANCE CLOSED / PRODUCTION HOLD**
+
+
+## Sprint 11 Slice 7 Technical Design Freeze — 2026-08-25
+
+**Sprint 11 Slice 7 — Booking-Level Selection Entitlement Reconciliation Evidence Foundation**
+
+Exact baseline:
+
+`6e37919e207ddfc629373ee6dbe38c80459aa3a0` — `docs: reconcile sprint 11 slice 6 remote state`
+
+### Discovery basis
+
+Post-Slice-6 read-only discovery established the complete deterministic reconciliation chain:
+
+`booking`
+-> immutable accepted quotation
+-> exact quotation package/add-on version + quantity
+-> immutable machine-readable image entitlement
+combined with
+-> immutable Stage-12 selection confirmation.
+
+Existing authority also establishes:
+
+- accepted quotations and non-draft quotation lines are immutable;
+- approved commercial versions are immutable;
+- add-on version choice is explicit by exact version id;
+- no canonical "currently effective version" rule exists;
+- no post-booking reconciliation/adjustment/invoice/settlement authority exists;
+- booking payment requirements remain immutable accepted-quote advance snapshots;
+- the existing booking payment ledger can record later positive INR payments without an advance ceiling or journey-stage gate;
+- existing payment summary semantics remain advance-only;
+- INR 500 `additional_image` v1 is current approved commercial evidence, but no historical/future pricing-timing rule exists.
+
+Therefore Slice 7 freezes reconciliation quantity evidence only.
+
+It does not price excess images.
+
+### Frozen relation
+
+Introduce immutable:
+
+`public.booking_selection_reconciliations`
+
+Fields:
+
+- `id`;
+- `organization_id`;
+- `booking_id`;
+- `source_quotation_id`;
+- `source_selection_confirmation_id`;
+- `selected_image_count`;
+- `included_image_count`;
+- `excess_image_count`;
+- `calculation_rule`;
+- `recorded_at`;
+- `recorded_by`.
+
+Exactly one row per organization + booking.
+
+Tenant-safe source foreign keys are required.
+
+### Frozen calculation
+
+Calculation rule:
+
+`accepted_quote_version_entitlement_v1`
+
+Inputs must be exact immutable booking sources.
+
+`selected_image_count` snapshots the canonical selection confirmation.
+
+`included_image_count` is the sum of exact accepted quotation line entitlement contributions:
+
+`line quantity * version-bound retouched_image_count_per_unit`.
+
+Package lines contribute through exact package-version entitlement authority.
+
+Add-on lines contribute only when their exact add-on version has image-entitlement authority.
+
+Custom lines contribute zero.
+
+No label parsing, item-key inference, price inference or latest-version lookup is permitted.
+
+The accepted package source must have exact machine-readable entitlement authority or reconciliation fails closed.
+
+Canonical excess:
+
+`GREATEST(selected_image_count - included_image_count, 0)`
+
+Zero excess must still persist as immutable reconciliation evidence.
+
+Accepted pre-purchased `additional_image` units increase included entitlement through their exact accepted add-on version and quantity.
+
+### Frozen controlled RPC
+
+Introduce:
+
+`record_booking_selection_reconciliation(uuid)`
+
+The RPC is authenticated-only, `SECURITY DEFINER`, empty search path and requires:
+
+- canonical booking lock;
+- active membership;
+- existing `selection.record`;
+- booking branch scope;
+- exactly one canonical journey state;
+- exact active Stage 12 / `selection_pending`;
+- exact immutable selection confirmation;
+- exact accepted source quotation;
+- exact version-bound entitlement authority.
+
+The RPC writes one immutable reconciliation and one structural audit event.
+
+Replay of identical derived evidence is idempotent.
+
+Any persisted mismatch fails closed.
+
+No correction/update RPC exists.
+
+### Security
+
+No new permission.
+
+No role-permission changes.
+
+Canonical counts remain:
+
+- 68 permissions;
+- 241 role-permission mappings.
+
+Authenticated reads use existing `selection.read`.
+
+Authenticated direct table mutation is denied.
+
+The table uses forced RLS.
+
+The RPC is executable by authenticated only and not by PUBLIC, anon or service_role.
+
+No service-role application mutation path is introduced.
+
+### Pricing and financial containment
+
+Slice 7 explicitly does not select or store a new excess-image commercial price.
+
+No:
+
+- unit price;
+- excess charge;
+- adjusted quotation total;
+- invoice;
+- amount due;
+- balance due;
+- settlement state.
+
+INR 500 `additional_image` v1 remains existing historical catalogue evidence only.
+
+A later checkpoint must separately determine and immutably snapshot the exact commercial version and price authority governing a positive reconciliation excess.
+
+Historical obligations must never float with future catalogue changes.
+
+### Frozen implementation boundary
+
+Exactly three implementation artifacts:
+
+1. one new migration ending
+   `sprint11_selection_entitlement_reconciliation_foundation.sql`;
+2. `supabase/tests/sprint11_selection_entitlement_reconciliation_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+No fourth implementation artifact is pre-authorized.
+
+Compatibility changes, if genuinely required by full regression, require separate governance amendment.
+
+### Explicit exclusions
+
+No:
+
+- catalogue/version mutation;
+- entitlement-authority mutation;
+- selection-confirmation mutation;
+- accepted-quotation mutation;
+- supplemental quote;
+- invoice;
+- additional-image price resolution;
+- INR 500 booking charge;
+- adjusted financial obligation;
+- payment-requirement mutation;
+- payment-ledger behavior change;
+- settlement/full-balance semantics;
+- Stage 12 -> 13;
+- editing/QC/delivery/Pixieset;
+- privacy/consent;
+- app route/UI;
+- remote Supabase;
+- Production migration/deployment/release.
+
+### Acceptance boundary
+
+Acceptance requires exact structural, provenance, immutability, calculation, no-overage, overage, entitlement-source, RLS, ACL, replay, audit, permission-count and containment assertions plus:
+
+- clean local reset;
+- dedicated Slice 7 pgTAP;
+- full pgTAP regression;
+- local DB lint;
+- fresh generated types;
+- Prettier;
+- TypeScript;
+- production build;
+- whitespace validation.
+
+Implementation is not yet authorized.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 7 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
