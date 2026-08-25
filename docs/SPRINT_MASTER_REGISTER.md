@@ -22479,3 +22479,78 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 10 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+
+## Sprint 11 Slice 10 Governance Closeout — 2026-08-26
+
+**Sprint 11 Slice 10 — Current Full-Balance Settlement Read Authority Foundation**
+
+Technical-design freeze:
+
+`ef6874576643ea6df107e3dc14e5366f1f2aed9a` — `docs: freeze sprint 11 slice 10`
+
+Implementation:
+
+`a058a36827eed5c9b4a1388109760082bcad5f48` — `feat: add full-balance settlement read authority`
+
+Implementation parent:
+
+`ef6874576643ea6df107e3dc14e5366f1f2aed9a`
+
+Exact implementation artifacts:
+
+1. `supabase/migrations/20260826020000_sprint11_full_balance_settlement_read_authority_foundation.sql`;
+2. `supabase/tests/sprint11_full_balance_settlement_read_authority_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+Delivered authority:
+
+- deterministic `get_booking_full_balance_summary(uuid)` current-state read model;
+- exact reconciliation-driven zero-excess vs positive-excess target selection;
+- zero excess -> accepted quotation total;
+- positive excess -> exact Slice 9 adjusted total;
+- target rule `reconciled_accepted_or_adjusted_total_v1`;
+- collection rule `non_reversed_booking_payments_v1`;
+- current valid collections exclude reversed payment evidence;
+- coverage settlement uses `valid_collected_inr >= settlement_target_inr`;
+- outstanding is clamped to zero;
+- no refund/overpayment business classification.
+
+Authorization and containment:
+
+- existing `finance.read` + branch scope only;
+- permission totals remain 68 / 241;
+- authenticated execution only;
+- anon / service_role execution denied;
+- no raw payment-ledger permission broadening;
+- no settlement persistence;
+- no audit-on-read;
+- no payment/reversal mutation;
+- no adjusted-obligation mutation;
+- no journey-state mutation;
+- no Stage 12 -> 13 transition;
+- no current-stage dependency.
+
+Validation evidence:
+
+- clean local reset PASS;
+- local DB lint PASS;
+- dedicated Slice 10 pgTAP 60 / 60 PASS;
+- full regression 27 files / 1750 tests PASS;
+- generated local Supabase types PASS;
+- targeted Prettier PASS;
+- targeted ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- diff/file hygiene PASS;
+- post-validation authority rows return to zero;
+- implementation commit contains exactly three frozen artifacts / 1991 insertions.
+
+The implementation is fully validated locally and committed. This checkpoint governance-closes the local Slice 10 implementation.
+
+The implementation and closeout are not yet pushed at the time of this checkpoint.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 10 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / NOT YET PUSHED / PRODUCTION HOLD**
