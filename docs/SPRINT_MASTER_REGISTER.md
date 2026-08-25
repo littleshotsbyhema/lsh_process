@@ -20929,3 +20929,151 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 5 — IMPLEMENTED / FULLY VALIDATED LOCALLY / PUSHED / REMOTELY RECONCILED / GOVERNANCE CLOSED / PRODUCTION HOLD**
+---
+
+## Sprint 11 Slice 6 Technical Design Freeze — 2026-08-25
+
+### Checkpoint
+
+**Sprint 11 Slice 6 — Version-Bound Machine-Readable Image Entitlement Authority Foundation**
+
+Exact baseline:
+
+`90d52a3482bc81aaf946487145dc8e59a33a820e` — `docs: close sprint 11 slice 5`
+
+Production remains HOLD.
+
+### Discovery evidence
+
+Post-Slice-5 read-only discovery established that all 12 currently approved package versions contain sourced Premium Retouched Image allowances, but every matching approved `commercial_package_inclusions` row has null `quantity` and `unit`.
+
+The exact approved allowances are:
+
+- maternity_bronze: 15;
+- maternity_gold: 20;
+- maternity_diamond: 25;
+- maternity_emerald: 35;
+- newborn_bronze: 12;
+- newborn_gold: 18;
+- newborn_diamond: 24;
+- newborn_emerald: 30;
+- sitter_bronze: 12;
+- sitter_gold: 18;
+- sitter_diamond: 25;
+- sitter_emerald: 30.
+
+Approved package versions and approved package-inclusion rows are immutable.
+
+They must not be rewritten to manufacture structured entitlement.
+
+The existing `commercial_operational_requirements` relation proves the repository already uses version-bound sidecar authority when operational semantics must be attached to immutable commercial versions.
+
+The approved `additional_image` add-on:
+
+- is active;
+- applies to maternity, newborn and sitter;
+- has approved version 1;
+- uses fixed-amount pricing;
+- is INR 500 per unit;
+- is sourced from the approved client package documents.
+
+Accepted quotation lines preserve exact package/add-on source-version identity and quantity.
+
+No post-booking adjustment/charge/invoice/obligation/reconciliation/settlement relation currently exists.
+
+### Frozen canonical model
+
+Introduce:
+
+`public.commercial_image_entitlements`
+
+with:
+
+- `id uuid`;
+- `organization_id uuid`;
+- `package_version_id uuid NULL`;
+- `addon_version_id uuid NULL`;
+- `retouched_image_count_per_unit integer`;
+- `created_at timestamptz`.
+
+Exactly one of `package_version_id` and `addon_version_id` must be non-null.
+
+Entitlement quantity must be positive.
+
+Source identity is unique:
+
+- at most one row per organization + package version;
+- at most one row per organization + add-on version.
+
+Both source references must use tenant-safe organization-scoped foreign keys.
+
+Creation must reject any referenced package/add-on version whose `approval_status` is not `approved`.
+
+Rows are immutable after creation.
+
+### Frozen seed
+
+Exactly 13 rows:
+
+- 12 approved package-version rows with the sourced quantities listed above;
+- one approved `additional_image` v1 row with `retouched_image_count_per_unit = 1`.
+
+Seed construction must validate exact approved version/source evidence.
+
+Runtime label parsing is forbidden.
+
+### Security
+
+No new permission.
+
+No role-permission change.
+
+Authenticated SELECT uses existing `org.read` through forced RLS.
+
+Authenticated direct INSERT / UPDATE / DELETE remain denied.
+
+No application mutation RPC.
+
+### Frozen implementation boundary
+
+Exactly three artifacts:
+
+1. one migration ending in `sprint11_image_entitlement_authority_foundation.sql`;
+2. `supabase/tests/sprint11_image_entitlement_authority_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+No fourth implementation artifact is authorized.
+
+Canonical permission counts remain 68 / 241.
+
+### Explicit exclusions
+
+No:
+
+- historical catalogue mutation;
+- inclusion quantity/unit backfill;
+- runtime label parsing;
+- booking-level reconciliation;
+- excess-image calculation;
+- INR 500 charge creation;
+- post-booking adjustment;
+- supplemental quotation/invoice;
+- accepted quotation mutation;
+- settlement/full-balance calculation;
+- payment change;
+- Stage 12 -> 13;
+- editing/QC/delivery/Pixieset;
+- privacy/consent change;
+- application UI/runtime;
+- remote Supabase;
+- Production mutation or release.
+
+### Validation contract
+
+Acceptance requires exact structural, seed, XOR, positive-quantity, tenant-safe foreign-key, per-source uniqueness, approved-source creation, immutability, RLS, ACL, permission-count and containment assertions plus clean reset, dedicated pgTAP, full regression, DB lint, fresh generated types, formatting, TypeScript, production build and whitespace validation.
+
+Implementation is not yet authorized.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 6 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**

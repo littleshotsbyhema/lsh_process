@@ -16,105 +16,257 @@ Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Spr
 
 ## Current Verified Checkpoint
 
-Sprint 11 Slice 5 — **Canonical Client Image Selection Confirmation Evidence Foundation** is implemented, validated and remotely landed.
+Sprint 11 Slice 5 — **Canonical Client Image Selection Confirmation Evidence Foundation** is implemented, validated, pushed, remotely reconciled and governance closed.
 
-Technical Design Freeze:
+Governance closeout:
 
-`049050859b237439dfd9debb8d80fedddb06a72e` — `docs: freeze sprint 11 slice 5`
+`90d52a3482bc81aaf946487145dc8e59a33a820e` — `docs: close sprint 11 slice 5`
 
-Implementation:
+Production remains HOLD.
 
-`ba488ad6a2eae07f2f4e06f384a934ab3941deda` — `feat: add selection confirmation evidence foundation`
+## Sprint 11 Slice 6 Technical Design Freeze
 
-Remote reconciliation:
+### Checkpoint
 
-- local HEAD = `ba488ad6a2eae07f2f4e06f384a934ab3941deda`;
-- `origin/architecture-rebuild` = `ba488ad6a2eae07f2f4e06f384a934ab3941deda`;
-- divergence = `0 / 0`;
-- worktree clean.
+**Sprint 11 Slice 6 — Version-Bound Machine-Readable Image Entitlement Authority Foundation**
 
-### Delivered canonical fact
+Exact baseline:
 
-Slice 5 establishes one missing canonical fact:
+`90d52a3482bc81aaf946487145dc8e59a33a820e` — `docs: close sprint 11 slice 5`
 
-**the client has confirmed a final image selection, with an authoritative selected-image count and confirmation timestamp.**
+Production remains HOLD.
 
-Delivered database authority includes:
+### Discovery conclusion
 
-- `public.booking_selection_confirmations`;
-- `public.record_booking_selection_confirmation(uuid, integer, timestamptz)`;
-- `selection.read`;
-- `selection.record`;
-- authenticated branch-aware RLS reads;
-- RPC-only evidence recording;
-- immutable confirmation evidence;
-- exact Stage 12 / `selection_pending` containment;
-- exact canonical Stage 11 `shoot_completed` -> Stage 12 `selection_pending` lineage validation;
-- exact replay idempotency;
-- conflicting replay rejection;
-- one structural, non-sensitive `booking.selection_confirmed` audit event.
+Fresh post-Slice-5 read-only discovery established:
 
-Slice 5 does not advance the booking journey.
+- all 12 approved Maternity/Newborn/Sitter package versions contain a sourced retouched-image allowance;
+- the approved package-inclusion rows currently express those allowances only through human-readable labels;
+- `commercial_package_inclusions.quantity` and `.unit` exist but are null for every current approved inclusion;
+- approved package versions and their inclusion rows are immutable;
+- therefore historical approved inclusion rows must not be rewritten to add machine-readable quantities;
+- `commercial_operational_requirements` establishes an existing version-bound sidecar-authority pattern;
+- accepted quotation package/add-on lines retain exact `source_package_version_id`, `source_addon_version_id` and quantity;
+- the approved `additional_image` add-on v1 is fixed at INR 500 and represents an additional retouched image beyond package inclusions;
+- no canonical post-booking commercial adjustment, charge, invoice, obligation, reconciliation or settlement relation exists;
+- existing booking payments are generic booking payment evidence, while the existing booking payment requirement remains an immutable accepted-quotation/advance snapshot;
+- no canonical function references Stage 13 / `editing_pending`.
 
-Stage 12 remains `selection_pending` after selection confirmation is recorded.
+### Design conclusion
 
-### Validation evidence
+Slice 6 establishes machine-readable image entitlement authority only.
 
-Final local acceptance completed successfully:
+It does not reconcile a booking.
 
-- clean local database reset: PASS;
-- dedicated Slice 5 pgTAP: **76/76 PASS**;
-- full local pgTAP regression: **1380/1380 PASS** across 22 files;
-- local database lint: PASS (`No schema errors found`);
-- generated Supabase types: narrow **67 additions / 0 deletions**;
-- generated-type Prettier: PASS;
-- TypeScript `--noEmit`: PASS;
-- production build: PASS;
-- `git diff --check`: PASS;
-- canonical permissions: **68**;
-- canonical role-permission mappings: **241**;
-- post-test persisted selection confirmations: **0**;
-- `selection.read.requires_server_enforcement = false`;
-- `selection.record.requires_server_enforcement = true`;
-- exact frozen five-artifact implementation boundary: PASS.
+It does not create a financial obligation.
 
-### Containment preserved
+It does not determine settlement.
 
-Slice 5 does not introduce or modify:
+It does not advance the journey.
 
-- individual selected-image identifiers or assets;
-- gallery/Pixieset/proofing/culling authority;
-- package-entitlement interpretation;
-- package-inclusion restructuring or backfill;
-- additional-image billing;
-- the approved INR 500 additional-image commercial rule execution;
-- post-booking commercial adjustments;
+### Canonical entitlement relation
+
+Introduce:
+
+`public.commercial_image_entitlements`
+
+Canonical structural fields:
+
+- `id`;
+- `organization_id`;
+- `package_version_id` nullable;
+- `addon_version_id` nullable;
+- `retouched_image_count_per_unit`;
+- `created_at`.
+
+Exactly one commercial source must be present:
+
+- package version; or
+- add-on version.
+
+Never both.
+
+`retouched_image_count_per_unit` must be a positive integer.
+
+Source identity is canonical and unique:
+
+- at most one entitlement row may reference a given organization + package version;
+- at most one entitlement row may reference a given organization + add-on version.
+
+Package-version and add-on-version references must use tenant-safe organization-scoped foreign keys.
+
+On creation, the referenced commercial version must already exist in the same organization and have `approval_status = 'approved'`.
+
+An entitlement must never be attached to a draft or otherwise unapproved commercial version.
+
+Once created, entitlement identity, source and quantity are immutable.
+
+A package entitlement row represents the included retouched-image quantity for one quoted package unit.
+
+An add-on entitlement row represents the included retouched-image quantity for one quoted add-on unit.
+
+### Initial authoritative mapping
+
+The migration will seed exactly 13 entitlement rows:
+
+| Commercial source | Images per unit |
+| --- | ---: |
+| maternity_bronze | 15 |
+| maternity_gold | 20 |
+| maternity_diamond | 25 |
+| maternity_emerald | 35 |
+| newborn_bronze | 12 |
+| newborn_gold | 18 |
+| newborn_diamond | 24 |
+| newborn_emerald | 30 |
+| sitter_bronze | 12 |
+| sitter_gold | 18 |
+| sitter_diamond | 25 |
+| sitter_emerald | 30 |
+| additional_image v1 | 1 |
+
+The migration must validate the exact approved package/add-on version identities and their existing sourced evidence.
+
+The migration must not parse numeric entitlement from labels at runtime.
+
+No generic `item_XX` inclusion key may be interpreted as entitlement.
+
+### Accepted-quotation compatibility
+
+Existing accepted quotation line items already retain:
+
+- exact package-version source;
+- exact add-on-version source;
+- line quantity.
+
+A later separately frozen reconciliation checkpoint may calculate total included retouched-image entitlement using exact version-bound entitlement rows and accepted quotation quantities.
+
+Slice 6 itself performs no booking calculation.
+
+### Historical catalogue preservation
+
+Slice 6 must not update, delete, backfill or replace approved:
+
+- `commercial_package_versions`;
+- `commercial_package_inclusions`;
+- `commercial_addon_versions`.
+
+The current null `quantity` / `unit` values on approved package inclusions remain historical truth.
+
+### Security and access
+
+No new permission is introduced.
+
+No role-permission mapping changes.
+
+Authenticated reads require existing `org.read` through forced RLS, matching the established version-bound commercial-semantics authority pattern.
+
+Authenticated direct INSERT, UPDATE and DELETE remain unavailable.
+
+No application mutation RPC is introduced.
+
+Entitlement rows are immutable.
+
+### Frozen implementation boundary
+
+Exactly three implementation artifacts:
+
+1. one new migration whose filename ends in `sprint11_image_entitlement_authority_foundation.sql`;
+2. `supabase/tests/sprint11_image_entitlement_authority_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+No fourth implementation artifact is authorized without governance amendment.
+
+Canonical permission totals remain:
+
+- permissions: 68;
+- role-permission mappings: 241.
+
+### Explicit exclusions
+
+Slice 6 does not implement or modify:
+
+- approved package inclusion quantity/unit backfill;
+- package-version mutation;
+- add-on-version mutation;
+- runtime label parsing;
+- booking selection evidence;
+- booking-level entitlement reconciliation;
+- additional-image excess calculation;
+- INR 500 charge creation;
+- post-booking financial adjustment;
+- supplemental quotation;
+- invoice;
 - accepted quotation mutation;
-- supplemental quotation or invoice behavior;
-- full-settlement calculation;
+- settlement/full-balance calculation;
 - payment ledger behavior;
-- privacy or consent authority;
+- payment requirement behavior;
 - Stage 12 -> 13 / `editing_pending`;
-- editing jobs, QC, delivery or heirloom production;
-- application routes or UI;
+- editing jobs;
+- QC;
+- delivery;
+- Pixieset;
+- privacy or consent;
+- application routes/UI;
 - remote Supabase;
-- Production deployment or release.
+- Production migration;
+- Production deployment;
+- release.
+
+### Validation contract
+
+Implementation acceptance requires:
+
+- exact three-artifact boundary;
+- exactly 13 canonical entitlement rows;
+- exact 12 package-version entitlement mappings;
+- exact one approved `additional_image` v1 entitlement mapping;
+- exact expected quantities for all 13 mappings;
+- positive integer entitlement quantity;
+- exactly-one-source XOR enforcement;
+- tenant-safe version foreign keys;
+- unique organization + package-version entitlement mapping;
+- unique organization + add-on-version entitlement mapping;
+- creation restricted to already-approved commercial versions;
+- immutable evidence;
+- forced RLS;
+- authenticated `org.read` read containment;
+- direct authenticated INSERT/UPDATE/DELETE denial;
+- no new permission;
+- permission count remains exactly 68;
+- role-permission mapping count remains exactly 241;
+- no approved catalogue mutation;
+- no runtime label parsing;
+- no booking reconciliation;
+- no charge/payment/settlement behavior;
+- no Stage 12 -> 13 behavior;
+- clean local database reset;
+- dedicated Slice 6 pgTAP PASS;
+- full local pgTAP regression PASS;
+- local database lint PASS;
+- freshly regenerated Supabase types with narrow semantic diff;
+- generated-type Prettier PASS;
+- TypeScript PASS;
+- production build PASS;
+- `git diff --check` PASS.
+
+Implementation is not yet authorized.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
 
 ## Immediate Product Sequence
 
-Sprint 11 Slice 5 governance is closed by this checkpoint.
+1. governance-commit the Slice 6 Technical Design Freeze;
+2. implement only the frozen version-bound image-entitlement authority after explicit implementation authorization;
+3. validate and governance-close Slice 6 independently;
+4. perform fresh discovery for booking-level post-selection commercial reconciliation;
+5. establish immutable adjusted financial obligation semantics;
+6. establish full-settlement semantics using the canonical booking payment ledger;
+7. only then design Stage 12 -> 13 / `editing_pending`.
 
-The next checkpoint is **fresh read-only discovery**, not implementation.
-
-Discovery must establish the authoritative boundary for:
-
-1. machine-readable package image entitlement;
-2. post-selection commercial reconciliation;
-3. additional-image obligation semantics;
-4. post-booking financial obligation and settlement state;
-5. the prerequisites that would eventually permit Stage 12 -> 13 / `editing_pending`.
-
-No next implementation slice is named or frozen until that discovery establishes a defensible boundary.
+No booking-commercial reconciliation, settlement model or Stage 13 gate is authorized by the Slice 6 freeze.
 
 Remote Supabase remains HOLD.
 
