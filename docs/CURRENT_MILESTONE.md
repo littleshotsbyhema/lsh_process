@@ -12,11 +12,11 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 8 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Slice 8 remote-state reconciliation is recorded by `38b0d5c93d88a21d641f988d75054e178269926e` — `docs: reconcile sprint 11 slice 8 remote state`. Sprint 11 Slice 9 — Booking Adjusted Financial Obligation Authority Foundation — is implemented, fully validated locally, committed and governance closed. Slice 9 implementation is `80822a81a087fb0225338466b077ec0e01ce4bd5` with exact parent `cb5462b1f662ee4eb218182558a4206231d78175`. Slice 9 is not yet pushed or remotely reconciled. Remote Supabase remains HOLD. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 8 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Slice 8 remote-state reconciliation is recorded by `38b0d5c93d88a21d641f988d75054e178269926e` — `docs: reconcile sprint 11 slice 8 remote state`. Sprint 11 Slice 9 — Booking Adjusted Financial Obligation Authority Foundation — is implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Slice 9 implementation `80822a81a087fb0225338466b077ec0e01ce4bd5` and governance closeout `6527abb047ba003e9a253f5598ce018d9697b35a` are confirmed on `origin/architecture-rebuild`; local/remote parity was confirmed at divergence `0 0` before this reconciliation edit. Remote Supabase remains HOLD. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
-Sprint 11 Slice 9 — **Booking Adjusted Financial Obligation Authority Foundation** is implemented, fully validated locally, committed and governance closed.
+Sprint 11 Slice 9 — **Booking Adjusted Financial Obligation Authority Foundation** is implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled.
 
 Technical-design freeze:
 
@@ -70,7 +70,7 @@ Validation evidence:
 
 Slice 9 materializes immutable positive-excess adjusted-obligation authority only. It does not calculate settlement, amount due, balance due, overpayment, refund state or paid-in-full status. It does not inspect booking collections to determine the obligation, mutate payment evidence or advance Stage 12 -> 13.
 
-Slice 9 implementation is committed locally but not yet pushed or remotely reconciled. Remote Supabase remains HOLD. Production remains HOLD.
+Slice 9 implementation `80822a81a087fb0225338466b077ec0e01ce4bd5` and governance closeout `6527abb047ba003e9a253f5598ce018d9697b35a` are confirmed on `origin/architecture-rebuild`, with local/remote parity confirmed at divergence `0 0` before this reconciliation edit. This two-document checkpoint records the reconciled remote state. Remote Supabase remains HOLD. Production remains HOLD.
 
 Previous Slice 8 technical-design freeze:
 
@@ -117,13 +117,17 @@ Slice 8 establishes immutable commercial package/additional-image term authority
 
 Slice 8 is implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Implementation `8ab0ab4e6fe0d3bae4084a66ab2999fed03abace`, governance closeout `376304bcaa23535fc2ca1efa436811f7f4268b51`, and remote-state reconciliation `38b0d5c93d88a21d641f988d75054e178269926e` are confirmed on `origin/architecture-rebuild`, with local/remote parity at divergence `0 0`.
 
-Current implementation checkpoint:
+Current remote-state checkpoint:
 
-Sprint 11 Slice 9 — **Booking Adjusted Financial Obligation Authority Foundation** — is implemented, fully validated locally, committed and governance closed.
+Sprint 11 Slice 9 — **Booking Adjusted Financial Obligation Authority Foundation** — is implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled.
 
 Implementation:
 
 `80822a81a087fb0225338466b077ec0e01ce4bd5` — `feat: add adjusted financial obligation authority`
+
+Governance closeout:
+
+`6527abb047ba003e9a253f5598ce018d9697b35a` — `docs: close sprint 11 slice 9`
 
 Canonical rule:
 
@@ -131,7 +135,7 @@ Canonical rule:
 
 The implementation remains obligation-authority-only. Settlement, amount due, balance due, overpayment, refund state and Stage 12 -> 13 remain outside the Slice 9 boundary.
 
-Git push remains HOLD pending governance-closeout verification. Remote Supabase remains HOLD. Production remains HOLD.
+Implementation and governance closeout are confirmed on `origin/architecture-rebuild`, with parity `0 0` confirmed before this reconciliation edit. Remote Supabase remains HOLD. Production remains HOLD.
 
 ## Sprint 11 Slice 6 Technical Design Freeze
 
@@ -2277,11 +2281,13 @@ Containment preserved:
 - no remote Supabase operation;
 - no Production migration, deployment or release.
 
-Implementation is fully validated locally and committed.
+Implementation is fully validated locally, committed and pushed.
 
-Governance closeout is recorded by this two-document checkpoint.
+Governance closeout `6527abb047ba003e9a253f5598ce018d9697b35a` is confirmed on `origin/architecture-rebuild`.
 
-Git push remains HOLD pending closeout-commit verification.
+Implementation `80822a81a087fb0225338466b077ec0e01ce4bd5` and governance closeout `6527abb047ba003e9a253f5598ce018d9697b35a` were independently confirmed at local/remote divergence `0 0` before this reconciliation edit.
+
+Remote-state reconciliation is recorded by this two-document checkpoint.
 
 Remote Supabase remains HOLD.
 
@@ -2289,13 +2295,13 @@ Production remains HOLD.
 
 ## Immediate Product Sequence
 
-1. governance-commit the Sprint 11 Slice 9 technical-design freeze;
-2. implement only the frozen adjusted financial-obligation authority after separate explicit implementation authorization;
-3. validate and governance-close Slice 9 independently;
-4. perform fresh read-only discovery for settlement/full-balance semantics using the immutable adjusted obligation plus canonical non-reversed booking-payment collections;
-5. only after settlement authority is separately frozen and implemented, design the Stage 12 -> 13 / `editing_pending` gate.
+1. treat Sprint 11 Slice 9 adjusted financial-obligation authority as implemented, fully validated locally, governance closed, pushed and remotely reconciled;
+2. perform fresh read-only discovery for settlement/full-balance semantics using the immutable adjusted obligation plus canonical non-reversed booking-payment collections;
+3. freeze settlement authority only after discovery establishes the exact canonical boundary and provenance rules;
+4. implement settlement authority only after a separate explicit implementation-authorization checkpoint;
+5. only after settlement authority is separately frozen, implemented and validated, design the Stage 12 -> 13 / `editing_pending` gate.
 
-No settlement model, amount-due/balance-due authority or Stage 13 gate is authorized by the Slice 9 freeze.
+Slice 9 does not itself authorize a settlement model, amount-due/balance-due authority or Stage 13 gate.
 
 Remote Supabase remains HOLD.
 
