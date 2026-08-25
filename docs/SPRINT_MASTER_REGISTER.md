@@ -22601,3 +22601,90 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 10 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**
+
+## Sprint 11 Slice 11 Technical Design Freeze — 2026-08-26
+
+**Sprint 11 Slice 11 — Controlled Stage 12 -> 13 / Editing Pending Advancement Gate**
+
+Exact baseline:
+
+`2c08d7aab5f5003098d2042d69316c0d2a4a631f` — `docs: reconcile sprint 11 slice 10 remote state`
+
+Discovery establishes:
+
+- Stage 12 = `selection_pending`;
+- Stage 13 = `editing_pending`;
+- no existing Stage 12 -> 13 implementation;
+- booking-row locking is the common synchronization root for every mutable prerequisite;
+- `booking.stage.advance` is the canonical journey-transition authority;
+- `editing.write` governs editing jobs rather than booking-stage advancement;
+- existing pgTAP explicitly rejects Editor journey advancement through `editing.write`;
+- protected financial evidence may be evaluated internally by a journey gate without granting the caller the financial read permission;
+- permissions remain 68 / 241.
+
+Frozen RPC:
+
+`public.mark_booking_editing_pending(uuid)`
+
+Frozen authorization:
+
+- authenticated active member;
+- existing `booking.stage.advance`;
+- booking branch scope;
+- no `editing.write`;
+- no `finance.read`;
+- no new permission.
+
+Frozen first-execution prerequisites:
+
+- exact current Stage 12 / `selection_pending`;
+- exact Stage 11 -> 12 / `selection_pending` lineage;
+- exact immutable selection confirmation;
+- exact immutable selection reconciliation;
+- exact Slice 10 settlement-target semantics;
+- current non-reversed collections satisfy
+  `valid_collected_inr >= settlement_target_inr`.
+
+Frozen transition:
+
+Stage 12 `selection_pending`
+->
+Stage 13 `editing_pending`
+
+with:
+
+`transition_key = 'editing_pending'`
+
+Frozen replay:
+
+- exact Stage 13 only;
+- exactly one historical Stage 12 -> 13 transition;
+- no financial re-evaluation on replay;
+- no second transition or audit;
+- later payment reversal never rewinds historical Stage 12 -> 13 evidence.
+
+Frozen implementation boundary:
+
+1. one migration ending in `sprint11_stage12_13_editing_pending_gate_foundation.sql`;
+2. `supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+Explicitly excluded:
+
+- new permissions;
+- editing-job persistence;
+- application UI/store/server-function changes;
+- Stage 13 -> 14;
+- settlement persistence;
+- overpayment/refund classification;
+- payment mutation;
+- remote Supabase;
+- Production deployment.
+
+Implementation is not yet authorized.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 11 — TECHNICALLY FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**

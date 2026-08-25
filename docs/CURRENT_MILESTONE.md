@@ -12,7 +12,7 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 10 are implemented, fully validated locally, committed, governance closed and pushed. Slice 10 implementation `a058a36827eed5c9b4a1388109760082bcad5f48` — `feat: add full-balance settlement read authority` and governance closeout `e481d1a70640913362953a4970e445755352e408` — `docs: close sprint 11 slice 10` are independently confirmed on `origin/architecture-rebuild`; this checkpoint records the reconciled remote state. Remote Supabase remains HOLD. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 10 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Slice 10 remote-state reconciliation is `2c08d7aab5f5003098d2042d69316c0d2a4a631f` — `docs: reconcile sprint 11 slice 10 remote state`. Sprint 11 Slice 11 — Controlled Stage 12 -> 13 / Editing Pending Advancement Gate — is technically frozen against that exact baseline; implementation is not yet authorized. Remote Supabase remains HOLD. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
@@ -2876,14 +2876,409 @@ Production remains HOLD.
 **SPRINT 11 SLICE 10 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**
 
 
+
+## Sprint 11 Slice 11 Technical Design Freeze — 2026-08-26
+
+### Checkpoint
+
+**Sprint 11 Slice 11 — Controlled Stage 12 -> 13 / Editing Pending Advancement Gate**
+
+Exact baseline:
+
+`2c08d7aab5f5003098d2042d69316c0d2a4a631f` — `docs: reconcile sprint 11 slice 10 remote state`
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+### Discovery conclusion
+
+Read-only discovery establishes:
+
+- Stage 12 is active `selection_pending`;
+- Stage 13 is active `editing_pending`;
+- no existing public function implements or can create Stage 13;
+- no existing Stage 13 transition authority exists;
+- finalized selection confirmation and reconciliation are immutable canonical evidence;
+- current full-balance authority is Slice 10 `get_booking_full_balance_summary(uuid)`;
+- all mutable selection, obligation, payment and reversal operations serialize through the booking row with `FOR UPDATE`;
+- `booking.stage.advance` is the canonical 21-stage journey-transition permission;
+- `editing.write` is an editing-job permission, not a booking-journey transition permission;
+- existing pgTAP precedent explicitly rejects an Editor attempting journey advancement through `editing.write`;
+- `finance.read` is an aggregate financial-read permission and must not be silently imported into journey advancement;
+- Stage 7 -> 8 precedent already proves that a controlled journey transition may evaluate protected financial evidence internally without requiring the caller to hold the corresponding payment-read permission;
+- canonical permission totals remain 68 permissions / 241 role-permission mappings.
+
+### Authorization decision
+
+Slice 11 requires existing:
+
+`booking.stage.advance`
+
+plus booking branch scope.
+
+Current Stage-advance roles remain:
+
+- Client Coordinator;
+- Founder;
+- Studio Manager.
+
+No new permission is introduced.
+
+No role-permission grant is changed.
+
+Slice 11 does not require:
+
+- `editing.read`;
+- `editing.write`;
+- `finance.read`;
+- `finance.write`;
+- `payment.read`;
+- `payment.record`;
+- `payment.reverse`.
+
+An Editor holding `editing.write` but lacking `booking.stage.advance` must be rejected.
+
+A Client Coordinator holding `booking.stage.advance` but lacking `editing.write` and `finance.read` remains eligible to perform the transition when all canonical evidence and the internal full-balance predicate are satisfied.
+
+### Canonical RPC
+
+Introduce exactly one browser-callable mutation RPC:
+
+`public.mark_booking_editing_pending(uuid)`
+
+Input:
+
+- booking id only.
+
+Return:
+
+`public.bookings`
+
+The function must be `SECURITY DEFINER` with:
+
+`SET search_path = ''`
+
+Execution boundary:
+
+- authenticated: allowed;
+- PUBLIC: denied;
+- anon: denied;
+- service_role: denied.
+
+### Synchronization boundary
+
+The booking row is the synchronization root.
+
+The function must lock the canonical booking with `FOR UPDATE` before evaluating mutable financial evidence.
+
+This lock is required before reading:
+
+- current journey state;
+- current payment evidence;
+- current reversal evidence.
+
+Existing selection confirmation, reconciliation, pricing-basis, adjusted-obligation, payment-record and payment-reversal mutation paths already serialize on the same booking row.
+
+Therefore the Stage 12 -> 13 financial decision is transactionally stable against concurrent canonical mutation.
+
+### First-execution stage containment
+
+First execution is allowed only when the booking is exactly:
+
+Stage 12 / `selection_pending`.
+
+The function must require exactly one current canonical journey state.
+
+It must require exact canonical Stage 11 -> 12 transition lineage:
+
+- source Stage 11 / `shoot_completed`;
+- destination Stage 12 / `selection_pending`;
+- transition key `selection_pending`.
+
+Any other current stage must fail closed except the strict Stage 13 replay defined below.
+
+### Selection evidence prerequisite
+
+First execution requires exactly one immutable:
+
+`booking_selection_confirmations`
+
+row for the same organization and booking.
+
+First execution also requires exactly one immutable:
+
+`booking_selection_reconciliations`
+
+row for the same organization and booking.
+
+The reconciliation must retain exact canonical lineage to:
+
+- the booking source quotation;
+- the selection confirmation;
+- the frozen calculation rule
+  `accepted_quote_version_entitlement_v1`.
+
+The gate does not create, repair or modify selection evidence.
+
+### Internal full-balance predicate
+
+The gate must NOT require the caller to execute or possess authorization for the public:
+
+`get_booking_full_balance_summary(uuid)`
+
+because that public read surface intentionally requires `finance.read`.
+
+Instead, while holding the booking synchronization lock, the gate must evaluate the exact same frozen Slice 10 settlement semantics internally.
+
+Canonical target rule:
+
+`reconciled_accepted_or_adjusted_total_v1`
+
+Canonical collection rule:
+
+`non_reversed_booking_payments_v1`
+
+#### Zero-excess branch
+
+If:
+
+`booking_selection_reconciliations.excess_image_count = 0`
+
+then the settlement target is exactly:
+
+`booking_payment_requirements.accepted_quotation_total_inr`
+
+Requirements include:
+
+- exact canonical payment requirement;
+- exact booking source quotation;
+- INR;
+- positive accepted quotation total;
+- exact canonical reconciliation;
+- no adjusted financial obligation may coexist.
+
+A zero-excess reconciliation with an adjusted-obligation row fails closed.
+
+#### Positive-excess branch
+
+If:
+
+`booking_selection_reconciliations.excess_image_count > 0`
+
+then exactly one canonical:
+
+`booking_adjusted_financial_obligations`
+
+row is required.
+
+The settlement target is exactly:
+
+`booking_adjusted_financial_obligations.adjusted_total_inr`
+
+The obligation must match the Slice 10 lineage contract, including:
+
+- organization;
+- booking;
+- source payment requirement;
+- source quotation;
+- source reconciliation;
+- accepted-total snapshot;
+- excess-image-count snapshot;
+- INR;
+- calculation rule
+  `accepted_quote_plus_excess_image_charge_v1`.
+
+Missing or inconsistent positive-excess obligation authority fails closed.
+
+### Current collection rule
+
+Current valid collection is:
+
+`SUM(booking_payments.amount_inr WHERE no canonical reversal exists)`
+
+using bigint arithmetic and zero when no valid payments exist.
+
+A reversed payment contributes zero.
+
+The gate condition is:
+
+`valid_collected_inr >= settlement_target_inr`
+
+Exact equality is not required.
+
+Collections above target satisfy the gate but create no:
+
+- overpayment classification;
+- refund-due state;
+- refund workflow.
+
+If the predicate is false, Stage 12 -> 13 must not occur.
+
+### Canonical transition
+
+First successful execution appends exactly one transition:
+
+Stage 12 `selection_pending`
+->
+Stage 13 `editing_pending`
+
+with:
+
+`transition_key = 'editing_pending'`
+
+It then advances the one canonical `booking_journey_states` row using exact current-stage and version containment.
+
+No generic journey-advance API is introduced.
+
+No Stage 13 -> 14 transition is introduced.
+
+### Strict Stage 13 replay
+
+If the booking is exactly Stage 13 / `editing_pending`, replay is allowed only when exactly one canonical historical Stage 12 -> 13 `editing_pending` transition exists.
+
+Replay performs no new:
+
+- transition;
+- journey-state mutation;
+- audit event;
+- financial mutation.
+
+Critically, replay must not re-evaluate current full-balance satisfaction.
+
+A payment reversal recorded after the historical Stage 12 -> 13 transition may make the current Slice 10 financial summary unsatisfied, but must never automatically rewind or invalidate the historical journey transition.
+
+Calls after later journey progression are not Slice 11 replay and must fail the operation-stage boundary.
+
+### Audit
+
+First successful advancement appends one structural non-sensitive audit event:
+
+`booking.editing_pending`
+
+The audit may record:
+
+- booking id;
+- transition key;
+- prior and resulting journey stage;
+- prior and resulting journey version;
+- canonical selection/reconciliation evidence identifiers.
+
+The audit must not expose:
+
+- settlement target amount;
+- collected amount;
+- payment references;
+- payment methods;
+- payment notes;
+- refund or overpayment semantics.
+
+### Editing-domain containment
+
+Slice 11 does not create an editing job.
+
+It does not modify the current mock editing tracker.
+
+It does not consume `editing.write` as journey authority.
+
+It does not implement:
+
+- editor assignment;
+- editing-job creation;
+- Stage 13 -> 14 / `editing_in_progress`;
+- retouching workflow;
+- QC;
+- delivery;
+- Pixieset.
+
+Those remain separately governed downstream editing-domain work.
+
+### Frozen implementation boundary
+
+Exactly three implementation artifacts are authorized only after a separate implementation-authorization checkpoint:
+
+1. one new migration whose filename ends in `sprint11_stage12_13_editing_pending_gate_foundation.sql`;
+2. `supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+No fourth implementation artifact is authorized without governance amendment.
+
+No application route, server-function file, store file or UI file is authorized.
+
+No new permission migration is authorized.
+
+No compatibility/regression test modification is pre-authorized.
+
+### Validation contract
+
+Implementation acceptance must prove at minimum:
+
+- exact three-artifact implementation boundary;
+- exact RPC name/signature/return type;
+- authenticated-only execution boundary;
+- active membership requirement;
+- `booking.stage.advance` requirement;
+- branch containment;
+- Editor rejected despite `editing.write`;
+- Client Coordinator allowed without `editing.write` or `finance.read`;
+- Founder allowed;
+- Studio Manager allowed;
+- exact Stage 12 first-execution containment;
+- strict Stage 13 replay;
+- later-stage rejection;
+- exact Stage 11 -> 12 lineage;
+- exact selection-confirmation cardinality;
+- exact reconciliation cardinality and lineage;
+- zero-excess accepted-total target;
+- zero-excess adjusted-obligation coexistence fails closed;
+- positive-excess exact adjusted-obligation requirement;
+- missing positive-excess obligation fails closed;
+- exact adjusted-obligation lineage;
+- non-reversed payment aggregation;
+- under-target rejection;
+- exact-target success;
+- over-target success;
+- later reversal does not rewind historical Stage 12 -> 13 evidence;
+- Stage 13 replay does not re-evaluate the later current shortfall;
+- transition key exactly `editing_pending`;
+- journey version increments exactly once;
+- replay creates no second transition;
+- first execution creates one structural audit event;
+- replay creates no second audit event;
+- no financial amount leakage in the transition audit;
+- no payment/reversal mutation;
+- no selection/reconciliation mutation;
+- no obligation mutation;
+- no settlement persistence;
+- no editing-job persistence;
+- no Stage 13 -> 14 transition;
+- no new permission;
+- permission totals remain 68 / 241;
+- clean local database reset;
+- dedicated Slice 11 pgTAP PASS;
+- full local pgTAP regression PASS;
+- local database lint PASS;
+- freshly generated local Supabase types with narrow semantic diff;
+- generated-type Prettier PASS;
+- targeted generated-types ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- `git diff --check` PASS.
+
+Implementation is not yet authorized.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+
 ## Immediate Product Sequence
 
-1. perform fresh read-only discovery for the Stage 12 -> 13 / `editing_pending` transition boundary;
-2. do not name or freeze that next slice until discovery establishes the exact evidence, authorization and transition contract;
-3. keep refund/overpayment workflow and historical settlement-event persistence separately governed unless later evidence proves they are required;
-4. keep Remote Supabase and Production on HOLD.
-
-Slice 10 remains a current-state read authority only. It does not itself authorize a Stage 12 -> 13 transition, persistent settlement evidence, refund obligation or payment mutation.
+1. governance-commit the Sprint 11 Slice 11 technical-design freeze;
+2. independently verify the exact freeze commit and remote baseline;
+3. authorize implementation only in a separate checkpoint;
+4. implement only the frozen Stage 12 -> 13 / `editing_pending` gate boundary;
+5. keep editing-job creation, Stage 13 -> 14, refund/overpayment workflow, Remote Supabase and Production separately governed.
 
 Remote Supabase remains HOLD.
 
