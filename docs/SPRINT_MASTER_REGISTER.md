@@ -20178,3 +20178,185 @@ No implementation beyond Slice 3 is authorized by this closeout.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 3 — IMPLEMENTED / VALIDATED / PUSHED / GOVERNANCE CLOSED / PRODUCTION HOLD**
+
+---
+
+## Sprint 11 Slice 4 Technical Design Freeze — 2026-08-25
+
+### Checkpoint
+
+**Sprint 11 Slice 4 — Controlled Stage 11 -> 12 / `selection_pending` Advancement Gate**
+
+Exact baseline:
+
+`d99e639c871a7aa11757f3b785c7bd33ed2de9f7` — `docs: close sprint 11 slice 3`
+
+Production remains HOLD.
+
+### Fresh discovery findings
+
+Read-only repository and local-database discovery established:
+
+- canonical Stage 11 is `shoot_completed`;
+- canonical Stage 12 is `selection_pending`;
+- both stages already exist and are active;
+- four canonical local bookings currently sit at Stage 11 / journey version 5;
+- current transition history contains Stage 10 -> 11 only;
+- there is no Stage 11 -> 12 RPC;
+- no function contains `selection_pending`;
+- no function contains `editing_pending`;
+- no canonical selection, editing, gallery or delivery table exists;
+- no canonical post-shoot RLS surface exists because those tables do not yet exist;
+- existing `/editing` and `/pixieset` routes remain legacy mock/Zustand surfaces;
+- `booking.stage.advance` is granted to Founder, Studio Manager and Client Coordinator;
+- editing/delivery permissions are separate future-domain capabilities and are not journey advancement authority;
+- current Stage-11 fixtures have paid the canonical required 50% advance but are not fully settled against accepted quotation total;
+- no canonical post-shoot privacy/image-use table currently exists.
+
+### Design conclusion
+
+Stage 12 represents a waiting state: **Selection Pending**.
+
+Entering Stage 12 must not imply that client selection has already occurred.
+
+Therefore Slice 4 is a journey-advancement gate only and does not create selection evidence.
+
+### Canonical RPC
+
+Slice 4 will introduce:
+
+`public.mark_booking_selection_pending(uuid)`
+
+Return type:
+
+`public.bookings`
+
+The RPC will use:
+
+- authenticated actor enforcement;
+- active organization membership;
+- existing `booking.stage.advance`;
+- branch-scope enforcement;
+- booking locking;
+- exact single current journey-state enforcement;
+- exact Stage 11 / `shoot_completed` first-call source;
+- canonical shoot-completion evidence lineage;
+- exact active Stage 12 / `selection_pending` destination;
+- append-only `booking_stage_transitions`;
+- optimistic exact-state/version advancement;
+- structural non-sensitive audit;
+- strict Stage-12 idempotent replay.
+
+### Canonical lineage requirement
+
+First advancement requires:
+
+- exactly one canonical `booking_shoot_completions` row;
+- exactly one canonical Stage 10 `shoot_scheduled` -> Stage 11 `shoot_completed` transition.
+
+Replay at exact Stage 12 additionally requires exactly one canonical Stage 11 `shoot_completed` -> Stage 12 `selection_pending` transition.
+
+Replay performs no new mutation or audit.
+
+### Transition and audit
+
+Canonical transition key:
+
+`selection_pending`
+
+Canonical audit action:
+
+`booking.selection_pending`
+
+The audit remains non-sensitive and structural.
+
+It may contain canonical identifiers and journey-version metadata but no invented selection content.
+
+### Payment boundary
+
+No full-balance requirement is introduced.
+
+Existing Stage-11 fixtures have canonical advance payment only.
+
+The legacy doctrine that editing begins after selection and balance payment is reserved for later editing-boundary discovery and is not promoted into the Stage 11 -> 12 transition.
+
+### Permission boundary
+
+No new permission is introduced.
+
+No role-permission mapping changes.
+
+`booking.stage.advance` remains the sole journey authority.
+
+Editing/delivery permissions do not authorize Stage 11 -> 12 advancement.
+
+### Security contract
+
+The new RPC will:
+
+- be `SECURITY DEFINER`;
+- use empty `search_path`;
+- remove PUBLIC/default execution;
+- deny `anon`;
+- deny application execution to `service_role`;
+- grant execution to `authenticated`;
+- retain database-side membership, permission and branch checks.
+
+### Frozen implementation boundary
+
+Exactly three implementation artifacts:
+
+1. one newly generated migration whose filename ends in `sprint11_stage11_12_gate_foundation.sql`;
+2. `supabase/tests/sprint11_stage11_12_gate_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+No fourth implementation file is authorized.
+
+### Explicit exclusions
+
+Slice 4 does not implement:
+
+- selection evidence;
+- image ids or image counts;
+- proofing;
+- culling;
+- editing jobs;
+- editing status;
+- QC;
+- gallery;
+- Pixieset;
+- delivery;
+- heirloom;
+- privacy/consent schema;
+- marketing approval;
+- payment changes;
+- full-balance enforcement;
+- Stage 12 -> 13;
+- application integration;
+- remote Supabase;
+- Production migration;
+- Production deployment;
+- release.
+
+### Validation contract
+
+Acceptance requires dedicated pgTAP coverage for structural security, authorized and unauthorized roles, branch isolation, exact-stage enforcement, completion-lineage enforcement, optimistic advancement, transition/audit cardinality, idempotent replay and malformed replay.
+
+It also requires:
+
+- clean local reset;
+- full local pgTAP regression;
+- local DB lint;
+- generated-type regeneration and narrow semantic diff;
+- targeted formatting;
+- TypeScript;
+- production build;
+- whitespace validation;
+- forbidden later-stage/schema scan;
+- exact three-artifact boundary.
+
+Implementation is not yet authorized.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 4 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
