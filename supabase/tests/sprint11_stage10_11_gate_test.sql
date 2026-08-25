@@ -49,8 +49,8 @@ SELECT is(
 -- C
 SELECT is(
   (SELECT count(*)::bigint FROM public.role_permissions),
-  233::bigint,
-  'C: canonical role-permission mapping remains 233'
+  241::bigint,
+  'C: canonical repository-wide role-permission mapping is 241'
 );
 
 -- D
