@@ -20735,3 +20735,197 @@ Implementation is not yet authorized.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 5 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+---
+
+## Sprint 11 Slice 5 Implementation Closeout — 2026-08-25
+
+### Checkpoint
+
+**Sprint 11 Slice 5 — Canonical Client Image Selection Confirmation Evidence Foundation**
+
+Technical Design Freeze:
+
+`049050859b237439dfd9debb8d80fedddb06a72e` — `docs: freeze sprint 11 slice 5`
+
+Implementation commit:
+
+`ba488ad6a2eae07f2f4e06f384a934ab3941deda` — `feat: add selection confirmation evidence foundation`
+
+Implementation parent:
+
+`049050859b237439dfd9debb8d80fedddb06a72e`
+
+Branch:
+
+`architecture-rebuild`
+
+### Delivered scope
+
+Slice 5 introduced the canonical immutable fact that a client finalized an image selection.
+
+Canonical database authority:
+
+- `public.booking_selection_confirmations`;
+- `public.record_booking_selection_confirmation(uuid, integer, timestamptz)`;
+- `selection.read`;
+- `selection.record`.
+
+The evidence records:
+
+- organization;
+- booking;
+- positive selected-image count;
+- client confirmation timestamp;
+- recording timestamp;
+- recording organization member.
+
+Exactly one evidence row may exist per organization + booking.
+
+The evidence is immutable.
+
+Authenticated reads require `selection.read` plus applicable branch scope.
+
+Authenticated direct INSERT, UPDATE and DELETE remain denied.
+
+Recording occurs only through the controlled authenticated RPC.
+
+The RPC requires:
+
+- authenticated actor;
+- active organization membership;
+- `selection.record`;
+- applicable branch scope;
+- exactly one current journey state;
+- exact active Stage 12 / `selection_pending`;
+- exactly one canonical Stage 11 `shoot_completed` -> Stage 12 `selection_pending` transition;
+- confirmation timestamp not preceding canonical Stage 12 entry;
+- positive selected-image count;
+- non-future confirmation timestamp.
+
+Exact replay with identical evidence is idempotent.
+
+Conflicting replay is rejected.
+
+Successful first recording emits exactly one structural, non-sensitive:
+
+`booking.selection_confirmed`
+
+audit event.
+
+### Permission state
+
+Canonical permission total after Slice 5:
+
+**68**
+
+Canonical role-permission mapping total after Slice 5:
+
+**241**
+
+`selection.read`
+
+- domain: `selection`;
+- `requires_server_enforcement = false`.
+
+`selection.record`
+
+- domain: `selection`;
+- `requires_server_enforcement = true`.
+
+Both capabilities are granted exactly to:
+
+- Founder;
+- Studio Manager;
+- Client Coordinator;
+- Editor.
+
+No other role receives a Slice 5 selection capability.
+
+### Frozen implementation boundary delivered
+
+Exactly five implementation artifacts were committed:
+
+1. `supabase/migrations/20260825135327_sprint11_selection_confirmation_evidence_foundation.sql`;
+2. `supabase/tests/sprint11_selection_confirmation_evidence_test.sql`;
+3. `src/integrations/supabase/types.ts`;
+4. `supabase/tests/sprint11_stage10_11_gate_test.sql`;
+5. `supabase/tests/sprint10_extended_creative_assignments_test.sql`.
+
+The two compatibility files changed only the canonical repository-wide `role_permissions` expectation from 233 to 241 and matching assertion wording.
+
+Generated Supabase types changed by exactly:
+
+- 67 additions;
+- 0 deletions.
+
+### Final validation evidence
+
+- clean local `supabase db reset`: PASS;
+- dedicated Slice 5 pgTAP: **76/76 PASS**;
+- full local pgTAP regression: **1380/1380 PASS**;
+- full regression files: **22**;
+- local database lint: PASS;
+- generated-type Prettier: PASS;
+- TypeScript `--noEmit`: PASS;
+- production build: PASS;
+- `git diff --check`: PASS;
+- persisted selection-confirmation rows after transactional validation: **0**;
+- exact five-artifact boundary: PASS.
+
+### Git reconciliation
+
+Implementation push:
+
+`0490508..ba488ad  architecture-rebuild -> architecture-rebuild`
+
+Post-push reconciliation:
+
+- local HEAD:
+  `ba488ad6a2eae07f2f4e06f384a934ab3941deda`;
+- `origin/architecture-rebuild`:
+  `ba488ad6a2eae07f2f4e06f384a934ab3941deda`;
+- divergence:
+  `0 / 0`;
+- worktree:
+  clean.
+
+### Explicit containment
+
+Slice 5 does not implement:
+
+- individual selected-image ids or image assets;
+- galleries, Pixieset, proofing or culling;
+- package-entitlement interpretation;
+- package-inclusion restructuring or backfill;
+- additional-image billing;
+- post-booking commercial adjustment;
+- accepted quotation mutation;
+- supplemental quotation or invoice behavior;
+- full-settlement calculation;
+- payment ledger mutation;
+- privacy or consent mutation;
+- Stage 12 -> 13 / `editing_pending`;
+- editing jobs, QC, delivery or heirloom production;
+- application route/UI integration;
+- remote Supabase;
+- Production migration;
+- Production deployment;
+- release.
+
+### Next checkpoint
+
+Fresh read-only discovery is required before any further implementation boundary is named or frozen.
+
+Discovery must establish authoritative semantics for:
+
+- machine-readable image entitlement;
+- post-selection commercial reconciliation;
+- additional-image financial obligation;
+- post-booking adjusted settlement;
+- eventual Stage 12 -> 13 prerequisites.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 5 — IMPLEMENTED / FULLY VALIDATED LOCALLY / PUSHED / REMOTELY RECONCILED / GOVERNANCE CLOSED / PRODUCTION HOLD**
