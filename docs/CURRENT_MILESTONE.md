@@ -12,7 +12,7 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 7 are implemented, fully validated locally, committed, pushed and remotely reconciled. Slice 7 remote-state reconciliation is recorded by `e02e81aacb77b2d9dbcffe8267c2e5fe55ee20a6` — `docs: reconcile sprint 11 slice 7 remote state`, with local/remote branch parity confirmed at divergence `0 0`. Sprint 11 Slice 8 — Client-Favorable Additional-Image Pricing Basis Authority Foundation — is implemented, fully validated locally and committed at `8ab0ab4e6fe0d3bae4084a66ab2999fed03abace`; this governance closeout records the completed local checkpoint. The Slice 8 implementation and closeout remain unpushed pending explicit push authorization. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 7 are implemented, fully validated locally, committed, pushed and remotely reconciled. Slice 7 remote-state reconciliation is recorded by `e02e81aacb77b2d9dbcffe8267c2e5fe55ee20a6` — `docs: reconcile sprint 11 slice 7 remote state`, with local/remote branch parity confirmed at divergence `0 0`. Sprint 11 Slice 8 — Client-Favorable Additional-Image Pricing Basis Authority Foundation — is implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Implementation `8ab0ab4e6fe0d3bae4084a66ab2999fed03abace` and governance closeout `376304bcaa23535fc2ca1efa436811f7f4268b51` are confirmed on `origin/architecture-rebuild`, with local/remote parity confirmed at the closeout SHA at divergence `0 0`. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
@@ -61,7 +61,7 @@ The founder-approved commercial rule remains `client_favorable_quote_or_selectio
 
 Slice 8 establishes immutable commercial package/additional-image term authority and immutable booking-level per-unit pricing-basis evidence only. It does not create an excess-image charge total, adjusted financial obligation, amount due, balance due, settlement result or Stage 12 -> 13 transition.
 
-This governance closeout records Slice 8 as implemented, fully validated locally, committed and governance closed. The implementation and this closeout remain local until explicit push authorization.
+Slice 8 is implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Implementation `8ab0ab4e6fe0d3bae4084a66ab2999fed03abace` and governance closeout `376304bcaa23535fc2ca1efa436811f7f4268b51` are confirmed on `origin/architecture-rebuild`; first local/remote reconciliation at the closeout SHA is confirmed at divergence `0 0`.
 
 Remote Supabase remains HOLD.
 
@@ -1609,9 +1609,9 @@ Slice 8 creates no:
 - remote Supabase mutation;
 - Production migration, deployment or release.
 
-Slice 8 is therefore **implemented, fully validated locally, committed and governance closed**.
+Slice 8 is therefore **implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled**.
 
-The implementation and governance-closeout commits remain local pending explicit Git push authorization.
+Implementation `8ab0ab4e6fe0d3bae4084a66ab2999fed03abace` and governance closeout `376304bcaa23535fc2ca1efa436811f7f4268b51` are confirmed on `origin/architecture-rebuild`. First local/remote reconciliation is confirmed at the closeout SHA with divergence `0 0`.
 
 Remote Supabase remains HOLD.
 

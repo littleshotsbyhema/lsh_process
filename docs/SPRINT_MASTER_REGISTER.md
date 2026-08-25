@@ -21878,9 +21878,9 @@ Containment preserved:
 - no remote Supabase mutation;
 - no Production migration/deployment/release.
 
-Slice 8 is implemented, fully validated locally, committed and governance closed.
+Slice 8 is implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled.
 
-The implementation and governance-closeout commits remain local pending explicit Git push authorization.
+Implementation `8ab0ab4e6fe0d3bae4084a66ab2999fed03abace` and governance closeout `376304bcaa23535fc2ca1efa436811f7f4268b51` are confirmed on `origin/architecture-rebuild`. First local/remote reconciliation is confirmed at the closeout SHA with divergence `0 0`.
 
 The next programme action is fresh read-only discovery for adjusted financial-obligation semantics using the immutable positive-excess reconciliation quantity plus the immutable applied per-unit pricing basis. No adjusted obligation, settlement model or Stage 13 gate is frozen by this closeout.
 
@@ -21888,4 +21888,4 @@ Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 8 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSH PENDING / PRODUCTION HOLD**
+**SPRINT 11 SLICE 8 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**
