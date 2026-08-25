@@ -20360,3 +20360,136 @@ Implementation is not yet authorized.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 4 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+---
+
+## Sprint 11 Slice 4 Implementation Closeout — 2026-08-25
+
+### Checkpoint
+
+**Sprint 11 Slice 4 — Controlled Stage 11 -> 12 / `selection_pending` Advancement Gate**
+
+Technical Design Freeze baseline:
+
+`d99e639c871a7aa11757f3b785c7bd33ed2de9f7` — `docs: close sprint 11 slice 3`
+
+Technical Design Freeze commit:
+
+`bb3a9acb368039e554bd221eefddb6e34de663cd` — `docs: freeze sprint 11 slice 4`
+
+Implementation commit:
+
+`312e7a94ff4dfc47b0924ec0b9ce71c8413f534a` — `feat: gate stage 11 to selection pending`
+
+### Delivered scope
+
+Slice 4 introduces exactly one controlled journey advancement RPC:
+
+`public.mark_booking_selection_pending(uuid)`
+
+The operation:
+
+- requires authenticated active organization membership;
+- uses existing `booking.stage.advance`;
+- preserves branch-scope enforcement;
+- locks the booking as synchronization root;
+- requires exactly one current journey state;
+- permits first execution only from exact active Stage 11 / `shoot_completed`;
+- requires exactly one canonical shoot-completion evidence row;
+- requires exactly one canonical Stage 10 `shoot_scheduled` -> Stage 11 `shoot_completed` transition;
+- advances to exact active Stage 12 / `selection_pending`;
+- appends exactly one `selection_pending` transition;
+- increments journey version exactly once;
+- emits exactly one structural non-sensitive `booking.selection_pending` audit;
+- supports strict exact Stage-12 idempotent replay;
+- rejects malformed Stage-12 replay history.
+
+### Frozen implementation boundary preserved
+
+Exactly three implementation artifacts were changed:
+
+1. `supabase/migrations/20260825071257_sprint11_stage11_12_gate_foundation.sql`;
+2. `supabase/tests/sprint11_stage11_12_gate_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+No fourth implementation artifact was introduced.
+
+### Validation evidence
+
+Final local acceptance completed successfully:
+
+- clean local database reset: PASS;
+- dedicated Slice 4 pgTAP: **43/43 PASS**;
+- full local pgTAP regression: **1304/1304 PASS across 21 files**;
+- local public-schema DB lint: PASS with no schema errors;
+- freshly regenerated Supabase types exactly matched the checked generated file;
+- generated-type Prettier: PASS;
+- TypeScript: PASS;
+- production build: PASS;
+- forbidden later-domain table scan: zero rows;
+- forbidden later-stage function scan: zero rows;
+- migration forbidden-scope scan: clean;
+- whitespace validation: PASS.
+
+### Security and authority
+
+- no new permission was introduced;
+- no role-permission mapping changed;
+- `booking.stage.advance` remains the sole journey authority;
+- Founder, Studio Manager and Client Coordinator are authorized through the existing permission;
+- Photographer and Editor remain unauthorized for this transition;
+- branch-scoped cross-branch advancement is denied;
+- suspended membership is denied;
+- RPC is `SECURITY DEFINER`;
+- RPC uses empty `search_path`;
+- PUBLIC, `anon` and application `service_role` execution remain denied;
+- execution is granted only to `authenticated`.
+
+### Selection and payment boundary
+
+Stage 12 means **selection is awaited**.
+
+Slice 4 does not fabricate or persist:
+
+- selected image ids;
+- selected image counts;
+- client-selection confirmation;
+- selection timestamps;
+- proofing/gallery evidence.
+
+No full-balance payment prerequisite was added.
+
+Any canonical selection evidence and any later balance-payment prerequisite require separate discovery and a separately frozen boundary.
+
+### Remote landing
+
+Fast-forward push succeeded:
+
+`bb3a9ac..312e7a9  architecture-rebuild -> architecture-rebuild`
+
+Independent remote verification confirmed:
+
+`312e7a94ff4dfc47b0924ec0b9ce71c8413f534a refs/heads/architecture-rebuild`
+
+Local/remote divergence after fetch:
+
+`0 0`
+
+### Next checkpoint
+
+Do not infer a selection-evidence model or Stage 12 -> 13 implementation from the existence of Stage 12.
+
+The next checkpoint is fresh read-only repository and local-database discovery covering:
+
+- canonical client-selection evidence;
+- image/proof/culling ownership;
+- selection completion semantics;
+- prerequisites for Stage 12 -> 13 / `editing_pending`;
+- whether full accepted-quotation settlement belongs at the editing boundary;
+- privacy/image-use separation;
+- application integration requirements.
+
+Any such implementation requires a separate Technical Design Freeze.
+
+Remote Supabase migration, Production deployment and release remain unauthorized.
+
+**SPRINT 11 SLICE 4 — IMPLEMENTED / FULLY VALIDATED LOCALLY / PUSHED / GOVERNANCE CLOSED / PRODUCTION HOLD**

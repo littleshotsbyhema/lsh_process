@@ -10,11 +10,11 @@ Do not rewrite the broader roadmap just to advance the active task.
 
 Treat the existing organization isolation, authentication, RBAC/RLS, audit foundation, and all Sprint 1-9 modules (organizations, families, contacts, children, memory profiles, leads/CRM, lead workspace, AI Memory Guide, packages/quotations/booking conversion, advance payments, booking confirmation, KPI) as authoritative and Complete/Released. Do not rebuild them. See `docs/SPRINT_MASTER_REGISTER.md` for the full sprint-by-sprint delivered scope and acceptance state.
 
-Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released. Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slice 1 — Canonical Shoot Completion Evidence Foundation, Slice 2 — Controlled Stage 10 -> 11 / `shoot_completed` Advancement Gate, and Slice 3 — Authenticated `/bookings` Shoot Completion Integration are implemented, validated, pushed to `origin/architecture-rebuild`, and governance closed. Slice 3 implementation is remotely landed at `0dfa357630be8714759d4663e00259b18dafe2bb`. Fresh post-shoot discovery is complete, and Sprint 11 Slice 4 — Controlled Stage 11 -> 12 / `selection_pending` Advancement Gate is Technical Design Frozen from baseline `d99e639c871a7aa11757f3b785c7bd33ed2de9f7`. Slice 4 implementation is not yet authorized. Production remains HOLD.
+Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released. Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slice 1 — Canonical Shoot Completion Evidence Foundation, Slice 2 — Controlled Stage 10 -> 11 / `shoot_completed` Advancement Gate, and Slice 3 — Authenticated `/bookings` Shoot Completion Integration are implemented, validated, pushed to `origin/architecture-rebuild`, and governance closed. Slice 3 implementation is remotely landed at `0dfa357630be8714759d4663e00259b18dafe2bb`. Sprint 11 Slice 4 — Controlled Stage 11 -> 12 / `selection_pending` Advancement Gate is implemented, fully validated locally, pushed to `origin/architecture-rebuild` at `312e7a94ff4dfc47b0924ec0b9ce71c8413f534a`, and governance closed. The exact frozen three-artifact boundary was preserved. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
-Sprint 11 Slice 4 — **Controlled Stage 11 -> 12 / `selection_pending` Advancement Gate** is Technical Design Frozen from exact baseline:
+Sprint 11 Slice 4 — **Controlled Stage 11 -> 12 / `selection_pending` Advancement Gate** is implemented, fully validated locally, and remotely landed.
 
 `d99e639c871a7aa11757f3b785c7bd33ed2de9f7` — `docs: close sprint 11 slice 3`
 
@@ -186,7 +186,30 @@ Implementation acceptance will require:
 - no full-payment prerequisite;
 - no selection evidence fabricated by advancement.
 
-Implementation is not yet authorized.
+Implementation completed within the exact frozen three-artifact boundary.
+
+Implementation commit:
+
+`312e7a94ff4dfc47b0924ec0b9ce71c8413f534a` — `feat: gate stage 11 to selection pending`
+
+Validation evidence:
+
+- clean local database reset: PASS;
+- dedicated Slice 4 pgTAP: 43/43 PASS;
+- full local pgTAP regression: 1304/1304 PASS across 21 files;
+- local public-schema DB lint: PASS with no schema errors;
+- regenerated Supabase types exactly matched fresh local generation;
+- generated-type Prettier: PASS;
+- TypeScript: PASS;
+- production build: PASS;
+- forbidden later-domain table scan: zero rows;
+- forbidden later-stage function scan: zero rows;
+- migration forbidden-scope scan: clean;
+- `git diff --check`: PASS;
+- exact implementation boundary: three artifacts only;
+- remote branch verification: exact SHA parity with divergence `0 0`.
+
+No remote Supabase migration or Production deployment was performed.
 
 Production remains HOLD.
 
@@ -198,16 +221,14 @@ Sprint 11 Slice 2 provides the controlled Stage 10 -> 11 / `shoot_completed` dat
 
 Sprint 11 Slice 3 provides authenticated `/bookings` integration for completion recording and Stage 10 -> 11 advancement.
 
-Sprint 11 Slice 4 is now separately Technical Design Frozen for the controlled Stage 11 -> 12 / `selection_pending` database gate only.
+Sprint 11 Slice 4 is implemented, locally validated, and remotely landed as the controlled Stage 11 -> 12 / `selection_pending` database gate.
 
-The intended sequence is:
+The intended sequence is now:
 
-1. validate and governance-commit this Slice 4 Technical Design Freeze;
-2. implement the frozen three-artifact database boundary only after explicit implementation authorization;
-3. validate Slice 4 independently;
-4. close Slice 4 separately;
-5. perform fresh discovery before any canonical selection-evidence model or Stage 12 -> 13 editing gate;
-6. integrate Stage 11 -> 12 into the application only under a separately frozen application checkpoint if required.
+1. perform fresh read-only discovery before defining any canonical selection-evidence model;
+2. separately discover the prerequisites for Stage 12 -> 13 / `editing_pending`, including selection evidence and any balance-payment rule;
+3. freeze any future selection-evidence or editing boundary independently;
+4. integrate Stage 11 -> 12 into the application only under a separately frozen application checkpoint if required.
 
 Production remains HOLD.
 
