@@ -238,6 +238,106 @@ export type Database = {
           },
         ];
       };
+      booking_adjusted_financial_obligations: {
+        Row: {
+          accepted_quotation_total_inr: number;
+          adjusted_total_inr: number;
+          applied_unit_price_inr: number;
+          booking_id: string;
+          calculation_rule: string;
+          currency: string;
+          excess_image_charge_inr: number;
+          excess_image_count: number;
+          id: string;
+          organization_id: string;
+          recorded_at: string;
+          recorded_by: string;
+          source_payment_requirement_id: string;
+          source_pricing_basis_id: string;
+          source_quotation_id: string;
+          source_reconciliation_id: string;
+        };
+        Insert: {
+          accepted_quotation_total_inr: number;
+          adjusted_total_inr: number;
+          applied_unit_price_inr: number;
+          booking_id: string;
+          calculation_rule: string;
+          currency: string;
+          excess_image_charge_inr: number;
+          excess_image_count: number;
+          id?: string;
+          organization_id: string;
+          recorded_at?: string;
+          recorded_by: string;
+          source_payment_requirement_id: string;
+          source_pricing_basis_id: string;
+          source_quotation_id: string;
+          source_reconciliation_id: string;
+        };
+        Update: {
+          accepted_quotation_total_inr?: number;
+          adjusted_total_inr?: number;
+          applied_unit_price_inr?: number;
+          booking_id?: string;
+          calculation_rule?: string;
+          currency?: string;
+          excess_image_charge_inr?: number;
+          excess_image_count?: number;
+          id?: string;
+          organization_id?: string;
+          recorded_at?: string;
+          recorded_by?: string;
+          source_payment_requirement_id?: string;
+          source_pricing_basis_id?: string;
+          source_quotation_id?: string;
+          source_reconciliation_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_adjusted_financial_obligations_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_adjusted_financial_obligations_payment_req_fkey";
+            columns: ["organization_id", "booking_id", "source_payment_requirement_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_payment_requirements";
+            referencedColumns: ["organization_id", "booking_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_adjusted_financial_obligations_pricing_basis_fkey";
+            columns: ["organization_id", "booking_id", "source_pricing_basis_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_additional_image_pricing_bases";
+            referencedColumns: ["organization_id", "booking_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_adjusted_financial_obligations_quote_fkey";
+            columns: ["organization_id", "source_quotation_id"];
+            isOneToOne: false;
+            referencedRelation: "quotations";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_adjusted_financial_obligations_reconciliation_fkey";
+            columns: ["organization_id", "booking_id", "source_reconciliation_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_selection_reconciliations";
+            referencedColumns: ["organization_id", "booking_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_adjusted_financial_obligations_recorded_by_fkey";
+            columns: ["recorded_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
       booking_journey_stages: {
         Row: {
           created_at: string;
@@ -6545,6 +6645,33 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "booking_additional_image_pricing_bases";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      record_booking_adjusted_financial_obligation: {
+        Args: { p_booking_id: string };
+        Returns: {
+          accepted_quotation_total_inr: number;
+          adjusted_total_inr: number;
+          applied_unit_price_inr: number;
+          booking_id: string;
+          calculation_rule: string;
+          currency: string;
+          excess_image_charge_inr: number;
+          excess_image_count: number;
+          id: string;
+          organization_id: string;
+          recorded_at: string;
+          recorded_by: string;
+          source_payment_requirement_id: string;
+          source_pricing_basis_id: string;
+          source_quotation_id: string;
+          source_reconciliation_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_adjusted_financial_obligations";
           isOneToOne: true;
           isSetofReturn: false;
         };
