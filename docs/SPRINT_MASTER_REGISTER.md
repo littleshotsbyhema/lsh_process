@@ -20493,3 +20493,245 @@ Any such implementation requires a separate Technical Design Freeze.
 Remote Supabase migration, Production deployment and release remain unauthorized.
 
 **SPRINT 11 SLICE 4 — IMPLEMENTED / FULLY VALIDATED LOCALLY / PUSHED / GOVERNANCE CLOSED / PRODUCTION HOLD**
+---
+
+## Sprint 11 Slice 5 Technical Design Freeze — 2026-08-25
+
+### Checkpoint
+
+**Sprint 11 Slice 5 — Canonical Client Image Selection Confirmation Evidence Foundation**
+
+Exact baseline:
+
+`054120ddc1e34eb6f0f2f40332528be318c1370d` — `docs: close sprint 11 slice 4`
+
+Production remains HOLD.
+
+### Discovery findings
+
+Fresh read-only post-Stage-12 discovery established:
+
+- Stage 12 `selection_pending` and Stage 13 `editing_pending` exist as active catalogue states;
+- there is no canonical selection, selected-image, proof, gallery, editing or delivery relation;
+- there is no Stage 12 -> 13 function;
+- legacy editing/Pixieset behavior remains mock/Zustand-backed;
+- package inclusion schema has optional `quantity` and `unit`, but approved image-entitlement seed rows currently use descriptive labels rather than machine-readable quantities;
+- the approved `additional_image` catalogue add-on is INR 500 per additional retouched image;
+- accepted quotations are immutable and bookings remain anchored to their accepted source quotation;
+- no post-booking adjustment/charge/invoice model exists;
+- current booking payment summary represents accepted-quotation advance truth rather than post-selection adjusted settlement;
+- privacy/image-use consent is not canonical selection evidence.
+
+### Design conclusion
+
+Slice 5 establishes immutable canonical confirmation that the client has finalized an image selection.
+
+It records:
+
+- selected-image count;
+- client-selection confirmation time;
+- canonical recording actor/time.
+
+It does not identify the selected image assets.
+
+It does not calculate commercial consequences.
+
+### Canonical relation
+
+Introduce:
+
+`public.booking_selection_confirmations`
+
+Exactly one canonical row per organization + booking.
+
+Evidence is immutable.
+
+No selected-image ids, gallery URLs, proof URLs, free-text notes or privacy/consent content are stored.
+
+### Canonical RPC
+
+Introduce:
+
+`public.record_booking_selection_confirmation(uuid, integer, timestamptz)`
+
+Return type:
+
+`public.booking_selection_confirmations`
+
+First recording requires:
+
+- authenticated active organization member;
+- `selection.record`;
+- applicable branch scope;
+- exact current Stage 12 / `selection_pending`;
+- exactly one canonical Stage 11 -> 12 / `selection_pending` transition;
+- positive selected-image count;
+- non-future confirmation timestamp;
+- confirmation timestamp not earlier than canonical Stage-12 entry.
+
+Successful recording creates exactly one immutable evidence row and exactly one structural non-sensitive:
+
+`booking.selection_confirmed`
+
+audit event.
+
+### Replay
+
+Exact Stage-12 replay with identical count and confirmation timestamp is idempotent.
+
+It returns the existing evidence row and emits no new row or audit.
+
+Conflicting replay is rejected.
+
+### Permissions
+
+Introduce:
+
+`selection.read`
+
+- `requires_server_enforcement = false`
+
+`selection.record`
+
+- `requires_server_enforcement = true`
+
+Frozen initial grants:
+
+| Role | selection.read | selection.record |
+| --- | --- | --- |
+| Founder | yes | yes |
+| Studio Manager | yes | yes |
+| Client Coordinator | yes | yes |
+| Editor | yes | yes |
+
+No other role receives these Slice 5 capabilities.
+
+`booking.stage.advance` and `editing.write` do not substitute for `selection.record`.
+
+### Data access
+
+Authenticated direct SELECT requires `selection.read` plus applicable booking branch scope.
+
+Direct authenticated INSERT / UPDATE / DELETE are denied.
+
+Recording occurs only through the dedicated RPC.
+
+### Security contract
+
+The recording RPC is:
+
+- `SECURITY DEFINER`;
+- empty `search_path`;
+- unavailable to PUBLIC and `anon`;
+- unavailable to application `service_role`;
+- executable only by `authenticated`;
+- database-enforced for membership, permission, branch, exact stage and canonical lineage.
+
+### Privacy boundary
+
+Client selection is not image-use consent.
+
+Slice 5 cannot widen public usage, grant marketing approval or change family privacy posture.
+
+### Commercial boundary
+
+Slice 5 does not:
+
+- parse package inclusion labels into entitlement;
+- infer entitlement from generic inclusion keys;
+- restructure or backfill package inclusion data;
+- calculate additional-image quantity;
+- charge the INR 500 additional-image add-on;
+- mutate/supersede the accepted quotation;
+- create a post-booking financial adjustment.
+
+A later separately frozen commercial-reconciliation checkpoint owns those concerns.
+
+### Payment boundary
+
+Selection confirmation does not prove financial settlement.
+
+Slice 5 changes no payment relation, payment summary or payment permission.
+
+### Journey boundary
+
+Slice 5 performs no journey transition.
+
+Stage 12 -> 13 / `editing_pending` remains unauthorized.
+
+### Frozen implementation boundary
+
+Exactly five implementation artifacts:
+
+1. one migration ending in `sprint11_selection_confirmation_evidence_foundation.sql`;
+2. `supabase/tests/sprint11_selection_confirmation_evidence_test.sql`;
+3. `src/integrations/supabase/types.ts`;
+4. `supabase/tests/sprint11_stage10_11_gate_test.sql`;
+5. `supabase/tests/sprint10_extended_creative_assignments_test.sql`.
+
+Artifacts 4 and 5 are compatibility-regression files only.
+
+Their permitted modification is limited to:
+
+- canonical repository-wide `role_permissions` count: 233 -> 241;
+- corresponding assertion-description wording.
+
+No pgTAP plan-count, fixture, authorization, journey or unrelated assertion change is authorized in those files.
+
+No sixth implementation file is authorized.
+
+### Explicit exclusions
+
+No:
+
+- selected-image asset model;
+- gallery/Pixieset model;
+- proofing/culling;
+- editing job;
+- QC/delivery;
+- package entitlement restructuring;
+- commercial reconciliation;
+- additional-image billing;
+- full-settlement calculation;
+- privacy/consent implementation;
+- Stage 12 -> 13;
+- application integration;
+- remote Supabase;
+- Production migration/deployment/release.
+
+### Validation contract
+
+Acceptance requires:
+
+- exactly 68 canonical permissions after Slice 5;
+- exactly 241 canonical role-permission mappings after Slice 5;
+- compatibility-only 233 -> 241 updates in the two frozen regression files;
+- `selection.read.requires_server_enforcement = false`;
+- `selection.record.requires_server_enforcement = true`;
+
+and dedicated pgTAP coverage for:
+
+- relation shape and immutability;
+- permission and exact role-grant boundary;
+- RPC ACL/security;
+- direct DML containment;
+- Stage-12-only operation;
+- canonical Stage 11 -> 12 lineage;
+- branch and membership isolation;
+- positive count;
+- timestamp validity and temporal lineage;
+- exactly-one evidence cardinality;
+- exact replay;
+- conflicting replay;
+- audit cardinality;
+- no individual image ids;
+- no commercial/payment/privacy mutation;
+- no Stage 12 -> 13 behavior.
+
+It also requires clean local reset, full pgTAP regression, DB lint, fresh generated types, formatting, TypeScript, production build, whitespace validation and explicit forbidden-scope scans.
+
+Implementation is not yet authorized.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 5 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
