@@ -12,11 +12,11 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 9 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Slice 9 remote-state reconciliation remains `18f42662a2d89760ba20e51683b43723fdabce20` — `docs: reconcile sprint 11 slice 9 remote state`. Sprint 11 Slice 10 — Current Full-Balance Settlement Read Authority Foundation — is implemented, fully validated locally and committed as `a058a36827eed5c9b4a1388109760082bcad5f48` — `feat: add full-balance settlement read authority`; this governance checkpoint closes the local Slice 10 implementation. Slice 10 is not yet pushed or remotely reconciled. Remote Supabase remains HOLD. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 10 are implemented, fully validated locally, committed, governance closed and pushed. Slice 10 implementation `a058a36827eed5c9b4a1388109760082bcad5f48` — `feat: add full-balance settlement read authority` and governance closeout `e481d1a70640913362953a4970e445755352e408` — `docs: close sprint 11 slice 10` are independently confirmed on `origin/architecture-rebuild`; this checkpoint records the reconciled remote state. Remote Supabase remains HOLD. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
-Sprint 11 Slice 10 — **Current Full-Balance Settlement Read Authority Foundation** is implemented, fully validated locally and committed. This two-document checkpoint governance-closes the local implementation; push and remote-state reconciliation remain separate later checkpoints.
+Sprint 11 Slice 10 — **Current Full-Balance Settlement Read Authority Foundation** is implemented, fully validated locally, committed, governance closed, pushed and independently verified on the remote branch. This two-document checkpoint records the reconciled remote state.
 
 Technical-design freeze:
 
@@ -102,7 +102,7 @@ with:
 
 Slice 10 intentionally remains a deterministic current-state read authority only. It creates no persistent settlement evidence, no overpayment/refund classification, no payment mutation and no Stage 12 -> 13 transition.
 
-The local implementation commit is governance-closed by this checkpoint but is not yet pushed. Remote `architecture-rebuild` remains at `ef6874576643ea6df107e3dc14e5366f1f2aed9a` until a separately authorized guarded push.
+Implementation `a058a36827eed5c9b4a1388109760082bcad5f48` and governance closeout `e481d1a70640913362953a4970e445755352e408` are independently confirmed on `origin/architecture-rebuild`, with exact local/remote parity `0 0` confirmed before this reconciliation edit. This two-document checkpoint records that reconciled remote state.
 
 Remote Supabase remains HOLD.
 
@@ -2823,12 +2823,65 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 
+
+## Sprint 11 Slice 10 Remote-State Reconciliation — 2026-08-26
+
+### Checkpoint
+
+**Sprint 11 Slice 10 — Current Full-Balance Settlement Read Authority Foundation**
+
+Technical-design freeze:
+
+`ef6874576643ea6df107e3dc14e5366f1f2aed9a` — `docs: freeze sprint 11 slice 10`
+
+Implementation:
+
+`a058a36827eed5c9b4a1388109760082bcad5f48` — `feat: add full-balance settlement read authority`
+
+Governance closeout:
+
+`e481d1a70640913362953a4970e445755352e408` — `docs: close sprint 11 slice 10`
+
+Exact pushed chain:
+
+`e481d1a70640913362953a4970e445755352e408`
+-> `a058a36827eed5c9b4a1388109760082bcad5f48`
+-> `ef6874576643ea6df107e3dc14e5366f1f2aed9a`
+
+Independent GitHub verification confirms:
+
+- `origin/architecture-rebuild` is exactly `e481d1a70640913362953a4970e445755352e408`;
+- the closeout parent is exactly `a058a36827eed5c9b4a1388109760082bcad5f48`;
+- the implementation commit is present with the exact subject `feat: add full-balance settlement read authority`;
+- the closeout commit is present with the exact subject `docs: close sprint 11 slice 10`;
+- the implementation contains the frozen Slice 10 RPC/types/migration/test authority;
+- local and remote parity was confirmed at `0 0` before this reconciliation edit.
+
+Slice 10 is therefore implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled.
+
+The delivered authority remains a deterministic current-state full-balance read only.
+
+It does not introduce:
+
+- persistent settlement evidence;
+- overpayment or refund-due classification;
+- payment or reversal mutation;
+- Stage 12 -> 13 / `editing_pending`;
+- any production or remote-Supabase deployment.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 10 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**
+
+
 ## Immediate Product Sequence
 
-1. guarded-push the exact Slice 10 implementation commit plus governance-closeout commit after separate push authorization;
-2. independently verify the remote implementation/closeout chain and record Slice 10 remote-state reconciliation;
-3. only after Slice 10 is remotely reconciled, perform fresh discovery for the Stage 12 -> 13 / `editing_pending` transition gate;
-4. keep refund/overpayment workflow and historical settlement-event persistence separately governed unless later evidence proves they are required.
+1. perform fresh read-only discovery for the Stage 12 -> 13 / `editing_pending` transition boundary;
+2. do not name or freeze that next slice until discovery establishes the exact evidence, authorization and transition contract;
+3. keep refund/overpayment workflow and historical settlement-event persistence separately governed unless later evidence proves they are required;
+4. keep Remote Supabase and Production on HOLD.
 
 Slice 10 remains a current-state read authority only. It does not itself authorize a Stage 12 -> 13 transition, persistent settlement evidence, refund obligation or payment mutation.
 
