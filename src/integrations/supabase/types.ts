@@ -6151,6 +6151,26 @@ export type Database = {
         Args: { p_branch_id?: string; p_organization_id: string };
         Returns: string[];
       };
+      get_booking_full_balance_summary: {
+        Args: { p_booking_id: string };
+        Returns: {
+          booking_id: string;
+          collection_rule: string;
+          currency: string;
+          excess_image_count: number;
+          full_balance_outstanding_inr: number;
+          full_balance_satisfied: boolean;
+          payment_count: number;
+          reversal_count: number;
+          settlement_target_inr: number;
+          source_adjusted_obligation_id: string;
+          source_payment_requirement_id: string;
+          source_quotation_id: string;
+          source_reconciliation_id: string;
+          target_rule: string;
+          valid_collected_inr: number;
+        }[];
+      };
       get_booking_payment_summary: {
         Args: { p_booking_id: string };
         Returns: {
