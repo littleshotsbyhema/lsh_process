@@ -12,13 +12,67 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 8 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Slice 8 remote-state reconciliation is recorded by `38b0d5c93d88a21d641f988d75054e178269926e` — `docs: reconcile sprint 11 slice 8 remote state`, with local/remote branch parity confirmed at divergence `0 0`. Sprint 11 Slice 9 — Booking Adjusted Financial Obligation Authority Foundation — is technically frozen against that exact baseline; implementation is not yet authorized. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 8 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Slice 8 remote-state reconciliation is recorded by `38b0d5c93d88a21d641f988d75054e178269926e` — `docs: reconcile sprint 11 slice 8 remote state`. Sprint 11 Slice 9 — Booking Adjusted Financial Obligation Authority Foundation — is implemented, fully validated locally, committed and governance closed. Slice 9 implementation is `80822a81a087fb0225338466b077ec0e01ce4bd5` with exact parent `cb5462b1f662ee4eb218182558a4206231d78175`. Slice 9 is not yet pushed or remotely reconciled. Remote Supabase remains HOLD. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
-Sprint 11 Slice 8 — **Client-Favorable Additional-Image Pricing Basis Authority Foundation** is implemented, fully validated locally and committed.
+Sprint 11 Slice 9 — **Booking Adjusted Financial Obligation Authority Foundation** is implemented, fully validated locally, committed and governance closed.
 
 Technical-design freeze:
+
+`cb5462b1f662ee4eb218182558a4206231d78175` — `docs: freeze sprint 11 slice 9`
+
+Frozen baseline:
+
+`38b0d5c93d88a21d641f988d75054e178269926e` — `docs: reconcile sprint 11 slice 8 remote state`
+
+Implementation:
+
+`80822a81a087fb0225338466b077ec0e01ce4bd5` — `feat: add adjusted financial obligation authority`
+
+Implementation parent:
+
+`cb5462b1f662ee4eb218182558a4206231d78175`
+
+Exact implementation artifacts:
+
+1. `supabase/migrations/20260826010000_sprint11_adjusted_financial_obligation_authority_foundation.sql`;
+2. `supabase/tests/sprint11_adjusted_financial_obligation_authority_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+Validation evidence:
+
+- clean local migration/reset contract: PASS;
+- dedicated Slice 9 pgTAP: 76 / 76 PASS;
+- full local pgTAP regression: 26 files / 1690 tests PASS;
+- local database lint: PASS with no schema errors;
+- canonical permission count: 68;
+- canonical role-permission mapping count: 241;
+- persisted adjusted-obligation rows after clean reset: 0;
+- adjusted-obligation relation has exactly 16 frozen columns;
+- charge and adjusted-total arithmetic use persisted `bigint`;
+- exact rule `accepted_quote_plus_excess_image_charge_v1` validated;
+- exact payment-requirement, quotation, reconciliation and pricing-basis provenance validated;
+- forced RLS: PASS;
+- authenticated direct INSERT / UPDATE / DELETE denied;
+- authenticated SELECT requires existing `finance.read`;
+- controlled mutation requires existing `finance.write`;
+- authenticated RPC execution allowed; anon and service_role execution denied;
+- structural audit evidence uses the canonical `booking.adjusted_financial_obligation_recorded` event and is non-sensitive;
+- generated Supabase types: 127 additions / 0 deletions;
+- generated-type Prettier: PASS;
+- targeted generated-types ESLint: PASS;
+- TypeScript `--noEmit`: PASS;
+- production build: PASS with existing non-blocking dependency, deprecation, bundle and Wrangler warnings only;
+- `git diff --check`: PASS;
+- implementation commit contains exactly the three frozen artifacts and 3166 insertions;
+- post-implementation-commit worktree: clean.
+
+Slice 9 materializes immutable positive-excess adjusted-obligation authority only. It does not calculate settlement, amount due, balance due, overpayment, refund state or paid-in-full status. It does not inspect booking collections to determine the obligation, mutate payment evidence or advance Stage 12 -> 13.
+
+Slice 9 implementation is committed locally but not yet pushed or remotely reconciled. Remote Supabase remains HOLD. Production remains HOLD.
+
+Previous Slice 8 technical-design freeze:
 
 `2e2fa624c1b2106fceeb0c46ca4a579d693f4d48` — `docs: freeze sprint 11 slice 8`
 
@@ -63,23 +117,21 @@ Slice 8 establishes immutable commercial package/additional-image term authority
 
 Slice 8 is implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Implementation `8ab0ab4e6fe0d3bae4084a66ab2999fed03abace`, governance closeout `376304bcaa23535fc2ca1efa436811f7f4268b51`, and remote-state reconciliation `38b0d5c93d88a21d641f988d75054e178269926e` are confirmed on `origin/architecture-rebuild`, with local/remote parity at divergence `0 0`.
 
-Active design checkpoint:
+Current implementation checkpoint:
 
-Sprint 11 Slice 9 — **Booking Adjusted Financial Obligation Authority Foundation** — is technically frozen against `38b0d5c93d88a21d641f988d75054e178269926e`.
+Sprint 11 Slice 9 — **Booking Adjusted Financial Obligation Authority Foundation** — is implemented, fully validated locally, committed and governance closed.
 
-Slice 9 materializes one immutable positive-excess booking obligation from three existing immutable authorities only: the accepted-booking principal in `booking_payment_requirements`, Slice 7 `excess_image_count`, and Slice 8 `applied_unit_price_inr`.
+Implementation:
+
+`80822a81a087fb0225338466b077ec0e01ce4bd5` — `feat: add adjusted financial obligation authority`
 
 Canonical rule:
 
 `accepted_quote_plus_excess_image_charge_v1`
 
-Slice 9 creates obligation authority only. It does not determine payment settlement, amount due, balance due, overpayment, refund state or Stage 12 -> 13.
+The implementation remains obligation-authority-only. Settlement, amount due, balance due, overpayment, refund state and Stage 12 -> 13 remain outside the Slice 9 boundary.
 
-Implementation is not yet authorized.
-
-Remote Supabase remains HOLD.
-
-Production remains HOLD.
+Git push remains HOLD pending governance-closeout verification. Remote Supabase remains HOLD. Production remains HOLD.
 
 ## Sprint 11 Slice 6 Technical Design Freeze
 
@@ -2112,7 +2164,124 @@ Implementation acceptance requires:
 - production build PASS;
 - `git diff --check` PASS.
 
-Implementation is not yet authorized.
+Implementation authorization was granted after the technical freeze.
+
+### Implementation closeout — 2026-08-26
+
+Technical-design freeze:
+
+`cb5462b1f662ee4eb218182558a4206231d78175` — `docs: freeze sprint 11 slice 9`
+
+Frozen baseline:
+
+`38b0d5c93d88a21d641f988d75054e178269926e` — `docs: reconcile sprint 11 slice 8 remote state`
+
+Implementation:
+
+`80822a81a087fb0225338466b077ec0e01ce4bd5` — `feat: add adjusted financial obligation authority`
+
+Implementation parent:
+
+`cb5462b1f662ee4eb218182558a4206231d78175`
+
+Exact implementation artifacts:
+
+1. `supabase/migrations/20260826010000_sprint11_adjusted_financial_obligation_authority_foundation.sql`;
+2. `supabase/tests/sprint11_adjusted_financial_obligation_authority_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+Delivered authority:
+
+- canonical `public.booking_adjusted_financial_obligations`;
+- exactly one immutable adjusted-obligation row per organization + booking;
+- positive-excess-only obligation materialization;
+- zero-excess bookings create no Slice 9 row;
+- accepted principal comes only from the exact immutable booking payment requirement;
+- excess quantity comes only from the exact canonical Slice 7 reconciliation;
+- applied unit price comes only from the exact canonical Slice 8 pricing basis;
+- exact organization + booking + source-quotation lineage across all authorities;
+- pricing basis must reference the exact reconciliation used by the obligation;
+- deterministic `bigint` calculation of excess-image charge and adjusted total;
+- canonical rule `accepted_quote_plus_excess_image_charge_v1`;
+- INR-only authority;
+- exact replay returns the existing immutable row;
+- conflicting immutable replay fails closed;
+- no caller-supplied amount, quantity, price, adjustment, note or arbitrary JSON input.
+
+Security and authorization:
+
+- no new permission;
+- no role-permission mapping change;
+- canonical totals remain 68 permissions / 241 role-permission mappings;
+- controlled mutation requires existing `finance.write`;
+- Accounts, Founder and Studio Manager retain write authority through the existing grant topology;
+- authenticated reads require existing `finance.read` plus booking branch scope;
+- Accounts, Founder, Sales and Studio Manager retain read authority through the existing grant topology;
+- relation RLS is enabled and forced;
+- authenticated direct INSERT / UPDATE / DELETE is denied;
+- controlled RPC is `SECURITY DEFINER` with empty search path;
+- authenticated RPC execution is allowed;
+- PUBLIC / anon / service_role execution is denied;
+- no service-role application mutation path is introduced.
+
+Audit:
+
+- canonical event `booking.adjusted_financial_obligation_recorded`;
+- structural source and calculation provenance only;
+- audit evidence is non-sensitive;
+- no unrelated private content or arbitrary financial-adjustment free text.
+
+Validation evidence:
+
+- clean local database reset: PASS;
+- local database lint: PASS — no schema errors;
+- dedicated Slice 9 pgTAP: 76 / 76 PASS;
+- full local pgTAP regression: 26 files / 1690 tests PASS;
+- canonical permissions: 68;
+- canonical role-permission mappings: 241;
+- clean-reset adjusted-obligation rows: 0;
+- exact adjusted-obligation columns: 16;
+- forced RLS: PASS;
+- authenticated SELECT-only table privilege contract: PASS;
+- authenticated-only controlled RPC contract: PASS;
+- generated Supabase types: 127 additions / 0 deletions;
+- generated-type Prettier: PASS;
+- targeted generated-types ESLint: PASS;
+- TypeScript `--noEmit`: PASS;
+- production build: PASS with existing non-blocking dependency, deprecation, bundle and Wrangler warnings only;
+- file hygiene / `git diff --check`: PASS;
+- implementation commit contains exactly three frozen artifacts;
+- implementation commit stat: 3166 insertions;
+- implementation parent is exactly the Slice 9 technical freeze;
+- post-implementation-commit worktree: clean.
+
+Containment preserved:
+
+- no accepted-quotation mutation;
+- no quotation-line mutation;
+- no payment-requirement mutation;
+- no payment or payment-reversal mutation;
+- no selection-confirmation mutation;
+- no Slice 7 reconciliation mutation;
+- no Slice 8 pricing-basis mutation;
+- no commercial-authority mutation;
+- no collection-dependent obligation calculation;
+- no settlement result;
+- no amount-due or balance-due result;
+- no overpayment or refund result;
+- no paid-in-full state;
+- no journey-state mutation;
+- no booking-stage-transition mutation;
+- no Stage 12 -> 13 / `editing_pending`;
+- no UI, route or server-function implementation;
+- no remote Supabase operation;
+- no Production migration, deployment or release.
+
+Implementation is fully validated locally and committed.
+
+Governance closeout is recorded by this two-document checkpoint.
+
+Git push remains HOLD pending closeout-commit verification.
 
 Remote Supabase remains HOLD.
 
