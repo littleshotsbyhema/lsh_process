@@ -1408,6 +1408,55 @@ export type Database = {
           },
         ];
       };
+      commercial_image_entitlements: {
+        Row: {
+          addon_version_id: string | null;
+          created_at: string;
+          id: string;
+          organization_id: string;
+          package_version_id: string | null;
+          retouched_image_count_per_unit: number;
+        };
+        Insert: {
+          addon_version_id?: string | null;
+          created_at?: string;
+          id?: string;
+          organization_id: string;
+          package_version_id?: string | null;
+          retouched_image_count_per_unit: number;
+        };
+        Update: {
+          addon_version_id?: string | null;
+          created_at?: string;
+          id?: string;
+          organization_id?: string;
+          package_version_id?: string | null;
+          retouched_image_count_per_unit?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "commercial_image_entitlements_addon_fkey";
+            columns: ["organization_id", "addon_version_id"];
+            isOneToOne: false;
+            referencedRelation: "commercial_addon_versions";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "commercial_image_entitlements_organization_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "commercial_image_entitlements_package_fkey";
+            columns: ["organization_id", "package_version_id"];
+            isOneToOne: false;
+            referencedRelation: "commercial_package_versions";
+            referencedColumns: ["organization_id", "id"];
+          },
+        ];
+      };
       commercial_operational_requirements: {
         Row: {
           addon_version_id: string | null;
