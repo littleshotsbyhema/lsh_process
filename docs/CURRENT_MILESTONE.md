@@ -12,7 +12,7 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 7 are implemented, fully validated locally, committed, pushed and remotely reconciled. Slice 7 remote-state reconciliation is recorded by `e02e81aacb77b2d9dbcffe8267c2e5fe55ee20a6` — `docs: reconcile sprint 11 slice 7 remote state`, with local/remote branch parity confirmed at divergence `0 0`. Sprint 11 Slice 8 — Client-Favorable Additional-Image Pricing Basis Authority Foundation — is implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Implementation `8ab0ab4e6fe0d3bae4084a66ab2999fed03abace` and governance closeout `376304bcaa23535fc2ca1efa436811f7f4268b51` are confirmed on `origin/architecture-rebuild`, with local/remote parity confirmed at the closeout SHA at divergence `0 0`. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 8 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Slice 8 remote-state reconciliation is recorded by `38b0d5c93d88a21d641f988d75054e178269926e` — `docs: reconcile sprint 11 slice 8 remote state`, with local/remote branch parity confirmed at divergence `0 0`. Sprint 11 Slice 9 — Booking Adjusted Financial Obligation Authority Foundation — is technically frozen against that exact baseline; implementation is not yet authorized. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
@@ -61,7 +61,21 @@ The founder-approved commercial rule remains `client_favorable_quote_or_selectio
 
 Slice 8 establishes immutable commercial package/additional-image term authority and immutable booking-level per-unit pricing-basis evidence only. It does not create an excess-image charge total, adjusted financial obligation, amount due, balance due, settlement result or Stage 12 -> 13 transition.
 
-Slice 8 is implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Implementation `8ab0ab4e6fe0d3bae4084a66ab2999fed03abace` and governance closeout `376304bcaa23535fc2ca1efa436811f7f4268b51` are confirmed on `origin/architecture-rebuild`; first local/remote reconciliation at the closeout SHA is confirmed at divergence `0 0`.
+Slice 8 is implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Implementation `8ab0ab4e6fe0d3bae4084a66ab2999fed03abace`, governance closeout `376304bcaa23535fc2ca1efa436811f7f4268b51`, and remote-state reconciliation `38b0d5c93d88a21d641f988d75054e178269926e` are confirmed on `origin/architecture-rebuild`, with local/remote parity at divergence `0 0`.
+
+Active design checkpoint:
+
+Sprint 11 Slice 9 — **Booking Adjusted Financial Obligation Authority Foundation** — is technically frozen against `38b0d5c93d88a21d641f988d75054e178269926e`.
+
+Slice 9 materializes one immutable positive-excess booking obligation from three existing immutable authorities only: the accepted-booking principal in `booking_payment_requirements`, Slice 7 `excess_image_count`, and Slice 8 `applied_unit_price_inr`.
+
+Canonical rule:
+
+`accepted_quote_plus_excess_image_charge_v1`
+
+Slice 9 creates obligation authority only. It does not determine payment settlement, amount due, balance due, overpayment, refund state or Stage 12 -> 13.
+
+Implementation is not yet authorized.
 
 Remote Supabase remains HOLD.
 
@@ -1617,14 +1631,502 @@ Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
+## Sprint 11 Slice 9 Technical Design Freeze — 2026-08-26
+
+### Checkpoint
+
+**Sprint 11 Slice 9 — Booking Adjusted Financial Obligation Authority Foundation**
+
+Exact baseline:
+
+`38b0d5c93d88a21d641f988d75054e178269926e` — `docs: reconcile sprint 11 slice 8 remote state`
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+### Discovery conclusion
+
+Fresh post-Slice-8 read-only discovery established:
+
+- `booking_payment_requirements` is the immutable accepted-booking financial-principal authority and snapshots the exact `source_quotation_id` plus `accepted_quotation_total_inr`;
+- `booking_selection_reconciliations` is the immutable booking-level selected/included/excess quantity authority;
+- `booking_additional_image_pricing_bases` is the immutable booking-level applied additional-image unit-price authority;
+- Slice 8 pricing basis carries exact reconciliation, quotation, package/add-on-version and applied-unit-price provenance;
+- `booking_payments` is a generic booking-wide collection ledger rather than an advance-only ledger;
+- `get_booking_payment_summary(uuid)` sums all non-reversed booking payments and currently interprets them only against the advance requirement;
+- no canonical adjusted-obligation, invoice, charge-total, amount-due, balance-due or settlement relation exists;
+- no canonical financial view provides adjusted-obligation or settlement authority;
+- no function implements adjusted obligation or Stage 12 -> 13 settlement semantics;
+- Stage 12 `selection_pending` and Stage 13 `editing_pending` exist in the journey catalogue, but no Stage 12 -> 13 financial gate is implemented;
+- existing `finance.write` is server-enforced and granted exactly to Accounts, Founder and Studio Manager;
+- existing `finance.read` is granted to Accounts, Founder, Sales and Studio Manager;
+- no current canonical function consumes `finance.read` or `finance.write`;
+- no new permission or role-permission mapping is required.
+
+### Design conclusion
+
+Slice 9 establishes immutable booking-level adjusted financial-obligation authority only.
+
+It does not establish settlement.
+
+It does not mutate payment collections.
+
+It does not determine amount due, balance due, overpayment or refund state.
+
+It does not advance Stage 12 -> 13.
+
+### Canonical adjusted-obligation relation
+
+Introduce:
+
+`public.booking_adjusted_financial_obligations`
+
+Canonical structural fields:
+
+- `id uuid`;
+- `organization_id uuid`;
+- `booking_id uuid`;
+- `source_payment_requirement_id uuid`;
+- `source_quotation_id uuid`;
+- `source_reconciliation_id uuid`;
+- `source_pricing_basis_id uuid`;
+- `accepted_quotation_total_inr integer`;
+- `excess_image_count integer`;
+- `applied_unit_price_inr integer`;
+- `excess_image_charge_inr bigint`;
+- `adjusted_total_inr bigint`;
+- `currency text`;
+- `calculation_rule text`;
+- `recorded_at timestamptz`;
+- `recorded_by uuid`.
+
+Exactly one immutable adjusted-obligation row may exist per organization + booking.
+
+A row may exist only when the exact canonical Slice 7 reconciliation has:
+
+`excess_image_count > 0`
+
+Zero-excess bookings do not receive a Slice 9 row. For those bookings, the existing immutable accepted quotation / payment requirement remains the unadjusted principal authority.
+
+### Canonical calculation rule
+
+The exact rule is:
+
+`accepted_quote_plus_excess_image_charge_v1`
+
+Canonical arithmetic:
+
+`excess_image_charge_inr = excess_image_count * applied_unit_price_inr`
+
+`adjusted_total_inr = accepted_quotation_total_inr + excess_image_charge_inr`
+
+The multiplication and total calculation must use `bigint` arithmetic.
+
+`excess_image_charge_inr` and `adjusted_total_inr` are persisted as `bigint`.
+
+No caller-supplied monetary amount is permitted.
+
+### Exact principal authority
+
+`accepted_quotation_total_inr` must come only from the booking's exact immutable:
+
+`public.booking_payment_requirements`
+
+The future operation must not reconstruct the accepted-booking principal from quotation-line arithmetic.
+
+The payment requirement must:
+
+- belong to the same organization + booking;
+- reference the exact `bookings.source_quotation_id`;
+- use INR;
+- carry a positive accepted quotation total;
+- remain unchanged by Slice 9.
+
+### Exact quantity authority
+
+`excess_image_count` must come only from the exact canonical:
+
+`public.booking_selection_reconciliations`
+
+The reconciliation must:
+
+- belong to the same organization + booking;
+- reference the exact booking source quotation;
+- have `excess_image_count > 0`;
+- remain unchanged by Slice 9.
+
+### Exact price authority
+
+`applied_unit_price_inr` must come only from the exact canonical:
+
+`public.booking_additional_image_pricing_bases`
+
+The pricing basis must:
+
+- belong to the same organization + booking;
+- reference the exact Slice 7 reconciliation used by the obligation;
+- reference the exact booking source quotation;
+- use INR;
+- carry a positive `applied_unit_price_inr`;
+- remain unchanged by Slice 9.
+
+### Cross-authority lineage
+
+All source authorities must agree exactly on:
+
+- organization;
+- booking;
+- accepted source quotation.
+
+The pricing basis must reference the exact reconciliation used by the obligation.
+
+Any missing, duplicate, ambiguous or inconsistent source authority fails closed.
+
+Runtime calculation must never infer:
+
+- a different quotation;
+- a latest/current commercial version;
+- a replacement reconciliation;
+- an alternative price;
+- an arbitrary amount.
+
+### Required supporting composite identities
+
+The migration may add supporting unique indexes required for tenant-safe composite source foreign keys:
+
+`booking_payment_requirements (organization_id, booking_id, id)`
+
+`booking_additional_image_pricing_bases (organization_id, booking_id, id)`
+
+The existing canonical Slice 7 index:
+
+`booking_selection_reconciliations (organization_id, booking_id, id)`
+
+remains authoritative.
+
+These indexes do not alter domain semantics.
+
+### Controlled recording RPC
+
+Introduce:
+
+`public.record_booking_adjusted_financial_obligation(uuid)`
+
+Input:
+
+- booking id only.
+
+The RPC must not accept:
+
+- amount;
+- unit price;
+- excess quantity;
+- discount;
+- override;
+- adjustment value;
+- settlement value;
+- note;
+- free text;
+- arbitrary JSON.
+
+Canonical operation:
+
+1. reject null booking id;
+2. require authenticated actor;
+3. lock the booking;
+4. require active organization membership;
+5. require existing `finance.write`;
+6. require booking branch scope;
+7. require exactly one current booking journey state;
+8. require exact Stage 12 / `selection_pending`;
+9. require exactly one canonical booking payment requirement;
+10. validate exact accepted-quotation principal lineage;
+11. require exactly one canonical Slice 7 reconciliation;
+12. require positive reconciled excess;
+13. require exactly one canonical Slice 8 pricing basis;
+14. require pricing basis to reference that exact reconciliation;
+15. validate organization + booking + quotation lineage across all authorities;
+16. validate INR source authorities;
+17. calculate the excess-image charge using bigint arithmetic;
+18. calculate the adjusted total using bigint arithmetic;
+19. persist exactly one immutable obligation row;
+20. append one structural audit event;
+21. leave all source authorities unchanged;
+22. leave booking payments and reversals unchanged;
+23. leave journey state and transitions unchanged;
+24. create no settlement state;
+25. create no Stage 12 -> 13 transition.
+
+### Replay semantics
+
+The booking must be locked before replay resolution.
+
+If an adjusted-obligation row already exists, the operation must recompute all immutable source authorities and calculations.
+
+If every persisted source id, source snapshot, calculated amount, currency and rule matches exactly, return the existing row.
+
+Any mismatch must fail closed as conflicting immutable financial-obligation evidence.
+
+No UPDATE path is permitted.
+
+### Authorization
+
+No new permission is introduced.
+
+No role-permission mapping changes are introduced.
+
+Canonical totals remain:
+
+- permissions: 68;
+- role-permission mappings: 241.
+
+Controlled mutation requires:
+
+`finance.write`
+
+Current grant topology remains unchanged:
+
+- Accounts;
+- Founder;
+- Studio Manager.
+
+Authenticated reads require:
+
+`finance.read`
+
+plus booking branch scope.
+
+Current `finance.read` grants remain unchanged:
+
+- Accounts;
+- Founder;
+- Sales;
+- Studio Manager.
+
+`finance.write` authorizes materializing the deterministic financial obligation only.
+
+It does not authorize arbitrary price or amount selection because the RPC accepts no monetary input.
+
+### RLS / ACL / security
+
+The new relation must enable and force RLS.
+
+Authenticated SELECT requires:
+
+- active organization membership through existing permission helpers;
+- `finance.read`;
+- booking branch scope.
+
+Authenticated direct INSERT, UPDATE and DELETE are denied.
+
+The controlled RPC must be:
+
+- `SECURITY DEFINER`;
+- `SET search_path = ''`;
+- executable by `authenticated`;
+- unavailable to PUBLIC;
+- unavailable to `anon`;
+- unavailable to `service_role`.
+
+No service-role application mutation path is introduced.
+
+### Immutability
+
+The adjusted-obligation relation is append-once immutable authority.
+
+After insertion:
+
+- UPDATE is rejected;
+- DELETE is rejected.
+
+Source ids, source monetary snapshots, calculated amounts, rule, actor and timestamps must never be rewritten.
+
+### Audit
+
+Canonical audit key:
+
+`booking.adjusted_financial_obligation_recorded`
+
+Audit evidence may contain structural:
+
+- booking id;
+- source payment-requirement id;
+- source quotation id;
+- source reconciliation id;
+- source pricing-basis id;
+- accepted quotation total;
+- excess image count;
+- applied unit price;
+- excess image charge;
+- adjusted total;
+- currency;
+- calculation rule;
+- actor.
+
+Audit must not contain unrelated family/private content, payment credentials or arbitrary free-form adjustment text.
+
+### Settlement containment
+
+Slice 9 creates financial-obligation authority only.
+
+It must not calculate or persist:
+
+- `valid_collected_inr`;
+- `amount_paid`;
+- `amount_due`;
+- `balance_due`;
+- `outstanding_inr`;
+- `overpayment`;
+- `refund_due`;
+- `settlement_status`;
+- `paid_in_full`.
+
+The Slice 9 recording operation must not read booking collections to decide the obligation.
+
+A later separately governed settlement checkpoint may compare the immutable adjusted obligation against valid non-reversed `booking_payments`.
+
+### Source immutability / no mutation
+
+Slice 9 must not update, delete or replace:
+
+- `quotations`;
+- `quotation_line_items`;
+- `booking_payment_requirements`;
+- `booking_payments`;
+- `booking_payment_reversals`;
+- `booking_selection_confirmations`;
+- `booking_selection_reconciliations`;
+- `booking_additional_image_pricing_bases`;
+- `commercial_package_additional_image_terms`;
+- `commercial_image_entitlements`;
+- `booking_journey_states`;
+- `booking_stage_transitions`.
+
+### Frozen implementation boundary
+
+Exactly three implementation artifacts are authorized after a separate implementation-authorization checkpoint:
+
+1. one new migration whose filename ends in `sprint11_adjusted_financial_obligation_authority_foundation.sql`;
+2. `supabase/tests/sprint11_adjusted_financial_obligation_authority_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+No fourth implementation artifact is authorized without governance amendment.
+
+No application route, server-function file or UI is authorized.
+
+No permission migration is authorized.
+
+No compatibility/regression file modification is pre-authorized.
+
+### Explicit exclusions
+
+Slice 9 does not implement or modify:
+
+- accepted quotation contents;
+- quotation line items;
+- package/add-on catalogue authority;
+- image entitlement authority;
+- selection confirmation;
+- selection reconciliation;
+- additional-image pricing-basis policy;
+- caller-entered adjustments;
+- discounts;
+- supplemental quotation;
+- invoice workflow;
+- payment recording behavior;
+- payment reversal behavior;
+- payment requirement behavior;
+- payment-summary behavior;
+- settlement/full-balance semantics;
+- amount-due semantics;
+- balance-due semantics;
+- overpayment/refund semantics;
+- Stage 12 -> 13 / `editing_pending`;
+- editing;
+- QC;
+- delivery;
+- Pixieset;
+- privacy/consent;
+- application routes/UI;
+- remote Supabase;
+- Production migration/deployment/release.
+
+### Validation contract
+
+Implementation acceptance requires:
+
+- exact three-artifact implementation boundary;
+- exactly one adjusted-obligation row per organization + booking;
+- positive-excess-only creation;
+- zero-excess rejection / no row;
+- exact payment-requirement principal provenance;
+- exact source quotation provenance;
+- exact reconciliation provenance;
+- exact pricing-basis provenance;
+- exact pricing-basis-to-reconciliation linkage;
+- exact organization + booking + quotation agreement;
+- exact persisted principal snapshot;
+- exact persisted excess quantity snapshot;
+- exact persisted applied-unit-price snapshot;
+- bigint multiplication;
+- exact excess-image charge calculation;
+- exact adjusted-total calculation;
+- exact `accepted_quote_plus_excess_image_charge_v1`;
+- INR-only authority;
+- no caller-supplied amount;
+- missing source authority fails closed;
+- duplicate/ambiguous source authority fails closed;
+- lineage mismatch fails closed;
+- exact replay idempotent;
+- conflicting replay fails closed;
+- immutable UPDATE / DELETE rejection;
+- forced RLS;
+- authenticated `finance.read` read containment;
+- booking branch-scope containment;
+- controlled mutation requires `finance.write`;
+- Accounts / Founder / Studio Manager write behavior consistent with current grants;
+- Sales read-but-not-write behavior consistent with current grants;
+- direct authenticated INSERT / UPDATE / DELETE denied;
+- RPC authenticated-only;
+- PUBLIC / anon / service_role execution denied;
+- no service-role application mutation path;
+- structural audit evidence;
+- no source-table mutation;
+- no booking-payment mutation;
+- no booking-payment-reversal mutation;
+- no collection-dependent obligation calculation;
+- no settlement fields;
+- no amount-due or balance-due fields;
+- no journey-state mutation;
+- no Stage 12 -> 13 transition;
+- canonical permission totals remain 68 / 241;
+- zero adjusted-obligation rows after clean reset;
+- dedicated Slice 9 pgTAP PASS;
+- full local pgTAP regression PASS;
+- local database lint PASS;
+- freshly generated local Supabase types with narrow semantic diff;
+- generated-type Prettier PASS;
+- targeted generated-types ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- `git diff --check` PASS.
+
+Implementation is not yet authorized.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
 ## Immediate Product Sequence
 
-1. perform fresh read-only discovery for the adjusted financial-obligation boundary using immutable positive excess quantity plus immutable applied per-unit pricing basis;
-2. only after that discovery, separately govern and freeze any adjusted financial-obligation design before implementation;
-3. separately establish full-settlement semantics using the existing canonical booking payment ledger;
-4. only then design Stage 12 -> 13 / `editing_pending`.
+1. governance-commit the Sprint 11 Slice 9 technical-design freeze;
+2. implement only the frozen adjusted financial-obligation authority after separate explicit implementation authorization;
+3. validate and governance-close Slice 9 independently;
+4. perform fresh read-only discovery for settlement/full-balance semantics using the immutable adjusted obligation plus canonical non-reversed booking-payment collections;
+5. only after settlement authority is separately frozen and implemented, design the Stage 12 -> 13 / `editing_pending` gate.
 
-No adjusted financial obligation, excess-charge total, settlement model or Stage 13 gate is authorized by this Slice 8 closeout.
+No settlement model, amount-due/balance-due authority or Stage 13 gate is authorized by the Slice 9 freeze.
 
 Remote Supabase remains HOLD.
 
