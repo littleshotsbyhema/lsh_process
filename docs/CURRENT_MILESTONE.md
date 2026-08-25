@@ -12,15 +12,23 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 5 are implemented, fully validated locally, committed, pushed to `origin/architecture-rebuild`, and remotely reconciled. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 5 are implemented, fully validated locally, committed, pushed to `origin/architecture-rebuild`, and remotely reconciled. Sprint 11 Slice 6 is implemented, fully validated locally, and committed locally at `fc96e30f261bca291ebbec4805fd7dbc9cfe20db`; governance closeout is being recorded by the current documentation checkpoint. Slice 6 has not yet been pushed or remotely reconciled. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
-Sprint 11 Slice 5 — **Canonical Client Image Selection Confirmation Evidence Foundation** is implemented, validated, pushed, remotely reconciled and governance closed.
+Sprint 11 Slice 6 — **Version-Bound Machine-Readable Image Entitlement Authority Foundation** is implemented, fully validated locally and committed.
 
-Governance closeout:
+Technical-design freeze:
 
-`90d52a3482bc81aaf946487145dc8e59a33a820e` — `docs: close sprint 11 slice 5`
+`96df8c22adce666cfa0be9518532f181942e1164` — `docs: freeze sprint 11 slice 6`
+
+Implementation:
+
+`fc96e30f261bca291ebbec4805fd7dbc9cfe20db` — `feat: add image entitlement authority foundation`
+
+The implementation commit contains exactly the three frozen implementation artifacts. This documentation checkpoint records the local governance closeout. Remote push and remote reconciliation remain pending explicit release.
+
+Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
@@ -250,7 +258,114 @@ Implementation acceptance requires:
 - production build PASS;
 - `git diff --check` PASS.
 
-Implementation is not yet authorized.
+### Implementation closeout — 2026-08-25
+
+Technical-design freeze:
+
+`96df8c22adce666cfa0be9518532f181942e1164` — `docs: freeze sprint 11 slice 6`
+
+Implementation:
+
+`fc96e30f261bca291ebbec4805fd7dbc9cfe20db` — `feat: add image entitlement authority foundation`
+
+Implementation parent:
+
+`96df8c22adce666cfa0be9518532f181942e1164`
+
+Exact implementation artifacts:
+
+1. `supabase/migrations/20260825135328_sprint11_image_entitlement_authority_foundation.sql`;
+2. `supabase/tests/sprint11_image_entitlement_authority_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+Delivered authority:
+
+- `public.commercial_image_entitlements`;
+- exactly one package-version or add-on-version source per row;
+- positive integer `retouched_image_count_per_unit`;
+- tenant-safe organization-scoped source foreign keys;
+- one entitlement row at most per organization + package version;
+- one entitlement row at most per organization + add-on version;
+- creation restricted to already-approved source versions;
+- immutable entitlement evidence;
+- exactly 12 approved package-version entitlement rows;
+- exactly one approved `additional_image` v1 entitlement row;
+- `additional_image` remains sourced from approved INR 500 fixed-amount v1 commercial evidence;
+- no runtime numeric parsing of human-readable package inclusion labels.
+
+Canonical seeded authority:
+
+- maternity_bronze: 15;
+- maternity_gold: 20;
+- maternity_diamond: 25;
+- maternity_emerald: 35;
+- newborn_bronze: 12;
+- newborn_gold: 18;
+- newborn_diamond: 24;
+- newborn_emerald: 30;
+- sitter_bronze: 12;
+- sitter_gold: 18;
+- sitter_diamond: 25;
+- sitter_emerald: 30;
+- additional_image v1: 1.
+
+Security and tenancy validation:
+
+- RLS enabled and forced;
+- authenticated SELECT only;
+- authenticated read containment uses existing `org.read`;
+- authenticated direct INSERT / UPDATE / DELETE unavailable;
+- no application mutation RPC introduced;
+- no service-role application grant introduced;
+- immutable lifecycle guard validated;
+- draft/unapproved package and add-on versions rejected;
+- cross-organization source identity protected by tenant-safe composite foreign keys.
+
+Historical commercial preservation:
+
+- no approved `commercial_package_versions` mutation;
+- no approved `commercial_package_inclusions` mutation;
+- no approved `commercial_addon_versions` mutation;
+- historical approved image-inclusion `quantity` / `unit` null values remain unchanged;
+- no permission or role-permission mutation.
+
+Validation evidence:
+
+- migration-order correction: PASS — Slice 6 follows Slice 5 canonically;
+- clean local database reset: PASS;
+- canonical entitlement rows: 13 total / 12 package / 1 add-on;
+- canonical permissions: 68;
+- canonical role-permission mappings: 241;
+- dedicated Slice 6 pgTAP: 49/49 PASS;
+- full local pgTAP regression: 23 files / 1429 tests PASS;
+- local database lint: PASS — no schema errors;
+- generated Supabase types: exact `49` additions / `0` deletions;
+- generated type semantic diff limited to `commercial_image_entitlements`;
+- generated-type Prettier: PASS;
+- TypeScript `--noEmit`: PASS;
+- production build: PASS with existing non-blocking dependency/deprecation warnings only;
+- final forbidden-surface audit: PASS;
+- `git diff --check`: PASS;
+- implementation worktree after commit: clean.
+
+Containment preserved:
+
+- no booking-level entitlement reconciliation;
+- no excess-image calculation;
+- no INR 500 booking charge creation;
+- no adjusted financial obligation;
+- no supplemental quotation or invoice;
+- no accepted quotation mutation;
+- no settlement/full-balance calculation;
+- no payment-ledger or payment-requirement behavior change;
+- no Stage 12 -> 13 / `editing_pending`;
+- no editing, QC, delivery or Pixieset behavior;
+- no privacy/consent change;
+- no application route/UI implementation;
+- no remote Supabase mutation;
+- no Production migration or deployment.
+
+Slice 6 is therefore **implemented and fully validated locally**. Governance is closed locally by this documentation checkpoint. Remote branch reconciliation remains pending explicit push authorization.
 
 Remote Supabase remains HOLD.
 
@@ -258,15 +373,15 @@ Production remains HOLD.
 
 ## Immediate Product Sequence
 
-1. governance-commit the Slice 6 Technical Design Freeze;
-2. implement only the frozen version-bound image-entitlement authority after explicit implementation authorization;
-3. validate and governance-close Slice 6 independently;
-4. perform fresh discovery for booking-level post-selection commercial reconciliation;
-5. establish immutable adjusted financial obligation semantics;
-6. establish full-settlement semantics using the canonical booking payment ledger;
+1. commit the Slice 6 governance closeout documentation;
+2. after separate explicit release, push the Slice 6 implementation and closeout commits and reconcile `origin/architecture-rebuild`;
+3. perform fresh read-only discovery for booking-level post-selection commercial reconciliation;
+4. establish and separately freeze the canonical reconciliation boundary only after discovery resolves source-version quantities, no-overage evidence, additional-image overage semantics and applicable pricing-timing rules;
+5. separately establish immutable adjusted financial-obligation semantics;
+6. separately establish full-settlement semantics using the canonical booking payment ledger;
 7. only then design Stage 12 -> 13 / `editing_pending`.
 
-No booking-commercial reconciliation, settlement model or Stage 13 gate is authorized by the Slice 6 freeze.
+No booking-commercial reconciliation implementation, adjusted financial obligation, settlement model or Stage 13 gate is authorized by the Slice 6 closeout. Fresh read-only discovery is the next product step after remote reconciliation.
 
 Remote Supabase remains HOLD.
 

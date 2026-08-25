@@ -21072,8 +21072,103 @@ No:
 
 Acceptance requires exact structural, seed, XOR, positive-quantity, tenant-safe foreign-key, per-source uniqueness, approved-source creation, immutability, RLS, ACL, permission-count and containment assertions plus clean reset, dedicated pgTAP, full regression, DB lint, fresh generated types, formatting, TypeScript, production build and whitespace validation.
 
-Implementation is not yet authorized.
+### Implementation closeout — 2026-08-25
+
+Technical-design freeze:
+
+- Commit: `96df8c22adce666cfa0be9518532f181942e1164`
+- Message: `docs: freeze sprint 11 slice 6`
+
+Implementation:
+
+- Commit: `fc96e30f261bca291ebbec4805fd7dbc9cfe20db`
+- Message: `feat: add image entitlement authority foundation`
+- Parent: `96df8c22adce666cfa0be9518532f181942e1164`
+
+Exact implementation boundary:
+
+1. `supabase/migrations/20260825135328_sprint11_image_entitlement_authority_foundation.sql`;
+2. `supabase/tests/sprint11_image_entitlement_authority_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+Delivered database authority:
+
+- new immutable `public.commercial_image_entitlements`;
+- positive integer image entitlement per commercial source unit;
+- exactly-one-source package/add-on XOR;
+- tenant-safe organization-scoped package-version and add-on-version foreign keys;
+- unique entitlement authority per organization + package version;
+- unique entitlement authority per organization + add-on version;
+- approved-source-only creation guard;
+- forced RLS;
+- authenticated `org.read` SELECT containment;
+- no authenticated direct INSERT / UPDATE / DELETE;
+- no application mutation RPC;
+- no service-role application grant.
+
+Canonical seed:
+
+- 12 approved package-version mappings;
+- one approved `additional_image` v1 mapping;
+- total rows: 13;
+- additional-image entitlement: 1 image per unit;
+- existing approved additional-image commercial source remains fixed-amount INR 500 v1;
+- no runtime numeric parsing of inclusion labels.
+
+Historical catalogue containment:
+
+- no approved package-version mutation;
+- no approved package-inclusion mutation;
+- no approved add-on-version mutation;
+- existing approved image-inclusion `quantity` and `unit` null values preserved;
+- no permission changes;
+- no role-permission changes;
+- canonical totals remain 68 permissions / 241 role-permission mappings.
+
+Validation evidence:
+
+- migration ordering corrected before SQL implementation;
+- clean local database reset: PASS;
+- dedicated pgTAP: 49/49 PASS;
+- full pgTAP regression: 23 files / 1429 tests PASS;
+- local database lint: PASS;
+- entitlement state: 13 total / 12 package / 1 add-on;
+- generated Supabase type diff: 49 additions / 0 deletions;
+- generated type surface limited to `commercial_image_entitlements`;
+- Prettier: PASS;
+- TypeScript `--noEmit`: PASS;
+- production build: PASS with existing non-blocking warnings only;
+- final RLS/ACL/policy audit: PASS;
+- forbidden approved-catalogue mutation audit: PASS;
+- forbidden permission/role-grant mutation audit: PASS;
+- forbidden booking/financial/journey mutation audit: PASS;
+- runtime-label-parsing audit: PASS;
+- service-role application-grant audit: PASS;
+- whitespace validation: PASS;
+- post-implementation worktree: clean.
+
+Explicitly not delivered:
+
+- booking-level entitlement reconciliation;
+- excess-image calculation;
+- booking-level INR 500 charge creation;
+- post-booking commercial adjustment;
+- supplemental quotation/invoice;
+- accepted quotation mutation;
+- adjusted financial obligation;
+- settlement/full-balance semantics;
+- payment behavior changes;
+- Stage 12 -> 13 / `editing_pending`;
+- editing/QC/delivery/Pixieset;
+- privacy/consent changes;
+- application UI/runtime;
+- remote Supabase mutation;
+- Production migration/deployment/release.
+
+Slice 6 is implemented and fully validated locally. This documentation checkpoint closes Slice 6 governance locally. Remote branch push/reconciliation remains separately controlled.
+
+Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 6 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+**SPRINT 11 SLICE 6 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED LOCALLY / REMOTE RECONCILIATION PENDING / PRODUCTION HOLD**
