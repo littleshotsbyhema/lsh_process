@@ -12,7 +12,7 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 11 are implemented, fully validated locally, committed, governance closed, pushed and independently verified on the remote branch. Slice 11 technical-design freeze is `fd321e570f128e92777d662836c0b4b206012fa3` — `docs: freeze sprint 11 slice 11`; implementation is `1486c36c8b13e228a0bca9b498ec6f9ea51fb958` — `feat: add editing pending advancement gate`; governance closeout is `e9d355238915f99a8f08f912282b1ece9ad90f0e` — `docs: close sprint 11 slice 11`. This two-document checkpoint records the reconciled Slice 11 remote state. Remote Supabase remains HOLD. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 11 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Exact reconciled baseline is `83d5a365da177dcaa23a5a501219d85860dd91f1` — `docs: reconcile sprint 11 slice 11 remote state`. Sprint 11 Slice 12 — Editing Start Evidence Foundation — is technically frozen against that exact baseline. Implementation is not yet authorized. Remote Supabase remains HOLD. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
@@ -3397,11 +3397,13 @@ Production remains HOLD.
 
 ## Immediate Product Sequence
 
-1. treat Sprint 11 Slice 11 as the current fully reconciled remote baseline only after this exact reconciliation commit is separately pushed and independently verified;
-2. after that verification, perform fresh read-only discovery for the next downstream boundary;
-3. do not name or freeze the next slice until discovery establishes the exact evidence, authorization and mutation boundary;
-4. keep editing-job creation, editor assignment, Stage 13 -> 14 / `editing_in_progress`, retouching, QC, delivery, Pixieset, persistent settlement state and refund/overpayment workflow separately governed unless discovery proves otherwise;
-5. keep Remote Supabase and Production on HOLD.
+1. governance-commit the Sprint 11 Slice 12 Editing Start Evidence Foundation technical-design freeze as an exact two-document docs-only commit;
+2. independently verify the exact freeze commit and remote baseline;
+3. push the exact freeze SHA only under separate one-shot authorization;
+4. independently verify the pushed freeze on `origin/architecture-rebuild`;
+5. authorize implementation only after that remote freeze verification;
+6. implement only the frozen immutable editing-start evidence boundary;
+7. keep Stage 13 -> 14 / `editing_in_progress`, editor assignment, mutable editing workflow, priority-editing SLA, retouching/QC, Pixieset/delivery and all later journey stages separately governed.
 
 Remote Supabase remains HOLD.
 
@@ -3624,10 +3626,460 @@ Sprint 11 Slice 11 implementation and governance closeout are pushed and indepen
 
 This two-document checkpoint records that exact remote state.
 
-This reconciliation artifact is subject to its own separate one-shot push and independent remote verification before it is treated as the remote governance authority for subsequent discovery.
+The reconciliation artifact was subsequently pushed under separate one-shot authorization and independently verified on `origin/architecture-rebuild` at `83d5a365da177dcaa23a5a501219d85860dd91f1`. It is the exact remote baseline for Slice 12.
 
 Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
 **SPRINT 11 SLICE 11 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**
+
+## Sprint 11 Slice 12 Technical Design Freeze — 2026-08-27
+
+### Frozen baseline
+
+Exact remotely reconciled parent:
+
+`83d5a365da177dcaa23a5a501219d85860dd91f1` — `docs: reconcile sprint 11 slice 11 remote state`
+
+Slice 12 may not be implemented against any other parent without a governance amendment.
+
+### Slice name
+
+**Sprint 11 Slice 12 — Editing Start Evidence Foundation**
+
+### Architectural purpose
+
+Slice 11 established canonical Stage 13 `editing_pending`.
+
+Slice 12 establishes only immutable backend evidence that authorized editing work has actually started for a booking already at that canonical stage.
+
+The evidence is deliberately separate from journey advancement.
+
+The later Stage 13 -> 14 / `editing_in_progress` journey gate is not part of Slice 12.
+
+### Frozen persistence authority
+
+Create exactly one new canonical relation:
+
+`public.booking_editing_starts`
+
+Exact columns:
+
+1. `id uuid`;
+2. `organization_id uuid`;
+3. `booking_id uuid`;
+4. `source_editing_pending_transition_id uuid`;
+5. `started_at timestamptz`;
+6. `started_by uuid`.
+
+Required semantics:
+
+- `id` is the immutable primary key;
+- `organization_id` + `booking_id` identify the canonical booking;
+- exactly one editing-start row may exist per organization + booking;
+- `source_editing_pending_transition_id` snapshots the exact canonical Stage 12 -> 13 `editing_pending` transition consumed at first recording;
+- `started_at` is server-authoritative and is generated by the recording operation;
+- `started_by` is the current active organization member performing the editing-domain action;
+- the row is immutable after insertion;
+- UPDATE is forbidden;
+- DELETE is forbidden;
+- no mutable status column exists in this slice.
+
+The relation must not contain:
+
+- editor assignment;
+- external creative assignment;
+- editing status;
+- edited-image count;
+- selection date duplication;
+- deadline;
+- SLA;
+- priority-editing classification;
+- QC status;
+- gallery URL;
+- delivery link;
+- delivery date;
+- payment amount or status;
+- refund or overpayment state.
+
+### Frozen recording RPC
+
+Create exactly one browser-callable mutation RPC:
+
+`public.record_booking_editing_start(uuid)`
+
+Exact argument:
+
+`p_booking_id uuid`
+
+Return type:
+
+`public.booking_editing_starts`
+
+The RPC is the sole authenticated application write authority for the new relation.
+
+It must be:
+
+- `SECURITY DEFINER`;
+- `SET search_path = ''`;
+- executable by `authenticated`;
+- not executable by PUBLIC;
+- not executable by `anon`;
+- not executable by `service_role`.
+
+### Frozen authorization contract
+
+First execution requires:
+
+- authenticated actor;
+- active organization membership;
+- existing `editing.write`;
+- booking branch scope.
+
+No new permission is introduced.
+
+Canonical permission totals remain:
+
+- permissions: 68;
+- role-permission mappings: 241.
+
+Current `editing.write` role topology remains exact:
+
+- `editor`;
+- `founder`;
+- `studio_manager`.
+
+Therefore:
+
+- Editor may record editing start;
+- Founder may record editing start;
+- Studio Manager may record editing start;
+- Client Coordinator may not record editing start merely because they hold `booking.stage.advance`;
+- `booking.team.assign` is not editing-start authority;
+- `booking.stage.advance` is not editing-start authority;
+- `finance.read` is not editing-start authority;
+- `payment.read` is not editing-start authority;
+- `delivery.write` is not required.
+
+### Frozen journey containment
+
+The booking row is the synchronization root and must be locked before mutable-state evaluation.
+
+First execution requires exactly one current canonical journey state.
+
+The current stage must be exactly:
+
+- order 13;
+- key `editing_pending`;
+- active.
+
+The RPC must require exactly one canonical historical transition:
+
+- source stage 12 `selection_pending`;
+- destination stage 13 `editing_pending`;
+- transition key `editing_pending`.
+
+The exact transition row used by the operation is snapshotted in:
+
+`source_editing_pending_transition_id`
+
+The recording operation must not:
+
+- append a new booking-stage transition;
+- mutate `booking_journey_states`;
+- increment journey version;
+- advance to Stage 14;
+- create Stage 14 history.
+
+### Frozen upstream-authority rule
+
+Slice 12 trusts successful canonical Stage 13 entry as the upstream readiness authority.
+
+It must not re-evaluate:
+
+- selection confirmation;
+- selection reconciliation;
+- image entitlement;
+- additional-image pricing;
+- adjusted financial obligation;
+- booking payment requirement;
+- booking payments;
+- payment reversals;
+- full-balance summary.
+
+This prevents `editing.write` from importing selection or finance authority.
+
+A later payment reversal does not invalidate historical Stage 13 entry and is not reinterpreted by the editing-start recorder.
+
+### Frozen idempotence rule
+
+The booking lock serializes concurrent first-record attempts.
+
+At exact Stage 13:
+
+- if no editing-start evidence exists, append exactly one row;
+- if the exact existing row already references the same canonical Stage 13 transition, return that row without mutation;
+- malformed or inconsistent pre-existing evidence fails closed.
+
+Replay creates:
+
+- no second editing-start row;
+- no second audit event;
+- no journey mutation.
+
+Recording from Stage 12 or any stage other than exact Stage 13 is rejected.
+
+Later-stage replay behavior is intentionally not introduced by this slice; later stages may read canonical evidence through the read authority instead.
+
+### Frozen read / RLS contract
+
+`booking_editing_starts` must:
+
+- enable RLS;
+- force RLS;
+- deny direct INSERT / UPDATE / DELETE to authenticated application callers;
+- expose authenticated SELECT only through existing `editing.read`;
+- enforce booking branch scope.
+
+Existing `editing.read` topology remains unchanged:
+
+- Client Coordinator;
+- Editor;
+- Founder;
+- Studio Manager.
+
+No new permission or role grant is created.
+
+### Frozen audit contract
+
+First successful recording appends exactly one non-sensitive audit event:
+
+`booking.editing_started`
+
+Audit entity:
+
+- entity type: `booking`;
+- entity id: booking id.
+
+Structural audit metadata may contain:
+
+- booking id;
+- editing-start evidence id;
+- source Editing Pending transition id;
+- started-at timestamp.
+
+The audit must not contain:
+
+- payment amounts;
+- payment identifiers;
+- payment methods;
+- selection counts;
+- financial-obligation values;
+- editor assignment;
+- external creative identity;
+- priority-editing interpretation;
+- deadline/SLA;
+- QC;
+- gallery/delivery data;
+- free-text notes.
+
+Replay must append no second audit event.
+
+### Frozen editor-assignment decision
+
+Editor assignment is explicitly excluded.
+
+Evidence supporting the exclusion:
+
+- canonical `booking_team_assignments` is a shoot-side subsystem whose mutation authority is `booking.team.assign`;
+- its supported roles are photographer / assistant / stylist / videographer roles;
+- its assignment lifecycle is constrained to booking stages 8 through 10;
+- it does not currently support `editor`;
+- the mock editing-start behavior itself begins with editor = `Unassigned`.
+
+Slice 12 therefore must not:
+
+- add `editor` to `booking_team_assignments`;
+- expand the booking-team stage window;
+- create an editor-assignment RPC;
+- require an assigned editor before editing start;
+- interpret `external_creatives` as editor identities.
+
+Any canonical editor-assignment authority requires separate discovery and governance.
+
+### Frozen priority-editing / SLA decision
+
+`priority editing` is not machine-readable operational authority today.
+
+The phrase exists in commercial/source text, but the structured
+`commercial_operational_requirements` relation currently permits only:
+
+`lead_videographer`
+
+Therefore Slice 12 must not infer or persist:
+
+- priority-editing boolean/status;
+- editing deadline;
+- turnaround days;
+- due date;
+- expedited-delivery SLA.
+
+`organization_settings.delivery_link_expiry_days` is delivery-link expiry configuration, not editing turnaround authority, and must not be reused as one.
+
+### Frozen mock-data interpretation
+
+The Zustand/mock editing workflow remains non-authoritative product reference only.
+
+Slice 12 does not canonicalize its internal states:
+
+- Shoot Uploaded;
+- Backup Completed;
+- Preview Gallery Sent;
+- Client Selection Pending;
+- Selection Received;
+- Full Payment Pending;
+- Editing Started;
+- Editing Completed;
+- Photographer QC;
+- Final Export;
+- Delivered.
+
+It also does not canonicalize mock fields:
+
+- `editedCount`;
+- `selectionDate`;
+- `deadline`;
+- `editor`;
+- `qc`;
+- `deliveryLink`;
+- `deliveryDate`.
+
+No UI or mock-store rewrite belongs to Slice 12.
+
+### Frozen two-authority handshake
+
+The architecture after Slice 12 is intentionally:
+
+1. `editing.write` records immutable editing-start evidence at Stage 13;
+2. a separately governed future journey gate may consume that evidence to advance Stage 13 -> 14 under `booking.stage.advance`.
+
+The two operations must not be collapsed in Slice 12.
+
+Consequently:
+
+- Editor may create editing-start evidence but cannot gain journey-stage authority;
+- Client Coordinator may retain journey-stage authority but cannot manufacture editing evidence;
+- Founder / Studio Manager may possess both permissions, but the authorities remain structurally separate.
+
+### Explicit exclusions
+
+Slice 12 does not implement:
+
+- Stage 13 -> 14 / `editing_in_progress`;
+- mutable editing-job lifecycle;
+- editor assignment;
+- booking-team editor role;
+- external-editor/freelancer semantics;
+- edited-image progress count;
+- priority editing;
+- editing SLA/deadline;
+- retouching workflow;
+- Stage 14 -> 15;
+- QC;
+- Stage 15 -> 16;
+- Pixieset;
+- gallery readiness;
+- Stage 16 -> 17;
+- delivery;
+- client delivery messaging;
+- payment/refund workflow;
+- settlement persistence;
+- UI/runtime integration;
+- mock-store replacement;
+- Remote Supabase deployment;
+- Production deployment.
+
+### Frozen implementation artifact boundary
+
+Implementation may modify exactly three artifacts:
+
+1. `supabase/migrations/20260827130000_sprint11_editing_start_evidence_foundation.sql`;
+2. `supabase/tests/sprint11_editing_start_evidence_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+No fourth implementation artifact is permitted without governance amendment.
+
+In particular, implementation must not modify:
+
+- route/UI files;
+- Zustand/mock-data files;
+- server routes;
+- existing compatibility tests;
+- access-control migration;
+- existing team-assignment migrations;
+- governance documents during the implementation commit.
+
+### Frozen validation contract
+
+Implementation validation must prove at minimum:
+
+- clean local database reset PASS;
+- local DB lint PASS;
+- dedicated pgTAP PASS;
+- full local pgTAP regression PASS;
+- permissions remain 68;
+- role-permission mappings remain 241;
+- table exists with exactly the six frozen columns;
+- exactly one organization + booking editing-start row is possible;
+- row is immutable;
+- RLS enabled and forced;
+- authenticated SELECT requires `editing.read` plus branch scope;
+- direct authenticated table mutation is unavailable;
+- RPC signature is exactly `record_booking_editing_start(uuid)`;
+- RPC returns `booking_editing_starts`;
+- RPC is SECURITY DEFINER with empty search path;
+- PUBLIC / anon / service_role execute denied;
+- authenticated execute allowed;
+- unauthenticated actor rejected;
+- inactive/suspended member rejected;
+- Editor allowed through `editing.write`;
+- Founder allowed through `editing.write`;
+- Studio Manager allowed through `editing.write`;
+- Client Coordinator rejected despite `booking.stage.advance`;
+- branch mismatch rejected;
+- Stage 12 rejected;
+- exact Stage 13 accepted;
+- Stage 14 rejected;
+- missing or malformed Stage 12 -> 13 lineage rejected;
+- source transition id snapshots the exact canonical `editing_pending` transition;
+- started timestamp is server-generated and cannot precede the source Stage 13 transition;
+- first execution creates exactly one evidence row;
+- exact Stage 13 replay returns the same row;
+- replay creates no duplicate audit;
+- one first-execution `booking.editing_started` audit exists;
+- audit is non-sensitive and contains no forbidden financial/assignment/SLA/delivery data;
+- no booking-stage transition is created;
+- journey state/version remains unchanged;
+- no selection/reconciliation/financial/payment authority is mutated;
+- no editor assignment is created;
+- no additional editing/QC/delivery table is created;
+- generated Supabase types contain exactly the new table and RPC schema changes expected from the migration;
+- Prettier PASS;
+- targeted generated-types ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- exact three-artifact implementation boundary retained;
+- diff hygiene PASS.
+
+### Freeze conclusion
+
+The evidence is sufficient to freeze immutable Editing Start authority without guessing a mutable editing workflow.
+
+Implementation remains unauthorized until this exact technical-design freeze is committed, pushed and independently verified.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 12 — TECHNICALLY FROZEN / IMPLEMENTATION NOT AUTHORIZED / PRODUCTION HOLD**

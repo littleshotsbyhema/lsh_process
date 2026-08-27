@@ -22859,10 +22859,93 @@ Explicit exclusions remain:
 
 This reconciliation checkpoint was authored only after independent verification of the exact pushed governance closeout.
 
-The reconciliation commit itself requires separate one-shot push authorization and independent verification before subsequent discovery treats it as the remote governance authority.
+The reconciliation commit was subsequently pushed under separate one-shot authorization and independently verified on `origin/architecture-rebuild` at `83d5a365da177dcaa23a5a501219d85860dd91f1`. It is the exact remote baseline for Slice 12.
 
 Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
 **SPRINT 11 SLICE 11 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**
+
+## Sprint 11 Slice 12 Technical Design Freeze — 2026-08-27
+
+**Sprint 11 Slice 12 — Editing Start Evidence Foundation**
+
+Exact frozen parent:
+
+`83d5a365da177dcaa23a5a501219d85860dd91f1` — `docs: reconcile sprint 11 slice 11 remote state`
+
+Frozen authority:
+
+- one immutable `public.booking_editing_starts` relation;
+- exactly six columns:
+  - `id`;
+  - `organization_id`;
+  - `booking_id`;
+  - `source_editing_pending_transition_id`;
+  - `started_at`;
+  - `started_by`;
+- exactly one `public.record_booking_editing_start(uuid)` mutation RPC;
+- existing `editing.write` is the recording authority;
+- existing `editing.read` is the read authority;
+- exact booking branch containment;
+- exact current Stage 13 `editing_pending`;
+- exact historical Stage 12 -> 13 `editing_pending` lineage;
+- one immutable editing-start row per booking;
+- server-authoritative start time;
+- strict idempotent replay at exact Stage 13;
+- one non-sensitive `booking.editing_started` audit on first success;
+- no journey mutation.
+
+No permission change:
+
+- permissions remain 68;
+- role-permission mappings remain 241.
+
+`editing.write` remains:
+
+- Editor;
+- Founder;
+- Studio Manager.
+
+Client Coordinator remains unable to create editing evidence despite holding `booking.stage.advance`.
+
+The slice deliberately trusts canonical Stage 13 entry and does not re-evaluate selection or finance authority.
+
+Explicit exclusions:
+
+- Stage 13 -> 14;
+- editor assignment;
+- booking-team editor role;
+- external-editor semantics;
+- mutable editing-job states;
+- edited count;
+- priority editing;
+- editing deadline/SLA;
+- retouching;
+- QC;
+- Pixieset/gallery;
+- delivery;
+- payment/refund mutation;
+- settlement persistence;
+- UI/mock-store integration;
+- Remote Supabase;
+- Production.
+
+Priority-editing source text is not machine-readable authority. The existing structured `commercial_operational_requirements` catalogue currently supports only `lead_videographer`.
+
+Frozen implementation artifacts:
+
+1. `supabase/migrations/20260827130000_sprint11_editing_start_evidence_foundation.sql`;
+2. `supabase/tests/sprint11_editing_start_evidence_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+No fourth implementation artifact without governance amendment.
+
+Implementation is not authorized until this exact freeze is separately pushed and remotely verified.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 12 — TECHNICALLY FROZEN / IMPLEMENTATION NOT AUTHORIZED / PRODUCTION HOLD**
