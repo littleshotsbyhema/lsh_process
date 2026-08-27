@@ -23201,4 +23201,71 @@ Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 13 — TECHNICALLY FROZEN LOCALLY / FREEZE PUSH PENDING / IMPLEMENTATION NOT AUTHORIZED / PRODUCTION HOLD**
+**SPRINT 11 SLICE 13 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / PUSHED / INDEPENDENTLY VERIFIED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / PRODUCTION HOLD**
+
+## Sprint 11 Slice 13 Governance Closeout — 2026-08-27
+
+**Sprint 11 Slice 13 — Controlled Stage 13 -> 14 / Editing In Progress Advancement Gate**
+
+Authority chain:
+
+- freeze `efef811dfebec9b49c784ce96bdda4c4ade54e78` — `docs: freeze sprint 11 slice 13`;
+- implementation `597f8de641fd3a73426061b9ecc793922be43354` —
+  `feat: add editing in progress advancement gate`.
+
+Independent remote verification:
+
+- `architecture-rebuild` points exactly to `597f8de641fd3a73426061b9ecc793922be43354`;
+- exact implementation parent is `efef811dfebec9b49c784ce96bdda4c4ade54e78`;
+- freeze -> implementation is 1 ahead / 0 behind;
+- exact four-artifact implementation boundary;
+- total implementation diff 2692 insertions / 0 deletions.
+
+Accepted validation:
+
+- clean local reset PASS;
+- DB lint PASS;
+- Slice 12 compatibility pgTAP 63 / 63 PASS;
+- Slice 13 dedicated pgTAP 53 / 53 PASS;
+- full local regression 30 files / 1925 tests PASS;
+- permissions 68;
+- role-permission mappings 241;
+- canonical residue `68:241:0:0:0:0:0:0:0:0`;
+- generated-types semantic delta exactly one
+  `mark_booking_editing_in_progress` RPC block;
+- Prettier PASS;
+- targeted generated-types ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- diff hygiene PASS.
+
+Closed Slice 13 authority:
+
+- Stage 13 `editing_pending` -> Stage 14 `editing_in_progress`;
+- existing `booking.stage.advance`;
+- immutable `booking_editing_starts` prerequisite;
+- strict Stage 14 replay;
+- one first-success `booking.editing_in_progress` audit;
+- no new persistence;
+- no new permission.
+
+Still excluded:
+
+- editor assignment;
+- mutable editing jobs;
+- priority editing/SLA;
+- Stage 14 -> 15 / QC;
+- Pixieset/gallery;
+- delivery;
+- payment/refund mutation;
+- UI/runtime;
+- Remote Supabase;
+- Production.
+
+The governance closeout remains local until separately pushed and independently verified.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 13 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / PUSHED / INDEPENDENTLY VERIFIED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / PRODUCTION HOLD**

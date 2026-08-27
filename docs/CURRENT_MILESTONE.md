@@ -12,9 +12,56 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 12 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Slice 12 remote reconciliation is `81032eccef5c5cb872adce403768c84948e988c1` — `docs: reconcile sprint 11 slice 12 remote state`. Sprint 11 Slice 13 — Controlled Stage 13 -> 14 / Editing In Progress Advancement Gate — has completed read-only discovery and is technically frozen locally by this checkpoint. Implementation remains unauthorized until this exact technical-design freeze is separately committed, pushed and independently verified. Remote Supabase remains HOLD. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 12 remain remotely reconciled. Sprint 11 Slice 13 — Controlled Stage 13 -> 14 / Editing In Progress Advancement Gate — is implemented, fully validated locally, committed, pushed and independently verified on `origin/architecture-rebuild`. Technical-design freeze is `efef811dfebec9b49c784ce96bdda4c4ade54e78` — `docs: freeze sprint 11 slice 13`; implementation is `597f8de641fd3a73426061b9ecc793922be43354` — `feat: add editing in progress advancement gate`. This checkpoint records the local governance closeout; the closeout itself remains local until separately pushed and independently verified. Remote Supabase remains HOLD. Production remains HOLD.
 
 ## Current Verified Checkpoint
+
+Sprint 11 Slice 13 — **Controlled Stage 13 -> 14 / Editing In Progress Advancement Gate** — is
+implemented, fully validated locally, committed, pushed and independently verified on
+`origin/architecture-rebuild`.
+
+Exact authority chain:
+
+- technical-design freeze `efef811dfebec9b49c784ce96bdda4c4ade54e78` — `docs: freeze sprint 11 slice 13`;
+- implementation `597f8de641fd3a73426061b9ecc793922be43354` — `feat: add editing in progress advancement gate`.
+
+Accepted validation:
+
+- clean local database reset: PASS;
+- local database lint: PASS with no schema errors;
+- Slice 12 compatibility pgTAP: 63 / 63 PASS;
+- Slice 13 dedicated pgTAP: 53 / 53 PASS;
+- full local pgTAP regression: 30 files / 1925 tests PASS;
+- permissions: 68;
+- role-permission mappings: 241;
+- canonical post-regression residue:
+  `68:241:0:0:0:0:0:0:0:0`;
+- generated Supabase type delta: exactly
+  `mark_booking_editing_in_progress`;
+- Prettier: PASS;
+- targeted generated-types ESLint: PASS;
+- TypeScript `--noEmit`: PASS;
+- production build: PASS.
+
+Exact implementation boundary:
+
+1. `src/integrations/supabase/types.ts` — 22 insertions;
+2. `supabase/migrations/20260827140000_sprint11_stage13_14_editing_in_progress_gate_foundation.sql`
+   — 914 insertions;
+3. `supabase/tests/sprint11_editing_start_evidence_test.sql` — 2 insertions;
+4. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`
+   — 1754 insertions.
+
+Total implementation diff: 2692 insertions / 0 deletions.
+
+This governance closeout remains local until separately committed, pushed and independently
+verified.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+### Prior remotely reconciled Slice 12 checkpoint
 
 Sprint 11 Slice 12 — **Editing Start Evidence Foundation** is implemented, fully validated locally, committed, governance closed, pushed and independently verified on the remote branch. Governance closeout `7250e920d46c4a2819c82b6136e349ef65310806` — `docs: close sprint 11 slice 12` is independently confirmed on `origin/architecture-rebuild`, with exact parent `c5b51ab7001443b2adc0eaa7a9728a9b20b33870`. This two-document checkpoint records the reconciled remote state.
 
@@ -4857,4 +4904,151 @@ Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 13 — TECHNICALLY FROZEN LOCALLY / FREEZE PUSH PENDING / IMPLEMENTATION NOT AUTHORIZED / PRODUCTION HOLD**
+**SPRINT 11 SLICE 13 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / PUSHED / INDEPENDENTLY VERIFIED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / PRODUCTION HOLD**
+
+## Sprint 11 Slice 13 Governance Closeout — 2026-08-27
+
+### Authority chain
+
+Technical-design freeze:
+
+`efef811dfebec9b49c784ce96bdda4c4ade54e78` — `docs: freeze sprint 11 slice 13`
+
+Implementation:
+
+`597f8de641fd3a73426061b9ecc793922be43354` — `feat: add editing in progress advancement gate`
+
+The implementation is independently confirmed on `origin/architecture-rebuild` with exact parent
+`efef811dfebec9b49c784ce96bdda4c4ade54e78`.
+
+Freeze -> implementation is exactly one commit ahead / zero behind.
+
+### Exact implementation boundary
+
+1. `src/integrations/supabase/types.ts` — 22 insertions / 0 deletions;
+2. `supabase/migrations/20260827140000_sprint11_stage13_14_editing_in_progress_gate_foundation.sql`
+   — 914 insertions / 0 deletions;
+3. `supabase/tests/sprint11_editing_start_evidence_test.sql`
+   — 2 insertions / 0 deletions;
+4. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`
+   — 1754 insertions / 0 deletions.
+
+Total:
+
+- 4 files;
+- 2692 insertions;
+- 0 deletions.
+
+No fifth implementation artifact exists.
+
+### Accepted database and behavioral validation
+
+Accepted evidence:
+
+- clean local database reset PASS;
+- local DB lint PASS;
+- RPC identity:
+  `mark_booking_editing_in_progress(p_booking_id uuid) -> bookings`;
+- SECURITY DEFINER: true;
+- empty `search_path`;
+- authenticated EXECUTE: true;
+- anon EXECUTE: false;
+- service_role EXECUTE: false;
+- PUBLIC EXECUTE: false;
+- `booking.stage.advance` retained as journey authority;
+- Editing Start evidence retained as prerequisite;
+- no `editing.write` requirement in the Stage 13 -> 14 gate;
+- Editor rejected for journey advancement;
+- Client Coordinator accepted with canonical evidence;
+- Founder accepted;
+- Studio Manager accepted;
+- branch containment proven;
+- Stage 12 rejected;
+- Stage 15 rejected;
+- missing Editing Start evidence rejected;
+- malformed lineage rejected;
+- duplicate Stage 12 -> 13 lineage rejected;
+- pre-existing Stage 13 -> 14 history rejected;
+- exact Stage 14 replay idempotent;
+- one first-success Stage 13 -> 14 transition;
+- one first-success `booking.editing_in_progress` audit;
+- no replay transition/audit/version duplication;
+- historical Editing Start evidence survives later starter suspension;
+- no Editing Start mutation;
+- no editor assignment;
+- no new editing persistence;
+- no QC/gallery/delivery authority.
+
+### Accepted regression state
+
+- Slice 12 compatibility suite: 63 / 63 PASS;
+- Slice 13 dedicated suite: 53 / 53 PASS;
+- full local regression: 30 files / 1925 tests PASS;
+- permissions: 68;
+- role-permission mappings: 241;
+- canonical residue:
+  `68:241:0:0:0:0:0:0:0:0`.
+
+### Accepted generated-types and application validation
+
+- fresh local Supabase generation completed;
+- raw-generator formatting discrepancy was classified as validation-script sequencing only;
+- generated types were normalized with repository Prettier;
+- semantic delta proved exactly one
+  `mark_booking_editing_in_progress` RPC block;
+- Prettier PASS;
+- targeted generated-types ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- `git diff --check` PASS.
+
+Known build warnings remain non-fatal and outside this slice:
+
+- TanStack `inputValidator()` deprecations;
+- large client chunk warning;
+- unused TanStack dependency imports;
+- Nitro/Rollup unknown `platform` option warning;
+- dependency-level `"use client"` directives ignored during bundling;
+- Wrangler `main` override warning.
+
+### Scope containment
+
+Slice 13 closes only the controlled Stage 13
+`editing_pending`
+->
+Stage 14
+`editing_in_progress`
+journey gate consuming immutable Editing Start evidence.
+
+Still excluded:
+
+- mutable editing-job lifecycle;
+- editor assignment;
+- priority editing;
+- editing SLA/deadline;
+- retouching;
+- Stage 14 -> 15;
+- QC persistence;
+- Pixieset/gallery authority;
+- Stage 15 -> 16;
+- Stage 16 -> 17;
+- delivery authority;
+- payment/refund mutation;
+- settlement persistence;
+- UI/runtime integration;
+- mock-store replacement;
+- Remote Supabase deployment;
+- Production deployment.
+
+### Closeout state
+
+The Slice 13 implementation is pushed and independently verified.
+
+This two-document governance closeout remains local until it is separately committed, pushed and
+independently verified.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 13 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / PUSHED / INDEPENDENTLY VERIFIED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / PRODUCTION HOLD**
