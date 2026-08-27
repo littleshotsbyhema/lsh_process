@@ -22770,10 +22770,99 @@ Explicit exclusions remain:
 - remote-Supabase deployment;
 - Production deployment.
 
-This governance closeout is local until its own exact commit is separately pushed and remotely verified.
+The governance closeout was subsequently pushed under separate one-shot authorization and independently verified on `origin/architecture-rebuild` at `e9d355238915f99a8f08f912282b1ece9ad90f0e`.
 
 Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 11 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / IMPLEMENTATION PUSHED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / PRODUCTION HOLD**
+**SPRINT 11 SLICE 11 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**
+
+## Sprint 11 Slice 11 Remote-State Reconciliation — 2026-08-27
+
+**Sprint 11 Slice 11 — Controlled Stage 12 -> 13 / Editing Pending Advancement Gate**
+
+Exact remote chain:
+
+`e9d355238915f99a8f08f912282b1ece9ad90f0e` — `docs: close sprint 11 slice 11`
+
+parent:
+
+`1486c36c8b13e228a0bca9b498ec6f9ea51fb958` — `feat: add editing pending advancement gate`
+
+parent:
+
+`fd321e570f128e92777d662836c0b4b206012fa3` — `docs: freeze sprint 11 slice 11`
+
+Independent remote verification confirms the closeout at `e9d355238915f99a8f08f912282b1ece9ad90f0e` on `architecture-rebuild`.
+
+Exact implementation boundary remains:
+
+1. `supabase/migrations/20260826030000_sprint11_stage12_13_editing_pending_gate_foundation.sql`;
+2. `supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+Exact governance-closeout boundary remains:
+
+1. `docs/CURRENT_MILESTONE.md`;
+2. `docs/SPRINT_MASTER_REGISTER.md`.
+
+Validation retained:
+
+- dedicated pgTAP 59 / 59 PASS;
+- full local pgTAP 28 files / 1809 tests PASS;
+- clean local DB reset PASS;
+- local DB lint PASS;
+- permissions remain 68 / 241;
+- governed post-test residue zero;
+- authenticated-only RPC ACL validated;
+- `booking.stage.advance` and branch containment validated;
+- Editor denied despite `editing.write`;
+- Client Coordinator allowed without `editing.write` or `finance.read`;
+- Stage 12 first-execution containment validated;
+- Stage 11 -> 12 lineage validated;
+- selection confirmation/reconciliation authority validated;
+- zero-excess accepted-total target validated;
+- positive-excess adjusted-total target validated;
+- reversed payments excluded;
+- under-target rejected;
+- exact-target accepted;
+- over-target accepted;
+- Stage 12 -> 13 `editing_pending` transition validated;
+- strict Stage 13 replay validated;
+- later reversal does not rewind historical advancement;
+- replay does not re-evaluate later financial shortfall;
+- non-sensitive audit boundary validated;
+- no payment/reversal/selection/reconciliation/obligation mutation;
+- no settlement/refund persistence;
+- no editing-job persistence;
+- no Stage 13 -> 14 authority;
+- generated local types exactly match checked types;
+- generated-type Prettier PASS;
+- targeted ESLint PASS;
+- TypeScript PASS;
+- production build PASS.
+
+Explicit exclusions remain:
+
+- editing-job creation;
+- editor assignment;
+- Stage 13 -> 14 / `editing_in_progress`;
+- retouching;
+- QC;
+- delivery;
+- Pixieset;
+- persistent settlement state;
+- overpayment/refund workflow;
+- Remote Supabase deployment;
+- Production deployment.
+
+This reconciliation checkpoint was authored only after independent verification of the exact pushed governance closeout.
+
+The reconciliation commit itself requires separate one-shot push authorization and independent verification before subsequent discovery treats it as the remote governance authority.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 11 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**
