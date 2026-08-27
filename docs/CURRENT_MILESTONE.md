@@ -12,7 +12,7 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 11 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Exact reconciled baseline is `83d5a365da177dcaa23a5a501219d85860dd91f1` — `docs: reconcile sprint 11 slice 11 remote state`. Sprint 11 Slice 12 — Editing Start Evidence Foundation — is technically frozen against that exact baseline. Implementation is not yet authorized. Remote Supabase remains HOLD. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 11 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Sprint 11 Slice 12 — Editing Start Evidence Foundation — is technically frozen, pushed and independently verified at `0089d9b29b99ba8f5dea39087bf651f47962bd3a` — `docs: freeze sprint 11 slice 12`. Implementation is authorized and remains local/uncommitted. Migration validation and the dedicated Slice 12 pgTAP contract are passing. A narrow compatibility-boundary amendment is required before the full regression because a pre-existing Slice 11 test incorrectly treats every future `%editing%` relation as a Slice 11 regression. Remote Supabase remains HOLD. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
@@ -4083,3 +4083,111 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 12 — TECHNICALLY FROZEN / IMPLEMENTATION NOT AUTHORIZED / PRODUCTION HOLD**
+
+## Sprint 11 Slice 12 Compatibility Boundary Amendment — 2026-08-27
+
+### Exact authority
+
+Remotely verified Slice 12 technical-design freeze:
+
+`0089d9b29b99ba8f5dea39087bf651f47962bd3a` — `docs: freeze sprint 11 slice 12`
+
+The frozen Slice 12 persistence authority remains unchanged:
+
+`public.booking_editing_starts`
+
+The frozen recording RPC remains unchanged:
+
+`public.record_booking_editing_start(uuid)`
+
+The migration itself is not amended by this checkpoint.
+
+### Compatibility defect discovered during validation
+
+The existing Slice 11 dedicated test:
+
+`supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`
+
+contains a structural assertion whose predicate counts every public relation whose name matches:
+
+`%editing%`
+
+and requires that count to equal zero.
+
+That assertion was valid while Slice 11 itself introduced no editing persistence, but it is not future-compatible with the separately governed Slice 12 relation:
+
+`public.booking_editing_starts`
+
+The Slice 12 relation is explicitly authorized by the later technical-design freeze and therefore must not be interpreted as a regression of Slice 11.
+
+This is a compatibility-test defect, not an Editing Start migration or domain-design defect.
+
+### Exact amendment
+
+The previously frozen three-artifact implementation boundary is amended to exactly four artifacts:
+
+1. `supabase/migrations/20260827130000_sprint11_editing_start_evidence_foundation.sql`;
+2. `supabase/tests/sprint11_editing_start_evidence_test.sql`;
+3. `src/integrations/supabase/types.ts`;
+4. `supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`.
+
+The fourth artifact is authorized only for one narrow compatibility hardening:
+
+- retain the Slice 11 pgTAP plan at exactly 59;
+- retain the meaning that Slice 11 itself introduced no editing-job persistence;
+- change only the legacy structural assertion so the later-governed relation
+  `booking_editing_starts` is excluded from its `%editing%` zero-count check;
+- do not whitelist any other editing relation;
+- do not alter Slice 11 authorization, fixture, journey, settlement, replay, audit or mutation tests;
+- do not weaken any Slice 12 assertion.
+
+No other pre-existing test file is authorized for modification.
+
+### Validation after amendment
+
+After the exact compatibility repair, validation must still prove:
+
+- Slice 11 dedicated pgTAP: 59 / 59 PASS;
+- Slice 12 dedicated pgTAP: 63 / 63 PASS;
+- full local pgTAP regression PASS;
+- clean transaction residue;
+- canonical permissions remain 68;
+- canonical role-permission mappings remain 241;
+- generated local Supabase types exactly represent the Slice 12 schema;
+- generated-types semantic diff contains only the expected Slice 12 table and RPC additions;
+- Prettier PASS;
+- targeted generated-types ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- exact amended four-artifact implementation boundary.
+
+### Scope unchanged
+
+This amendment does not authorize:
+
+- Stage 13 -> 14;
+- mutable editing jobs;
+- editor assignment;
+- priority-editing SLA;
+- QC;
+- Pixieset;
+- delivery;
+- additional relations;
+- additional permissions;
+- UI/runtime changes;
+- Remote Supabase deployment;
+- Production deployment.
+
+### Amendment conclusion
+
+The Slice 12 domain design is unchanged.
+
+Only the stale Slice 11 future-compatibility assertion is added to the implementation artifact boundary.
+
+The compatibility test must not be modified until this amendment commit is separately pushed and independently verified.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 12 — TECHNICALLY FROZEN / IMPLEMENTATION AUTHORIZED / COMPATIBILITY AMENDMENT PENDING REMOTE VERIFICATION / PRODUCTION HOLD**

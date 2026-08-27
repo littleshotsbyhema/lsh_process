@@ -22949,3 +22949,45 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 12 — TECHNICALLY FROZEN / IMPLEMENTATION NOT AUTHORIZED / PRODUCTION HOLD**
+
+## Sprint 11 Slice 12 Compatibility Boundary Amendment — 2026-08-27
+
+**Sprint 11 Slice 12 — Editing Start Evidence Foundation**
+
+Remote technical-design freeze:
+
+`0089d9b29b99ba8f5dea39087bf651f47962bd3a` — `docs: freeze sprint 11 slice 12`
+
+Validation discovered one pre-existing future-compatibility defect in:
+
+`supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`
+
+Its Slice 11 structural test counts every public `%editing%` relation and expects zero. The separately governed Slice 12 relation `booking_editing_starts` makes that historical predicate stale.
+
+This does not change the Slice 12 domain design.
+
+Amended exact implementation boundary:
+
+1. `supabase/migrations/20260827130000_sprint11_editing_start_evidence_foundation.sql`;
+2. `supabase/tests/sprint11_editing_start_evidence_test.sql`;
+3. `src/integrations/supabase/types.ts`;
+4. `supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`.
+
+The fourth artifact may change only the legacy Slice 11 no-editing-persistence assertion:
+
+- plan remains 59;
+- exclude exactly `booking_editing_starts`;
+- whitelist no other future editing relation;
+- preserve all other Slice 11 behavior and assertions.
+
+Dedicated Slice 12 pgTAP is already 63 / 63 PASS after a test-only `information_schema.sql_identifier[]` -> `text[]` assertion cast repair.
+
+Full regression remains mandatory after the compatibility hardening.
+
+No additional implementation artifact is authorized.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 12 — TECHNICALLY FROZEN / IMPLEMENTATION AUTHORIZED / COMPATIBILITY AMENDMENT PENDING REMOTE VERIFICATION / PRODUCTION HOLD**
