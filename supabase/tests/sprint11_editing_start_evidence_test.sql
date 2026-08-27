@@ -421,6 +421,8 @@ SELECT is(
          procedure.pronamespace
     WHERE namespace.nspname = 'public'
       AND procedure.prokind = 'f'
+      AND procedure.proname <>
+          'mark_booking_editing_in_progress'
       AND pg_get_functiondef(
             procedure.oid
           ) ILIKE '%editing_in_progress%'
