@@ -12,9 +12,120 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 10 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Slice 10 remote-state reconciliation is `2c08d7aab5f5003098d2042d69316c0d2a4a631f` — `docs: reconcile sprint 11 slice 10 remote state`. Sprint 11 Slice 11 — Controlled Stage 12 -> 13 / Editing Pending Advancement Gate — is technically frozen against that exact baseline; implementation is not yet authorized. Remote Supabase remains HOLD. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 10 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Sprint 11 Slice 11 — Controlled Stage 12 -> 13 / Editing Pending Advancement Gate — is implemented, fully validated locally, committed and pushed. Its exact implementation is `1486c36c8b13e228a0bca9b498ec6f9ea51fb958` — `feat: add editing pending advancement gate`, with technical-design freeze `fd321e570f128e92777d662836c0b4b206012fa3` — `docs: freeze sprint 11 slice 11` as its exact parent. The implementation has been independently verified on `origin/architecture-rebuild`; this checkpoint records the local governance closeout before the closeout commit itself is separately pushed and remotely reconciled. Remote Supabase remains HOLD. Production remains HOLD.
 
 ## Current Verified Checkpoint
+
+Sprint 11 Slice 11 — **Controlled Stage 12 -> 13 / Editing Pending Advancement Gate** is implemented, fully validated locally, committed, pushed and independently verified on the remote branch. This checkpoint records its governance closeout.
+
+Technical-design freeze:
+
+`fd321e570f128e92777d662836c0b4b206012fa3` — `docs: freeze sprint 11 slice 11`
+
+Implementation:
+
+`1486c36c8b13e228a0bca9b498ec6f9ea51fb958` — `feat: add editing pending advancement gate`
+
+Implementation parent:
+
+`fd321e570f128e92777d662836c0b4b206012fa3`
+
+Exact implementation artifacts:
+
+1. `supabase/migrations/20260826030000_sprint11_stage12_13_editing_pending_gate_foundation.sql`;
+2. `supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+Implementation diff:
+
+- generated Supabase types: 22 insertions;
+- migration: 993 insertions;
+- dedicated pgTAP: 1822 insertions;
+- total implementation commit: 2837 insertions / 0 deletions.
+
+Validation evidence:
+
+- clean local database reset: PASS;
+- local database lint: PASS with no schema errors;
+- dedicated Slice 11 pgTAP: 59 / 59 PASS;
+- full local pgTAP regression: 28 files / 1809 tests PASS;
+- canonical permission count: 68;
+- canonical role-permission mapping count: 241;
+- post-regression Slice 11 authority residue: zero;
+- exact RPC `public.mark_booking_editing_pending(uuid)` present;
+- return type `public.bookings` validated;
+- `SECURITY DEFINER` with empty search path validated;
+- authenticated execution allowed;
+- PUBLIC execution denied;
+- anon execution denied;
+- service_role execution denied;
+- existing `booking.stage.advance` remains the journey-transition authority;
+- Client Coordinator / Founder / Studio Manager remain the exact Stage-advance roles;
+- Editor remains rejected despite `editing.write`;
+- Client Coordinator remains eligible without `editing.write` or `finance.read`;
+- booking branch containment validated;
+- exact Stage 12 `selection_pending` first-execution boundary validated;
+- exact Stage 11 -> 12 `selection_pending` history prerequisite validated;
+- exact immutable selection-confirmation prerequisite validated;
+- exact immutable selection-reconciliation lineage validated;
+- zero-excess accepted-total settlement target validated;
+- zero-excess adjusted-obligation conflict fails closed;
+- positive excess requires exact adjusted financial obligation;
+- corrupt adjusted-obligation lineage fails closed;
+- non-reversed payment collection rule validated;
+- under-target collection rejected;
+- exact-target collection accepted;
+- over-target collection accepted without refund/overpayment semantics;
+- successful first execution appends exactly one Stage 12 -> 13 `editing_pending` transition;
+- journey version increments exactly once;
+- first execution creates exactly one non-sensitive `booking.editing_pending` audit event;
+- transition audit exposes no financial amount/payment/refund semantics;
+- strict Stage 13 replay creates no second transition, audit or journey mutation;
+- payment reversal after historical advancement can make current Slice 10 summary unsatisfied without rewinding Stage 13;
+- Stage 13 replay after that reversal does not re-evaluate current full-balance satisfaction;
+- later Stage 14 progression is not accepted as Slice 11 replay;
+- no payment or reversal mutation by the gate;
+- no selection/reconciliation/adjusted-obligation mutation by the gate;
+- no settlement persistence;
+- no refund-due persistence;
+- no editing-job persistence;
+- no Stage 13 -> 14 implementation;
+- no new permission or role grant;
+- freshly generated local Supabase types exactly equal the checked types under the repository Prettier configuration;
+- generated-types semantic diff is exactly one Slice 11 RPC block;
+- generated-types Prettier: PASS;
+- targeted generated-types ESLint: PASS;
+- TypeScript `--noEmit`: PASS;
+- production build: PASS with pre-existing non-blocking TanStack/Nitro/Wrangler/bundle warnings only;
+- SQL/file hygiene and `git diff --check`: PASS;
+- implementation commit contains exactly the three frozen artifacts;
+- post-implementation-commit worktree: clean;
+- implementation push landed at the exact SHA;
+- post-push local/remote parity: `0 0`.
+
+Slice 11 therefore establishes only the controlled journey gate from Stage 12 `selection_pending` to Stage 13 `editing_pending`.
+
+It does not introduce:
+
+- editing-job creation;
+- editor assignment;
+- Stage 13 -> 14 / `editing_in_progress`;
+- retouching or QC workflow;
+- delivery or Pixieset authority;
+- persistent settlement state;
+- refund or overpayment workflow;
+- remote-Supabase deployment;
+- Production deployment.
+
+The implementation is pushed and independently verified. This governance-closeout commit is the next local governance artifact and must be separately pushed and remotely verified before Slice 11 is declared remotely reconciled.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 11 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / IMPLEMENTATION PUSHED / GOVERNANCE CLOSEOUT IN PROGRESS / PRODUCTION HOLD**
+
+### Previous verified checkpoint — Sprint 11 Slice 10
 
 Sprint 11 Slice 10 — **Current Full-Balance Settlement Read Authority Foundation** is implemented, fully validated locally, committed, governance closed, pushed and independently verified on the remote branch. This two-document checkpoint records the reconciled remote state.
 
@@ -3265,7 +3376,19 @@ Implementation acceptance must prove at minimum:
 - production build PASS;
 - `git diff --check` PASS.
 
-Implementation is not yet authorized.
+At the technical-freeze checkpoint implementation was not yet authorized.
+
+Implementation was subsequently authorized only after the freeze was pushed and independently verified.
+
+The exact authorized implementation is now complete:
+
+`1486c36c8b13e228a0bca9b498ec6f9ea51fb958` — `feat: add editing pending advancement gate`
+
+with exact parent:
+
+`fd321e570f128e92777d662836c0b4b206012fa3` — `docs: freeze sprint 11 slice 11`
+
+The implementation passed the complete frozen validation contract and is independently confirmed on `origin/architecture-rebuild`.
 
 Remote Supabase remains HOLD.
 
@@ -3274,11 +3397,12 @@ Production remains HOLD.
 
 ## Immediate Product Sequence
 
-1. governance-commit the Sprint 11 Slice 11 technical-design freeze;
-2. independently verify the exact freeze commit and remote baseline;
-3. authorize implementation only in a separate checkpoint;
-4. implement only the frozen Stage 12 -> 13 / `editing_pending` gate boundary;
-5. keep editing-job creation, Stage 13 -> 14, refund/overpayment workflow, Remote Supabase and Production separately governed.
+1. commit this Sprint 11 Slice 11 governance closeout as an exact two-document docs-only commit;
+2. independently verify the closeout commit parent, subject, file boundary and clean worktree;
+3. push the exact closeout SHA only after a separate one-shot push authorization;
+4. independently verify the closeout on `origin/architecture-rebuild`;
+5. record a separate remote-state reconciliation checkpoint after that remote verification;
+6. only after reconciliation, perform fresh read-only discovery for the next downstream boundary; do not pre-freeze editing-job creation, Stage 13 -> 14, refund/overpayment workflow or another journey slice without evidence.
 
 Remote Supabase remains HOLD.
 
@@ -3329,3 +3453,70 @@ For each checkpoint report:
 - security/tenant isolation checks
 - unresolved issues
 - recommended next checkpoint
+
+## Sprint 11 Slice 11 Governance Closeout — 2026-08-27
+
+### Exact authority
+
+Technical-design freeze:
+
+`fd321e570f128e92777d662836c0b4b206012fa3` — `docs: freeze sprint 11 slice 11`
+
+Implementation:
+
+`1486c36c8b13e228a0bca9b498ec6f9ea51fb958` — `feat: add editing pending advancement gate`
+
+The implementation is independently confirmed on `origin/architecture-rebuild` with exact parent `fd321e570f128e92777d662836c0b4b206012fa3`.
+
+### Delivered boundary
+
+Exactly three implementation artifacts:
+
+1. `supabase/migrations/20260826030000_sprint11_stage12_13_editing_pending_gate_foundation.sql`;
+2. `supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+No fourth implementation artifact was introduced.
+
+### Validation closeout
+
+- dedicated Slice 11 pgTAP: 59 / 59 PASS;
+- full local pgTAP regression: 28 files / 1809 tests PASS;
+- clean local DB reset: PASS;
+- local DB lint: PASS;
+- permissions: 68;
+- role-permission mappings: 241;
+- post-regression Slice 11 residue: zero;
+- exact authenticated-only RPC ACL validated;
+- `booking.stage.advance` authorization and branch containment validated;
+- Editor denied through `editing.write`;
+- Client Coordinator allowed without `editing.write` or `finance.read`;
+- zero/positive excess settlement-target semantics validated;
+- under/exact/over collection behavior validated;
+- strict Stage 13 replay validated;
+- later reversal does not rewind historical Stage 13 entry;
+- transition/audit cardinality validated;
+- non-sensitive audit boundary validated;
+- no payment/reversal/selection/reconciliation/obligation mutation;
+- no settlement or refund persistence;
+- no editing-job persistence;
+- no Stage 13 -> 14 authority;
+- generated local types exactly match checked types;
+- generated-types diff is exactly the Slice 11 RPC;
+- Prettier / targeted ESLint / TypeScript / production build PASS;
+- exact three-artifact implementation commit boundary validated;
+- implementation push independently verified.
+
+### Governance conclusion
+
+Sprint 11 Slice 11 is implemented and its implementation is remotely verified.
+
+This closeout records that the frozen Stage 12 `selection_pending` -> Stage 13 `editing_pending` advancement gate has been delivered without expanding into the editing-job domain or settlement/refund workflow.
+
+This closeout commit itself remains local until separately authorized for push.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 11 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / IMPLEMENTATION PUSHED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / PRODUCTION HOLD**

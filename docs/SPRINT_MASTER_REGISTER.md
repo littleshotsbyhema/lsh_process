@@ -22688,3 +22688,92 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 11 — TECHNICALLY FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / PRODUCTION HOLD**
+
+## Sprint 11 Slice 11 Governance Closeout — 2026-08-27
+
+**Sprint 11 Slice 11 — Controlled Stage 12 -> 13 / Editing Pending Advancement Gate**
+
+Technical-design freeze:
+
+`fd321e570f128e92777d662836c0b4b206012fa3` — `docs: freeze sprint 11 slice 11`
+
+Implementation:
+
+`1486c36c8b13e228a0bca9b498ec6f9ea51fb958` — `feat: add editing pending advancement gate`
+
+Implementation parent:
+
+`fd321e570f128e92777d662836c0b4b206012fa3`
+
+Exact delivered implementation boundary:
+
+1. `supabase/migrations/20260826030000_sprint11_stage12_13_editing_pending_gate_foundation.sql`;
+2. `supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+Validation:
+
+- clean local DB reset PASS;
+- local DB lint PASS;
+- dedicated Slice 11 pgTAP 59 / 59 PASS;
+- full local pgTAP 28 files / 1809 tests PASS;
+- permissions remain 68 / 241;
+- post-regression governed evidence residue remains zero;
+- authenticated-only RPC execution boundary validated;
+- `booking.stage.advance` plus branch scope validated;
+- Editor denied despite `editing.write`;
+- Client Coordinator allowed without `editing.write` or `finance.read`;
+- exact Stage 12 first-execution containment validated;
+- exact Stage 11 -> 12 lineage validated;
+- exact selection confirmation/reconciliation authority validated;
+- zero-excess accepted-total target validated;
+- positive-excess adjusted-total target validated;
+- reversed payments excluded;
+- under-target rejected;
+- exact-target accepted;
+- over-target accepted without refund classification;
+- exact Stage 12 -> 13 `editing_pending` transition validated;
+- journey version increments once;
+- strict Stage 13 replay validated;
+- later reversal does not rewind historical Stage 13 entry;
+- replay after later reversal does not re-evaluate current financial shortfall;
+- first execution creates one non-sensitive `booking.editing_pending` audit;
+- replay creates no second transition or audit;
+- no sensitive financial amount/payment/refund semantics in the transition audit;
+- no payment/reversal mutation;
+- no selection/reconciliation/obligation mutation;
+- no settlement persistence;
+- no refund-due persistence;
+- no editing-job persistence;
+- no Stage 13 -> 14 implementation;
+- no new permission or role grant;
+- fresh generated local types exactly equal the checked artifact;
+- generated-types semantic diff is exactly one Slice 11 RPC block;
+- generated-type Prettier PASS;
+- targeted generated-types ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- exact implementation boundary and diff hygiene PASS;
+- implementation push independently verified at `1486c36c8b13e228a0bca9b498ec6f9ea51fb958`.
+
+Explicit exclusions remain:
+
+- editing-job creation;
+- editor assignment;
+- Stage 13 -> 14 / `editing_in_progress`;
+- retouching;
+- QC;
+- delivery;
+- Pixieset;
+- persistent settlement state;
+- overpayment/refund workflow;
+- remote-Supabase deployment;
+- Production deployment.
+
+This governance closeout is local until its own exact commit is separately pushed and remotely verified.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 11 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / IMPLEMENTATION PUSHED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / PRODUCTION HOLD**
