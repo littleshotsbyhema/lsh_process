@@ -23332,3 +23332,68 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 13 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**
+
+## Sprint 11 Slice 14 Technical Design Freeze — 2026-08-27
+
+**Sprint 11 Slice 14 — Editing Completion Evidence Foundation**
+
+Baseline:
+
+`245d528ddcbe7921956634f583ca1c2ead5896c5` — `docs: reconcile sprint 11 slice 13 remote state`
+
+Frozen authority:
+
+- immutable `public.booking_editing_completions`;
+- exact six-column evidence shape;
+- one `public.record_booking_editing_completion(uuid)` mutation RPC;
+- existing `editing.write` only;
+- exact Stage 14 `editing_in_progress` containment;
+- exact Stage 13 -> 14 `editing_in_progress` source-transition lineage;
+- forced RLS;
+- authenticated read via existing `editing.read` + branch scope;
+- authenticated direct table mutation unavailable;
+- strict Stage-14-only idempotent replay;
+- one first-success `booking.editing_completed` audit;
+- no journey advancement;
+- no new permission;
+- permissions remain 68;
+- role-permission mappings remain 241.
+
+Existing `editing.write` roles remain:
+
+- Editor;
+- Founder;
+- Studio Manager.
+
+Explicitly excluded:
+
+- Stage 14 -> 15 / QC Pending;
+- QC persistence/results;
+- mutable editing jobs;
+- editor assignment;
+- edited-image progress;
+- priority editing/SLA;
+- retouching workflow;
+- Pixieset/gallery;
+- delivery;
+- payment/refund mutation;
+- UI/runtime;
+- Remote Supabase;
+- Production.
+
+Authorized implementation artifacts:
+
+1. new Editing Completion evidence migration;
+2. dedicated Slice 14 pgTAP;
+3. generated Supabase types;
+4. narrowly bounded Slice 11 compatibility amendment;
+5. narrowly bounded Slice 12 compatibility amendment;
+6. narrowly bounded Slice 13 compatibility amendment.
+
+Implementation remains unauthorized until this freeze is committed, pushed and independently verified.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 14 — TECHNICALLY FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
