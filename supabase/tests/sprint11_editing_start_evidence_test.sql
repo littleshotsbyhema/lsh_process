@@ -421,8 +421,11 @@ SELECT is(
          procedure.pronamespace
     WHERE namespace.nspname = 'public'
       AND procedure.prokind = 'f'
-      AND procedure.proname <>
-          'mark_booking_editing_in_progress'
+      AND procedure.proname NOT IN (
+        'mark_booking_editing_in_progress',
+        'lsh_booking_editing_completion_guard',
+        'record_booking_editing_completion'
+      )
       AND pg_get_functiondef(
             procedure.oid
           ) ILIKE '%editing_in_progress%'

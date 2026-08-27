@@ -268,8 +268,10 @@ SELECT is(
         'f'
       )
       AND relation.relname ILIKE '%editing%'
-      AND relation.relname <>
-          'booking_editing_starts'
+      AND relation.relname NOT IN (
+        'booking_editing_starts',
+        'booking_editing_completions'
+      )
   ),
   0::bigint,
   'Slice 13 creates no new editing persistence relation'
@@ -285,6 +287,10 @@ SELECT is(
          procedure.pronamespace
     WHERE namespace.nspname = 'public'
       AND procedure.prokind = 'f'
+      AND procedure.proname NOT IN (
+        'lsh_booking_editing_completion_guard',
+        'record_booking_editing_completion'
+      )
       AND pg_get_functiondef(
             procedure.oid
           ) ILIKE '%editing_in_progress%'

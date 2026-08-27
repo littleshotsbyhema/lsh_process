@@ -283,7 +283,10 @@ SELECT is(
         'f'
       )
       AND relation.relname ILIKE '%editing%'
-      AND relation.relname <> 'booking_editing_starts'
+      AND relation.relname NOT IN (
+        'booking_editing_starts',
+        'booking_editing_completions'
+      )
   ),
   0::bigint,
   'Slice 11 creates no editing-job persistence relation'

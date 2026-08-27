@@ -338,6 +338,55 @@ export type Database = {
           },
         ];
       };
+      booking_editing_completions: {
+        Row: {
+          booking_id: string;
+          completed_at: string;
+          completed_by: string;
+          id: string;
+          organization_id: string;
+          source_editing_in_progress_transition_id: string;
+        };
+        Insert: {
+          booking_id: string;
+          completed_at: string;
+          completed_by: string;
+          id?: string;
+          organization_id: string;
+          source_editing_in_progress_transition_id: string;
+        };
+        Update: {
+          booking_id?: string;
+          completed_at?: string;
+          completed_by?: string;
+          id?: string;
+          organization_id?: string;
+          source_editing_in_progress_transition_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_editing_completions_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_editing_completions_completed_by_fkey";
+            columns: ["completed_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_editing_completions_source_transition_fkey";
+            columns: ["organization_id", "source_editing_in_progress_transition_id"];
+            isOneToOne: true;
+            referencedRelation: "booking_stage_transitions";
+            referencedColumns: ["organization_id", "id"];
+          },
+        ];
+      };
       booking_editing_starts: {
         Row: {
           booking_id: string;
@@ -6785,6 +6834,23 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "booking_adjusted_financial_obligations";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      record_booking_editing_completion: {
+        Args: { p_booking_id: string };
+        Returns: {
+          booking_id: string;
+          completed_at: string;
+          completed_by: string;
+          id: string;
+          organization_id: string;
+          source_editing_in_progress_transition_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_editing_completions";
           isOneToOne: true;
           isSetofReturn: false;
         };
