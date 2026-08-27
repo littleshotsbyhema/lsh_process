@@ -23557,3 +23557,106 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 14 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+
+## Sprint 11 Slice 15 Technical Design Freeze — 2026-08-27
+
+**Sprint 11 Slice 15 — Controlled Stage 14 -> 15 / QC Pending Advancement Gate**
+
+Baseline:
+
+`2e2e37c872f37037a417a8f61b62160a9ea4c21e` — `docs: reconcile sprint 11 slice 14 remote state`
+
+Frozen authority:
+
+- one `public.mark_booking_qc_pending(uuid)` application RPC;
+- `SECURITY DEFINER` with empty `search_path`;
+- authenticated application EXECUTE only;
+- existing `booking.stage.advance` only;
+- exact Stage 14 `editing_in_progress` -> Stage 15 `qc_pending`;
+- immutable `booking_editing_completions` prerequisite;
+- exact Stage 13 -> 14 `editing_in_progress` source-transition lineage;
+- booking synchronization root and branch containment;
+- optimistic exact-state/version advancement;
+- strict Stage 15 replay;
+- one first-success `booking.qc_pending` audit;
+- no new persistence;
+- no new permission;
+- permissions remain 68;
+- role-permission mappings remain 241.
+
+Authority separation remains exact:
+
+- Editor may create Editing Completion evidence under `editing.write`;
+- Editor does not gain `booking.stage.advance`;
+- Client Coordinator / Founder / Studio Manager retain journey advancement;
+- the Stage 15 gate does not require `editing.write`;
+- the Stage 15 gate must not create or mutate Editing Completion evidence.
+
+First execution requires:
+
+- exact current Stage 14 `editing_in_progress`;
+- exactly one canonical Stage 13 -> 14 `editing_in_progress` transition;
+- exactly one immutable Editing Completion row;
+- completion source-transition id equal to that exact Stage 13 -> 14 transition;
+- completion timestamp not earlier than the source transition;
+- zero pre-existing Stage 14 -> 15 transition history;
+- exactly one active Stage 15 `qc_pending` destination.
+
+Replay is allowed only at exact Stage 15 `qc_pending` and must prove one historical canonical
+Stage 14 -> 15 transition with key `qc_pending`.
+
+Replay creates no second transition, audit, state-version increment or evidence mutation.
+
+Explicit exclusions:
+
+- QC persistence/result/pass/fail;
+- QC reviewer assignment;
+- retouching/rework;
+- mutable editing jobs;
+- editor assignment;
+- priority/SLA;
+- Stage 15 -> 16;
+- Pixieset/gallery;
+- Stage 16 -> 17;
+- delivery;
+- payment/refund mutation;
+- settlement persistence;
+- UI/runtime;
+- Remote Supabase;
+- Production.
+
+Frozen compatibility amendments are exactly:
+
+1. `supabase/tests/sprint11_editing_start_evidence_test.sql`
+   - additionally exclude only `mark_booking_qc_pending` from its historical later-Stage function
+     predicate;
+
+2. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`
+   - additionally exclude only `mark_booking_qc_pending` from its historical only-Stage-14-function
+     predicate.
+
+Slice 14 dedicated Editing Completion pgTAP is not authorized for amendment.
+
+Exact implementation artifacts:
+
+1. `supabase/migrations/<timestamp>_sprint11_stage14_15_qc_pending_gate_foundation.sql`;
+2. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql`;
+3. `src/integrations/supabase/types.ts`;
+4. `supabase/tests/sprint11_editing_start_evidence_test.sql`;
+5. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`.
+
+No sixth artifact without governance amendment.
+
+Validation requires clean reset, DB lint, Slice 11-14 compatibility, dedicated Slice 15 pgTAP,
+full regression, permission totals 68 / 241, no unauthorized downstream persistence, fresh
+generated types with semantic delta limited to `mark_booking_qc_pending`, Prettier, targeted
+ESLint, TypeScript no-emit, production build, diff hygiene and exact five-artifact containment.
+
+Implementation remains unauthorized until this technical-design freeze is committed, pushed and
+independently verified.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 15 — TECHNICALLY FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**

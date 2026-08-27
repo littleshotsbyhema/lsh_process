@@ -5789,3 +5789,371 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 14 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+
+## Sprint 11 Slice 15 Technical Design Freeze — 2026-08-27
+
+### Frozen baseline
+
+Exact remotely reconciled parent:
+
+`2e2e37c872f37037a417a8f61b62160a9ea4c21e` — `docs: reconcile sprint 11 slice 14 remote state`
+
+Slice 15 may not be implemented against any other parent without a governance amendment.
+
+### Slice name
+
+**Sprint 11 Slice 15 — Controlled Stage 14 -> 15 / QC Pending Advancement Gate**
+
+### Architectural purpose
+
+Slice 14 established immutable Editing Completion evidence while the booking remained exactly at
+Stage 14 `editing_in_progress`.
+
+Slice 15 may consume that evidence only under existing journey authority and advance the booking
+to Stage 15 `qc_pending`.
+
+The authority separation remains exact:
+
+1. `editing.write` records immutable Editing Completion evidence;
+2. `booking.stage.advance` performs the journey transition;
+3. the journey advancer must not create, rewrite or infer Editing Completion evidence;
+4. Stage 15 means only QC Pending and does not represent a QC result.
+
+### Frozen mutation RPC
+
+Create exactly one application mutation RPC:
+
+`public.mark_booking_qc_pending(uuid)`
+
+Exact argument:
+
+`p_booking_id uuid`
+
+Return type:
+
+`public.bookings`
+
+The function must be:
+
+- `SECURITY DEFINER`;
+- empty `search_path`;
+- callable by authenticated application actors only.
+
+Application EXECUTE authority:
+
+- authenticated: allowed;
+- PUBLIC: denied;
+- anon: denied;
+- service_role: denied.
+
+### Frozen authorization
+
+First execution requires:
+
+- authenticated actor;
+- active organization membership;
+- existing `booking.stage.advance`;
+- booking branch scope.
+
+Existing `booking.stage.advance` topology remains exactly:
+
+- Client Coordinator;
+- Founder;
+- Studio Manager.
+
+Editor does not gain journey-advance authority.
+
+No new permission or role mapping is introduced.
+
+Canonical totals remain:
+
+- permissions: 68;
+- role-permission mappings: 241.
+
+The RPC must not require:
+
+- `editing.write`;
+- `editing.read`;
+- `delivery.write`;
+- `finance.read`;
+- `payment.read`;
+- `booking.team.assign`.
+
+The RPC must not call `record_booking_editing_completion(uuid)` and must not insert or mutate
+`booking_editing_completions`.
+
+### Frozen synchronization and current-stage rule
+
+The booking row remains the canonical synchronization root and is locked before advancement.
+
+Exactly one current canonical journey state is required.
+
+First execution requires exactly:
+
+- Stage 14;
+- key `editing_in_progress`;
+- active stage.
+
+The gate may accept exact Stage 15 `qc_pending` only as strict replay.
+
+Stage 13 or any earlier stage is rejected.
+
+Stage 16 or any later stage is rejected.
+
+### Frozen Stage 14 lineage
+
+First execution must prove exactly one canonical transition for the same organization + booking:
+
+Stage 13 `editing_pending`
+->
+Stage 14 `editing_in_progress`
+
+with transition key:
+
+`editing_in_progress`
+
+The transition must identify the booking's current Stage 14 as its destination.
+
+No historical selection, finance, payment or Editing Start authority is re-evaluated.
+
+### Frozen Editing Completion prerequisite
+
+First execution requires exactly one immutable row in:
+
+`public.booking_editing_completions`
+
+for the same organization + booking.
+
+The evidence must satisfy:
+
+- its `source_editing_in_progress_transition_id` equals the exact canonical Stage 13 -> 14
+  transition used by this gate;
+- `completed_at >= source transition transitioned_at`.
+
+The gate consumes historical evidence only.
+
+It must not require the historical `completed_by` actor to remain active or currently authorized.
+
+A later suspension, role change or branch change of the completion actor does not invalidate
+already-valid immutable completion evidence.
+
+### Frozen pre-existing-transition guard
+
+While the booking is still current Stage 14, there must be zero existing canonical:
+
+Stage 14 `editing_in_progress`
+->
+Stage 15 `qc_pending`
+
+transitions for that booking.
+
+Any pre-existing destination transition while current state remains Stage 14 is inconsistent and
+must fail closed.
+
+### Frozen destination
+
+Exactly one active canonical destination must exist:
+
+- Stage 15;
+- key `qc_pending`.
+
+First success appends exactly one transition:
+
+Stage 14 `editing_in_progress`
+->
+Stage 15 `qc_pending`
+
+with transition key:
+
+`qc_pending`
+
+and the current authenticated organization member as `transitioned_by`.
+
+### Frozen state advancement
+
+The gate updates exactly one `booking_journey_states` row.
+
+The advancement must be optimistic against the exact locked source state and version.
+
+First success:
+
+- sets `current_stage_id` to canonical Stage 15;
+- sets `stage_entered_at` to the transition timestamp;
+- increments journey version exactly once;
+- attributes the update to the current authorized actor.
+
+A concurrent or inconsistent state change must fail closed.
+
+### Frozen replay
+
+Exact Stage 15 `qc_pending` is the only valid replay state.
+
+Replay must prove exactly one historical canonical transition:
+
+Stage 14 `editing_in_progress`
+->
+Stage 15 `qc_pending`
+
+with transition key `qc_pending` and destination equal to the current Stage 15 state.
+
+Valid replay:
+
+- returns the same booking;
+- creates no second transition;
+- creates no second audit;
+- does not increment journey version;
+- does not mutate Editing Completion evidence.
+
+Replay proves historical journey advancement only.
+
+It does not re-evaluate historical Editing Completion actor authority or any earlier editing,
+selection, finance or payment authority.
+
+### Frozen audit
+
+First successful advancement appends exactly one non-sensitive audit event:
+
+`booking.qc_pending`
+
+Entity:
+
+- type `booking`;
+- id booking id.
+
+Structural audit metadata may contain only journey/evidence identifiers such as:
+
+- booking id;
+- Editing Completion evidence id;
+- source Editing In Progress transition id;
+- transition key `qc_pending`;
+- prior journey version;
+- resulting journey version;
+- Editing Completion timestamp.
+
+Audit metadata must not contain:
+
+- image counts;
+- QC result/pass/fail;
+- QC reviewer assignment;
+- free-text QC notes;
+- retouching notes;
+- editor assignment semantics;
+- external-creative identity;
+- priority/SLA interpretation;
+- financial amounts;
+- payment identifiers;
+- Pixieset/gallery information;
+- delivery information.
+
+Replay creates no second audit event.
+
+### Frozen journey containment
+
+Slice 15 may mutate only the canonical journey structures required for this exact advancement:
+
+- append one `booking_stage_transitions` row;
+- update one `booking_journey_states` row.
+
+Slice 15 creates no new persistence relation.
+
+Slice 15 does not mutate `booking_editing_completions`.
+
+Slice 15 does not create Stage 15 -> 16 authority.
+
+### Frozen scope exclusions
+
+Slice 15 does not implement:
+
+- QC persistence;
+- QC pass/fail/result;
+- QC reviewer assignment;
+- QC comments or free text;
+- retouching/rework workflow;
+- mutable editing-job lifecycle;
+- edited-image progress counts;
+- editor assignment;
+- external-editor/freelancer semantics;
+- priority editing;
+- editing SLA/deadline;
+- Stage 15 -> 16;
+- Pixieset/gallery authority;
+- Stage 16 -> 17;
+- delivery authority;
+- payment/refund mutation;
+- settlement persistence;
+- UI/runtime integration;
+- mock-store replacement;
+- Remote Supabase deployment;
+- Production deployment.
+
+### Frozen compatibility boundary
+
+Historical tests may be amended only where their earlier downstream-zero assertions become stale
+because of this later-governed Stage 15 gate.
+
+Authorized compatibility amendments are exactly:
+
+1. `supabase/tests/sprint11_editing_start_evidence_test.sql`
+   - the historical function predicate mentioning `editing_in_progress` may additionally exclude
+     exactly `mark_booking_qc_pending`;
+   - no other function may be added to that exclusion;
+
+2. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`
+   - the historical only-Stage-14-function predicate may additionally exclude exactly
+     `mark_booking_qc_pending`;
+   - no other assertion may be weakened.
+
+`supabase/tests/sprint11_editing_completion_evidence_test.sql` is not authorized for amendment and
+must continue to pass unchanged.
+
+No other historical test amendment is authorized without a governance amendment.
+
+### Frozen implementation artifact boundary
+
+Authorized implementation artifacts are exactly:
+
+1. `supabase/migrations/<timestamp>_sprint11_stage14_15_qc_pending_gate_foundation.sql`;
+2. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql`;
+3. `src/integrations/supabase/types.ts`;
+4. `supabase/tests/sprint11_editing_start_evidence_test.sql`;
+5. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`.
+
+No sixth implementation artifact is authorized without a governance amendment.
+
+### Validation contract
+
+Before Slice 15 implementation may close, require:
+
+- clean local database reset PASS;
+- local DB lint PASS;
+- Slice 11 compatibility PASS;
+- Slice 12 compatibility PASS;
+- Slice 13 compatibility PASS;
+- Slice 14 compatibility PASS;
+- dedicated Slice 15 pgTAP PASS;
+- full local pgTAP regression PASS;
+- permissions exactly 68;
+- role-permission mappings exactly 241;
+- no unauthorized QC/gallery/delivery persistence residue;
+- generated Supabase types freshly regenerated;
+- generated-types semantic delta limited to `mark_booking_qc_pending`;
+- Prettier PASS;
+- targeted ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- `git diff --check` PASS;
+- exact five-artifact implementation boundary.
+
+### Freeze conclusion
+
+Sprint 11 Slice 15 is technically frozen as
+**Controlled Stage 14 -> 15 / QC Pending Advancement Gate**.
+
+Implementation remains unauthorized until this exact technical-design freeze is committed, pushed
+and independently verified.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 15 — TECHNICALLY FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
