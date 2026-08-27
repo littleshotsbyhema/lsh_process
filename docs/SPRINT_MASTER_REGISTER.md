@@ -22991,3 +22991,75 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 12 — TECHNICALLY FROZEN / IMPLEMENTATION AUTHORIZED / COMPATIBILITY AMENDMENT PENDING REMOTE VERIFICATION / PRODUCTION HOLD**
+
+## Sprint 11 Slice 12 Governance Closeout — 2026-08-27
+
+**Sprint 11 Slice 12 — Editing Start Evidence Foundation**
+
+Technical-design freeze:
+
+`0089d9b29b99ba8f5dea39087bf651f47962bd3a` — `docs: freeze sprint 11 slice 12`
+
+Compatibility-boundary amendment:
+
+`e6afc35ee85c0b2e001536c95d4a32c962873962` — `docs: amend sprint 11 slice 12 compatibility boundary`
+
+Implementation:
+
+`c5b51ab7001443b2adc0eaa7a9728a9b20b33870` — `feat: add editing start evidence`
+
+Exact implementation artifacts:
+
+1. `supabase/migrations/20260827130000_sprint11_editing_start_evidence_foundation.sql`;
+2. `supabase/tests/sprint11_editing_start_evidence_test.sql`;
+3. `src/integrations/supabase/types.ts`;
+4. `supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`.
+
+Exact implementation statistics:
+
+- 4 files;
+- 2890 insertions;
+- 0 deletions.
+
+Accepted validation:
+
+- clean reset PASS;
+- DB lint PASS;
+- Slice 11 compatibility pgTAP 59 / 59 PASS;
+- Slice 12 dedicated pgTAP 63 / 63 PASS;
+- full local pgTAP 29 files / 1872 tests PASS;
+- permissions 68;
+- role-permission mappings 241;
+- canonical residue `68:241:0:0:0:0:0:0:0`;
+- generated-types semantic delta exactly the Slice 12 table + RPC;
+- Prettier PASS;
+- targeted generated-types ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- exact amended four-artifact boundary;
+- implementation push independently verified at `c5b51ab7001443b2adc0eaa7a9728a9b20b33870`.
+
+Delivered authority remains limited to immutable editing-start evidence at exact Stage 13 under `editing.write`.
+
+Still excluded:
+
+- Stage 13 -> 14 / `editing_in_progress`;
+- mutable editing jobs;
+- editor assignment;
+- priority-editing SLA;
+- retouching;
+- QC;
+- Pixieset;
+- delivery;
+- refund/payment mutation;
+- UI/runtime integration;
+- Remote Supabase;
+- Production.
+
+This closeout remains local until separately pushed and independently verified.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 12 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / IMPLEMENTATION PUSHED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / PRODUCTION HOLD**
