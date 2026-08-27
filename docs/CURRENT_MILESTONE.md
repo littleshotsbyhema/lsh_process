@@ -12,11 +12,11 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 13 remain remotely reconciled. Sprint 11 Slice 14 — Editing Completion Evidence Foundation — is implemented, fully validated locally, committed, pushed and independently verified on `origin/architecture-rebuild`. Technical-design freeze is `f367973df24edca781c95695dbb93db7538e157f` — `docs: freeze sprint 11 slice 14`; implementation is `a2d4f4f4462a715d75add6b9e0ebb286d0b5f336` — `feat: add editing completion evidence foundation`. This checkpoint records the local governance closeout; the closeout itself remains local until separately committed, pushed and independently verified. Remote Supabase remains HOLD. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 14 are implemented, fully validated locally, committed, governance closed, pushed and independently verified on `origin/architecture-rebuild`. Slice 14 technical-design freeze is `f367973df24edca781c95695dbb93db7538e157f` — `docs: freeze sprint 11 slice 14`; implementation is `a2d4f4f4462a715d75add6b9e0ebb286d0b5f336` — `feat: add editing completion evidence foundation`; governance closeout is `473428daf3036b14584ebbfe8e69fa2a5d48b6b6` — `docs: close sprint 11 slice 14`. This two-document checkpoint records the reconciled Slice 14 remote state before the reconciliation commit itself is separately pushed. Remote Supabase remains HOLD. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
-Sprint 11 Slice 14 — **Editing Completion Evidence Foundation** — is implemented, fully validated locally, committed, pushed and independently verified on `origin/architecture-rebuild`.
+Sprint 11 Slice 14 — **Editing Completion Evidence Foundation** — is implemented, fully validated locally, committed, governance closed, pushed and independently verified on `origin/architecture-rebuild`. Governance closeout `473428daf3036b14584ebbfe8e69fa2a5d48b6b6` — `docs: close sprint 11 slice 14` is independently confirmed with exact parent `a2d4f4f4462a715d75add6b9e0ebb286d0b5f336`. This two-document checkpoint records the reconciled remote state.
 
 Exact authority chain:
 
@@ -73,6 +73,9 @@ Total implementation diff:
 Slice 14 establishes immutable editing-domain completion evidence while the booking remains exactly at Stage 14 `editing_in_progress`.
 
 It does not advance the booking journey to Stage 15.
+
+The governance closeout is now committed and pushed, and is independently verified on
+`origin/architecture-rebuild` at `473428daf3036b14584ebbfe8e69fa2a5d48b6b6`.
 
 Remote Supabase remains HOLD.
 
@@ -5531,7 +5534,7 @@ Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 14 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / PUSHED / INDEPENDENTLY VERIFIED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+**SPRINT 11 SLICE 14 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
 ## Sprint 11 Slice 14 Governance Closeout — 2026-08-27
 
 ### Authority chain
@@ -5671,10 +5674,118 @@ Still excluded:
 
 The Slice 14 implementation is pushed and independently verified.
 
-This two-document governance closeout remains local until separately committed, pushed and independently verified.
+This two-document governance closeout is now committed and pushed, and is independently verified on
+`origin/architecture-rebuild` at `473428daf3036b14584ebbfe8e69fa2a5d48b6b6`.
 
 Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 14 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / PUSHED / INDEPENDENTLY VERIFIED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+**SPRINT 11 SLICE 14 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+
+## Sprint 11 Slice 14 Remote-State Reconciliation — 2026-08-27
+
+### Reconciled authority chain
+
+Technical-design freeze:
+
+`f367973df24edca781c95695dbb93db7538e157f` — `docs: freeze sprint 11 slice 14`
+
+Implementation:
+
+`a2d4f4f4462a715d75add6b9e0ebb286d0b5f336` — `feat: add editing completion evidence foundation`
+
+Governance closeout:
+
+`473428daf3036b14584ebbfe8e69fa2a5d48b6b6` — `docs: close sprint 11 slice 14`
+
+Exact closeout parent:
+
+`a2d4f4f4462a715d75add6b9e0ebb286d0b5f336`
+
+### Independent remote verification
+
+The pushed Slice 14 closeout is independently verified:
+
+- `architecture-rebuild` points exactly to `473428daf3036b14584ebbfe8e69fa2a5d48b6b6`;
+- closeout subject is exactly `docs: close sprint 11 slice 14`;
+- closeout parent is exactly `a2d4f4f4462a715d75add6b9e0ebb286d0b5f336`;
+- implementation -> closeout is exactly one commit ahead / zero behind;
+- the closeout modifies exactly two governance documents;
+- `docs/CURRENT_MILESTONE.md`: 212 insertions / 2 deletions;
+- `docs/SPRINT_MASTER_REGISTER.md`: 89 insertions / 1 deletion;
+- total closeout diff: 301 insertions / 3 deletions.
+
+### Reconciled accepted implementation state
+
+Accepted Slice 14 validation remains:
+
+- clean local database reset PASS;
+- local DB lint PASS with no schema errors;
+- dedicated Slice 14 pgTAP 42 / 42 PASS;
+- full local pgTAP regression 31 files / 1967 tests PASS;
+- Slice 11 compatibility PASS;
+- Slice 12 compatibility PASS;
+- Slice 13 compatibility PASS;
+- permissions 68;
+- role-permission mappings 241;
+- structural fingerprint `68:241:1:1:6`;
+- exact six-column `booking_editing_completions`;
+- exact `record_booking_editing_completion(uuid)` RPC;
+- SECURITY DEFINER with empty `search_path`;
+- authenticated EXECUTE only;
+- existing `editing.write` mutation authority;
+- existing `editing.read` plus branch-scope read authority;
+- exact Stage 14 `editing_in_progress` containment;
+- exact Stage 13 -> 14 source-transition lineage;
+- strict Stage-14-only replay;
+- one first-success `booking.editing_completed` audit;
+- no journey mutation;
+- no new permission;
+- no Stage 14 -> 15 authority;
+- generated-types semantic delta exactly `booking_editing_completions`
+  plus `record_booking_editing_completion`;
+- generated-types diff 66 insertions / 0 deletions;
+- Prettier PASS;
+- targeted ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- diff hygiene PASS.
+
+### Reconciled scope containment
+
+Still excluded:
+
+- Stage 14 -> 15 / `qc_pending`;
+- mutable editing jobs;
+- edited-image progress counts;
+- editor assignment;
+- external-editor/freelancer semantics;
+- priority editing / SLA;
+- retouching;
+- QC persistence or result;
+- Pixieset/gallery authority;
+- Stage 15 -> 16;
+- Stage 16 -> 17;
+- delivery authority;
+- payment/refund mutation;
+- settlement persistence;
+- UI/runtime integration;
+- mock-store replacement;
+- Remote Supabase deployment;
+- Production deployment.
+
+### Reconciliation conclusion
+
+Sprint 11 Slice 14 governance closeout is pushed and its remote state is reconciled by this
+two-document checkpoint.
+
+This reconciliation commit remains local until separately pushed and independently verified.
+
+No downstream implementation boundary is authorized by this reconciliation.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 14 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**

@@ -23396,7 +23396,7 @@ Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 14 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / PUSHED / INDEPENDENTLY VERIFIED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+**SPRINT 11 SLICE 14 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
 ## Sprint 11 Slice 14 Governance Closeout — 2026-08-27
 
 ### Slice
@@ -23480,8 +23480,80 @@ Slice 14 does not establish:
 5. `supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`;
 6. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`.
 
+The governance closeout is now pushed and independently verified on `origin/architecture-rebuild` at
+`473428daf3036b14584ebbfe8e69fa2a5d48b6b6`.
+
 Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 14 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / PUSHED / INDEPENDENTLY VERIFIED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+**SPRINT 11 SLICE 14 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+
+## Sprint 11 Slice 14 Remote-State Reconciliation — 2026-08-27
+
+**Sprint 11 Slice 14 — Editing Completion Evidence Foundation**
+
+Reconciled authority chain:
+
+- freeze `f367973df24edca781c95695dbb93db7538e157f`;
+- implementation `a2d4f4f4462a715d75add6b9e0ebb286d0b5f336`;
+- governance closeout `473428daf3036b14584ebbfe8e69fa2a5d48b6b6`;
+- exact closeout parent `a2d4f4f4462a715d75add6b9e0ebb286d0b5f336`.
+
+Independent remote verification:
+
+- branch exactly `473428daf3036b14584ebbfe8e69fa2a5d48b6b6`;
+- closeout subject exactly `docs: close sprint 11 slice 14`;
+- implementation -> closeout exactly 1 ahead / 0 behind;
+- exact two-document closeout boundary;
+- `CURRENT_MILESTONE.md` closeout diff: 212 insertions / 2 deletions;
+- `SPRINT_MASTER_REGISTER.md` closeout diff: 89 insertions / 1 deletion;
+- total closeout diff: 301 insertions / 3 deletions.
+
+Accepted validation:
+
+- reset PASS;
+- DB lint PASS;
+- dedicated Slice 14 pgTAP 42 / 42 PASS;
+- full regression 31 files / 1967 tests PASS;
+- Slice 11 / 12 / 13 compatibility PASS;
+- permissions 68;
+- role-permission mappings 241;
+- fingerprint `68:241:1:1:6`;
+- generated-types semantic delta exactly the Slice 14 relation plus RPC;
+- Prettier, ESLint, TypeScript no-emit and production build PASS.
+
+Closed authority remains only:
+
+- immutable Editing Completion evidence;
+- exact Stage 14 `editing_in_progress` containment;
+- exact Stage 13 -> 14 source-transition lineage;
+- `editing.write` mutation authority;
+- `editing.read` plus branch-scope read authority;
+- strict Stage-14-only replay;
+- first-success `booking.editing_completed` audit;
+- no journey mutation.
+
+Still excluded:
+
+- Stage 14 -> 15 / QC;
+- mutable editing jobs;
+- editor assignment;
+- priority editing / SLA;
+- retouching;
+- Pixieset/gallery;
+- delivery;
+- payment/refund mutation;
+- UI/runtime;
+- Remote Supabase;
+- Production.
+
+This reconciliation commit remains local until separately pushed and independently verified.
+
+No downstream implementation boundary is authorized.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 14 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
