@@ -275,7 +275,15 @@ SELECT is(
       ON namespace.oid =
          relation.relnamespace
     WHERE namespace.nspname = 'public'
+      AND relation.relkind IN (
+        'r',
+        'p',
+        'v',
+        'm',
+        'f'
+      )
       AND relation.relname ILIKE '%editing%'
+      AND relation.relname <> 'booking_editing_starts'
   ),
   0::bigint,
   'Slice 11 creates no editing-job persistence relation'
