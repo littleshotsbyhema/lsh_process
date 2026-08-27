@@ -23056,10 +23056,77 @@ Still excluded:
 - Remote Supabase;
 - Production.
 
-This closeout remains local until separately pushed and independently verified.
+The governance closeout was subsequently pushed under separate one-shot authorization and independently verified on `origin/architecture-rebuild` at `7250e920d46c4a2819c82b6136e349ef65310806`.
 
 Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 12 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / IMPLEMENTATION PUSHED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / PRODUCTION HOLD**
+**SPRINT 11 SLICE 12 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**
+
+## Sprint 11 Slice 12 Remote-State Reconciliation — 2026-08-27
+
+**Sprint 11 Slice 12 — Editing Start Evidence Foundation**
+
+Reconciled authority:
+
+- technical-design freeze `0089d9b29b99ba8f5dea39087bf651f47962bd3a` — `docs: freeze sprint 11 slice 12`;
+- compatibility-boundary amendment `e6afc35ee85c0b2e001536c95d4a32c962873962` —
+  `docs: amend sprint 11 slice 12 compatibility boundary`;
+- implementation `c5b51ab7001443b2adc0eaa7a9728a9b20b33870` — `feat: add editing start evidence`;
+- governance closeout `7250e920d46c4a2819c82b6136e349ef65310806` — `docs: close sprint 11 slice 12`.
+
+Independent remote verification confirms the closeout at `7250e920d46c4a2819c82b6136e349ef65310806` on
+`architecture-rebuild`, with exact parent `c5b51ab7001443b2adc0eaa7a9728a9b20b33870`.
+
+The implementation-to-closeout comparison is exactly one commit ahead / zero behind and
+contains only:
+
+1. `docs/CURRENT_MILESTONE.md`;
+2. `docs/SPRINT_MASTER_REGISTER.md`.
+
+Remote closeout statistics are exactly 247 insertions / 1 deletion.
+
+Accepted implementation validation remains:
+
+- Slice 11 compatibility pgTAP 59 / 59 PASS;
+- Slice 12 dedicated pgTAP 63 / 63 PASS;
+- full local pgTAP 29 files / 1872 tests PASS;
+- permissions 68;
+- role-permission mappings 241;
+- canonical residue `68:241:0:0:0:0:0:0:0`;
+- generated-types semantic delta exactly Slice 12 table + RPC;
+- Prettier PASS;
+- targeted ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- exact four-artifact implementation boundary.
+
+Delivered authority remains limited to immutable Editing Start evidence at exact Stage 13
+under existing `editing.write`.
+
+Still excluded:
+
+- Stage 13 -> 14 / `editing_in_progress`;
+- mutable editing jobs;
+- editor assignment;
+- priority-editing SLA;
+- retouching/QC;
+- Pixieset;
+- delivery;
+- payment/refund mutation;
+- UI/runtime integration;
+- Remote Supabase;
+- Production.
+
+This reconciliation records remote governance state only and performs no implementation
+or database mutation.
+
+The reconciliation commit itself remains local until separately pushed and independently
+verified.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 12 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**

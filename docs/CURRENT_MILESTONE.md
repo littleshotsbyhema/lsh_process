@@ -12,11 +12,11 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 11 are implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled. Sprint 11 Slice 12 — Editing Start Evidence Foundation — is implemented, fully validated locally, committed and pushed. Technical-design freeze is `0089d9b29b99ba8f5dea39087bf651f47962bd3a` — `docs: freeze sprint 11 slice 12`; compatibility-boundary amendment is `e6afc35ee85c0b2e001536c95d4a32c962873962` — `docs: amend sprint 11 slice 12 compatibility boundary`; implementation is `c5b51ab7001443b2adc0eaa7a9728a9b20b33870` — `feat: add editing start evidence`. The implementation has been independently verified on `origin/architecture-rebuild`. This checkpoint records the local governance closeout before the closeout commit is separately pushed and remotely reconciled. Remote Supabase remains HOLD. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 12 are implemented, fully validated locally, committed, governance closed, pushed and independently verified on `origin/architecture-rebuild`. Slice 12 technical-design freeze is `0089d9b29b99ba8f5dea39087bf651f47962bd3a` — `docs: freeze sprint 11 slice 12`; compatibility-boundary amendment is `e6afc35ee85c0b2e001536c95d4a32c962873962` — `docs: amend sprint 11 slice 12 compatibility boundary`; implementation is `c5b51ab7001443b2adc0eaa7a9728a9b20b33870` — `feat: add editing start evidence`; governance closeout is `7250e920d46c4a2819c82b6136e349ef65310806` — `docs: close sprint 11 slice 12`. This two-document checkpoint records the reconciled Slice 12 remote state before the reconciliation commit itself is separately pushed. Remote Supabase remains HOLD. Production remains HOLD.
 
 ## Current Verified Checkpoint
 
-Sprint 11 Slice 12 — **Editing Start Evidence Foundation** is implemented, fully validated locally, committed and pushed. The exact implementation is `c5b51ab7001443b2adc0eaa7a9728a9b20b33870` — `feat: add editing start evidence`, with compatibility-boundary amendment `e6afc35ee85c0b2e001536c95d4a32c962873962` — `docs: amend sprint 11 slice 12 compatibility boundary` as its exact parent and technical-design freeze `0089d9b29b99ba8f5dea39087bf651f47962bd3a` — `docs: freeze sprint 11 slice 12` as the governing design authority.
+Sprint 11 Slice 12 — **Editing Start Evidence Foundation** is implemented, fully validated locally, committed, governance closed, pushed and independently verified on the remote branch. Governance closeout `7250e920d46c4a2819c82b6136e349ef65310806` — `docs: close sprint 11 slice 12` is independently confirmed on `origin/architecture-rebuild`, with exact parent `c5b51ab7001443b2adc0eaa7a9728a9b20b33870`. This two-document checkpoint records the reconciled remote state.
 
 Exact implementation artifacts:
 
@@ -105,7 +105,7 @@ Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 12 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / IMPLEMENTATION PUSHED / GOVERNANCE CLOSEOUT IN PROGRESS / PRODUCTION HOLD**
+**SPRINT 11 SLICE 12 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**
 
 ### Previous verified checkpoint — Sprint 11 Slice 11
 
@@ -4358,10 +4358,113 @@ Slice 12 implementation is complete within the amended frozen scope.
 
 The implementation does not authorize Stage 13 -> 14 or any downstream editing/QC/delivery workflow.
 
-This governance closeout remains local until it is separately committed, pushed under one-shot authorization, and independently verified.
+The governance closeout was subsequently committed, pushed under separate one-shot authorization, and independently verified on `origin/architecture-rebuild` at `7250e920d46c4a2819c82b6136e349ef65310806`.
 
 Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 12 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / IMPLEMENTATION PUSHED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / PRODUCTION HOLD**
+**SPRINT 11 SLICE 12 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**
+
+## Sprint 11 Slice 12 Remote-State Reconciliation — 2026-08-27
+
+### Reconciled authority chain
+
+Technical-design freeze:
+
+`0089d9b29b99ba8f5dea39087bf651f47962bd3a` — `docs: freeze sprint 11 slice 12`
+
+Compatibility-boundary amendment:
+
+`e6afc35ee85c0b2e001536c95d4a32c962873962` — `docs: amend sprint 11 slice 12 compatibility boundary`
+
+Implementation:
+
+`c5b51ab7001443b2adc0eaa7a9728a9b20b33870` — `feat: add editing start evidence`
+
+Governance closeout:
+
+`7250e920d46c4a2819c82b6136e349ef65310806` — `docs: close sprint 11 slice 12`
+
+Closeout parent:
+
+`c5b51ab7001443b2adc0eaa7a9728a9b20b33870`
+
+### Independent remote verification
+
+Independent remote verification confirms:
+
+- `architecture-rebuild` points exactly to `7250e920d46c4a2819c82b6136e349ef65310806`;
+- remote closeout subject is exactly `docs: close sprint 11 slice 12`;
+- remote closeout parent is exactly `c5b51ab7001443b2adc0eaa7a9728a9b20b33870`;
+- implementation -> closeout is exactly one commit ahead and zero behind;
+- the closeout contains exactly `docs/CURRENT_MILESTONE.md` and
+  `docs/SPRINT_MASTER_REGISTER.md`;
+- closeout diff is exactly 247 insertions / 1 deletion across those two documents;
+- local and remote branch parity after the closeout push is `0 0`.
+
+This reconciliation records remote governance state only.
+
+It does not re-run or alter Slice 12 implementation.
+
+### Accepted implementation state
+
+The remotely closed Slice 12 remains validated by:
+
+- clean local reset PASS;
+- local DB lint PASS;
+- Slice 11 compatibility pgTAP 59 / 59 PASS;
+- Slice 12 dedicated pgTAP 63 / 63 PASS;
+- full local pgTAP 29 files / 1872 tests PASS;
+- permissions 68;
+- role-permission mappings 241;
+- canonical post-regression residue `68:241:0:0:0:0:0:0:0`;
+- immutable six-column `public.booking_editing_starts`;
+- exact `public.record_booking_editing_start(uuid)` recorder;
+- existing `editing.write` mutation authority;
+- existing `editing.read` read authority;
+- exact Stage 13 `editing_pending` containment;
+- exact Stage 12 -> 13 transition-lineage snapshot;
+- strict idempotent replay;
+- one non-sensitive `booking.editing_started` first-success audit;
+- no booking-stage advancement;
+- generated-types semantic delta exactly the Slice 12 table + RPC;
+- Prettier PASS;
+- targeted generated-types ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- exact amended four-artifact implementation boundary.
+
+### Boundary remains closed
+
+Slice 12 does not authorize:
+
+- Stage 13 -> 14 / `editing_in_progress`;
+- mutable editing-job workflow;
+- editor assignment;
+- editing SLA/deadline or priority-editing operational state;
+- retouching/QC;
+- Pixieset/gallery;
+- delivery;
+- payment/refund mutation;
+- UI/runtime integration;
+- Remote Supabase deployment;
+- Production deployment.
+
+No database or implementation mutation belongs to this reconciliation checkpoint.
+
+### Reconciliation conclusion
+
+Sprint 11 Slice 12 is now governance closed and its exact pushed remote state has been reconciled.
+
+This reconciliation commit remains local until separately pushed under one-shot authorization and independently verified.
+
+Only after that separate reconciliation push/verification may the next downstream boundary enter fresh read-only discovery.
+
+No Stage 13 -> 14, editing-job, editor-assignment, QC, Pixieset, delivery or other downstream slice is pre-authorized by this checkpoint.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 12 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**
