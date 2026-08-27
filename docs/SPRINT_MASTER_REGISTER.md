@@ -23396,4 +23396,92 @@ Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 14 — TECHNICALLY FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+**SPRINT 11 SLICE 14 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / PUSHED / INDEPENDENTLY VERIFIED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+## Sprint 11 Slice 14 Governance Closeout — 2026-08-27
+
+### Slice
+
+**Editing Completion Evidence Foundation**
+
+Technical-design freeze:
+
+`f367973df24edca781c95695dbb93db7538e157f` — `docs: freeze sprint 11 slice 14`
+
+Implementation:
+
+`a2d4f4f4462a715d75add6b9e0ebb286d0b5f336` — `feat: add editing completion evidence foundation`
+
+Remote implementation verification:
+
+- exact remote SHA `a2d4f4f4462a715d75add6b9e0ebb286d0b5f336`;
+- exact parent `f367973df24edca781c95695dbb93db7538e157f`;
+- freeze -> implementation: one commit ahead / zero behind;
+- implementation boundary: exactly six files;
+- implementation diff: 2529 insertions / 5 deletions.
+
+### Accepted validation
+
+- dedicated Slice 14 pgTAP: 42 / 42 PASS;
+- full local pgTAP regression: 31 files / 1967 tests PASS;
+- clean local DB reset: PASS;
+- local DB lint: PASS;
+- Slice 11 compatibility: PASS;
+- Slice 12 compatibility: PASS;
+- Slice 13 compatibility: PASS;
+- permissions: 68;
+- role-permission mappings: 241;
+- structural fingerprint: `68:241:1:1:6`;
+- generated types: fresh local generation;
+- generated-types semantic delta: `booking_editing_completions` plus `record_booking_editing_completion`;
+- generated-types diff: 66 insertions / 0 deletions;
+- Prettier: PASS;
+- targeted ESLint: PASS;
+- TypeScript `--noEmit`: PASS;
+- production build: PASS;
+- diff hygiene: PASS.
+
+### Delivered authority
+
+Slice 14 establishes:
+
+- immutable `public.booking_editing_completions`;
+- exactly six evidence columns;
+- exactly one completion per organization + booking;
+- exact canonical Stage 13 -> 14 source-transition lineage;
+- `public.record_booking_editing_completion(uuid)`;
+- existing `editing.write` as mutation authority;
+- existing `editing.read` plus branch scope as read authority;
+- one first-success `booking.editing_completed` audit;
+- strict Stage-14-only idempotent replay;
+- no journey mutation.
+
+Slice 14 does not establish:
+
+- Stage 14 -> 15 advancement;
+- QC persistence or result;
+- editing-job workflow;
+- editor assignment;
+- priority editing or SLA;
+- retouching;
+- Pixieset/gallery authority;
+- delivery authority;
+- payment/refund mutation;
+- settlement persistence;
+- UI/runtime integration;
+- Remote Supabase deployment;
+- Production deployment.
+
+### Implementation artifacts
+
+1. `src/integrations/supabase/types.ts`;
+2. `supabase/migrations/20260827150000_sprint11_editing_completion_evidence_foundation.sql`;
+3. `supabase/tests/sprint11_editing_completion_evidence_test.sql`;
+4. `supabase/tests/sprint11_editing_start_evidence_test.sql`;
+5. `supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`;
+6. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 14 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / PUSHED / INDEPENDENTLY VERIFIED / GOVERNANCE CLOSED LOCALLY / CLOSEOUT PUSH PENDING / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
