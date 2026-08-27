@@ -23130,3 +23130,75 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 12 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / PRODUCTION HOLD**
+
+## Sprint 11 Slice 13 Technical Design Freeze — 2026-08-27
+
+**Sprint 11 Slice 13 — Controlled Stage 13 -> 14 / Editing In Progress Advancement Gate**
+
+Exact parent:
+
+`81032eccef5c5cb872adce403768c84948e988c1` — `docs: reconcile sprint 11 slice 12 remote state`
+
+Frozen authority:
+
+- consume existing immutable `booking_editing_starts`;
+- advance only Stage 13 `editing_pending` -> Stage 14 `editing_in_progress`;
+- one `mark_booking_editing_in_progress(uuid)` RPC;
+- existing `booking.stage.advance` only;
+- booking/branch containment;
+- exact Editing Start source-transition lineage;
+- strict Stage 14 replay;
+- one `booking.editing_in_progress` first-success audit;
+- no new persistence relation;
+- no new permission.
+
+Authority separation remains exact:
+
+- Editor may create Editing Start evidence through `editing.write`;
+- Editor does not gain journey advancement;
+- Client Coordinator / Founder / Studio Manager retain `booking.stage.advance`;
+- the Stage 14 gate does not require `editing.write`, finance or payment authority.
+
+Explicit exclusions:
+
+- editor assignment;
+- mutable editing job;
+- priority-editing/SLA;
+- retouching;
+- Stage 14 -> 15;
+- QC;
+- Pixieset;
+- gallery;
+- delivery;
+- payment/refund mutation;
+- UI/runtime integration;
+- Remote Supabase;
+- Production.
+
+Existing Slice 12 pgTAP test #25 is known before implementation to be future-incompatible because
+it requires zero functions mentioning `editing_in_progress`.
+
+Frozen compatibility rule:
+
+- Slice 12 plan remains exactly 63;
+- test #25 may exclude exactly `mark_booking_editing_in_progress`;
+- no other Stage-14 function may be whitelisted;
+- no other Slice 12 test behavior may change.
+
+Exact implementation artifacts:
+
+1. `supabase/migrations/20260827140000_sprint11_stage13_14_editing_in_progress_gate_foundation.sql`;
+2. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`;
+3. `src/integrations/supabase/types.ts`;
+4. `supabase/tests/sprint11_editing_start_evidence_test.sql`.
+
+No fifth artifact without governance amendment.
+
+Implementation remains unauthorized until this technical-design freeze is separately pushed and
+independently verified.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 13 — TECHNICALLY FROZEN LOCALLY / FREEZE PUSH PENDING / IMPLEMENTATION NOT AUTHORIZED / PRODUCTION HOLD**
