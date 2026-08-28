@@ -7680,3 +7680,228 @@ journey gate consuming immutable QC Pass evidence.
 Implementation has not started.
 
 **SPRINT 11 SLICE 17 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT STARTED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+
+## Sprint 11 Slice 17 Governance Closeout — 2026-08-28
+
+### Exact authority chain
+
+Technical-design freeze:
+
+`c36c6bb1583f6eff0c5fe985fa7f9668d4685913`
+— `docs: freeze sprint 11 slice 17`
+
+Implementation:
+
+`757e364c2a73faaec342bd9d0dbdea5da2165810`
+— `feat: add pixieset gallery ready advancement gate`
+
+Implementation parent:
+
+`c36c6bb1583f6eff0c5fe985fa7f9668d4685913`
+
+No compatibility governance amendment was required.
+
+Focused regression initially exposed two historical Stage-14 function-scan
+false positives caused only by the literal `editing_in_progress` token inside
+a Slice 17 function comment.
+
+The Slice 17 migration comment was narrowed without changing runtime authority,
+and both historical assertions then passed unchanged.
+
+### Delivered Slice 17 boundary
+
+Slice 17 delivers exactly one controlled journey gate:
+
+Stage 15 `qc_pending`
+->
+Stage 16 `pixieset_gallery_ready`
+
+through:
+
+`public.mark_booking_pixieset_gallery_ready(p_booking_id uuid)`
+
+The RPC returns:
+
+`public.bookings`
+
+Journey mutation authority remains the existing:
+
+`booking.stage.advance`
+
+with exact role topology:
+
+- `client_coordinator`;
+- `founder`;
+- `studio_manager`.
+
+No new permission or role-permission mapping was introduced.
+
+Canonical totals remain:
+
+- permissions: 68;
+- role-permission mappings: 241.
+
+### Accepted first-success contract
+
+First execution requires:
+
+- authenticated actor;
+- active organization membership;
+- `booking.stage.advance`;
+- booking branch scope;
+- exactly one current journey state;
+- exact active Stage 15 `qc_pending`;
+- exactly one immutable `public.booking_qc_passes` row;
+- QC Pass source transition belonging to the same organization and booking;
+- source transition key exactly `qc_pending`;
+- source transition destination equal to current Stage 15;
+- QC Pass timestamp not earlier than that source transition;
+- zero pre-existing canonical Stage 15 -> 16 transition.
+
+First success performs exactly:
+
+1. one Stage 15 -> 16 `booking_stage_transitions` append;
+2. one optimistic `booking_journey_states` progression update;
+3. one structural `booking.pixieset_gallery_ready` audit.
+
+Journey-state version increments exactly once.
+
+The current authorized journey actor is attributed to the transition and state
+update.
+
+### Accepted replay contract
+
+Exact Stage 16 `pixieset_gallery_ready` replay is idempotent.
+
+Replay proves exactly one canonical historical:
+
+Stage 15 `qc_pending`
+->
+Stage 16 `pixieset_gallery_ready`
+
+transition with exact transition key:
+
+`pixieset_gallery_ready`
+
+Valid replay creates:
+
+- no second transition;
+- no second audit;
+- no second version increment;
+- no QC Pass mutation;
+- no gallery or delivery persistence.
+
+Stage 16 without valid canonical history fails closed.
+
+Earlier stages fail closed.
+
+Stage 17 or later fails closed.
+
+### Persistence and authority containment
+
+Slice 17 introduces no new business relation.
+
+It introduces no:
+
+- Pixieset gallery relation;
+- gallery URL persistence;
+- gallery synchronization persistence;
+- delivery persistence;
+- QC-result persistence;
+- reviewer assignment;
+- mutable QC workflow.
+
+The immutable QC Pass prerequisite is consumed as evidence only.
+
+Slice 17 does not call or recreate:
+
+- `record_booking_qc_pass`;
+- `record_booking_editing_completion`;
+- `record_booking_editing_start`;
+- `mark_booking_qc_pending`;
+- `mark_booking_editing_in_progress`.
+
+It imports no `editing.*`, `delivery.*`, review, finance, payment or
+team-assignment mutation authority.
+
+Stage 16 -> 17 remains outside Slice 17.
+
+### Accepted validation
+
+Slice 17 validation is accepted as:
+
+- clean local database reset PASS;
+- local database lint PASS with no schema errors;
+- permissions exactly 68;
+- role-permission mappings exactly 241;
+- exact active Stage 15 `qc_pending`;
+- exact active Stage 16 `pixieset_gallery_ready`;
+- authenticated RPC EXECUTE allowed;
+- PUBLIC EXECUTE denied;
+- anon EXECUTE denied;
+- service_role EXECUTE denied;
+- downstream gallery/Pixieset/delivery persistence count 0;
+- dedicated Slice 17 pgTAP 38 / 38 PASS;
+- focused Sprint 11 regression 16 files / 930 tests PASS;
+- full local pgTAP regression 34 files / 2085 tests PASS;
+- historical Slice 12 and Slice 13 compatibility assertions PASS unchanged;
+- generated Supabase types freshly regenerated locally;
+- generated-types semantic delta limited exactly to
+  `mark_booking_pixieset_gallery_ready`;
+- generated-types diff 22 insertions / 0 deletions;
+- Prettier PASS;
+- targeted generated-types ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS with non-blocking existing dependency,
+  deprecation and bundle-size warnings only;
+- `git diff --check` PASS.
+
+### Exact implementation boundary
+
+Implementation commit contains exactly:
+
+1. `src/integrations/supabase/types.ts`
+   — 22 insertions / 0 deletions;
+2. `supabase/migrations/20260828154710_sprint11_stage15_16_pixieset_gallery_ready_gate_foundation.sql`
+   — 929 insertions / 0 deletions;
+3. `supabase/tests/sprint11_stage15_16_pixieset_gallery_ready_gate_test.sql`
+   — 1472 insertions / 0 deletions.
+
+Total implementation diff:
+
+- 3 files;
+- 2423 insertions;
+- 0 deletions.
+
+### Independent remote verification
+
+Independent GitHub verification confirms:
+
+- `architecture-rebuild` points exactly to
+  `757e364c2a73faaec342bd9d0dbdea5da2165810`;
+- remote implementation subject is exactly
+  `feat: add pixieset gallery ready advancement gate`;
+- remote implementation parent is exactly
+  `c36c6bb1583f6eff0c5fe985fa7f9668d4685913`;
+- freeze -> implementation is exactly one commit ahead / zero behind;
+- the implementation contains exactly the three authorized artifacts;
+- the remote implementation diff is exactly 2423 insertions / 0 deletions.
+
+### Governance conclusion
+
+Sprint 11 Slice 17 is implemented within the exact frozen authority boundary,
+fully validated locally, committed, pushed and independently verified.
+
+This closeout modifies governance documentation only.
+
+The closeout remains local until separately committed, pushed and independently
+verified.
+
+No Pixieset external integration, gallery persistence, delivery persistence or
+Stage 16 -> 17 authority is authorized by this closeout.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 17 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / PUSHED / IMPLEMENTATION REMOTELY VERIFIED / GOVERNANCE CLOSEOUT PENDING COMMIT / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
