@@ -25853,3 +25853,397 @@ The following remain unchanged:
 **HOLD — SPRINT 11 SLICE 18 IMPLEMENTATION**
 
 **NEXT — PHASE 2 STUDIO OPERATIONS POST-SHOOT READ-ONLY DISCOVERY**
+
+## Phase 2 Studio Operations — Corrective Slice A Technical-Design Freeze — 2026-08-29
+
+### Status
+
+**APPROVED — TECHNICAL DESIGN FROZEN**
+
+**IMPLEMENTATION NOT STARTED**
+
+**REMOTE SUPABASE HOLD**
+
+**PRODUCTION HOLD**
+
+This slice is the first prerequisite correction identified by the Phase 2 Studio Operations post-shoot authority reconciliation.
+
+It establishes the canonical approved media-card inventory required before custody, ingestion, checksum verification, backup, card release, editing handover, or strengthened Stage 11 -> 12 gating can be implemented.
+
+---
+
+### 1. Authority Boundary
+
+Operational Sprint 11 requires an approved media-card inventory with unique IDs before the media-custody workflow begins.
+
+The repository currently has no reusable equipment, asset, inventory, device, or media-card registry.
+
+Therefore this slice introduces the smallest canonical inventory authority required to eliminate anonymous media cards.
+
+This slice does not claim to complete US-125 Media-Card Custody and Shot Accounting.
+
+---
+
+### 2. Permission
+
+Introduce exactly one permission:
+
+`media.inventory.register`
+
+Permission contract:
+
+- domain: `media`
+- label: `Register media cards`
+- purpose: register approved physical media cards into the canonical studio inventory
+- `requires_server_enforcement = true`
+
+Grant exactly to:
+
+- `founder`
+- `studio_manager`
+
+Do not grant this permission to:
+
+- photographer
+- assistant
+- stylist
+- editor
+- client_coordinator
+- sales
+- album_coordinator
+- marketing
+- accounts
+
+Photographer custody authority is a later separately governed boundary.
+
+---
+
+### 3. Canonical Relation
+
+Create exactly one new canonical relation:
+
+`public.media_cards`
+
+Exact columns:
+
+1. `id uuid`
+2. `organization_id uuid`
+3. `card_code text`
+4. `registered_at timestamptz`
+5. `registered_by uuid`
+
+Required invariants:
+
+- `id` is the primary key;
+- `organization_id` is required;
+- `card_code` is required;
+- stored `card_code` has no leading or trailing whitespace;
+- `card_code` length is between 1 and 120 characters;
+- physical card identity is organization-scoped;
+- card identity is case-insensitively unique inside one organization;
+- the same textual card code may exist in a different organization;
+- `registered_at` is required and server-generated;
+- `registered_by` is required and references an organization member in the same organization;
+- the registered identity row is immutable after creation.
+
+Registration means the card is part of the approved inventory for this foundation.
+
+Card retirement, loss, quarantine, destruction, replacement, secure-reuse state, or other later lifecycle state is not introduced in this slice.
+
+---
+
+### 4. Registration RPC
+
+Create exactly one application mutation RPC:
+
+`public.register_media_card(uuid,text)`
+
+Logical arguments:
+
+- organization ID;
+- media-card code.
+
+The function must:
+
+- be `SECURITY DEFINER`;
+- use an empty `search_path`;
+- require an authenticated actor;
+- reject a null organization ID;
+- reject a null, empty, or whitespace-only card code;
+- reject a normalized card code longer than 120 characters;
+- normalize surrounding whitespace before persistence;
+- require active membership in the target organization;
+- require exact `media.inventory.register` authority;
+- create no organization membership or role state;
+- create no booking state;
+- create no journey transition;
+- create no custody state.
+
+The inventory is organization-level, so this RPC has no booking branch scope.
+
+---
+
+### 5. Replay and Identity Semantics
+
+Registration must be idempotent for the same physical-card identity.
+
+For the same organization:
+
+- `CARD-001`
+- `card-001`
+- ` CARD-001 `
+
+resolve to the same case-insensitive card identity.
+
+If the canonical row already exists, the RPC returns that existing row.
+
+Replay must not:
+
+- create a duplicate row;
+- change the original stored card-code casing;
+- change `registered_at`;
+- change `registered_by`;
+- append another first-success audit event.
+
+The same normalized code in a different organization remains a separate valid identity.
+
+---
+
+### 6. Immutability
+
+Authenticated application actors must not directly insert, update, or delete `public.media_cards`.
+
+The registration RPC is the only application mutation surface authorized by this slice.
+
+After creation, the five frozen identity fields are immutable.
+
+Any later retirement, loss, quarantine, replacement, or operational state model requires separate governance rather than rewriting historical registration truth.
+
+---
+
+### 7. RLS and ACL Boundary
+
+`public.media_cards` must:
+
+- enable RLS;
+- force RLS;
+- revoke direct mutation privileges from application roles;
+- expose authenticated SELECT only through a governed policy;
+- deny anonymous access.
+
+For this slice, authenticated read access requires:
+
+- active membership in the organization; and
+- `media.inventory.register`.
+
+Broader custody/operator read access may be introduced only by a later governed slice.
+
+The registration function must:
+
+- revoke execution from `PUBLIC`;
+- revoke execution from `anon`;
+- revoke execution from `service_role`;
+- grant execution only to `authenticated`.
+
+---
+
+### 8. Audit Contract
+
+First successful registration appends exactly one non-sensitive structural audit event:
+
+`media.card_registered`
+
+Audit entity type:
+
+`media_card`
+
+The audit event may contain structural identifiers including:
+
+- organization ID;
+- media-card ID;
+- canonical card code;
+- registering member ID.
+
+Replay does not create another registration audit event.
+
+No client imagery, file contents, family information, credentials, storage secrets, or arbitrary free-text notes belong in this audit event.
+
+---
+
+### 9. Canonical Permission Totals
+
+Before this slice:
+
+- permissions: 68
+- role-permission mappings: 241
+
+After this slice:
+
+- permissions: 69
+- role-permission mappings: 243
+
+Reason:
+
+- one new permission;
+- two new role mappings:
+  - founder;
+  - studio_manager.
+
+Historical migration assertions remain historical and must not be rewritten.
+
+---
+
+### 10. Compatibility-Test Boundary
+
+The following existing test files are authorized for narrow compatibility edits only where they assert repository-wide final permission or role-permission totals:
+
+1. `supabase/tests/sprint10_extended_creative_assignments_test.sql`
+2. `supabase/tests/sprint11_additional_image_pricing_basis_authority_test.sql`
+3. `supabase/tests/sprint11_adjusted_financial_obligation_authority_test.sql`
+4. `supabase/tests/sprint11_editing_completion_evidence_test.sql`
+5. `supabase/tests/sprint11_editing_start_evidence_test.sql`
+6. `supabase/tests/sprint11_full_balance_settlement_read_authority_test.sql`
+7. `supabase/tests/sprint11_image_entitlement_authority_test.sql`
+8. `supabase/tests/sprint11_qc_pass_evidence_test.sql`
+9. `supabase/tests/sprint11_selection_confirmation_evidence_test.sql`
+10. `supabase/tests/sprint11_selection_entitlement_reconciliation_test.sql`
+11. `supabase/tests/sprint11_stage10_11_gate_test.sql`
+12. `supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`
+13. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`
+14. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql`
+15. `supabase/tests/sprint11_stage15_16_pixieset_gallery_ready_gate_test.sql`
+
+Authorized compatibility change:
+
+- repository-final permission assertions: `68 -> 69`;
+- repository-final mapping assertions: `241 -> 243`.
+
+Do not mechanically replace unrelated numeric values.
+
+In particular:
+
+- pgTAP `plan(...)` counts are not permission counts;
+- historical migration assertions are not changed;
+- unrelated behavioral expectations are not changed.
+
+---
+
+### 11. New Implementation Artifacts
+
+Implementation is authorized later to create exactly:
+
+1. `supabase/migrations/20260829011200_sprint11_media_card_inventory_authority_foundation.sql`
+2. `supabase/tests/sprint11_media_card_inventory_authority_test.sql`
+
+And to update:
+
+3. `src/integrations/supabase/types.ts`
+
+plus only the 15 compatibility-test files listed above where live repository-total assertions require adjustment.
+
+The Supabase TypeScript type file must represent the resulting local schema, including `media_cards` and `register_media_card`.
+
+---
+
+### 12. Dedicated Validation Contract
+
+The dedicated pgTAP coverage must validate at minimum:
+
+- permission existence and exact domain;
+- exact founder/studio-manager grant topology;
+- absence of unauthorized grants;
+- exact `media_cards` column contract;
+- organization/member foreign-key containment;
+- normalized card-code validation;
+- case-insensitive organization-scoped uniqueness;
+- authenticated successful registration;
+- inactive/non-member rejection;
+- unauthorized-role rejection;
+- anonymous rejection;
+- direct INSERT denial;
+- direct UPDATE denial;
+- direct DELETE denial;
+- immutability;
+- exact replay identity;
+- case-insensitive replay;
+- cross-organization independence;
+- one first-success audit event;
+- no duplicate audit on replay;
+- no booking/journey mutation;
+- final canonical totals of 69 permissions / 243 mappings.
+
+Full repository validation remains required after implementation.
+
+---
+
+### 13. Explicitly Out of Scope
+
+This slice does not implement:
+
+- booking-to-card assignment;
+- card allocation to photographers;
+- shot accounting;
+- expected image counts;
+- actual image counts;
+- seal IDs;
+- custody transfers;
+- dual custody acknowledgement;
+- media ingestion;
+- project-folder structure;
+- file manifests;
+- byte-count reconciliation;
+- SHA-256 hashes;
+- missing-file detection;
+- duplicate-file detection;
+- corrupt-file detection;
+- quarantine;
+- encrypted storage;
+- backup copies;
+- restore evidence;
+- card release;
+- secure card reuse;
+- editing handover;
+- culling;
+- image lineage;
+- Stage 11 -> 12 compatibility strengthening;
+- any other journey-stage change;
+- application UI;
+- external integrations.
+
+---
+
+### 14. Next Boundary
+
+After this slice is implemented, fully validated, committed, pushed, and remotely reconciled, the next design checkpoint is the media-card custody boundary.
+
+That later checkpoint must separately govern assignment, seal/custody transfer, dual acknowledgement, and subsequent dependency on ingestion/backup before card release.
+
+No later media workflow is pre-authorized by this freeze.
+
+---
+
+### Environment Boundary
+
+- Local implementation after freeze: **AUTHORIZED**
+- `architecture-rebuild`: **AUTHORIZED development branch**
+- `main`: **NO CHANGE AUTHORIZED**
+- Remote Supabase mutation/deployment: **HOLD**
+- Production deployment: **HOLD**
+
+---
+
+### Formal Checkpoint
+
+**APPROVE — CORRECTIVE SLICE A TECHNICAL DESIGN FROZEN**
+
+**APPROVE — MEDIA CARD INVENTORY IS THE FIRST POST-SHOOT PREREQUISITE**
+
+**APPROVE — NEW `media` AUTHORITY DOMAIN**
+
+**APPROVE — EXPECTED AUTHORITY TOTALS 69 / 243**
+
+**HOLD — IMPLEMENTATION UNTIL THIS FREEZE IS COMMITTED AND REMOTELY VERIFIED**
+
+**HOLD — REMOTE SUPABASE**
+
+**HOLD — PRODUCTION**
