@@ -23659,4 +23659,115 @@ Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 15 — TECHNICALLY FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+**SPRINT 11 SLICE 15 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED LOCALLY / PUSH PENDING / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+## Sprint 11 Slice 15 Governance Closeout — 2026-08-28
+
+### Slice
+
+**Controlled Stage 14 -> 15 / QC Pending Advancement Gate**
+
+Technical-design freeze:
+
+`0e6accc7dc3bd69c80becd3e4db626a688b0d971` — `docs: freeze sprint 11 slice 15`
+
+Implementation:
+
+`67746d3063c5f029c374d3700f2dd94d65d51756` — `feat: add qc pending advancement gate`
+
+Exact implementation parent:
+
+`0e6accc7dc3bd69c80becd3e4db626a688b0d971`
+
+Local implementation boundary:
+
+- exactly five files;
+- 2314 insertions / 0 deletions;
+- no sixth implementation artifact.
+
+Remote implementation verification remains pending until the local implementation and governance
+closeout chain is pushed.
+
+### Accepted validation
+
+- dedicated Slice 15 pgTAP: 38 / 38 PASS;
+- Slice 11 compatibility: 59 / 59 PASS;
+- Slice 12 compatibility: 63 / 63 PASS;
+- Slice 13 compatibility: 53 / 53 PASS;
+- Slice 14 compatibility: 42 / 42 PASS unchanged;
+- full local pgTAP regression: 32 files / 2005 tests PASS;
+- clean local DB reset: PASS;
+- local DB lint: PASS;
+- permissions: 68;
+- role-permission mappings: 241;
+- `mark_booking_qc_pending(uuid)`: present;
+- SECURITY DEFINER: PASS;
+- empty `search_path`: PASS;
+- authenticated EXECUTE: allowed;
+- anon EXECUTE: denied;
+- service_role EXECUTE: denied;
+- Stage 14 `editing_in_progress`: active;
+- Stage 15 `qc_pending`: active;
+- unauthorized QC/gallery/delivery persistence relations: 0;
+- generated types: fresh local generation;
+- generated-types semantic delta: exactly `mark_booking_qc_pending`;
+- generated-types diff: 22 insertions / 0 deletions;
+- Prettier: PASS;
+- targeted ESLint: PASS;
+- TypeScript `--noEmit`: PASS;
+- production build: PASS;
+- diff hygiene: PASS.
+
+### Delivered authority
+
+Slice 15 establishes:
+
+- exact Stage 14 `editing_in_progress` -> Stage 15 `qc_pending` advancement;
+- `public.mark_booking_qc_pending(uuid)`;
+- existing `booking.stage.advance` as journey authority;
+- immutable `booking_editing_completions` as the first-execution evidence prerequisite;
+- exact Stage 13 -> 14 source-transition lineage;
+- optimistic exact-state/version advancement;
+- one first-success `booking.qc_pending` audit;
+- strict Stage-15-only idempotent replay;
+- no Editing Completion evidence mutation;
+- no new persistence;
+- no new permission.
+
+Slice 15 does not establish:
+
+- QC persistence/result/pass/fail;
+- QC reviewer assignment;
+- retouching/rework;
+- mutable editing jobs;
+- editor assignment;
+- priority editing / SLA;
+- Stage 15 -> 16;
+- Pixieset/gallery authority;
+- Stage 16 -> 17;
+- delivery authority;
+- payment/refund mutation;
+- settlement persistence;
+- UI/runtime integration;
+- Remote Supabase deployment;
+- Production deployment.
+
+### Implementation artifacts
+
+1. `src/integrations/supabase/types.ts`;
+2. `supabase/migrations/20260828010000_sprint11_stage14_15_qc_pending_gate_foundation.sql`;
+3. `supabase/tests/sprint11_editing_start_evidence_test.sql`;
+4. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`;
+5. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql`.
+
+The implementation is locally committed at
+`67746d3063c5f029c374d3700f2dd94d65d51756`.
+
+This governance closeout remains local until separately committed and pushed.
+
+No Stage 15 -> 16 implementation boundary is authorized.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 15 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED LOCALLY / PUSH PENDING / REMOTE SUPABASE HOLD / PRODUCTION HOLD**

@@ -6156,4 +6156,192 @@ Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 15 — TECHNICALLY FROZEN / IMPLEMENTATION NOT YET AUTHORIZED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+**SPRINT 11 SLICE 15 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED LOCALLY / PUSH PENDING / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+## Sprint 11 Slice 15 Governance Closeout — 2026-08-28
+
+### Authority chain
+
+Technical-design freeze:
+
+`0e6accc7dc3bd69c80becd3e4db626a688b0d971` — `docs: freeze sprint 11 slice 15`
+
+Implementation:
+
+`67746d3063c5f029c374d3700f2dd94d65d51756` — `feat: add qc pending advancement gate`
+
+Exact implementation parent:
+
+`0e6accc7dc3bd69c80becd3e4db626a688b0d971`
+
+Freeze -> implementation is exactly one local commit.
+
+The implementation is fully validated locally and committed.
+
+Remote implementation verification remains pending until the local implementation and governance
+closeout chain is pushed to `origin/architecture-rebuild`.
+
+### Exact implementation boundary
+
+1. `src/integrations/supabase/types.ts`
+   — 22 insertions / 0 deletions;
+2. `supabase/migrations/20260828010000_sprint11_stage14_15_qc_pending_gate_foundation.sql`
+   — 885 insertions / 0 deletions;
+3. `supabase/tests/sprint11_editing_start_evidence_test.sql`
+   — 1 insertion / 0 deletions;
+4. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`
+   — 1 insertion / 0 deletions;
+5. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql`
+   — 1405 insertions / 0 deletions.
+
+Total:
+
+- 5 files;
+- 2314 insertions;
+- 0 deletions.
+
+No sixth implementation artifact exists.
+
+### Accepted database and behavioral validation
+
+Accepted evidence:
+
+- clean local database reset PASS;
+- local DB lint PASS with no schema errors;
+- dedicated Slice 15 pgTAP 38 / 38 PASS;
+- historical Slice 11 compatibility 59 / 59 PASS;
+- historical Slice 12 compatibility 63 / 63 PASS;
+- historical Slice 13 compatibility 53 / 53 PASS;
+- historical Slice 14 compatibility 42 / 42 PASS unchanged;
+- full local pgTAP regression 32 files / 2005 tests PASS;
+- permissions remain exactly 68;
+- role-permission mappings remain exactly 241;
+- exact RPC `public.mark_booking_qc_pending(uuid)` exists;
+- RPC is SECURITY DEFINER with empty `search_path`;
+- authenticated EXECUTE allowed;
+- anon EXECUTE denied;
+- service_role EXECUTE denied;
+- existing `booking.stage.advance` remains the journey mutation authority;
+- no new permission or role mapping was introduced;
+- canonical Stage 14 `editing_in_progress` remains active;
+- canonical Stage 15 `qc_pending` remains active;
+- exact Stage 14 -> 15 advancement is validated;
+- exact Stage 13 -> 14 `editing_in_progress` source-transition lineage is required;
+- exactly one immutable Editing Completion prerequisite is required on first execution;
+- completion source-transition lineage must match the exact canonical Stage 13 -> 14 transition;
+- completion timestamp may not precede the source transition;
+- historical completion-actor suspension does not invalidate already-valid immutable evidence;
+- Editor does not gain journey advancement authority;
+- Client Coordinator / Founder / Studio Manager retain journey advancement authority;
+- the gate does not require `editing.write`;
+- the gate does not create or mutate Editing Completion evidence;
+- zero pre-existing Stage 14 -> 15 transition history is required while current state remains Stage 14;
+- first success appends exactly one canonical Stage 14 -> 15 transition with key `qc_pending`;
+- first success advances exactly one journey-state row;
+- journey version increments exactly once;
+- first success attributes transition and state mutation to the current authorized actor;
+- first success appends exactly one non-sensitive `booking.qc_pending` audit;
+- exact Stage 15 `qc_pending` replay is idempotent;
+- valid replay creates no second transition;
+- valid replay creates no second audit;
+- valid replay creates no second journey-version increment;
+- valid replay does not mutate Editing Completion evidence;
+- invalid Stage 15 history fails closed;
+- Stage 13 and earlier states are rejected;
+- Stage 16 and later states are rejected;
+- missing canonical lineage fails closed;
+- duplicate canonical lineage fails closed;
+- missing Editing Completion evidence fails closed;
+- malformed Editing Completion evidence fails closed;
+- inconsistent pre-existing Stage 14 -> 15 history fails closed;
+- no Stage 15 -> 16 authority was introduced;
+- no unauthorized QC, Pixieset/gallery or delivery persistence relation exists.
+
+### Accepted generated-types and application validation
+
+- fresh local Supabase type generation completed after clean reset;
+- generated output normalized with the repository Prettier configuration;
+- generated-types diff exactly 22 insertions / 0 deletions;
+- generated-types semantic delta is exactly `mark_booking_qc_pending`;
+- generated RPC argument is exactly `p_booking_id: string`;
+- generated RPC return is the canonical `bookings` row shape;
+- Prettier PASS;
+- targeted generated-types ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- `git diff --check` PASS;
+- exact five-artifact implementation containment PASS.
+
+Known build warnings remain non-fatal and outside Slice 15:
+
+- TanStack `inputValidator()` deprecations;
+- large client chunk warning;
+- dependency-level unused-import warnings;
+- Nitro/Rollup unknown `platform` option warning;
+- dependency-level `"use client"` directives ignored during bundling;
+- Wrangler `main` override warning.
+
+### Delivered authority
+
+Slice 15 closes only the controlled journey advancement:
+
+Stage 14 `editing_in_progress`
+->
+Stage 15 `qc_pending`
+
+under existing `booking.stage.advance`.
+
+The gate consumes immutable Editing Completion evidence created under separate `editing.write`
+authority.
+
+Authority separation remains exact:
+
+- Editing Completion creation remains an editing-domain authority;
+- Stage 14 -> 15 advancement remains a journey-domain authority;
+- historical completion evidence is consumed, not recreated;
+- historical completion-actor authority is not re-evaluated;
+- replay proves journey history only.
+
+### Scope containment
+
+Slice 15 does not establish:
+
+- QC persistence;
+- QC pass/fail/result;
+- QC reviewer assignment;
+- QC comments or free text;
+- retouching/rework workflow;
+- mutable editing-job lifecycle;
+- edited-image progress counts;
+- editor assignment;
+- external-editor/freelancer semantics;
+- priority editing;
+- editing SLA/deadline;
+- Stage 15 -> 16;
+- Pixieset/gallery authority;
+- Stage 16 -> 17;
+- delivery authority;
+- payment/refund mutation;
+- settlement persistence;
+- UI/runtime integration;
+- mock-store replacement;
+- Remote Supabase deployment;
+- Production deployment.
+
+### Closeout state
+
+The Slice 15 implementation is fully validated locally and committed at:
+
+`67746d3063c5f029c374d3700f2dd94d65d51756`
+
+This two-document governance closeout remains local until separately committed and pushed.
+
+Remote implementation and closeout verification remain pending until the local commit chain is
+pushed to `origin/architecture-rebuild`.
+
+No Stage 15 -> 16 implementation authority is granted by this closeout.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 15 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED LOCALLY / PUSH PENDING / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
