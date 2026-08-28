@@ -24992,3 +24992,166 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 17 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / PUSHED / IMPLEMENTATION REMOTELY VERIFIED / GOVERNANCE CLOSEOUT PENDING COMMIT / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+
+## Sprint 11 Slice 17 Remote-State Reconciliation — 2026-08-28
+
+### Reconciled authority chain
+
+Technical-design freeze:
+
+`c36c6bb1583f6eff0c5fe985fa7f9668d4685913`
+— `docs: freeze sprint 11 slice 17`
+
+Implementation:
+
+`757e364c2a73faaec342bd9d0dbdea5da2165810`
+— `feat: add pixieset gallery ready advancement gate`
+
+Governance closeout:
+
+`76fedeaecd728706a8c9f0d97ab0e96d2abbd822`
+— `docs: close sprint 11 slice 17`
+
+Closeout parent:
+
+`757e364c2a73faaec342bd9d0dbdea5da2165810`
+
+No Slice 17 compatibility-governance amendment was required.
+
+### Independent remote verification
+
+Independent GitHub verification confirms:
+
+- `architecture-rebuild` points exactly to
+  `76fedeaecd728706a8c9f0d97ab0e96d2abbd822`;
+- remote closeout subject is exactly
+  `docs: close sprint 11 slice 17`;
+- remote closeout parent is exactly
+  `757e364c2a73faaec342bd9d0dbdea5da2165810`;
+- implementation -> closeout is exactly one commit ahead / zero behind;
+- the closeout modifies exactly two governance documents;
+- `docs/CURRENT_MILESTONE.md` contains 225 insertions / 0 deletions;
+- `docs/SPRINT_MASTER_REGISTER.md` contains 225 insertions / 0 deletions;
+- total closeout diff is exactly 450 insertions / 0 deletions;
+- local and remote branch parity after the closeout push is exactly `0 0`;
+- the local worktree is clean.
+
+This reconciliation records pushed remote governance state only.
+
+It does not re-run or alter Slice 17 implementation.
+
+### Reconciled accepted implementation state
+
+Accepted Slice 17 validation remains:
+
+- clean local database reset PASS;
+- local database lint PASS with no schema errors;
+- permissions exactly 68;
+- role-permission mappings exactly 241;
+- exact active Stage 15 `qc_pending`;
+- exact active Stage 16 `pixieset_gallery_ready`;
+- exact `public.mark_booking_pixieset_gallery_ready(uuid)` RPC;
+- authenticated RPC EXECUTE allowed;
+- PUBLIC EXECUTE denied;
+- anon EXECUTE denied;
+- service_role EXECUTE denied;
+- existing `booking.stage.advance` authority retained;
+- exact journey-authorized role topology retained:
+  `client_coordinator`, `founder`, `studio_manager`;
+- immutable `public.booking_qc_passes` prerequisite consumed without mutation;
+- exact QC Pass/current-Stage-15 lineage validated;
+- first success appends exactly one Stage 15 -> 16 transition;
+- transition key exactly `pixieset_gallery_ready`;
+- journey-state version increments exactly once;
+- one first-success `booking.pixieset_gallery_ready` structural audit;
+- exact Stage 16 idempotent replay validated;
+- replay creates no second transition, audit or version increment;
+- corrupt Stage 16 replay lineage rejected;
+- earlier-stage invocation rejected;
+- Stage 17-or-later invocation rejected;
+- no QC Pass mutation;
+- no new business persistence relation;
+- gallery/Pixieset/delivery persistence count remains zero;
+- dedicated Slice 17 pgTAP 38 / 38 PASS;
+- focused Sprint 11 regression 16 files / 930 tests PASS;
+- full local pgTAP regression 34 files / 2085 tests PASS;
+- historical Slice 12 and Slice 13 compatibility assertions PASS unchanged;
+- generated Supabase types semantic delta limited exactly to
+  `mark_booking_pixieset_gallery_ready`;
+- generated-types diff 22 insertions / 0 deletions;
+- Prettier PASS;
+- targeted generated-types ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS with non-blocking existing dependency,
+  deprecation and bundle-size warnings only;
+- diff hygiene PASS.
+
+### Reconciled implementation boundary
+
+Exact Slice 17 implementation boundary remains:
+
+1. `src/integrations/supabase/types.ts`
+   — 22 insertions / 0 deletions;
+2. `supabase/migrations/20260828154710_sprint11_stage15_16_pixieset_gallery_ready_gate_foundation.sql`
+   — 929 insertions / 0 deletions;
+3. `supabase/tests/sprint11_stage15_16_pixieset_gallery_ready_gate_test.sql`
+   — 1472 insertions / 0 deletions.
+
+Total implementation diff:
+
+- 3 files;
+- 2423 insertions;
+- 0 deletions.
+
+### Reconciled scope containment
+
+Slice 17 closes only:
+
+Stage 15 `qc_pending`
+->
+controlled `booking.stage.advance`
+->
+Stage 16 `pixieset_gallery_ready`
+
+with immutable QC Pass evidence as the prerequisite.
+
+Still excluded:
+
+- Pixieset API integration;
+- Pixieset credentials;
+- external gallery creation;
+- gallery identifier persistence;
+- gallery URL persistence;
+- gallery synchronization persistence;
+- client gallery-access persistence;
+- delivery persistence;
+- final-delivery evidence;
+- Stage 16 -> 17;
+- review-request workflow;
+- payment/refund mutation;
+- UI/runtime integration;
+- mock-store replacement;
+- Remote Supabase deployment;
+- Production deployment.
+
+### Reconciliation conclusion
+
+Sprint 11 Slice 17 implementation and governance closeout are pushed and
+independently verified.
+
+This two-document checkpoint records the reconciled remote state.
+
+This reconciliation commit remains local until separately committed, pushed
+and independently verified.
+
+No Stage 16 -> 17, delivery, external Pixieset integration or other downstream
+authority is authorized by this reconciliation.
+
+Only after this reconciliation is separately pushed and independently verified
+may the next downstream boundary enter fresh read-only discovery.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 17 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
