@@ -6,13 +6,13 @@ SELECT plan(34);
 
 -- =====================================================================
 -- Phase 2 Studio Operations
--- Corrective Slice A - Media Card Inventory Authority Foundation
+-- Corrective Slice B0 - Capture Device Identity Foundation
 --
 -- Proves:
---   * exact media.inventory.register authority topology;
+--   * exact media.device.register authority topology;
 --   * exact immutable five-column inventory relation;
 --   * tenant-safe organization/member containment;
---   * organization-scoped case-insensitive card identity;
+--   * organization-scoped case-insensitive capture-device identity;
 --   * forced RLS / authenticated-only governed read access;
 --   * controlled authenticated registration RPC;
 --   * active organization-wide authority only;
@@ -45,15 +45,15 @@ SELECT is(
     SELECT count(*)::bigint
     FROM public.permissions permission
     WHERE permission.key =
-          'media.inventory.register'
+          'media.device.register'
       AND permission.domain =
           'media'
       AND permission.label =
-          'Register media cards'
+          'Register capture devices'
       AND permission.requires_server_enforcement
   ),
   1::bigint,
-  'media.inventory.register exists exactly once with frozen media-domain contract'
+  'media.device.register exists exactly once with frozen media-domain contract'
 );
 
 
@@ -72,13 +72,13 @@ SELECT is(
       ON role.id =
          mapping.role_id
     WHERE permission.key =
-          'media.inventory.register'
+          'media.device.register'
   ),
   ARRAY[
     'founder',
     'studio_manager'
   ]::text[],
-  'media.inventory.register is granted only to Founder and Studio Manager'
+  'media.device.register is granted only to Founder and Studio Manager'
 );
 
 
@@ -92,16 +92,16 @@ SELECT is(
     FROM information_schema.columns
     WHERE table_schema = 'public'
       AND table_name =
-          'media_cards'
+          'capture_devices'
   ),
   ARRAY[
     'id:uuid',
     'organization_id:uuid',
-    'card_code:text',
+    'device_code:text',
     'registered_at:timestamptz',
     'registered_by:uuid'
   ]::text[],
-  'media_cards contains exactly the frozen five-column typed contract'
+  'capture_devices contains exactly the frozen five-column typed contract'
 );
 
 
@@ -117,12 +117,12 @@ SELECT ok(
     )
     FROM pg_catalog.pg_constraint constraint_row
     WHERE constraint_row.conrelid =
-          'public.media_cards'::regclass
+          'public.capture_devices'::regclass
       AND constraint_row.conname =
-          'media_cards_organization_fkey'
+          'capture_devices_organization_fkey'
   ) LIKE
     'FOREIGN KEY (organization_id) REFERENCES organizations(id)%',
-  'media_cards organization foreign key is canonical'
+  'capture_devices organization foreign key is canonical'
 );
 
 
@@ -138,12 +138,12 @@ SELECT ok(
     )
     FROM pg_catalog.pg_constraint constraint_row
     WHERE constraint_row.conrelid =
-          'public.media_cards'::regclass
+          'public.capture_devices'::regclass
       AND constraint_row.conname =
-          'media_cards_registered_by_fkey'
+          'capture_devices_registered_by_fkey'
   ) LIKE
     'FOREIGN KEY (registered_by, organization_id) REFERENCES organization_members(id, organization_id)%',
-  'media-card registering member foreign key is tenant-safe'
+  'capture-device registering member foreign key is tenant-safe'
 );
 
 
@@ -155,17 +155,17 @@ SELECT ok(
     WHERE index_row.schemaname =
           'public'
       AND index_row.tablename =
-          'media_cards'
+          'capture_devices'
       AND index_row.indexname =
-          'media_cards_org_card_code_ci_key'
+          'capture_devices_org_device_code_ci_key'
       AND index_row.indexdef ILIKE
           '%UNIQUE INDEX%'
       AND index_row.indexdef ILIKE
           '%organization_id%'
       AND index_row.indexdef ILIKE
-          '%lower(card_code)%'
+          '%lower(device_code)%'
   ),
-  'media-card identity is case-insensitively unique inside one organization'
+  'capture-device identity is case-insensitively unique inside one organization'
 );
 
 
@@ -177,9 +177,9 @@ SELECT ok(
       AND relation.relforcerowsecurity
     FROM pg_catalog.pg_class relation
     WHERE relation.oid =
-          'public.media_cards'::regclass
+          'public.capture_devices'::regclass
   ),
-  'media_cards enables and forces RLS'
+  'capture_devices enables and forces RLS'
 );
 
 
@@ -191,30 +191,30 @@ SELECT ok(
 SELECT ok(
   has_table_privilege(
     'authenticated',
-    'public.media_cards',
+    'public.capture_devices',
     'SELECT'
   )
   AND NOT has_table_privilege(
     'authenticated',
-    'public.media_cards',
+    'public.capture_devices',
     'INSERT'
   )
   AND NOT has_table_privilege(
     'authenticated',
-    'public.media_cards',
+    'public.capture_devices',
     'UPDATE'
   )
   AND NOT has_table_privilege(
     'authenticated',
-    'public.media_cards',
+    'public.capture_devices',
     'DELETE'
   )
   AND NOT has_table_privilege(
     'anon',
-    'public.media_cards',
+    'public.capture_devices',
     'SELECT'
   ),
-  'media_cards grants authenticated SELECT only and exposes no anon access'
+  'capture_devices grants authenticated SELECT only and exposes no anon access'
 );
 
 
@@ -223,7 +223,7 @@ SELECT ok(
   (
     SELECT
       lower(COALESCE(policy.qual, ''))
-        LIKE '%media.inventory.register%'
+        LIKE '%media.device.register%'
       AND lower(COALESCE(policy.qual, ''))
         LIKE '%current_organization_member%'
       AND lower(COALESCE(policy.qual, ''))
@@ -231,13 +231,13 @@ SELECT ok(
     FROM pg_catalog.pg_policies policy
     WHERE policy.schemaname = 'public'
       AND policy.tablename =
-          'media_cards'
+          'capture_devices'
       AND policy.policyname =
-          'media_cards_authenticated_select'
+          'capture_devices_authenticated_select'
       AND policy.cmd =
           'SELECT'
   ),
-  'media-card read policy requires active membership and media.inventory.register'
+  'capture-device read policy requires active membership and media.device.register'
 );
 
 
@@ -247,22 +247,22 @@ SELECT ok(
     SELECT 1
     FROM pg_catalog.pg_trigger trigger_row
     WHERE trigger_row.tgrelid =
-          'public.media_cards'::regclass
+          'public.capture_devices'::regclass
       AND trigger_row.tgname =
-          'media_cards_immutable_guard'
+          'capture_devices_immutable_guard'
       AND NOT trigger_row.tgisinternal
   )
   AND to_regprocedure(
-        'public.lsh_media_card_immutable_guard()'
+        'public.lsh_capture_device_immutable_guard()'
       ) IS NOT NULL,
-  'media-card immutable identity guard exists'
+  'capture-device immutable identity guard exists'
 );
 
 
 -- 12
 SELECT ok(
   to_regprocedure(
-    'public.register_media_card(uuid,text)'
+    'public.register_capture_device(uuid,text)'
   ) IS NOT NULL
   AND (
     SELECT pg_catalog.pg_get_function_result(
@@ -270,9 +270,9 @@ SELECT ok(
     )
     FROM pg_catalog.pg_proc procedure
     WHERE procedure.oid =
-      'public.register_media_card(uuid,text)'::regprocedure
-  ) = 'media_cards',
-  'register_media_card(uuid,text) exists and returns media_cards'
+      'public.register_capture_device(uuid,text)'::regprocedure
+  ) = 'capture_devices',
+  'register_capture_device(uuid,text) exists and returns capture_devices'
 );
 
 
@@ -284,19 +284,19 @@ SELECT ok(
     WHERE procedure.pronamespace =
           'public'::regnamespace
       AND procedure.proname =
-          'register_media_card'
+          'register_capture_device'
   ) = 1
   AND (
     SELECT procedure.prosecdef
     FROM pg_catalog.pg_proc procedure
     WHERE procedure.oid =
-      'public.register_media_card(uuid,text)'::regprocedure
+      'public.register_capture_device(uuid,text)'::regprocedure
   )
   AND (
     SELECT procedure.proconfig
     FROM pg_catalog.pg_proc procedure
     WHERE procedure.oid =
-      'public.register_media_card(uuid,text)'::regprocedure
+      'public.register_capture_device(uuid,text)'::regprocedure
   ) = ARRAY['search_path=""']::text[],
   'registration RPC has one SECURITY DEFINER signature with empty search_path'
 );
@@ -306,17 +306,17 @@ SELECT ok(
 SELECT ok(
   has_function_privilege(
     'authenticated',
-    'public.register_media_card(uuid,text)',
+    'public.register_capture_device(uuid,text)',
     'EXECUTE'
   )
   AND NOT has_function_privilege(
     'anon',
-    'public.register_media_card(uuid,text)',
+    'public.register_capture_device(uuid,text)',
     'EXECUTE'
   )
   AND NOT has_function_privilege(
     'service_role',
-    'public.register_media_card(uuid,text)',
+    'public.register_capture_device(uuid,text)',
     'EXECUTE'
   )
   AND NOT EXISTS (
@@ -332,7 +332,7 @@ SELECT ok(
       )
     ) acl
     WHERE procedure.oid =
-      'public.register_media_card(uuid,text)'::regprocedure
+      'public.register_capture_device(uuid,text)'::regprocedure
       AND acl.grantee = 0
       AND acl.privilege_type = 'EXECUTE'
   ),
@@ -345,13 +345,13 @@ SELECT ok(
   (
     SELECT
       pg_get_functiondef(procedure.oid)
-        ILIKE '%media.inventory.register%'
+        ILIKE '%media.device.register%'
       AND pg_get_functiondef(procedure.oid)
         ILIKE '%current_organization_member%'
       AND pg_get_functiondef(procedure.oid)
         ILIKE '%append_audit_event%'
       AND pg_get_functiondef(procedure.oid)
-        ILIKE '%media.card_registered%'
+        ILIKE '%media.capture_device_registered%'
       AND pg_get_functiondef(procedure.oid)
         NOT ILIKE '%booking.stage.advance%'
       AND pg_get_functiondef(procedure.oid)
@@ -368,7 +368,7 @@ SELECT ok(
         NOT ILIKE '%custody%'
     FROM pg_catalog.pg_proc procedure
     WHERE procedure.oid =
-      'public.register_media_card(uuid,text)'::regprocedure
+      'public.register_capture_device(uuid,text)'::regprocedure
   ),
   'registration RPC contains only frozen inventory authority and imports no later workflow authority'
 );
@@ -396,7 +396,7 @@ INSERT INTO public.organizations (
 )
 VALUES (
   'ca100000-0000-0000-0000-000000000901'::uuid,
-  'S11 Media Inventory Organization B',
+  'S11 Capture Device Identity Organization B',
   's11-media-inventory-b',
   'active'::public.organization_status
 );
@@ -412,7 +412,7 @@ INSERT INTO public.branches (
 VALUES (
   'ca100000-0000-0000-0000-000000000701'::uuid,
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
-  'S11 Media Inventory Branch',
+  'S11 Capture Device Identity Branch',
   's11-media-inventory',
   'active'::public.branch_status
 );
@@ -432,7 +432,7 @@ VALUES
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   'ca100000-0000-0000-0000-000000000001'::uuid,
   'active'::public.member_status,
-  'Media Inventory Founder',
+  'Capture Device Identity Founder',
   NULL
 ),
 (
@@ -440,7 +440,7 @@ VALUES
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   'ca100000-0000-0000-0000-000000000002'::uuid,
   'active'::public.member_status,
-  'Media Inventory Studio Manager',
+  'Capture Device Identity Studio Manager',
   NULL
 ),
 (
@@ -448,7 +448,7 @@ VALUES
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   'ca100000-0000-0000-0000-000000000003'::uuid,
   'active'::public.member_status,
-  'Media Inventory Photographer',
+  'Capture Device Identity Photographer',
   NULL
 ),
 (
@@ -456,7 +456,7 @@ VALUES
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   'ca100000-0000-0000-0000-000000000004'::uuid,
   'suspended'::public.member_status,
-  'Suspended Media Inventory Founder',
+  'Suspended Capture Device Identity Founder',
   now()
 ),
 (
@@ -464,7 +464,7 @@ VALUES
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   'ca100000-0000-0000-0000-000000000005'::uuid,
   'active'::public.member_status,
-  'Branch Scoped Media Inventory Manager',
+  'Branch Scoped Capture Device Identity Manager',
   NULL
 ),
 (
@@ -472,7 +472,7 @@ VALUES
   'ca100000-0000-0000-0000-000000000901'::uuid,
   'ca100000-0000-0000-0000-000000000006'::uuid,
   'active'::public.member_status,
-  'Organization B Media Inventory Founder',
+  'Organization B Capture Device Identity Founder',
   NULL
 );
 
@@ -537,7 +537,7 @@ JOIN public.roles role
      fixture.role_key;
 
 
-CREATE FUNCTION pg_temp.media_inventory_set_actor(
+CREATE FUNCTION pg_temp.capture_device_identity_set_actor(
   p_user_id uuid
 )
 RETURNS void
@@ -573,21 +573,23 @@ WHERE id =
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid;
 
 
-CREATE TEMP TABLE media_inventory_baseline AS
+CREATE TEMP TABLE capture_device_identity_baseline AS
 SELECT
   (SELECT count(*)::bigint FROM public.bookings)
     AS booking_count,
   (SELECT count(*)::bigint FROM public.booking_journey_states)
     AS journey_state_count,
   (SELECT count(*)::bigint FROM public.booking_stage_transitions)
-    AS journey_transition_count;
+    AS journey_transition_count,
+  (SELECT count(*)::bigint FROM public.media_cards)
+    AS media_card_count;
 
 
 -- =====================================================================
 -- Part 3 - Fail-closed input and authorization contract
 -- =====================================================================
 
-SELECT pg_temp.media_inventory_set_actor(
+SELECT pg_temp.capture_device_identity_set_actor(
   'ca100000-0000-0000-0000-000000000001'::uuid
 );
 
@@ -595,13 +597,13 @@ SELECT pg_temp.media_inventory_set_actor(
 -- 16
 SELECT throws_ok(
   $$
-  SELECT public.register_media_card(
+  SELECT public.register_capture_device(
     NULL,
-    'CARD-001'
+    'CAM-001'
   )
   $$,
   '22023',
-  'register_media_card: organization_id is required',
+  'register_capture_device: organization_id is required',
   'null organization id is rejected'
 );
 
@@ -609,63 +611,63 @@ SELECT throws_ok(
 -- 17
 SELECT throws_ok(
   $$
-  SELECT public.register_media_card(
+  SELECT public.register_capture_device(
     '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
     NULL
   )
   $$,
   '22023',
-  'register_media_card: card_code is required',
-  'null card code is rejected'
+  'register_capture_device: device_code is required',
+  'null device code is rejected'
 );
 
 
 -- 18
 SELECT throws_ok(
   $$
-  SELECT public.register_media_card(
+  SELECT public.register_capture_device(
     '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
     '   '
   )
   $$,
   '22023',
-  'register_media_card: card_code must not be empty',
-  'blank normalized card code is rejected'
+  'register_capture_device: device_code must not be empty',
+  'blank normalized device code is rejected'
 );
 
 
 -- 19
 SELECT throws_ok(
   $$
-  SELECT public.register_media_card(
+  SELECT public.register_capture_device(
     '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
     repeat('X', 121)
   )
   $$,
   '22023',
-  'register_media_card: card_code must not exceed 120 characters',
-  'card code longer than 120 characters is rejected'
+  'register_capture_device: device_code must not exceed 120 characters',
+  'device code longer than 120 characters is rejected'
 );
 
 
-SELECT pg_temp.media_inventory_set_actor(NULL);
+SELECT pg_temp.capture_device_identity_set_actor(NULL);
 
 
 -- 20
 SELECT throws_ok(
   $$
-  SELECT public.register_media_card(
+  SELECT public.register_capture_device(
     '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
-    'CARD-ANON'
+    'CAM-ANON'
   )
   $$,
   '42501',
-  'register_media_card: authenticated actor required',
+  'register_capture_device: authenticated actor required',
   'unauthenticated registration is rejected'
 );
 
 
-SELECT pg_temp.media_inventory_set_actor(
+SELECT pg_temp.capture_device_identity_set_actor(
   'ca100000-0000-0000-0000-000000000004'::uuid
 );
 
@@ -673,18 +675,18 @@ SELECT pg_temp.media_inventory_set_actor(
 -- 21
 SELECT throws_ok(
   $$
-  SELECT public.register_media_card(
+  SELECT public.register_capture_device(
     '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
-    'CARD-SUSPENDED'
+    'CAM-SUSPENDED'
   )
   $$,
   '42501',
-  'register_media_card: active organization membership required',
-  'suspended Founder cannot register media cards'
+  'register_capture_device: active organization membership required',
+  'suspended Founder cannot register capture devices'
 );
 
 
-SELECT pg_temp.media_inventory_set_actor(
+SELECT pg_temp.capture_device_identity_set_actor(
   'ca100000-0000-0000-0000-000000000003'::uuid
 );
 
@@ -692,18 +694,18 @@ SELECT pg_temp.media_inventory_set_actor(
 -- 22
 SELECT throws_ok(
   $$
-  SELECT public.register_media_card(
+  SELECT public.register_capture_device(
     '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
-    'CARD-PHOTOGRAPHER'
+    'CAM-PHOTOGRAPHER'
   )
   $$,
   '42501',
-  'register_media_card: media.inventory.register permission required',
-  'Photographer has no media-card registration authority'
+  'register_capture_device: media.device.register permission required',
+  'Photographer has no capture-device registration authority'
 );
 
 
-SELECT pg_temp.media_inventory_set_actor(
+SELECT pg_temp.capture_device_identity_set_actor(
   'ca100000-0000-0000-0000-000000000005'::uuid
 );
 
@@ -711,14 +713,14 @@ SELECT pg_temp.media_inventory_set_actor(
 -- 23
 SELECT throws_ok(
   $$
-  SELECT public.register_media_card(
+  SELECT public.register_capture_device(
     '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
-    'CARD-BRANCH-MANAGER'
+    'CAM-BRANCH-MANAGER'
   )
   $$,
   '42501',
-  'register_media_card: media.inventory.register permission required',
-  'branch-scoped Studio Manager does not receive organization-wide media inventory authority'
+  'register_capture_device: media.device.register permission required',
+  'branch-scoped Studio Manager does not receive organization-wide capture-device identity authority'
 );
 
 
@@ -726,18 +728,18 @@ SELECT throws_ok(
 -- Part 4 - Successful registration / replay / tenant identity
 -- =====================================================================
 
-CREATE TEMP TABLE media_inventory_results (
+CREATE TEMP TABLE capture_device_identity_results (
   label text PRIMARY KEY,
-  media_card_id uuid NOT NULL,
+  capture_device_id uuid NOT NULL,
   organization_id uuid NOT NULL,
-  card_code text NOT NULL,
+  device_code text NOT NULL,
   registered_at timestamptz NOT NULL,
   registered_by uuid NOT NULL
 );
 
 
 -- Existing Founder from Organization A is not a member of Organization B.
-SELECT pg_temp.media_inventory_set_actor(
+SELECT pg_temp.capture_device_identity_set_actor(
   'ca100000-0000-0000-0000-000000000001'::uuid
 );
 
@@ -745,37 +747,37 @@ SELECT pg_temp.media_inventory_set_actor(
 -- 24
 SELECT throws_ok(
   $$
-  SELECT public.register_media_card(
+  SELECT public.register_capture_device(
     'ca100000-0000-0000-0000-000000000901'::uuid,
-    'CARD-NONMEMBER'
+    'CAM-NONMEMBER'
   )
   $$,
   '42501',
-  'register_media_card: active organization membership required',
+  'register_capture_device: active organization membership required',
   'active actor without target-organization membership is rejected'
 );
 
 
 -- Founder first success with surrounding whitespace.
-INSERT INTO media_inventory_results (
+INSERT INTO capture_device_identity_results (
   label,
-  media_card_id,
+  capture_device_id,
   organization_id,
-  card_code,
+  device_code,
   registered_at,
   registered_by
 )
 SELECT
   'founder_first',
-  card.id,
-  card.organization_id,
-  card.card_code,
-  card.registered_at,
-  card.registered_by
-FROM public.register_media_card(
+  device.id,
+  device.organization_id,
+  device.device_code,
+  device.registered_at,
+  device.registered_by
+FROM public.register_capture_device(
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
-  '  CARD-001  '
-) card;
+  '  CAM-001  '
+) device;
 
 
 -- 25
@@ -784,107 +786,107 @@ SELECT ok(
     SELECT
       result.organization_id =
         '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
-      AND result.card_code =
-        'CARD-001'
+      AND result.device_code =
+        'CAM-001'
       AND result.registered_by =
         'ca100000-0000-0000-0000-000000000101'::uuid
       AND result.registered_at IS NOT NULL
-    FROM media_inventory_results result
+    FROM capture_device_identity_results result
     WHERE result.label =
           'founder_first'
   )
   AND (
     SELECT count(*) = 1
-    FROM public.media_cards card
-    WHERE card.organization_id =
+    FROM public.capture_devices device
+    WHERE device.organization_id =
           '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
-      AND card.card_code =
-          'CARD-001'
+      AND device.device_code =
+          'CAM-001'
   ),
-  'Founder registration trims card code and records canonical attribution'
+  'Founder registration trims device code and records canonical attribution'
 );
 
 
 -- Studio Manager first success.
-SELECT pg_temp.media_inventory_set_actor(
+SELECT pg_temp.capture_device_identity_set_actor(
   'ca100000-0000-0000-0000-000000000002'::uuid
 );
 
-INSERT INTO media_inventory_results (
+INSERT INTO capture_device_identity_results (
   label,
-  media_card_id,
+  capture_device_id,
   organization_id,
-  card_code,
+  device_code,
   registered_at,
   registered_by
 )
 SELECT
   'studio_first',
-  card.id,
-  card.organization_id,
-  card.card_code,
-  card.registered_at,
-  card.registered_by
-FROM public.register_media_card(
+  device.id,
+  device.organization_id,
+  device.device_code,
+  device.registered_at,
+  device.registered_by
+FROM public.register_capture_device(
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
-  'CARD-002'
-) card;
+  'CAM-002'
+) device;
 
 
 -- 26
 SELECT ok(
   (
     SELECT
-      result.card_code =
-        'CARD-002'
+      result.device_code =
+        'CAM-002'
       AND result.registered_by =
         'ca100000-0000-0000-0000-000000000102'::uuid
-    FROM media_inventory_results result
+    FROM capture_device_identity_results result
     WHERE result.label =
           'studio_first'
   ),
-  'organization-wide Studio Manager may register a canonical media card'
+  'organization-wide Studio Manager may register a canonical capture device'
 );
 
 
--- Replay CARD-001 under another authorized actor using different case.
-INSERT INTO media_inventory_results (
+-- Replay CAM-001 under another authorized actor using different case.
+INSERT INTO capture_device_identity_results (
   label,
-  media_card_id,
+  capture_device_id,
   organization_id,
-  card_code,
+  device_code,
   registered_at,
   registered_by
 )
 SELECT
   'founder_replay',
-  card.id,
-  card.organization_id,
-  card.card_code,
-  card.registered_at,
-  card.registered_by
-FROM public.register_media_card(
+  device.id,
+  device.organization_id,
+  device.device_code,
+  device.registered_at,
+  device.registered_by
+FROM public.register_capture_device(
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
-  ' card-001 '
-) card;
+  ' cam-001 '
+) device;
 
 
 -- 27
 SELECT ok(
   (
     SELECT
-      replay.media_card_id =
-        original.media_card_id
+      replay.capture_device_id =
+        original.capture_device_id
       AND replay.organization_id =
         original.organization_id
-      AND replay.card_code =
-        original.card_code
+      AND replay.device_code =
+        original.device_code
       AND replay.registered_at =
         original.registered_at
       AND replay.registered_by =
         original.registered_by
-    FROM media_inventory_results replay
-    CROSS JOIN media_inventory_results original
+    FROM capture_device_identity_results replay
+    CROSS JOIN capture_device_identity_results original
     WHERE replay.label =
           'founder_replay'
       AND original.label =
@@ -892,11 +894,11 @@ SELECT ok(
   )
   AND (
     SELECT count(*) = 1
-    FROM public.media_cards card
-    WHERE card.organization_id =
+    FROM public.capture_devices device
+    WHERE device.organization_id =
           '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
-      AND lower(card.card_code) =
-          'card-001'
+      AND lower(device.device_code) =
+          'cam-001'
   ),
   'case-insensitive replay returns the exact immutable original identity'
 );
@@ -915,78 +917,78 @@ SELECT ok(
         jsonb_build_object(
           'organization_id',
           '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
-          'media_card_id',
-          result.media_card_id,
+          'capture_device_id',
+          result.capture_device_id,
           'registered_by',
           'ca100000-0000-0000-0000-000000000101'::uuid
         )
       )
       AND bool_and(
-        NOT audit.metadata ? 'card_code'
+        NOT audit.metadata ? 'device_code'
       )
     FROM public.audit_events audit
-    CROSS JOIN media_inventory_results result
+    CROSS JOIN capture_device_identity_results result
     WHERE result.label =
           'founder_first'
       AND audit.organization_id =
           result.organization_id
       AND audit.entity_id =
-          result.media_card_id
+          result.capture_device_id
       AND audit.entity_type =
-          'media_card'
+          'capture_device'
       AND audit.action_key =
-          'media.card_registered'
+          'media.capture_device_registered'
   ),
   'first success emits exactly one structural non-sensitive audit and replay emits none'
 );
 
 
 -- Same textual identity is independently valid in Organization B.
-SELECT pg_temp.media_inventory_set_actor(
+SELECT pg_temp.capture_device_identity_set_actor(
   'ca100000-0000-0000-0000-000000000006'::uuid
 );
 
-INSERT INTO media_inventory_results (
+INSERT INTO capture_device_identity_results (
   label,
-  media_card_id,
+  capture_device_id,
   organization_id,
-  card_code,
+  device_code,
   registered_at,
   registered_by
 )
 SELECT
   'organization_b_same_code',
-  card.id,
-  card.organization_id,
-  card.card_code,
-  card.registered_at,
-  card.registered_by
-FROM public.register_media_card(
+  device.id,
+  device.organization_id,
+  device.device_code,
+  device.registered_at,
+  device.registered_by
+FROM public.register_capture_device(
   'ca100000-0000-0000-0000-000000000901'::uuid,
-  ' CARD-001 '
-) card;
+  ' CAM-001 '
+) device;
 
 
 -- 29
 SELECT ok(
   (
     SELECT
-      organization_b.media_card_id <>
-        organization_a.media_card_id
+      organization_b.capture_device_id <>
+        organization_a.capture_device_id
       AND organization_b.organization_id =
         'ca100000-0000-0000-0000-000000000901'::uuid
-      AND organization_b.card_code =
-        'CARD-001'
+      AND organization_b.device_code =
+        'CAM-001'
       AND organization_b.registered_by =
         'ca100000-0000-0000-0000-000000000106'::uuid
-    FROM media_inventory_results organization_b
-    CROSS JOIN media_inventory_results organization_a
+    FROM capture_device_identity_results organization_b
+    CROSS JOIN capture_device_identity_results organization_a
     WHERE organization_b.label =
           'organization_b_same_code'
       AND organization_a.label =
           'founder_first'
   ),
-  'same textual card code is an independent canonical identity in another organization'
+  'same textual device code is an independent canonical identity in another organization'
 );
 
 
@@ -994,18 +996,18 @@ SELECT ok(
 -- Part 5 - Direct mutation denial / immutability / containment
 -- =====================================================================
 
-CREATE FUNCTION pg_temp.media_inventory_capture_owner_update(
-  p_media_card_id uuid
+CREATE FUNCTION pg_temp.capture_device_identity_capture_owner_update(
+  p_capture_device_id uuid
 )
 RETURNS text
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  UPDATE public.media_cards
-  SET card_code =
-      card_code || '-MUTATED'
+  UPDATE public.capture_devices
+  SET device_code =
+      device_code || '-MUTATED'
   WHERE id =
-        p_media_card_id;
+        p_capture_device_id;
 
   RETURN 'NO_ERROR';
 EXCEPTION
@@ -1015,16 +1017,16 @@ END;
 $$;
 
 
-CREATE FUNCTION pg_temp.media_inventory_capture_owner_delete(
-  p_media_card_id uuid
+CREATE FUNCTION pg_temp.capture_device_identity_capture_owner_delete(
+  p_capture_device_id uuid
 )
 RETURNS text
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  DELETE FROM public.media_cards
+  DELETE FROM public.capture_devices
   WHERE id =
-        p_media_card_id;
+        p_capture_device_id;
 
   RETURN 'NO_ERROR';
 EXCEPTION
@@ -1040,56 +1042,56 @@ SET LOCAL ROLE authenticated;
 -- 30
 SELECT throws_ok(
   $$
-  INSERT INTO public.media_cards (
+  INSERT INTO public.capture_devices (
     organization_id,
-    card_code,
+    device_code,
     registered_by
   )
   VALUES (
     '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
-    'CARD-DIRECT-INSERT',
+    'CAM-DIRECT-INSERT',
     'ca100000-0000-0000-0000-000000000101'::uuid
   )
   $$,
   '42501',
-  'permission denied for table media_cards',
-  'authenticated actor cannot directly INSERT media-card inventory'
+  'permission denied for table capture_devices',
+  'authenticated actor cannot directly INSERT capture-device inventory'
 );
 
 
 -- 31
 SELECT throws_ok(
   $$
-  UPDATE public.media_cards
-  SET card_code =
-      'CARD-DIRECT-UPDATE'
+  UPDATE public.capture_devices
+  SET device_code =
+      'CAM-DIRECT-UPDATE'
   WHERE id = (
-    SELECT media_card_id
-    FROM media_inventory_results
+    SELECT capture_device_id
+    FROM capture_device_identity_results
     WHERE label =
           'founder_first'
   )
   $$,
   '42501',
-  'permission denied for table media_cards',
-  'authenticated actor cannot directly UPDATE media-card inventory'
+  'permission denied for table capture_devices',
+  'authenticated actor cannot directly UPDATE capture-device inventory'
 );
 
 
 -- 32
 SELECT throws_ok(
   $$
-  DELETE FROM public.media_cards
+  DELETE FROM public.capture_devices
   WHERE id = (
-    SELECT media_card_id
-    FROM media_inventory_results
+    SELECT capture_device_id
+    FROM capture_device_identity_results
     WHERE label =
           'founder_first'
   )
   $$,
   '42501',
-  'permission denied for table media_cards',
-  'authenticated actor cannot directly DELETE media-card inventory'
+  'permission denied for table capture_devices',
+  'authenticated actor cannot directly DELETE capture-device inventory'
 );
 
 
@@ -1098,25 +1100,25 @@ RESET ROLE;
 
 -- 33
 SELECT ok(
-  pg_temp.media_inventory_capture_owner_update(
+  pg_temp.capture_device_identity_capture_owner_update(
     (
-      SELECT media_card_id
-      FROM media_inventory_results
+      SELECT capture_device_id
+      FROM capture_device_identity_results
       WHERE label =
             'founder_first'
     )
   ) =
-    'P0001:media card inventory identity is immutable'
+    'P0001:capture device inventory identity is immutable'
   AND
-  pg_temp.media_inventory_capture_owner_delete(
+  pg_temp.capture_device_identity_capture_owner_delete(
     (
-      SELECT media_card_id
-      FROM media_inventory_results
+      SELECT capture_device_id
+      FROM capture_device_identity_results
       WHERE label =
             'founder_first'
     )
   ) =
-    'P0001:media card inventory identity is immutable',
+    'P0001:capture device inventory identity is immutable',
   'immutable guard rejects UPDATE and DELETE even through privileged direct mutation'
 );
 
@@ -1129,7 +1131,7 @@ SELECT ok(
   ) =
     (
       SELECT booking_count
-      FROM media_inventory_baseline
+      FROM capture_device_identity_baseline
     )
   AND
   (
@@ -1138,7 +1140,7 @@ SELECT ok(
   ) =
     (
       SELECT journey_state_count
-      FROM media_inventory_baseline
+      FROM capture_device_identity_baseline
     )
   AND
   (
@@ -1147,14 +1149,23 @@ SELECT ok(
   ) =
     (
       SELECT journey_transition_count
-      FROM media_inventory_baseline
+      FROM capture_device_identity_baseline
     )
   AND
   (
     SELECT count(*)::bigint
     FROM public.media_cards
+  ) =
+    (
+      SELECT media_card_count
+      FROM capture_device_identity_baseline
+    )
+  AND
+  (
+    SELECT count(*)::bigint
+    FROM public.capture_devices
   ) = 3::bigint,
-  'media-card registration mutates only canonical inventory and leaves booking and journey state untouched'
+  'capture-device registration mutates only capture-device inventory and leaves media-card, booking, and journey state untouched'
 );
 
 

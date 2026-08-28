@@ -1653,6 +1653,45 @@ export type Database = {
           },
         ];
       };
+      capture_devices: {
+        Row: {
+          device_code: string;
+          id: string;
+          organization_id: string;
+          registered_at: string;
+          registered_by: string;
+        };
+        Insert: {
+          device_code: string;
+          id?: string;
+          organization_id: string;
+          registered_at?: string;
+          registered_by: string;
+        };
+        Update: {
+          device_code?: string;
+          id?: string;
+          organization_id?: string;
+          registered_at?: string;
+          registered_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "capture_devices_organization_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "capture_devices_registered_by_fkey";
+            columns: ["registered_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
       children: {
         Row: {
           archived_at: string | null;
@@ -7182,6 +7221,22 @@ export type Database = {
       record_memory_guide_next_action: {
         Args: { p_access_token: string; p_next_action: string };
         Returns: boolean;
+      };
+      register_capture_device: {
+        Args: { p_device_code: string; p_organization_id: string };
+        Returns: {
+          device_code: string;
+          id: string;
+          organization_id: string;
+          registered_at: string;
+          registered_by: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "capture_devices";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       register_media_card: {
         Args: { p_card_code: string; p_organization_id: string };
