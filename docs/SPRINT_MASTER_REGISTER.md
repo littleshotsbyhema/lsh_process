@@ -23659,7 +23659,7 @@ Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 15 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED LOCALLY / PUSH PENDING / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+**SPRINT 11 SLICE 15 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
 ## Sprint 11 Slice 15 Governance Closeout — 2026-08-28
 
 ### Slice
@@ -23684,8 +23684,7 @@ Local implementation boundary:
 - 2314 insertions / 0 deletions;
 - no sixth implementation artifact.
 
-Remote implementation verification remains pending until the local implementation and governance
-closeout chain is pushed.
+Remote implementation and governance closeout verification are complete at `e4863b00c0b1c59a191d6b0afb762f980603bb29`.
 
 ### Accepted validation
 
@@ -23762,7 +23761,7 @@ Slice 15 does not establish:
 The implementation is locally committed at
 `67746d3063c5f029c374d3700f2dd94d65d51756`.
 
-This governance closeout remains local until separately committed and pushed.
+This governance closeout is committed and pushed, and independently verified at `e4863b00c0b1c59a191d6b0afb762f980603bb29`.
 
 No Stage 15 -> 16 implementation boundary is authorized.
 
@@ -23770,4 +23769,85 @@ Remote Supabase remains HOLD.
 
 Production remains HOLD.
 
-**SPRINT 11 SLICE 15 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED LOCALLY / PUSH PENDING / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+**SPRINT 11 SLICE 15 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+## Sprint 11 Slice 15 Remote-State Reconciliation — 2026-08-28
+
+**Sprint 11 Slice 15 — Controlled Stage 14 -> 15 / QC Pending Advancement Gate**
+
+Reconciled authority chain:
+
+- freeze `0e6accc7dc3bd69c80becd3e4db626a688b0d971`;
+- implementation `67746d3063c5f029c374d3700f2dd94d65d51756`;
+- governance closeout `e4863b00c0b1c59a191d6b0afb762f980603bb29`;
+- exact implementation parent `0e6accc7dc3bd69c80becd3e4db626a688b0d971`;
+- exact closeout parent `67746d3063c5f029c374d3700f2dd94d65d51756`.
+
+Independent remote verification:
+
+- branch exactly `e4863b00c0b1c59a191d6b0afb762f980603bb29`;
+- closeout subject exactly `docs: close sprint 11 slice 15`;
+- freeze -> implementation exactly 1 ahead / 0 behind;
+- implementation -> closeout exactly 1 ahead / 0 behind;
+- exact five-artifact implementation boundary;
+- implementation diff 2314 insertions / 0 deletions;
+- exact two-document closeout boundary;
+- `CURRENT_MILESTONE.md` closeout diff: 189 insertions / 1 deletion;
+- `SPRINT_MASTER_REGISTER.md` closeout diff: 112 insertions / 1 deletion;
+- total closeout diff: 301 insertions / 2 deletions.
+
+Accepted validation:
+
+- reset PASS;
+- DB lint PASS;
+- dedicated Slice 15 pgTAP 38 / 38 PASS;
+- Slice 11 / 12 / 13 / 14 compatibility PASS;
+- full regression 32 files / 2005 tests PASS;
+- permissions 68;
+- role-permission mappings 241;
+- exact `mark_booking_qc_pending(uuid)` RPC;
+- authenticated EXECUTE only;
+- exact Stage 14 -> 15 advancement;
+- immutable Editing Completion prerequisite;
+- strict Stage-15-only replay;
+- first-success `booking.qc_pending` audit;
+- no new persistence or permission;
+- generated-types semantic delta exactly `mark_booking_qc_pending`;
+- Prettier, ESLint, TypeScript no-emit and production build PASS.
+
+Closed authority remains only:
+
+- Stage 14 `editing_in_progress` -> Stage 15 `qc_pending`;
+- existing `booking.stage.advance`;
+- immutable Editing Completion evidence prerequisite;
+- canonical Stage 13 -> 14 lineage;
+- optimistic journey-state advancement;
+- strict Stage-15 replay;
+- first-success `booking.qc_pending` audit.
+
+Still excluded:
+
+- QC persistence/result/pass/fail;
+- QC reviewer assignment;
+- retouching/rework;
+- mutable editing jobs;
+- editor assignment;
+- priority/SLA;
+- Stage 15 -> 16;
+- Pixieset/gallery;
+- Stage 16 -> 17;
+- delivery;
+- payment/refund mutation;
+- settlement;
+- UI/runtime;
+- Remote Supabase;
+- Production.
+
+This reconciliation commit remains local until separately pushed and independently verified.
+
+No downstream implementation boundary is authorized.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 15 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
