@@ -25605,3 +25605,251 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 18 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT STARTED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+
+## Programme Authority Reconciliation and Sprint 11 Slice 18 Governance Amendment — 2026-08-29
+
+### Governance Status
+
+**APPROVED — PROGRAMME AUTHORITY RECONCILIATION**
+
+**HOLD — SPRINT 11 SLICE 18 IMPLEMENTATION**
+
+This amendment was created after a full review of the available Little Shots planning and operational authority library against the current repository architecture.
+
+It does not roll back any previously completed engineering slice.
+
+It does not authorize any database, application, integration, remote Supabase, or production change.
+
+---
+
+### 1. One Product, Multiple Product Surfaces
+
+Little Shots is one connected product architecture.
+
+The intended final production line is not a permanent separation between a website branch and a Studio OS branch.
+
+The product may expose multiple surfaces, including:
+
+- public Little Shots website and brand experience;
+- AI Memory Guide;
+- CRM and sales workflows;
+- client-facing experiences;
+- authenticated Studio OS;
+- production, editing, QC, delivery, heirloom, team, and reporting workflows.
+
+These surfaces may be deployed or routed separately while sharing governed domain truth where appropriate.
+
+`main` is the eventual trusted production line.
+
+`architecture-rebuild` is the controlled development and architecture-validation branch.
+
+The branch name does not define a separate product.
+
+---
+
+### 2. Programme Phase Classification
+
+The current production, shoot, selection, editing, QC, gallery, delivery, and heirloom work belongs to:
+
+**Phase 2 — Studio Operations / Internal Studio Operating System**
+
+Phase 1 remains the website, AI sales, CRM, commercial, booking, payment, privacy, consent, client-service, and related foundation.
+
+Existing Phase 1 foundations remain valid dependencies of Phase 2.
+
+Phase 2 work must not be represented as though it were part of the original Phase 1 sales sprint sequence.
+
+---
+
+### 3. Sprint Namespace Reconciliation
+
+The planning library contains more than one sprint numbering sequence.
+
+For governance and traceability, unqualified sprint numbers must not be assumed to refer to the same programme sequence.
+
+The repository's current operational work shall be interpreted as:
+
+**Phase 2 Studio Operations — Operational Sprint 11**
+
+when referring to shoot/post-production operational work.
+
+This is distinct from the earlier Phase 1 delivery backlog in which Sprint 11 and Sprint 12 refer to quotation work.
+
+Future governance records must identify the programme/phase context whenever sprint numbering could be ambiguous.
+
+---
+
+### 4. Existing Completed Engineering Remains Preserved
+
+Previously completed and validated slices remain historical approved implementation.
+
+This reconciliation does not invalidate:
+
+- shoot-completion evidence;
+- controlled journey advancement already implemented;
+- selection confirmation evidence;
+- image-entitlement authority;
+- selection/entitlement reconciliation;
+- additional-image pricing authority;
+- adjusted financial obligation authority;
+- full-balance settlement authority;
+- editing-start evidence;
+- editing-in-progress advancement;
+- editing-completion evidence;
+- QC-pending advancement;
+- QC-pass evidence;
+- Pixieset-gallery-ready advancement;
+- the existing RLS, RBAC, audit, idempotency, lineage, and least-privilege architecture.
+
+No rollback or destructive rewrite is authorized by this amendment.
+
+---
+
+### 5. Upstream Operational Requirement Gap
+
+The operational source material requires a post-shoot chain that includes, at minimum:
+
+1. media-card custody and shot accounting;
+2. controlled media ingestion;
+3. deterministic file/count/checksum verification;
+4. missing, duplicate, and corruption handling;
+5. verified encrypted redundant backup;
+6. controlled media-card release;
+7. verified privacy-labelled handover to editing.
+
+The current canonical Stage 11 -> 12 implementation consumes shoot-completion evidence but does not currently consume formal evidence for this entire operational chain.
+
+Therefore:
+
+**the shoot-to-selection lifecycle must not be declared operationally complete until this requirement gap is reconciled.**
+
+This amendment does not yet prescribe the database shape.
+
+A separate read-only discovery and technical-design checkpoint must determine whether these requirements need:
+
+- new immutable evidence relations;
+- a production-project or media-ingestion domain;
+- additional controlled gates;
+- integration-owned evidence;
+- or another architecture consistent with the repository's domain rules.
+
+No such implementation is authorized here.
+
+---
+
+### 6. Culling and Image-Lineage Requirement Gap
+
+The operational editing specification also requires concepts including:
+
+- verified-media production intake;
+- human-led culling;
+- source-preserving image lineage;
+- derived-version integrity;
+- privacy exclusions;
+- controlled client proofing;
+- immutable submitted selection versions;
+- revision governance;
+- QC and export readiness.
+
+Existing selection, editing, entitlement, finance, and QC foundations remain valid sub-capabilities.
+
+However, they must not be interpreted as proving that all upstream media, culling, image-lineage, proofing, and production requirements are already implemented.
+
+These requirements require separate governed reconciliation.
+
+---
+
+### 7. Stage 17 Delivery Semantics
+
+The existing canonical journey currently places:
+
+- Stage 16 — `pixieset_gallery_ready`;
+- Stage 17 — `delivered`;
+- Stage 18 — `album_frame_production`.
+
+Because physical album/frame production occurs after Stage 17 in the current canonical ordering, Stage 17 must not be interpreted as proof that the entire booking, including all physical products, has been finally delivered.
+
+Until separately governed otherwise, the intended business interpretation of the Stage 16 -> 17 boundary is:
+
+**digital gallery delivery / digital delivery completion**
+
+rather than complete final project handover.
+
+The existing database key `delivered` is not renamed by this governance-only amendment.
+
+Any schema-key, label, UI, audit-action, or downstream journey change requires a separately frozen technical design.
+
+---
+
+### 8. Sprint 11 Slice 18 Amendment
+
+The previously frozen Sprint 11 Slice 18 design remains part of the historical governance record.
+
+However, its implementation authorization is now **SUSPENDED**.
+
+The generic concepts:
+
+- `booking_delivery_confirmations`;
+- `record_booking_delivery_confirmation(...)`;
+- `booking.delivery_confirmed`;
+
+must not be implemented from the previous freeze until delivery semantics are re-frozen with an unambiguous digital-gallery boundary.
+
+The evidence-first architecture itself remains approved in principle:
+
+operational authority -> immutable evidence -> separate journey authority.
+
+The authority separation between operational delivery work and journey advancement also remains approved in principle.
+
+What is on HOLD is the current generic delivery naming and implementation boundary, not the least-privilege evidence pattern.
+
+---
+
+### 9. Required Next Checkpoint
+
+Before Slice 18 implementation resumes, the next checkpoint is:
+
+**Phase 2 Studio Operations — Post-Shoot Authority Reconciliation / Read-Only Discovery**
+
+It must determine:
+
+1. the correct media-custody domain boundary;
+2. ingestion and checksum evidence requirements;
+3. backup and redundancy evidence requirements;
+4. editing-handover requirements;
+5. culling and image-lineage requirements;
+6. whether any existing journey gates require later compatibility amendments;
+7. the exact meaning of Stage 17;
+8. the exact digital-gallery delivery evidence name and audit contract;
+9. how later physical-product delivery and final handover remain distinct;
+10. the smallest safe implementation order.
+
+Only after that checkpoint is frozen may Slice 18 or any prerequisite implementation resume.
+
+---
+
+### 10. Environment and Deployment Boundary
+
+The following remain unchanged:
+
+- Local development and read-only discovery: **AUTHORIZED**
+- `architecture-rebuild`: **AUTHORIZED development branch**
+- `main`: **NO CHANGE AUTHORIZED by this amendment**
+- Remote Supabase mutation/deployment: **HOLD**
+- Production deployment: **HOLD**
+
+---
+
+### Formal Checkpoint
+
+**APPROVE — PROGRAMME / PHASE / SPRINT AUTHORITY RECONCILED**
+
+**APPROVE — EXISTING COMPLETED ENGINEERING PRESERVED**
+
+**REVISE — POST-SHOOT MEDIA / HANDOVER REQUIREMENTS REQUIRE RECONCILIATION**
+
+**REVISE — STAGE 17 REQUIRES DIGITAL-DELIVERY SEMANTIC PRECISION**
+
+**HOLD — SPRINT 11 SLICE 18 IMPLEMENTATION**
+
+**NEXT — PHASE 2 STUDIO OPERATIONS POST-SHOOT READ-ONLY DISCOVERY**
