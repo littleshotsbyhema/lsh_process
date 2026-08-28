@@ -6928,3 +6928,118 @@ Production remains HOLD.
 Stage 15 -> 16 remains unauthorized.
 
 **SPRINT 11 SLICE 16 — GOVERNANCE AMENDED FOR EXACT HISTORICAL COMPATIBILITY / LOCAL IMPLEMENTATION CONTINUES / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+
+### Sprint 11 Slice 16 Governance Closeout
+
+Sprint 11 Slice 16 — **QC Pass Evidence Foundation** — is implemented,
+fully validated locally, pushed and independently verified on
+`origin/architecture-rebuild`.
+
+Exact authority chain:
+
+- technical-design freeze:
+  `f492e50d5a70591c09f197157e02db305f33cace`
+  — `docs: freeze sprint 11 slice 16`;
+- historical-compatibility governance amendment:
+  `0b6296fdceffb0fdc12743129d2c467bc4f55c05`
+  — `docs: amend sprint 11 slice 16 compatibility`;
+- implementation:
+  `8bc1cfcf78ecad23ec4537b27948f85f2d77f552`
+  — `feat: add qc pass evidence foundation`.
+
+The implementation parent is exactly:
+
+`0b6296fdceffb0fdc12743129d2c467bc4f55c05`.
+
+Independent remote comparison confirms the amendment -> implementation
+relationship is exactly one commit ahead / zero behind.
+
+Accepted Slice 16 validation:
+
+- clean local database reset PASS;
+- local database lint PASS with no schema errors;
+- dedicated Slice 16 pgTAP 42 / 42 PASS;
+- Slice 11 compatibility 59 / 59 PASS;
+- Slice 12 compatibility 63 / 63 PASS;
+- Slice 13 compatibility 53 / 53 PASS;
+- Slice 14 compatibility 42 / 42 PASS;
+- Slice 15 compatibility 38 / 38 PASS;
+- focused Sprint 11 Slice 11 through 16 validation 297 / 297 PASS;
+- full local pgTAP regression 33 files / 2047 tests PASS;
+- canonical permissions 68;
+- canonical role-permission mappings 241;
+- exact six-column `public.booking_qc_passes` relation;
+- exact `public.record_booking_qc_pass(uuid)` RPC;
+- unauthorized additional QC / Pixieset / delivery persistence count 0;
+- immutable QC Pass evidence validated;
+- exact canonical Stage 14 `editing_in_progress` -> Stage 15 `qc_pending`
+  source-transition lineage validated;
+- strict Stage-15-only replay validated;
+- first success records exactly one structural `booking.qc_passed` audit;
+- booking remains exactly Stage 15 `qc_pending`;
+- no Stage 15 -> 16 authority introduced;
+- existing `editing.write` remains the mutation authority;
+- existing `editing.read` remains the read authority;
+- permissions remain 68 and role-permission mappings remain 241;
+- generated Supabase types freshly regenerated from the clean local database;
+- generated-types semantic delta limited exactly to
+  `booking_qc_passes` and `record_booking_qc_pass`;
+- generated-types diff 66 insertions / 0 deletions;
+- Prettier PASS;
+- targeted generated-types ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS with non-blocking pre-existing dependency,
+  deprecation and bundle-size warnings only;
+- `git diff --check` PASS.
+
+Exact amended implementation boundary:
+
+1. `src/integrations/supabase/types.ts` — 66 insertions / 0 deletions;
+2. `supabase/migrations/20260828150000_sprint11_qc_pass_evidence_foundation.sql`
+   — 930 insertions / 0 deletions;
+3. `supabase/tests/sprint11_editing_completion_evidence_test.sql`
+   — 2 insertions / 1 deletion;
+4. `supabase/tests/sprint11_editing_start_evidence_test.sql`
+   — 3 insertions / 1 deletion;
+5. `supabase/tests/sprint11_qc_pass_evidence_test.sql`
+   — 1552 insertions / 0 deletions;
+6. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`
+   — 3 insertions / 1 deletion;
+7. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql`
+   — 1 insertion / 0 deletions.
+
+Total implementation diff:
+
+- 7 files;
+- 2557 insertions;
+- 3 deletions.
+
+Slice 16 therefore establishes immutable affirmative QC Pass evidence while
+the booking remains exactly at Stage 15 `qc_pending`.
+
+Slice 16 does not implement:
+
+- QC failure/result lifecycle;
+- mutable QC workflow;
+- reviewer assignment;
+- QC notes or scores;
+- rework/retouch workflow;
+- image-level QC;
+- Stage 15 -> 16;
+- Pixieset/gallery persistence;
+- gallery URLs or synchronization;
+- delivery persistence;
+- Stage 16 -> 17;
+- payment/refund mutation;
+- UI/runtime integration;
+- mock-store replacement;
+- Remote Supabase deployment;
+- Production deployment.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+Stage 15 -> 16 remains separately governed and unauthorized.
+
+**SPRINT 11 SLICE 16 — IMPLEMENTED / FULLY VALIDATED LOCALLY / IMPLEMENTATION PUSHED AND INDEPENDENTLY VERIFIED / GOVERNANCE CLOSEOUT PENDING COMMIT / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
