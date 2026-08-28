@@ -880,6 +880,55 @@ export type Database = {
           },
         ];
       };
+      booking_qc_passes: {
+        Row: {
+          booking_id: string;
+          id: string;
+          organization_id: string;
+          passed_at: string;
+          passed_by: string;
+          source_qc_pending_transition_id: string;
+        };
+        Insert: {
+          booking_id: string;
+          id?: string;
+          organization_id: string;
+          passed_at: string;
+          passed_by: string;
+          source_qc_pending_transition_id: string;
+        };
+        Update: {
+          booking_id?: string;
+          id?: string;
+          organization_id?: string;
+          passed_at?: string;
+          passed_by?: string;
+          source_qc_pending_transition_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "bpass_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "bpass_passed_by_fkey";
+            columns: ["passed_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "bpass_source_transition_fkey";
+            columns: ["organization_id", "source_qc_pending_transition_id"];
+            isOneToOne: true;
+            referencedRelation: "booking_stage_transitions";
+            referencedColumns: ["organization_id", "id"];
+          },
+        ];
+      };
       booking_safety_readiness: {
         Row: {
           booking_id: string;
@@ -6921,6 +6970,23 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "booking_payments";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      record_booking_qc_pass: {
+        Args: { p_booking_id: string };
+        Returns: {
+          booking_id: string;
+          id: string;
+          organization_id: string;
+          passed_at: string;
+          passed_by: string;
+          source_qc_pending_transition_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_qc_passes";
           isOneToOne: true;
           isSetofReturn: false;
         };

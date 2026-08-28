@@ -290,7 +290,9 @@ SELECT is(
       AND procedure.proname NOT IN (
         'mark_booking_qc_pending',
         'lsh_booking_editing_completion_guard',
-        'record_booking_editing_completion'
+        'record_booking_editing_completion',
+        'lsh_booking_qc_pass_guard',
+        'record_booking_qc_pass'
       )
       AND pg_get_functiondef(
             procedure.oid

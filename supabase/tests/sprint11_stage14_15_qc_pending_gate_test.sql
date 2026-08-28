@@ -193,6 +193,7 @@ SELECT is(
     JOIN pg_catalog.pg_namespace namespace
       ON namespace.oid = relation.relnamespace
     WHERE namespace.nspname = 'public'
+      AND relation.relname <> 'booking_qc_passes'
       AND (
         relation.relname ILIKE '%qc%'
         OR relation.relname ILIKE '%pixieset%'
