@@ -26247,3 +26247,439 @@ No later media workflow is pre-authorized by this freeze.
 **HOLD — REMOTE SUPABASE**
 
 **HOLD — PRODUCTION**
+
+
+---
+
+## Corrective Slice B0 — Capture Device Identity Foundation
+
+### Governance Status
+
+**Technical-design freeze only. No implementation is authorized until this governance checkpoint is committed, pushed to `architecture-rebuild`, and independently remote-verified.**
+
+### 1. Why B0 Exists
+
+Post-Shoot Authority Reconciliation established that Operational Sprint 11 requires canonical media-card custody with no anonymous card or custody gap.
+
+Corrective Slice A created the approved media-card inventory prerequisite.
+
+Subsequent read-only discovery established that the repository has no canonical camera, equipment, or capture-device identity relation.
+
+The Sprint 11 operational source nevertheless requires the first custody step to record:
+
+- card ID;
+- camera ID;
+- seal status.
+
+The same source models card allocation against concrete capture-device identities such as Camera A, Camera A Backup, Camera B, and Camera B Backup.
+
+Therefore card assignment cannot safely be implemented against free-text camera labels.
+
+B0 introduces only the minimum canonical capture-device identity required before card assignment authority can be frozen.
+
+It does not implement US-125 Media-Card Custody and Shot Accounting.
+
+### 2. Narrow Registration Authority
+
+B0 introduces exactly one new permission:
+
+`media.device.register`
+
+Contract:
+
+- domain: `media`
+- label: `Register capture devices`
+- purpose: register approved physical capture-device identities into canonical studio inventory
+- `requires_server_enforcement = true`
+
+Exact role grants:
+
+- `founder`
+- `studio_manager`
+
+No other canonical role receives this permission in B0.
+
+In particular:
+
+- `photographer` does not receive capture-device registration authority;
+- an operational photographer must not be able to manufacture a new device identity while performing card assignment;
+- no Ingestion Operator or Technical Owner role is invented by this slice.
+
+Expected canonical authority totals after B0:
+
+- permissions: `70`
+- role-permission mappings: `245`
+
+The migration must precondition against the currently established totals:
+
+- permissions: `69`
+- role-permission mappings: `243`
+
+### 3. Canonical Capture-Device Relation
+
+B0 introduces exactly one canonical relation:
+
+`public.capture_devices`
+
+The relation contains exactly five columns:
+
+1. `id uuid`
+2. `organization_id uuid`
+3. `device_code text`
+4. `registered_at timestamptz`
+5. `registered_by uuid`
+
+Required invariants:
+
+- `id` is the primary key;
+- `organization_id` is required;
+- `device_code` is required;
+- `device_code` is stored trimmed;
+- trimmed `device_code` length is between 1 and 120 characters;
+- `device_code` is case-insensitively unique within an organization;
+- the same logical device code may exist independently in different organizations;
+- `registered_at` is server-generated;
+- `registered_by` references an organization member in the same organization;
+- registered capture-device identity is immutable after creation.
+
+Registration means only that an approved canonical capture-device identity exists.
+
+Registration does not prove:
+
+- availability;
+- assignment;
+- physical presence;
+- safety inspection;
+- maintenance state;
+- ownership;
+- custody;
+- booking use;
+- camera configuration.
+
+B0 does not add model, manufacturer, serial number, asset tag, capacity, maintenance, lifecycle, assignment, or location fields.
+
+### 4. Controlled Registration RPC
+
+B0 introduces exactly one controlled mutation surface:
+
+`public.register_capture_device(uuid,text)`
+
+Inputs:
+
+- organization ID;
+- capture-device code.
+
+The RPC must:
+
+- be `SECURITY DEFINER`;
+- use `SET search_path = ''`;
+- require an authenticated actor;
+- reject null organization ID;
+- reject null device code;
+- trim the supplied device code;
+- reject blank device code;
+- reject device code longer than 120 characters;
+- require active membership in the target organization;
+- require `media.device.register`;
+- create no booking state;
+- create no custody state;
+- create no card assignment;
+- create no journey mutation.
+
+The authority boundary is organization-level.
+
+No branch scope is introduced by B0.
+
+### 5. Replay and Logical Identity
+
+Within one organization, these values represent the same logical capture-device identity:
+
+- `CAM-A`
+- `cam-a`
+- ` CAM-A `
+
+A replay against an existing logical identity must:
+
+- return the existing canonical row;
+- preserve the original stored casing;
+- preserve the original `registered_at`;
+- preserve the original `registered_by`;
+- create no duplicate row;
+- create no duplicate audit event.
+
+The same logical code in a different organization represents a separate valid capture-device identity.
+
+### 6. Immutability, RLS, and ACL
+
+`public.capture_devices` must enable and force Row Level Security.
+
+Authenticated SELECT authority requires both:
+
+- active membership in the capture device's organization;
+- `media.device.register` for that organization.
+
+B0 deliberately uses the narrow registration authority for initial inventory read access.
+
+Broader operational read access for card-assignment or custody actors is not introduced by this slice and must be separately governed later.
+
+Authenticated application actors must not receive direct:
+
+- `INSERT`;
+- `UPDATE`;
+- `DELETE`
+
+authority on `public.capture_devices`.
+
+Anonymous access is denied.
+
+Capture-device registration occurs only through the controlled RPC.
+
+The registered capture-device identity is immutable.
+
+A privileged or accidental direct UPDATE or DELETE must be rejected by an immutable-identity trigger rather than relying only on RLS or table ACL.
+
+The immutable trigger function itself must not be executable by:
+
+- `PUBLIC`;
+- `anon`;
+- `authenticated`;
+- `service_role`.
+
+### 7. Registration RPC ACL
+
+Execution authority for:
+
+`public.register_capture_device(uuid,text)`
+
+must be:
+
+- revoked from `PUBLIC`;
+- revoked from `anon`;
+- revoked from `service_role`;
+- granted to `authenticated`.
+
+The function must independently enforce active organization membership and `media.device.register`.
+
+RPC executability alone must not grant registration authority.
+
+### 8. Audit Contract
+
+The first successful creation of a canonical capture-device identity emits exactly one audit event:
+
+`media.capture_device_registered`
+
+Audit entity type:
+
+`capture_device`
+
+Audit entity ID:
+
+- canonical capture-device ID.
+
+The audit event is non-sensitive structural evidence.
+
+It must not store the user-supplied `device_code` in:
+
+- `old_values`;
+- `new_values`;
+- metadata;
+- any other free-text audit field.
+
+`old_values` must be `NULL`.
+
+`new_values` must be `NULL`.
+
+Audit metadata may contain only structural identifiers required for accountability, including:
+
+- organization ID;
+- capture-device ID;
+- registering organization-member ID.
+
+A logical replay must emit no additional registration audit event.
+
+### 9. Frozen Implementation Artifacts
+
+After this governance freeze is committed, pushed, and independently remote-verified, local implementation is authorized only within the following frozen artifact boundary.
+
+Create:
+
+1. `supabase/migrations/20260829030000_sprint11_capture_device_identity_foundation.sql`
+2. `supabase/tests/sprint11_capture_device_identity_test.sql`
+
+Update:
+
+3. `src/integrations/supabase/types.ts`
+
+The generated Supabase TypeScript representation must include:
+
+- `capture_devices`;
+- `register_capture_device`.
+
+No application UI or integration surface is authorized by B0.
+
+### 10. Compatibility-Test Boundary
+
+Because B0 adds exactly:
+
+- one permission;
+- two role-permission mappings;
+
+the live canonical authority totals change from:
+
+- `69` permissions to `70`;
+- `243` role-permission mappings to `245`.
+
+Only existing tests that assert the live current totals may be updated for this compatibility change.
+
+The exact existing compatibility-test boundary is:
+
+1. `supabase/tests/sprint10_extended_creative_assignments_test.sql`
+2. `supabase/tests/sprint11_additional_image_pricing_basis_authority_test.sql`
+3. `supabase/tests/sprint11_adjusted_financial_obligation_authority_test.sql`
+4. `supabase/tests/sprint11_editing_completion_evidence_test.sql`
+5. `supabase/tests/sprint11_editing_start_evidence_test.sql`
+6. `supabase/tests/sprint11_full_balance_settlement_read_authority_test.sql`
+7. `supabase/tests/sprint11_image_entitlement_authority_test.sql`
+8. `supabase/tests/sprint11_media_card_inventory_authority_test.sql`
+9. `supabase/tests/sprint11_qc_pass_evidence_test.sql`
+10. `supabase/tests/sprint11_selection_confirmation_evidence_test.sql`
+11. `supabase/tests/sprint11_selection_entitlement_reconciliation_test.sql`
+12. `supabase/tests/sprint11_stage10_11_gate_test.sql`
+13. `supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`
+14. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`
+15. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql`
+16. `supabase/tests/sprint11_stage15_16_pixieset_gallery_ready_gate_test.sql`
+
+These compatibility edits are limited to assertions of the live current authority totals.
+
+Historical migration assertions must not be rewritten.
+
+In particular, Corrective Slice A's migration remains historically correct at its own final state of `69 / 243`.
+
+### 11. Dedicated Validation Boundary
+
+The dedicated B0 test must validate at minimum:
+
+- exact permission key, domain, label, and server-enforcement contract;
+- exact Founder + Studio Manager grant topology;
+- absence of Photographer registration authority;
+- exact five-column `capture_devices` contract;
+- organization foreign-key containment;
+- registering-member organization containment;
+- trimmed and bounded device-code validation;
+- case-insensitive uniqueness within organization;
+- cross-organization code independence;
+- successful authenticated Founder registration;
+- successful authenticated organization-wide Studio Manager registration;
+- inactive-member rejection;
+- non-member rejection;
+- unauthorized-role rejection;
+- anonymous rejection;
+- direct authenticated INSERT denial;
+- direct authenticated UPDATE denial;
+- direct authenticated DELETE denial;
+- privileged UPDATE and DELETE immutability rejection;
+- exact replay preservation;
+- case-insensitive replay preservation;
+- exactly one first-success audit event;
+- no replay audit duplication;
+- absence of `device_code` from audit payloads;
+- no booking mutation;
+- no journey mutation;
+- no media-card mutation;
+- final authority totals of `70 / 245`.
+
+Full repository validation remains required after implementation.
+
+### 12. Explicitly Out of Scope
+
+B0 does not implement:
+
+- media-card assignment;
+- booking-to-card assignment;
+- capture-device assignment to a booking;
+- capture-device assignment to a photographer;
+- photographer custody;
+- external-creative custody;
+- camera configuration;
+- shot accounting;
+- expected image counts;
+- actual image counts;
+- card removal evidence;
+- write-protection evidence;
+- seal IDs;
+- seal verification;
+- custody transfers;
+- dual custody acknowledgement;
+- Ingestion Operator identity;
+- Technical Owner identity;
+- ingestion workstations;
+- media ingestion;
+- manifests;
+- file counts;
+- byte reconciliation;
+- SHA-256;
+- missing-file detection;
+- duplicate-file detection;
+- corruption detection;
+- quarantine;
+- encrypted storage;
+- backup;
+- restore evidence;
+- card release;
+- secure card reuse;
+- editing handover;
+- culling;
+- image lineage;
+- Stage 11 -> 12 strengthening;
+- any other journey-stage change;
+- application UI;
+- external integrations.
+
+### 13. Next Boundary
+
+After B0 is implemented, fully validated, committed, pushed, and remotely reconciled, the next design checkpoint is:
+
+**Corrective Slice B1 — Media Card Assignment Authority**
+
+B1 must separately govern the relationship among:
+
+- a booking;
+- an approved media card;
+- an approved capture-device identity;
+- an eligible authenticated custodian;
+- the canonical Lead Photographer assignment boundary.
+
+B1 must not silently invent Ingestion Operator or Technical Owner roles.
+
+B1 must also resolve the external-creative authentication limitation before external creatives can provide authenticated custody evidence.
+
+Card removal, shot accounting, sealing, custody transfer, and dual acknowledgement remain later separately governed boundaries.
+
+No later custody workflow is pre-authorized by this freeze.
+
+### Environment Boundary
+
+- Local implementation after governance freeze: **AUTHORIZED**
+- `architecture-rebuild`: **AUTHORIZED development branch**
+- `main`: **NO CHANGE AUTHORIZED**
+- Remote Supabase mutation/deployment: **HOLD**
+- Production deployment: **HOLD**
+
+### Formal Checkpoint
+
+**APPROVE — CORRECTIVE SLICE B0 TECHNICAL DESIGN FROZEN**
+
+**APPROVE — CAPTURE-DEVICE IDENTITY IS A REQUIRED CARD-ASSIGNMENT PREREQUISITE**
+
+**APPROVE — EXACT B0 AUTHORITY TOTALS 70 / 245**
+
+**APPROVE — EXACT IMPLEMENTATION BOUNDARY: 19 FILES**
+
+**HOLD — IMPLEMENTATION UNTIL THIS FREEZE IS COMMITTED AND REMOTELY VERIFIED**
+
+**HOLD — CORRECTIVE SLICE B1 UNTIL B0 IS CLOSED**
+
+**HOLD — REMOTE SUPABASE**
+
+**HOLD — PRODUCTION**
