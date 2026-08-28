@@ -3616,6 +3616,45 @@ export type Database = {
           },
         ];
       };
+      media_cards: {
+        Row: {
+          card_code: string;
+          id: string;
+          organization_id: string;
+          registered_at: string;
+          registered_by: string;
+        };
+        Insert: {
+          card_code: string;
+          id?: string;
+          organization_id: string;
+          registered_at?: string;
+          registered_by: string;
+        };
+        Update: {
+          card_code?: string;
+          id?: string;
+          organization_id?: string;
+          registered_at?: string;
+          registered_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "media_cards_organization_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "media_cards_registered_by_fkey";
+            columns: ["registered_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
       member_role_grants: {
         Row: {
           branch_id: string | null;
@@ -7143,6 +7182,22 @@ export type Database = {
       record_memory_guide_next_action: {
         Args: { p_access_token: string; p_next_action: string };
         Returns: boolean;
+      };
+      register_media_card: {
+        Args: { p_card_code: string; p_organization_id: string };
+        Returns: {
+          card_code: string;
+          id: string;
+          organization_id: string;
+          registered_at: string;
+          registered_by: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "media_cards";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       remove_quotation_line: {
         Args: { p_line_item_id: string };

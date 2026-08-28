@@ -25,7 +25,7 @@ SELECT plan(76);
 --   * no payment, reversal, quotation, requirement, or journey mutation;
 --   * no settlement semantics;
 --   * no Stage 12 -> 13 advancement;
---   * permission catalogue remains 68 / 241.
+--   * permission catalogue remains 69 / 243.
 -- =====================================================================
 
 
@@ -36,15 +36,15 @@ SELECT plan(76);
 -- 1
 SELECT is(
   (SELECT count(*)::bigint FROM public.permissions),
-  68::bigint,
-  'canonical permission catalogue remains exactly 68'
+  69::bigint,
+  'canonical permission catalogue remains exactly 69'
 );
 
 -- 2
 SELECT is(
   (SELECT count(*)::bigint FROM public.role_permissions),
-  241::bigint,
-  'canonical role-permission mapping count remains exactly 241'
+  243::bigint,
+  'canonical role-permission mapping count remains exactly 243'
 );
 
 -- 3
@@ -1705,14 +1705,14 @@ SELECT throws_ok(
 -- 75
 SELECT is(
   (SELECT count(*)::bigint FROM public.permissions),
-  68::bigint,
+  69::bigint,
   'Slice 9 behavior leaves permission catalogue unchanged'
 );
 
 -- 76
 SELECT is(
   (SELECT count(*)::bigint FROM public.role_permissions),
-  241::bigint,
+  243::bigint,
   'Slice 9 behavior leaves role-permission mappings unchanged'
 );
 

@@ -37,15 +37,15 @@ SELECT plan(82);
 -- 1
 SELECT is(
   (SELECT count(*)::bigint FROM public.permissions),
-  68::bigint,
-  'canonical permission catalogue remains exactly 68'
+  69::bigint,
+  'canonical permission catalogue remains exactly 69'
 );
 
 -- 2
 SELECT is(
   (SELECT count(*)::bigint FROM public.role_permissions),
-  241::bigint,
-  'canonical role-permission mapping count remains exactly 241'
+  243::bigint,
+  'canonical role-permission mapping count remains exactly 243'
 );
 
 -- 3
@@ -1835,14 +1835,14 @@ SELECT ok(
 -- 81
 SELECT is(
   (SELECT count(*)::bigint FROM public.permissions),
-  68::bigint,
+  69::bigint,
   'Slice 7 behavior leaves canonical permission count unchanged'
 );
 
 -- 82
 SELECT is(
   (SELECT count(*)::bigint FROM public.role_permissions),
-  241::bigint,
+  243::bigint,
   'Slice 7 behavior leaves role-permission mapping count unchanged'
 );
 
