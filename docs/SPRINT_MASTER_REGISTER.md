@@ -26683,3 +26683,685 @@ No later custody workflow is pre-authorized by this freeze.
 **HOLD — REMOTE SUPABASE**
 
 **HOLD — PRODUCTION**
+
+
+## Corrective Slice B1 - Media Card Assignment Authority - Technical Design Freeze
+
+### Governance Position
+
+Corrective Slice B0 - Capture Device Identity Foundation is closed.
+
+The earlier B0 statement holding B1 until B0 closure was a historical
+conditional hold and remains unchanged in the B0 record.
+
+This B1 freeze supersedes that prospective hold from this point forward.
+
+B1 implements the CUS-501 media-card-to-capture-device assignment authority
+only.
+
+B1 does not complete the wider media-custody workflow.
+
+Card removal, shot accounting, write protection, seal evidence, custody
+transfer, dual acknowledgement, ingestion, checksum verification, backup,
+card release, editing handover, culling, and image lineage remain separately
+governed later boundaries.
+
+### Precondition Authority
+
+Canonical authority before B1:
+
+- permissions: 70
+- role_permissions: 245
+
+B1 adds exactly:
+
+- one permission
+- one role-permission mapping
+
+Canonical authority after B1:
+
+- permissions: 71
+- role_permissions: 246
+
+Historical migrations retain the authority totals that were correct at their
+own migration point and MUST NOT be rewritten.
+
+### Permission Contract
+
+B1 introduces exactly one permission:
+
+- key: `media.card.assign`
+- domain: `media`
+- label: `Assign media cards`
+- description: `Assign registered media cards to registered capture devices for the current booking Lead Photographer.`
+- requires_server_enforcement: `true`
+
+Exactly one canonical role receives this permission:
+
+- `photographer`
+
+B1 does NOT grant `media.card.assign` to:
+
+- `founder`
+- `studio_manager`
+- any other existing canonical role
+
+Founder or Studio Manager status is not an administrative bypass for CUS-501.
+
+An actor holding some other administrative permission is not thereby entitled
+to assign a media card.
+
+The source workbook also identifies an Ingestion Operator capability, but the
+canonical repository currently contains no authenticated
+`ingestion_operator` role or equivalent approved identity.
+
+B1 MUST NOT invent, alias, or substitute:
+
+- `ingestion_operator`
+- `technical_owner`
+- `operations_manager`
+- any other ungoverned operational role
+
+Ingestion-side assignment authority remains deferred until a separately
+governed authenticated ingestion actor exists.
+
+### Canonical Actor Contract
+
+B1 assignment is authorization-first.
+
+The caller MUST:
+
+1. be authenticated;
+2. resolve through `auth.uid()` to an active organization member;
+3. hold `media.card.assign` for the booking's canonical branch scope;
+4. be the current INTERNAL Lead Photographer assignment for that booking.
+
+The authoritative Lead Photographer relation is
+`public.booking_team_assignments`.
+
+The qualifying current assignment MUST satisfy:
+
+- same `organization_id`;
+- same `booking_id`;
+- `assignment_role = 'lead_photographer'`;
+- `ended_at IS NULL`;
+- `assigned_member_id` equals the current authenticated organization member;
+- `assigned_external_creative_id IS NULL`.
+
+Holding the canonical `photographer` role without being the booking's current
+Lead Photographer is insufficient.
+
+The current Lead Photographer assignment is booking-specific authority.
+
+### External Creative Boundary
+
+An external Lead Photographer is a canonical booking-team subject through
+`assigned_external_creative_id`.
+
+`public.external_creatives` currently has no authenticated-user or
+organization-member binding.
+
+Therefore an external Lead Photographer cannot currently produce
+self-authenticated B1 custody evidence.
+
+B1 MUST explicitly reject an external current Lead Photographer.
+
+B1 MUST NOT create an external-authentication mapping.
+
+Any future external-custody identity mechanism requires a separately frozen
+foundation.
+
+### Journey Gate
+
+B1 assignment may occur only when the booking has exactly one canonical
+current journey state and that state resolves to:
+
+- `stage_order = 10`
+- `stage_key = 'shoot_scheduled'`
+
+B1 MUST reject assignment before Stage 10.
+
+B1 MUST reject new assignment after Stage 10, including:
+
+- Stage 11 `shoot_completed`
+- Stage 12 `selection_pending`
+- all later stages
+
+B1 does not modify the Stage 10 -> Stage 11 gate.
+
+Any later requirement preventing shoot completion while custody remains open
+must be separately frozen.
+
+### Canonical Relation
+
+B1 introduces exactly one new canonical relation:
+
+`public.media_card_assignments`
+
+The relation contains exactly these eleven columns:
+
+1. `id uuid`
+2. `organization_id uuid`
+3. `booking_id uuid`
+4. `media_card_id uuid`
+5. `capture_device_id uuid`
+6. `lead_photographer_assignment_id uuid`
+7. `custodian_member_id uuid`
+8. `assigned_at timestamptz`
+9. `assigned_by uuid`
+10. `ended_at timestamptz`
+11. `ended_by uuid`
+
+Column invariants:
+
+- `id` is the primary key with default `gen_random_uuid()`;
+- `organization_id` is required;
+- `booking_id` is required;
+- `media_card_id` is required;
+- `capture_device_id` is required;
+- `lead_photographer_assignment_id` is required;
+- `custodian_member_id` is required;
+- `assigned_at` is required with default `now()`;
+- `assigned_by` is required;
+- `ended_at` is nullable;
+- `ended_by` is nullable.
+
+B1 initial assignment requires:
+
+- `ended_at IS NULL`;
+- `ended_by IS NULL`;
+- `custodian_member_id = assigned_by`.
+
+Lifecycle structural integrity requires:
+
+- `ended_at` and `ended_by` are either both NULL or both non-NULL;
+- if populated, `ended_at >= assigned_at`.
+
+B1 exposes no controlled close mutation.
+
+All B1-created rows therefore remain active until a later separately governed
+slice introduces the authorized removal/closure mechanism.
+
+### Tenant-Safe Foreign-Key Lineage
+
+B1 MUST use canonical organization-safe foreign keys.
+
+Booking:
+
+`(organization_id, booking_id)`
+-> `public.bookings(organization_id, id)`
+
+Media card:
+
+`(organization_id, media_card_id)`
+-> `public.media_cards(organization_id, id)`
+
+Capture device:
+
+`(organization_id, capture_device_id)`
+-> `public.capture_devices(organization_id, id)`
+
+Lead Photographer assignment:
+
+`(lead_photographer_assignment_id, organization_id, booking_id)`
+-> `public.booking_team_assignments(id, organization_id, booking_id)`
+
+Initial custodian:
+
+`(custodian_member_id, organization_id)`
+-> `public.organization_members(id, organization_id)`
+
+Assignment actor:
+
+`(assigned_by, organization_id)`
+-> `public.organization_members(id, organization_id)`
+
+Future closure actor:
+
+`(ended_by, organization_id)`
+-> `public.organization_members(id, organization_id)`
+
+The relation MUST also expose:
+
+`UNIQUE (id, organization_id, booking_id)`
+
+to provide tenant-safe lineage for later separately governed custody evidence.
+
+### Historical Identity
+
+`lead_photographer_assignment_id` records the exact canonical booking-team
+assignment that existed when CUS-501 succeeded.
+
+That value is historical evidence.
+
+A later Lead Photographer replacement MUST NOT rewrite the B1 assignment row.
+
+`custodian_member_id` records the initial authenticated internal custodian.
+
+`assigned_by` records the authenticated actor who performed the assignment.
+
+For B1 first assignment those two member IDs are the same actor.
+
+### Active-Assignment Collision Contract
+
+A registered media card may have at most one active assignment within its
+organization.
+
+B1 MUST enforce the equivalent of:
+
+`UNIQUE (organization_id, media_card_id) WHERE ended_at IS NULL`
+
+One capture device MAY have multiple active media cards.
+
+B1 MUST NOT create a uniqueness constraint that limits a capture device to one
+active card.
+
+One booking MAY use multiple cards.
+
+One booking MAY use multiple capture devices.
+
+A card may be reused only after a later authorized B2 closure has ended its
+previous assignment.
+
+### Assignment RPC
+
+B1 introduces exactly one controlled mutation RPC:
+
+`public.assign_media_card(uuid, uuid, uuid)`
+
+Canonical argument order:
+
+1. `p_booking_id uuid`
+2. `p_media_card_id uuid`
+3. `p_capture_device_id uuid`
+
+Return type:
+
+`public.media_card_assignments`
+
+The caller MUST NOT provide:
+
+- organization ID;
+- custodian member ID;
+- assigned-by member ID;
+- Lead Photographer assignment ID;
+- assignment timestamp;
+- closure fields.
+
+The RPC derives those values from canonical authenticated state.
+
+The RPC MUST be:
+
+- `SECURITY DEFINER`;
+- `SET search_path = ''`;
+- authenticated-only.
+
+The RPC MUST revoke execute from:
+
+- PUBLIC
+- anon
+- service_role
+
+The RPC MUST grant execute only to:
+
+- authenticated
+
+### Assignment RPC Validation
+
+The RPC MUST:
+
+1. reject NULL required inputs;
+2. require `auth.uid()`;
+3. resolve and lock the authoritative booking;
+4. derive the booking organization and branch;
+5. require active organization membership;
+6. require `media.card.assign` at the booking branch scope;
+7. require exactly one canonical journey state;
+8. require Stage 10 `shoot_scheduled`;
+9. resolve the current Lead Photographer booking-team assignment;
+10. reject no current Lead Photographer;
+11. reject an external Lead Photographer;
+12. require the current Lead Photographer member to equal the authenticated actor;
+13. require the media card to exist in the same organization;
+14. require the capture device to exist in the same organization;
+15. prevent more than one active assignment for the same media card;
+16. insert only canonical derived identity and attribution.
+
+The implementation MUST serialize competing assignment attempts so concurrent
+requests cannot create two active rows for one card.
+
+### Replay Contract
+
+Replay is authorization-first.
+
+An existing active assignment is an exact replay only when all of the following
+still match:
+
+- same organization;
+- same booking;
+- same media card;
+- same capture device;
+- same current Lead Photographer assignment;
+- same custodian member;
+- same assigning member.
+
+An exact active replay:
+
+- returns the original assignment row;
+- preserves the original ID;
+- preserves `assigned_at`;
+- preserves `assigned_by`;
+- creates no second assignment row;
+- creates no duplicate audit event.
+
+If the same card is already active with a different:
+
+- booking;
+- capture device;
+- Lead Photographer assignment;
+- custodian;
+
+the request MUST fail.
+
+A Lead Photographer replacement while a card remains active does not transfer
+custody.
+
+The replacement Lead Photographer cannot reassign that card through B1.
+
+Later custody/removal controls must resolve the existing assignment first.
+
+### Relation Mutation Guard
+
+B1 assignment identity and original attribution are immutable.
+
+Direct DELETE is forbidden.
+
+Direct UPDATE is forbidden during B1.
+
+INSERT with pre-populated `ended_at` or `ended_by` is forbidden.
+
+Authenticated clients have no direct INSERT, UPDATE, or DELETE authority.
+
+Service-role table mutation is not an application mutation surface.
+
+A privileged database mutation attempt must still be rejected by the B1
+relation guard for UPDATE and DELETE.
+
+B2 may later replace or evolve this guard only through a separately frozen
+migration that introduces controlled removal/closure evidence.
+
+### RLS and ACL Boundary
+
+`public.media_card_assignments` MUST:
+
+- enable RLS;
+- force RLS.
+
+Authenticated SELECT is permitted only through a B1-specific policy requiring:
+
+- active organization membership;
+- `media.card.assign` for the assignment booking's branch scope;
+- valid booking branch scope where applicable.
+
+`booking.read` alone is insufficient to read B1 custody-assignment evidence.
+
+No authenticated direct INSERT, UPDATE, or DELETE privilege is permitted.
+
+No anonymous access is permitted.
+
+The application mutation surface is the controlled
+`assign_media_card(...)` RPC only.
+
+### Audit Contract
+
+First successful assignment emits exactly one audit event:
+
+- event_type: `media.card_assigned`
+- entity_type: `media_card_assignment`
+- entity_id: the canonical `media_card_assignments.id`
+- sensitive: `false`
+- old_values: NULL
+- new_values: NULL
+- source: `application`
+- request_id: NULL
+
+Audit metadata contains structural IDs only:
+
+- `organization_id`
+- `booking_id`
+- `media_card_assignment_id`
+- `media_card_id`
+- `capture_device_id`
+- `lead_photographer_assignment_id`
+- `custodian_member_id`
+- `assigned_by`
+
+The audit record MUST NOT contain:
+
+- `card_code`
+- `device_code`
+- display names
+- email addresses
+- phone numbers
+- free-text descriptions
+- seal data
+- shot-count data
+
+Exact replay creates no second audit event.
+
+### CUS-501 / Later Custody Boundary
+
+B1 establishes:
+
+- booking;
+- registered media card;
+- registered capture device;
+- canonical internal Lead Photographer assignment;
+- initial authenticated custodian;
+- assignment timestamp and attribution.
+
+B1 does NOT introduce:
+
+- card removal;
+- expected shot count;
+- actual shot count;
+- removal timestamp;
+- write-protection evidence;
+- seal ID;
+- seal condition;
+- seal status;
+- transfer state;
+- sender acknowledgement;
+- recipient acknowledgement;
+- ingestion custodian;
+- ingestion workstation;
+- ingest batch;
+- manifest;
+- SHA-256;
+- backup state;
+- card release;
+- editing handover.
+
+Those remain B2, B3, and later separately governed slices.
+
+### Runtime Non-Mutation Boundary
+
+A successful B1 RPC may mutate only:
+
+- `public.media_card_assignments`;
+- canonical audit storage through the existing audit append authority.
+
+It MUST NOT mutate:
+
+- `public.media_cards`;
+- `public.capture_devices`;
+- `public.bookings`;
+- `public.booking_team_assignments`;
+- `public.booking_journey_states`;
+- `public.booking_stage_transitions`;
+- family/client records;
+- quotations;
+- payments;
+- editing state;
+- gallery state.
+
+### Exact Implementation Boundary
+
+After this governance freeze is committed and remotely verified, local B1
+implementation is limited to exactly twenty files.
+
+CREATE:
+
+1. `supabase/migrations/20260829040000_sprint11_media_card_assignment_authority_foundation.sql`
+2. `supabase/tests/sprint11_media_card_assignment_authority_test.sql`
+
+UPDATE:
+
+3. `src/integrations/supabase/types.ts`
+4. `supabase/tests/sprint10_extended_creative_assignments_test.sql`
+5. `supabase/tests/sprint11_additional_image_pricing_basis_authority_test.sql`
+6. `supabase/tests/sprint11_adjusted_financial_obligation_authority_test.sql`
+7. `supabase/tests/sprint11_capture_device_identity_test.sql`
+8. `supabase/tests/sprint11_editing_completion_evidence_test.sql`
+9. `supabase/tests/sprint11_editing_start_evidence_test.sql`
+10. `supabase/tests/sprint11_full_balance_settlement_read_authority_test.sql`
+11. `supabase/tests/sprint11_image_entitlement_authority_test.sql`
+12. `supabase/tests/sprint11_media_card_inventory_authority_test.sql`
+13. `supabase/tests/sprint11_qc_pass_evidence_test.sql`
+14. `supabase/tests/sprint11_selection_confirmation_evidence_test.sql`
+15. `supabase/tests/sprint11_selection_entitlement_reconciliation_test.sql`
+16. `supabase/tests/sprint11_stage10_11_gate_test.sql`
+17. `supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`
+18. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`
+19. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql`
+20. `supabase/tests/sprint11_stage15_16_pixieset_gallery_ready_gate_test.sql`
+
+No other implementation file is authorized by this freeze.
+
+Governance documentation belongs to the separate governance-freeze commit and
+is not part of the twenty-file implementation commit.
+
+### Compatibility Total Boundary
+
+Exactly seventeen existing live-current test files currently contain the
+`70 / 245` authority contract.
+
+Across those seventeen files there are exactly thirty-eight matching live-total
+occurrences.
+
+Only those live-current assertions may advance to:
+
+- 71 permissions
+- 246 role-permission mappings
+- combined text `71:246` where the test uses the combined representation
+
+Historical migration assertions MUST NOT be edited.
+
+Comments, UUIDs, plan counts, historical totals, and unrelated numeric literals
+MUST NOT be changed merely because they contain similar numbers.
+
+The new B1 dedicated test asserts the final B1 authority contract of `71 / 246`.
+
+### Required Dedicated B1 Validation
+
+The dedicated B1 pgTAP test MUST prove at minimum:
+
+- exact permission key, domain, label, description, and server-enforcement flag;
+- exactly one role grant and that role is `photographer`;
+- no Founder or Studio Manager grant;
+- exact eleven-column relation shape;
+- all tenant-safe foreign keys;
+- closure-pair structural check;
+- assignment time structural check;
+- initial custodian / assigned-by equality;
+- active-card uniqueness;
+- absence of capture-device active uniqueness;
+- forced RLS;
+- direct authenticated DML denial;
+- anonymous denial;
+- service-role application-surface denial;
+- RPC signature;
+- SECURITY DEFINER;
+- empty search path;
+- RPC ACL;
+- authenticated current internal Lead Photographer success;
+- organization-wide qualifying photographer success where canonically assigned;
+- branch-scoped qualifying photographer success where canonically assigned;
+- photographer who is not the current Lead Photographer rejection;
+- Founder without the canonical Lead Photographer/photographer authority rejection;
+- Studio Manager without the canonical Lead Photographer/photographer authority rejection;
+- inactive member rejection;
+- non-member rejection;
+- anonymous rejection;
+- external current Lead Photographer rejection;
+- Stage 9 rejection;
+- exact Stage 10 success;
+- Stage 11 rejection;
+- same-organization media-card requirement;
+- same-organization capture-device requirement;
+- exact replay;
+- replay preserves original identity and attribution;
+- replay creates no duplicate audit;
+- active-card different-device collision rejection;
+- active-card different-booking collision rejection;
+- active-card different-current-custodian rejection;
+- multiple different cards on the same capture device are allowed;
+- first success emits exactly one `media.card_assigned` audit event;
+- exact structural audit metadata;
+- card and device codes absent from audit;
+- booking, journey, media-card, capture-device, and booking-team state remain unchanged;
+- privileged UPDATE rejection;
+- privileged DELETE rejection;
+- final authority totals exactly `71 / 246`.
+
+### Repository Validation Required Before B1 Commit
+
+Before the B1 implementation commit is authorized, local validation MUST
+include:
+
+- `git diff --check`;
+- local Supabase database reset;
+- local Supabase database lint;
+- dedicated B1 pgTAP test;
+- all seventeen frozen compatibility tests;
+- full Supabase database test suite;
+- targeted lint for the modified generated TypeScript type artifact;
+- production application build;
+- repository-wide lint reconciliation against the established baseline;
+- exact twenty-file implementation-boundary audit.
+
+Any new regression introduced by B1 requires revision.
+
+The existing repository-wide lint baseline may be treated separately only if
+its final error/warning totals remain unchanged and the B1-touched TypeScript
+artifact has no new lint diagnostic.
+
+### Environment Boundary
+
+- B1 governance/design: **APPROVED**
+- Local B1 implementation after governance freeze commit and remote verification: **AUTHORIZED**
+- Corrective Slice B2 implementation: **HOLD**
+- `architecture-rebuild`: **AUTHORIZED development branch**
+- `main`: **NO CHANGE AUTHORIZED**
+- Remote Supabase mutation/deployment: **HOLD**
+- Production deployment: **HOLD**
+
+### Formal Checkpoint
+
+**APPROVE - CORRECTIVE SLICE B1 TECHNICAL DESIGN FROZEN**
+
+**APPROVE - MEDIA CARD ASSIGNMENT IS BOUND TO THE CURRENT INTERNAL BOOKING LEAD PHOTOGRAPHER**
+
+**APPROVE - EXACT B1 AUTHORITY TOTALS 71 / 246**
+
+**APPROVE - EXACT B1 COMPATIBILITY SURFACE: 17 FILES / 38 LIVE-TOTAL OCCURRENCES**
+
+**APPROVE - EXACT B1 IMPLEMENTATION BOUNDARY: 20 FILES**
+
+**HOLD - IMPLEMENTATION UNTIL THIS FREEZE IS COMMITTED AND REMOTELY VERIFIED**
+
+**HOLD - CORRECTIVE SLICE B2**
+
+**HOLD - REMOTE SUPABASE**
+
+**HOLD - PRODUCTION**
