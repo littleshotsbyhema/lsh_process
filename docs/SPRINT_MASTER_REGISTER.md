@@ -25155,3 +25155,453 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 17 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+
+## Sprint 11 Slice 18 Technical-Design Freeze — 2026-08-28
+
+### Slice title
+
+**Sprint 11 Slice 18 — Delivery Confirmation Evidence Foundation**
+
+### Discovery baseline
+
+Read-only discovery established:
+
+- exact active Stage 16 `pixieset_gallery_ready`;
+- exact active Stage 17 `delivered`;
+- no existing public delivery-confirmation persistence relation;
+- no existing `record_booking_delivery_confirmation(uuid)` RPC;
+- no existing gallery/Pixieset/delivery business persistence;
+- no existing canonical delivery function;
+- no existing `booking.delivery_confirmed` audit event;
+- no existing `booking.delivered` audit event;
+- permissions remain exactly 68;
+- role-permission mappings remain exactly 241.
+
+Existing authority remains:
+
+`delivery.write`
+- `editor`;
+- `founder`;
+- `studio_manager`.
+
+Existing read authority remains:
+
+`delivery.read`.
+
+Existing journey mutation authority remains separately:
+
+`booking.stage.advance`
+- `client_coordinator`;
+- `founder`;
+- `studio_manager`.
+
+The difference between delivery-operation authority and journey-advance
+authority is intentional and preserved.
+
+### Architectural decision
+
+Slice 18 does not advance Stage 16 to Stage 17.
+
+Slice 18 introduces immutable canonical evidence that authorized delivery work
+has been confirmed while the booking remains at exact Stage 16
+`pixieset_gallery_ready`.
+
+A later separately governed slice may consume this evidence under
+`booking.stage.advance` to authorize Stage 16 -> 17.
+
+### Canonical relation
+
+Slice 18 introduces exactly:
+
+`public.booking_delivery_confirmations`
+
+with exactly six columns:
+
+1. `id uuid`;
+2. `organization_id uuid`;
+3. `booking_id uuid`;
+4. `source_pixieset_gallery_ready_transition_id uuid`;
+5. `delivered_at timestamptz`;
+6. `delivered_by uuid`.
+
+The relation is immutable.
+
+There is at most one canonical delivery-confirmation evidence row per
+organization and booking.
+
+The source transition is also uniquely attributable within the organization.
+
+### Canonical source lineage
+
+Delivery confirmation is valid only at exact active Stage 16
+`pixieset_gallery_ready`.
+
+Its source transition must resolve for the same organization and booking to
+exact canonical immediate lineage:
+
+Stage 15 `qc_pending`
+->
+Stage 16 `pixieset_gallery_ready`
+
+with transition key exactly:
+
+`pixieset_gallery_ready`
+
+and destination equal to the booking's current Stage 16 journey state.
+
+The source transition actor does not need to remain an active organization
+member.
+
+Slice 18 validates only its immediate Stage 15 -> 16 lineage.
+
+It does not reopen or independently reconstruct QC Pass, Editing Completion,
+Editing Start, selection, entitlement, finance or other deeper prerequisites.
+
+`delivered_at` must not precede the canonical Stage 16 source-transition
+timestamp.
+
+### Canonical recorder
+
+Slice 18 introduces exactly:
+
+`public.record_booking_delivery_confirmation(p_booking_id uuid)`
+
+returning:
+
+`public.booking_delivery_confirmations`
+
+The RPC must be:
+
+- `SECURITY DEFINER`;
+- empty `search_path`;
+- executable only by `authenticated`;
+- denied to PUBLIC;
+- denied to anon;
+- denied to service_role.
+
+### Mutation authority
+
+Recording delivery confirmation requires existing:
+
+`delivery.write`
+
+No new permission is introduced.
+
+No role-permission mapping is introduced.
+
+Canonical totals remain:
+
+- permissions: 68;
+- role-permission mappings: 241.
+
+Exact `delivery.write` role topology remains:
+
+- `editor`;
+- `founder`;
+- `studio_manager`.
+
+The RPC also requires:
+
+- authenticated actor;
+- active organization membership;
+- booking branch scope.
+
+The booking row is the canonical synchronization root and is locked first.
+
+### First-record contract
+
+First execution requires:
+
+- non-null booking id;
+- existing booking;
+- authenticated actor;
+- active organization membership;
+- `delivery.write`;
+- booking branch scope;
+- exactly one current journey state;
+- exact active Stage 16 `pixieset_gallery_ready`;
+- exactly one canonical Stage 15 -> 16
+  `pixieset_gallery_ready` source transition;
+- source transition belonging to the same organization and booking;
+- source transition destination equal to current Stage 16;
+- delivery-confirmation timestamp not earlier than source transition;
+- zero existing delivery-confirmation evidence for the booking.
+
+First success performs exactly:
+
+1. one immutable `booking_delivery_confirmations` insert;
+2. one structural `booking.delivery_confirmed` audit.
+
+It performs no journey-state update.
+
+It appends no booking-stage transition.
+
+It does not move the booking to Stage 17.
+
+### Replay contract
+
+Replay is strict Stage-16-only idempotency.
+
+If canonical delivery-confirmation evidence already exists while the booking
+remains exact Stage 16, replay validates that:
+
+- evidence belongs to the same organization and booking;
+- stored source transition equals the canonical current Stage-16 entry
+  transition;
+- `delivered_at` is not earlier than the source transition.
+
+Valid replay returns the same immutable evidence row.
+
+Valid replay creates:
+
+- no second evidence row;
+- no second audit;
+- no journey mutation;
+- no version increment;
+- no gallery/Pixieset persistence.
+
+Existing inconsistent evidence fails closed.
+
+Earlier-stage invocation fails closed.
+
+Stage 17 or later invocation fails closed.
+
+### Immutable lifecycle
+
+Authenticated clients receive no direct INSERT, UPDATE or DELETE authority on
+`booking_delivery_confirmations`.
+
+The evidence relation uses forced RLS.
+
+Authenticated SELECT is governed by existing:
+
+`delivery.read`
+
+plus booking branch scope.
+
+The canonical mutation path is the recorder RPC.
+
+Evidence UPDATE and DELETE are forbidden.
+
+### Audit contract
+
+First success appends exactly:
+
+`booking.delivery_confirmed`
+
+The audit is structural only.
+
+Allowed audit context is limited to identifiers and timestamps such as:
+
+- booking id;
+- delivery-confirmation evidence id;
+- source Pixieset Gallery Ready transition id;
+- Stage 16 id;
+- delivered-at timestamp.
+
+The audit must not contain:
+
+- gallery URL;
+- password;
+- PIN;
+- credentials;
+- API tokens;
+- download URL;
+- client-access secrets;
+- Pixieset payloads;
+- external response payloads;
+- invoice or contract links;
+- free-text delivery notes.
+
+`booking.delivered` is not introduced by Slice 18 and remains available for a
+future separately governed Stage 16 -> 17 journey gate.
+
+### Persistence containment
+
+Slice 18 introduces no Pixieset integration persistence.
+
+It introduces no:
+
+- gallery relation;
+- Pixieset gallery identifier;
+- gallery URL;
+- password or PIN;
+- Pixieset API credential;
+- external synchronization state;
+- download URL;
+- download expiry;
+- store/order persistence;
+- favorites persistence;
+- client-access persistence;
+- invoice/contract-link persistence;
+- mutable delivery workflow;
+- delivery job relation.
+
+The only new business persistence is the immutable six-column
+`booking_delivery_confirmations` evidence relation.
+
+### Authority containment
+
+Slice 18 does not require or import:
+
+- `booking.stage.advance`;
+- `editing.read`;
+- `editing.write`;
+- `review.read`;
+- `review.write`;
+- finance authority;
+- payment authority;
+- team-assignment authority.
+
+Slice 18 does not call or recreate:
+
+- `mark_booking_pixieset_gallery_ready`;
+- `record_booking_qc_pass`;
+- `mark_booking_qc_pending`;
+- `record_booking_editing_completion`;
+- `record_booking_editing_start`;
+- `mark_booking_editing_in_progress`.
+
+### Explicitly excluded downstream scope
+
+Slice 18 does not authorize:
+
+- Stage 16 -> 17;
+- `delivered` journey transition;
+- `booking.delivered` audit;
+- final-delivery journey gate;
+- Pixieset API integration;
+- Pixieset credentials;
+- gallery creation;
+- external gallery synchronization;
+- UI/runtime integration;
+- mock-store replacement;
+- review-request workflow;
+- heirloom workflow;
+- payment/refund mutation;
+- Remote Supabase deployment;
+- Production deployment.
+
+### Historical-test compatibility boundary
+
+Read-only discovery identified exactly four historical pgTAP files whose
+current-schema future-zero persistence scans would otherwise classify the new
+canonical delivery evidence as a historical-slice regression:
+
+1. `supabase/tests/sprint11_editing_completion_evidence_test.sql`;
+2. `supabase/tests/sprint11_qc_pass_evidence_test.sql`;
+3. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql`;
+4. `supabase/tests/sprint11_stage15_16_pixieset_gallery_ready_gate_test.sql`.
+
+Slice 18 authorizes one narrow compatibility edit in each listed file:
+
+exclude exact relation:
+
+`booking_delivery_confirmations`
+
+from the historical global gallery/Pixieset/delivery persistence-count scan.
+
+No historical test may:
+
+- delete the assertion;
+- skip the assertion;
+- comment it out;
+- replace the expected zero with a non-zero count;
+- broaden the exclusion to arbitrary future relations;
+- weaken unrelated authority checks;
+- alter historical runtime semantics.
+
+No other historical test modification is authorized by this freeze.
+
+Because this compatibility requirement is discovered and explicitly frozen
+before implementation, no separate compatibility-governance amendment is
+currently required.
+
+### Expected implementation artifact boundary
+
+Slice 18 implementation is expected to modify exactly seven artifacts:
+
+1. one new Slice 18 delivery-confirmation-evidence migration;
+2. `supabase/tests/sprint11_delivery_confirmation_evidence_test.sql`;
+3. `src/integrations/supabase/types.ts`;
+4. `supabase/tests/sprint11_editing_completion_evidence_test.sql`;
+5. `supabase/tests/sprint11_qc_pass_evidence_test.sql`;
+6. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql`;
+7. `supabase/tests/sprint11_stage15_16_pixieset_gallery_ready_gate_test.sql`.
+
+No eighth implementation artifact is authorized without a new governance
+decision.
+
+Generated Supabase types may change semantically only for:
+
+- `booking_delivery_confirmations`;
+- `record_booking_delivery_confirmation`.
+
+Exact generated-types line counts are not frozen in advance.
+
+### Required validation
+
+Implementation acceptance will require at minimum:
+
+- clean local database reset PASS;
+- local database lint PASS with no schema errors;
+- permissions exactly 68;
+- role-permission mappings exactly 241;
+- relation exactly six columns;
+- forced RLS;
+- authenticated SELECT governed by `delivery.read`;
+- authenticated direct mutation denied;
+- evidence UPDATE and DELETE denied;
+- authenticated RPC EXECUTE allowed;
+- PUBLIC RPC EXECUTE denied;
+- anon RPC EXECUTE denied;
+- service_role RPC EXECUTE denied;
+- exact active Stage 16 requirement;
+- exact Stage 15 -> 16 source lineage;
+- timestamp ordering enforced;
+- `delivery.write` required;
+- exact delivery-write role topology retained;
+- Editor can record delivery confirmation without receiving journey authority;
+- Client Coordinator cannot record delivery confirmation merely from
+  `booking.stage.advance`;
+- first record creates exactly one evidence row;
+- first record creates exactly one `booking.delivery_confirmed` audit;
+- replay returns the same evidence row;
+- replay creates no second audit;
+- no journey transition created;
+- no journey-state version change;
+- malformed source lineage rejected;
+- earlier-stage invocation rejected;
+- Stage 17-or-later invocation rejected;
+- no external gallery/Pixieset persistence;
+- four authorized historical compatibility assertions PASS;
+- dedicated Slice 18 pgTAP PASS;
+- focused Sprint 11 regression PASS;
+- full local pgTAP regression PASS;
+- generated Supabase types freshly regenerated;
+- generated-types semantic delta constrained to the frozen boundary;
+- Prettier PASS;
+- targeted generated-types ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- diff hygiene PASS.
+
+### Governance conclusion
+
+Sprint 11 Slice 18 is frozen as an immutable Delivery Confirmation Evidence
+Foundation only.
+
+The booking remains at exact Stage 16 after delivery confirmation is recorded.
+
+Stage 16 -> 17 requires a later separately governed journey gate consuming this
+evidence under `booking.stage.advance`.
+
+This technical-design freeze modifies governance documentation only.
+
+Implementation has not started.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 18 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT STARTED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
