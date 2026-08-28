@@ -6854,3 +6854,77 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 16 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT STARTED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+
+### Sprint 11 Slice 16 Governance Amendment 1 — Historical Stage-14 Compatibility
+
+This amendment is additive and does not rewrite the original Slice 16
+technical-design freeze.
+
+During local Slice 16 validation, after:
+
+- clean local database reset PASS;
+- local database lint PASS;
+- dedicated Slice 16 pgTAP 42 / 42 PASS;
+- Slice 14 compatibility 42 / 42 PASS;
+- Slice 15 compatibility 38 / 38 PASS;
+- Slice 11 compatibility 59 / 59 PASS;
+
+the historical Slice 12 compatibility suite exposed one compatibility-only
+failure:
+
+`Slice 12 introduces no Stage 14 function`
+
+The assertion returned exactly two later authorized functions.
+
+Direct catalogue inspection proved those functions are exactly:
+
+- `public.lsh_booking_qc_pass_guard()`;
+- `public.record_booking_qc_pass(uuid)`.
+
+Both are legitimate Slice 16 functions and necessarily reference
+`editing_in_progress` only to prove the frozen canonical Stage 14
+`editing_in_progress` -> Stage 15 `qc_pending` source-transition lineage.
+
+This does not introduce Stage 13 -> 14 authority, Stage 15 -> 16 authority,
+or any new journey mutation.
+
+The original Slice 16 compatibility authorization is therefore amended by
+adding exactly two historical test artifacts:
+
+3. `supabase/tests/sprint11_editing_start_evidence_test.sql` may add exactly
+   `lsh_booking_qc_pass_guard` and `record_booking_qc_pass` to the
+   `procedure.proname NOT IN (...)` exclusion list of its historical
+   Stage-14-function compatibility assertion only;
+
+4. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`
+   may add exactly `lsh_booking_qc_pass_guard` and
+   `record_booking_qc_pass` to the `procedure.proname NOT IN (...)`
+   exclusion list of its historical Stage-14-function compatibility
+   assertion only.
+
+No other assertion in either historical test may be changed under this
+amendment.
+
+The amended Slice 16 implementation boundary is exactly seven artifacts:
+
+1. `supabase/migrations/<timestamp>_sprint11_qc_pass_evidence_foundation.sql`;
+2. `supabase/tests/sprint11_qc_pass_evidence_test.sql`;
+3. `src/integrations/supabase/types.ts`;
+4. `supabase/tests/sprint11_editing_completion_evidence_test.sql`;
+5. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql`;
+6. `supabase/tests/sprint11_editing_start_evidence_test.sql`;
+7. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`.
+
+No eighth implementation artifact is authorized.
+
+This amendment changes no Slice 16 domain authority, persistence model,
+permission topology, RLS authority, replay semantics, audit semantics,
+journey containment or downstream exclusion.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+Stage 15 -> 16 remains unauthorized.
+
+**SPRINT 11 SLICE 16 — GOVERNANCE AMENDED FOR EXACT HISTORICAL COMPATIBILITY / LOCAL IMPLEMENTATION CONTINUES / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
