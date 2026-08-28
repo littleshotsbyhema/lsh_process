@@ -423,6 +423,7 @@ SELECT is(
       AND procedure.prokind = 'f'
       AND procedure.proname NOT IN (
         'mark_booking_editing_in_progress',
+        'mark_booking_qc_pending',
         'lsh_booking_editing_completion_guard',
         'record_booking_editing_completion'
       )
