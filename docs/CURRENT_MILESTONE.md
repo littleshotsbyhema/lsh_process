@@ -12,9 +12,40 @@ Treat the existing organization isolation, authentication, RBAC/RLS, audit found
 
 Sprint 10 (Pre-Shoot Preparation, Safety Readiness & Shoot Scheduling Foundation) is implemented through Slice 7R and remains not released.
 
-Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 14 are implemented, fully validated locally, committed, governance closed, pushed and independently verified on `origin/architecture-rebuild`. Slice 14 technical-design freeze is `f367973df24edca781c95695dbb93db7538e157f` — `docs: freeze sprint 11 slice 14`; implementation is `a2d4f4f4462a715d75add6b9e0ebb286d0b5f336` — `feat: add editing completion evidence foundation`; governance closeout is `473428daf3036b14584ebbfe8e69fa2a5d48b6b6` — `docs: close sprint 11 slice 14`. This two-document checkpoint records the reconciled Slice 14 remote state before the reconciliation commit itself is separately pushed. Remote Supabase remains HOLD. Production remains HOLD.
+Sprint 11 (Shoot Completion & Post-Session Handoff) is the active programme. Sprint 11 Slices 1 through 15 are implemented, fully validated locally, committed, governance closed, pushed and independently verified on `origin/architecture-rebuild`. Slice 15 technical-design freeze is `0e6accc7dc3bd69c80becd3e4db626a688b0d971` — `docs: freeze sprint 11 slice 15`; implementation is `67746d3063c5f029c374d3700f2dd94d65d51756` — `feat: add qc pending advancement gate`; governance closeout is `e4863b00c0b1c59a191d6b0afb762f980603bb29` — `docs: close sprint 11 slice 15`; remote-state reconciliation is `83692ed04a22ef8bf1a2e1a9336e4f043d5a3266` — `docs: reconcile sprint 11 slice 15 remote state`. Slice 16 is the active technical-design checkpoint and remains unimplemented. Remote Supabase remains HOLD. Production remains HOLD.
 
 ## Current Verified Checkpoint
+
+Sprint 11 Slice 15 — **Controlled Stage 14 -> 15 / QC Pending Advancement Gate** — is implemented, fully validated locally, committed, governance closed, pushed and remotely reconciled.
+
+Exact authority chain:
+
+- technical-design freeze `0e6accc7dc3bd69c80becd3e4db626a688b0d971`;
+- implementation `67746d3063c5f029c374d3700f2dd94d65d51756`;
+- governance closeout `e4863b00c0b1c59a191d6b0afb762f980603bb29`;
+- remote-state reconciliation `83692ed04a22ef8bf1a2e1a9336e4f043d5a3266`.
+
+Accepted Slice 15 validation:
+
+- clean local database reset PASS;
+- local DB lint PASS;
+- dedicated Slice 15 pgTAP 38 / 38 PASS;
+- Slice 11 compatibility 59 / 59 PASS;
+- Slice 12 compatibility 63 / 63 PASS;
+- Slice 13 compatibility 53 / 53 PASS;
+- Slice 14 compatibility 42 / 42 PASS unchanged;
+- full local pgTAP regression 32 files / 2005 tests PASS;
+- permissions 68;
+- role-permission mappings 241;
+- exact `public.mark_booking_qc_pending(uuid)` authority;
+- exact Stage 14 `editing_in_progress` -> Stage 15 `qc_pending`;
+- no Stage 15 -> 16 authority.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+### Prior remotely reconciled Slice 14 checkpoint
 
 Sprint 11 Slice 14 — **Editing Completion Evidence Foundation** — is implemented, fully validated locally, committed, governance closed, pushed and independently verified on `origin/architecture-rebuild`. Governance closeout `473428daf3036b14584ebbfe8e69fa2a5d48b6b6` — `docs: close sprint 11 slice 14` is independently confirmed with exact parent `a2d4f4f4462a715d75add6b9e0ebb286d0b5f336`. This two-document checkpoint records the reconciled remote state.
 
@@ -6466,3 +6497,360 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 15 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+
+## Sprint 11 Slice 16 Technical Design Freeze — 2026-08-28
+
+### Frozen baseline
+
+Exact remotely reconciled parent:
+
+`83692ed04a22ef8bf1a2e1a9336e4f043d5a3266` — `docs: reconcile sprint 11 slice 15 remote state`
+
+Slice 16 may not be implemented against any other parent without a governance amendment.
+
+### Slice name
+
+**Sprint 11 Slice 16 — QC Pass Evidence Foundation**
+
+### Architectural purpose
+
+Slice 15 establishes exact Stage 15 `qc_pending`.
+
+Slice 16 establishes immutable evidence that QC has passed while the booking remains exactly at Stage 15.
+
+The authority separation is:
+
+1. existing `editing.write` records immutable QC Pass evidence;
+2. Slice 16 performs no journey advancement;
+3. a later separately governed `booking.stage.advance` gate may consume the immutable pass evidence;
+4. Stage 16 `pixieset_gallery_ready` remains outside Slice 16.
+
+### Frozen persistence
+
+Create exactly one relation:
+
+`public.booking_qc_passes`
+
+Exact columns:
+
+1. `id uuid`;
+2. `organization_id uuid`;
+3. `booking_id uuid`;
+4. `source_qc_pending_transition_id uuid`;
+5. `passed_at timestamptz`;
+6. `passed_by uuid`.
+
+No seventh column is authorized.
+
+Row existence represents an affirmative QC pass.
+
+Slice 16 does not persist:
+
+- fail/result/status enums;
+- QC score;
+- free-text QC notes;
+- reviewer assignment;
+- rework/retouch instructions;
+- image-level QC;
+- Pixieset/gallery data;
+- delivery data.
+
+### Frozen invariants
+
+The relation must enforce:
+
+- tenant-safe organization ownership;
+- one QC Pass evidence row per organization + booking;
+- one consumption of a source QC Pending transition;
+- exact organization-safe booking reference;
+- exact organization-safe source-transition reference;
+- immutable evidence after insert;
+- `passed_at >=` source transition timestamp.
+
+Update and delete are forbidden.
+
+### Frozen mutation RPC
+
+Create exactly one mutation RPC:
+
+`public.record_booking_qc_pass(uuid)`
+
+Exact argument:
+
+`p_booking_id uuid`
+
+Return type:
+
+`public.booking_qc_passes`
+
+The RPC must be:
+
+- `SECURITY DEFINER`;
+- empty `search_path`;
+- authenticated application actors only.
+
+PUBLIC, anon and service_role EXECUTE remain denied.
+
+### Frozen authorization
+
+First execution requires:
+
+- authenticated actor;
+- active organization membership;
+- existing `editing.write`;
+- booking branch scope.
+
+Existing `editing.write` topology remains exactly:
+
+- Editor;
+- Founder;
+- Studio Manager.
+
+No new permission or role mapping is introduced.
+
+Canonical totals remain:
+
+- permissions 68;
+- role-permission mappings 241.
+
+The RPC must not require or import:
+
+- `booking.stage.advance`;
+- `delivery.read`;
+- `delivery.write`;
+- `review.read`;
+- `review.write`;
+- `finance.read`;
+- `payment.read`;
+- `booking.team.assign`.
+
+### Frozen read authority
+
+Forced RLS authenticated SELECT uses existing:
+
+`editing.read`
+
+plus booking branch scope.
+
+Existing `editing.read` topology remains exactly:
+
+- Client Coordinator;
+- Editor;
+- Founder;
+- Studio Manager.
+
+No QC-specific read permission is introduced.
+
+### Frozen current-stage rule
+
+The booking row is the synchronization root and is locked before first insert.
+
+Exactly one current canonical journey state is required.
+
+First execution requires exactly:
+
+Stage 15 `qc_pending`
+
+and the stage must be active.
+
+Stage 14 or earlier is rejected.
+
+Stage 16 or later is rejected.
+
+### Frozen QC Pending lineage
+
+First execution must prove exactly one canonical transition for the same organization + booking:
+
+Stage 14 `editing_in_progress`
+->
+Stage 15 `qc_pending`
+
+with transition key:
+
+`qc_pending`
+
+The transition destination must equal the booking's current Stage 15 state.
+
+The exact transition id is stored as:
+
+`source_qc_pending_transition_id`
+
+Slice 16 trusts this already-governed journey provenance.
+
+It must not re-evaluate or mutate:
+
+- `booking_editing_completions`;
+- Editing Completion actor authority;
+- Editing Start evidence;
+- selection evidence;
+- finance authority;
+- payment authority.
+
+### Frozen first success
+
+First success inserts exactly one immutable QC Pass evidence row.
+
+`passed_by` is the current authorized organization member.
+
+`passed_at` is the authoritative pass timestamp.
+
+The booking remains exactly Stage 15 `qc_pending`.
+
+No `booking_stage_transitions` row is appended.
+
+No `booking_journey_states` row is updated.
+
+### Frozen replay
+
+Valid replay is allowed only while the booking remains exact Stage 15 `qc_pending`.
+
+Replay must prove exactly one existing evidence row whose:
+
+- organization matches;
+- booking matches;
+- source transition equals the exact canonical Stage 14 -> 15 `qc_pending` transition;
+- `passed_at` is not earlier than the source transition.
+
+Valid replay:
+
+- returns the same evidence row;
+- creates no second evidence;
+- creates no second audit;
+- performs no journey mutation.
+
+Invalid or inconsistent evidence fails closed.
+
+### Frozen audit
+
+First success appends exactly one non-sensitive audit event:
+
+`booking.qc_passed`
+
+Structural metadata may contain only identifiers and timestamps required to prove the pass lineage, including:
+
+- booking id;
+- QC Pass evidence id;
+- source QC Pending transition id;
+- Stage 15 identifier;
+- pass timestamp.
+
+Audit metadata must not contain:
+
+- free-text QC notes;
+- QC failure reasons;
+- image-level findings;
+- editor notes;
+- reviewer assignment;
+- financial information;
+- Pixieset/gallery information;
+- delivery information.
+
+Replay creates no second audit.
+
+### Frozen journey and downstream containment
+
+Slice 16 creates no journey authority.
+
+It must not:
+
+- append Stage 15 -> 16;
+- mutate `booking_journey_states`;
+- create Pixieset/gallery persistence;
+- create delivery persistence;
+- call a Stage 15 -> 16 journey RPC;
+- import `delivery.write`.
+
+Stage 16 `pixieset_gallery_ready` remains later-governed.
+
+### Frozen scope exclusions
+
+Slice 16 does not implement:
+
+- QC fail persistence;
+- generic QC result lifecycle;
+- QC reviewer assignment;
+- QC comments/free text;
+- retouching/rework workflow;
+- image-level QC;
+- mutable editing-job lifecycle;
+- priority/SLA;
+- Stage 15 -> 16;
+- Pixieset integration;
+- gallery persistence;
+- gallery URLs;
+- gallery status;
+- Stage 16 -> 17;
+- delivery persistence;
+- payment/refund mutation;
+- settlement;
+- UI/runtime integration;
+- mock-store replacement;
+- Remote Supabase deployment;
+- Production deployment.
+
+### Frozen compatibility boundary
+
+Exactly two historical tests may be amended because their historical downstream-zero relation assertions become stale once the later-governed QC Pass relation exists.
+
+Authorized amendments are exactly:
+
+1. `supabase/tests/sprint11_editing_completion_evidence_test.sql`
+   - its historical QC/gallery/delivery zero-persistence predicate may exclude exactly `booking_qc_passes`;
+   - no other assertion may be weakened;
+
+2. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql`
+   - its historical QC/gallery/delivery zero-persistence predicate may exclude exactly `booking_qc_passes`;
+   - no other assertion may be weakened.
+
+No other historical test amendment is authorized.
+
+### Frozen implementation artifact boundary
+
+Authorized implementation artifacts are exactly:
+
+1. `supabase/migrations/<timestamp>_sprint11_qc_pass_evidence_foundation.sql`;
+2. `supabase/tests/sprint11_qc_pass_evidence_test.sql`;
+3. `src/integrations/supabase/types.ts`;
+4. `supabase/tests/sprint11_editing_completion_evidence_test.sql`;
+5. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql`.
+
+No sixth implementation artifact is authorized without a governance amendment.
+
+### Validation contract
+
+Before Slice 16 implementation may close, require:
+
+- clean local database reset PASS;
+- local DB lint PASS;
+- dedicated Slice 16 pgTAP PASS;
+- Slice 14 compatibility 42 / 42 PASS;
+- Slice 15 compatibility 38 / 38 PASS;
+- all earlier focused compatibility suites PASS;
+- full local pgTAP regression PASS;
+- permissions exactly 68;
+- role-permission mappings exactly 241;
+- exact six-column `booking_qc_passes`;
+- exact `record_booking_qc_pass(uuid)` RPC;
+- no unauthorized Pixieset/gallery/delivery persistence;
+- generated Supabase types freshly regenerated;
+- generated-types semantic delta limited to `booking_qc_passes` and `record_booking_qc_pass`;
+- Prettier PASS;
+- targeted ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- `git diff --check` PASS;
+- exact five-artifact implementation boundary.
+
+### Freeze conclusion
+
+Sprint 11 Slice 16 is technically frozen as:
+
+**QC Pass Evidence Foundation**
+
+Implementation remains unauthorized until this exact freeze is committed, pushed and independently verified.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 16 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT STARTED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**

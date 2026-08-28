@@ -4,7 +4,7 @@
 **Repository:** `Little-Shots-by-Hema-OS/memory-keeper-os`
 **Primary release branch:** `architecture-rebuild`
 **Register version:** 1.0
-**Last updated:** 2026-08-17
+**Last updated:** 2026-08-28
 
 ---
 
@@ -23851,3 +23851,93 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 15 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+
+## Sprint 11 Slice 16 Technical Design Freeze — 2026-08-28
+
+**Sprint 11 Slice 16 — QC Pass Evidence Foundation**
+
+Frozen baseline:
+
+`83692ed04a22ef8bf1a2e1a9336e4f043d5a3266` — `docs: reconcile sprint 11 slice 15 remote state`
+
+Frozen authority:
+
+- exact current Stage 15 `qc_pending`;
+- existing `editing.write` records immutable QC Pass evidence;
+- `editing.write` topology remains Editor / Founder / Studio Manager;
+- `editing.read` governs branch-scoped authenticated reads;
+- no new permission or role mapping;
+- permissions remain 68;
+- role-permission mappings remain 241;
+- no `booking.stage.advance` authority in Slice 16;
+- no `delivery.write` authority in Slice 16.
+
+Frozen persistence:
+
+`public.booking_qc_passes`
+
+Exact six columns:
+
+- `id uuid`;
+- `organization_id uuid`;
+- `booking_id uuid`;
+- `source_qc_pending_transition_id uuid`;
+- `passed_at timestamptz`;
+- `passed_by uuid`.
+
+Frozen mutation:
+
+`public.record_booking_qc_pass(p_booking_id uuid)`
+
+returns `public.booking_qc_passes`.
+
+First execution requires exact active Stage 15 and exactly one canonical Stage 14 -> 15 transition with key `qc_pending`.
+
+The evidence binds to that exact source transition.
+
+Slice 16 does not re-evaluate Editing Completion, editing actor, selection, finance or payment authority.
+
+First success records immutable QC Pass evidence and one structural `booking.qc_passed` audit.
+
+The booking remains Stage 15.
+
+Strict replay is Stage-15-only and creates no second evidence, audit or journey mutation.
+
+Still excluded:
+
+- QC fail/result lifecycle;
+- reviewer assignment;
+- QC notes;
+- rework/retouch workflow;
+- image-level QC;
+- Stage 15 -> 16;
+- Pixieset/gallery persistence;
+- delivery persistence;
+- Stage 16 -> 17;
+- UI/runtime;
+- mock-store replacement;
+- Remote Supabase;
+- Production.
+
+Authorized compatibility amendments are exactly:
+
+1. `supabase/tests/sprint11_editing_completion_evidence_test.sql` may exclude exactly `booking_qc_passes` from its historical QC/gallery/delivery zero-persistence predicate;
+2. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql` may exclude exactly `booking_qc_passes` from its historical QC/gallery/delivery zero-persistence predicate.
+
+Frozen implementation boundary is exactly five artifacts:
+
+1. `supabase/migrations/<timestamp>_sprint11_qc_pass_evidence_foundation.sql`;
+2. `supabase/tests/sprint11_qc_pass_evidence_test.sql`;
+3. `src/integrations/supabase/types.ts`;
+4. `supabase/tests/sprint11_editing_completion_evidence_test.sql`;
+5. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql`.
+
+No sixth implementation artifact is authorized.
+
+Implementation remains unauthorized until the technical-design freeze is committed, pushed and independently verified.
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+**SPRINT 11 SLICE 16 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT STARTED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
