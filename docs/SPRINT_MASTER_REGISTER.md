@@ -24311,3 +24311,459 @@ Remote Supabase remains HOLD.
 Production remains HOLD.
 
 **SPRINT 11 SLICE 16 — IMPLEMENTED / FULLY VALIDATED LOCALLY / COMMITTED / GOVERNANCE CLOSED / PUSHED / REMOTELY RECONCILED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
+
+## Sprint 11 Slice 17 Technical Design Freeze — 2026-08-28
+
+### Slice title
+
+**Sprint 11 Slice 17 — Controlled Stage 15 -> 16 / Pixieset Gallery Ready Advancement Gate**
+
+### Frozen baseline
+
+Exact remotely reconciled parent:
+
+`455593af7c4b322188bc929441e18df219d09730`
+
+— `docs: reconcile sprint 11 slice 16 remote state`
+
+The canonical journey catalogue currently contains exactly:
+
+- Stage 15 — `qc_pending` — active;
+- Stage 16 — `pixieset_gallery_ready` — active.
+
+The canonical relevant authority topology remains:
+
+- `booking.stage.advance`
+  — `client_coordinator`, `founder`, `studio_manager`;
+- `editing.read`
+  — `client_coordinator`, `editor`, `founder`, `studio_manager`;
+- `editing.write`
+  — `editor`, `founder`, `studio_manager`;
+- `delivery.read`
+  — `album_coordinator`, `client_coordinator`, `editor`,
+    `founder`, `photographer`, `studio_manager`;
+- `delivery.write`
+  — `editor`, `founder`, `studio_manager`.
+
+Canonical permission totals remain:
+
+- permissions: 68;
+- role-permission mappings: 241.
+
+The corrected local baseline probe confirms:
+
+- zero public functions whose name contains `gallery` or `pixieset`;
+- zero existing public function definitions containing
+  `pixieset_gallery_ready`;
+- zero public persistence relations whose name contains
+  `gallery`, `pixieset` or `delivery`.
+
+The immutable Slice 16 prerequisite already exists:
+
+`public.booking_qc_passes`
+
+with exact affirmative QC Pass lineage.
+
+### Frozen architectural purpose
+
+Slice 17 introduces the single controlled journey authority required to move
+a booking from exact Stage 15 `qc_pending` to exact Stage 16
+`pixieset_gallery_ready`.
+
+Slice 17 is a journey-advancement gate only.
+
+The authoritative manual invocation of this gate means the authorized journey
+actor is declaring that the booking may enter the Pixieset Gallery Ready
+journey stage after canonical QC Pass evidence exists.
+
+The Stage 16 name does not create or imply a persisted Pixieset integration
+object, gallery URL, synchronization record, delivery record, API call or
+external-system authority.
+
+### Frozen authority model
+
+Journey mutation authority remains the existing:
+
+`booking.stage.advance`
+
+No new permission is introduced.
+
+No new role-permission mapping is introduced.
+
+Exact journey-authorized role topology remains:
+
+- `client_coordinator`;
+- `founder`;
+- `studio_manager`.
+
+Editor does not receive journey advancement.
+
+Photographer does not receive journey advancement.
+
+Album Coordinator does not receive journey advancement.
+
+Marketing does not receive journey advancement.
+
+Slice 17 does not require:
+
+- `editing.write`;
+- `editing.read`;
+- `delivery.write`;
+- `delivery.read`;
+- `review.write`;
+- `review.read`;
+- `finance.read`;
+- `payment.read`;
+- `booking.team.assign`.
+
+### Frozen RPC contract
+
+Slice 17 introduces exactly one application RPC:
+
+`public.mark_booking_pixieset_gallery_ready(p_booking_id uuid)`
+
+Return type:
+
+`public.bookings`
+
+The RPC must be:
+
+- `SECURITY DEFINER`;
+- `SET search_path = ''`;
+- executable by `authenticated`;
+- not executable by `PUBLIC`;
+- not executable by `anon`;
+- not executable by `service_role`.
+
+The RPC requires the current actor to be:
+
+- authenticated;
+- an active member of the booking organization;
+- authorized by `booking.stage.advance`;
+- within the booking branch scope when the booking has a branch.
+
+### Frozen synchronization root
+
+The booking row remains the canonical synchronization root.
+
+The RPC must lock the booking before resolving journey state and prerequisite
+evidence.
+
+Exactly one current `booking_journey_states` row must exist for the booking.
+
+### Frozen first-execution source state
+
+First execution is permitted only when the current journey stage is exactly:
+
+Stage 15 — `qc_pending`
+
+The current Stage 15 catalogue row must be active.
+
+Any earlier stage is rejected.
+
+Any later stage other than the exact valid Stage 16 replay state is rejected.
+
+### Frozen QC Pass prerequisite
+
+First execution requires exactly one immutable:
+
+`public.booking_qc_passes`
+
+row for the same organization and booking.
+
+The gate consumes the QC Pass evidence; it does not create, update, delete or
+re-record QC Pass evidence.
+
+The QC Pass row's:
+
+`source_qc_pending_transition_id`
+
+must resolve to the same organization and booking and must identify the
+historical `qc_pending` transition whose destination is the booking's current
+Stage 15 journey state.
+
+The source transition must have:
+
+`transition_key = 'qc_pending'`
+
+and:
+
+`to_stage_id = current Stage 15 id`.
+
+The QC Pass timestamp must not precede that transition timestamp.
+
+Slice 17 trusts the deeper immutable Slice 16 provenance guarantee that this
+stored source transition is the canonical Stage 14 -> 15 transition.
+
+Slice 17 therefore does not independently reopen or restate the upstream
+Stage 14 `editing_in_progress` source-stage predicate.
+
+Slice 17 does not require the historical QC Pass actor or historical
+`qc_pending` transition actor to remain active.
+
+Only the current journey actor must satisfy current authorization.
+
+### Frozen pre-advancement uniqueness
+
+While the booking is still at exact Stage 15, there must be zero existing
+canonical Stage 15 -> 16 transitions for that booking with:
+
+`transition_key = 'pixieset_gallery_ready'`.
+
+A pre-existing destination transition while the current state remains
+Stage 15 is corruption and must be rejected.
+
+### Frozen Stage 16 destination
+
+Exactly one active destination stage must exist for the organization with:
+
+- `stage_order = 16`;
+- `stage_key = 'pixieset_gallery_ready'`;
+- `is_active = true`.
+
+No alternate Stage 16 destination may be selected.
+
+### Frozen first-success journey mutation
+
+First successful execution performs exactly:
+
+1. one append to `public.booking_stage_transitions`;
+2. one optimistic update to `public.booking_journey_states`;
+3. one structural audit append.
+
+The journey transition must be:
+
+Stage 15 `qc_pending`
+->
+Stage 16 `pixieset_gallery_ready`
+
+with exact:
+
+`transition_key = 'pixieset_gallery_ready'`.
+
+The transition actor must be the current authorized journey actor.
+
+The journey-state update must change only the canonical journey progression
+fields required by the existing journey model, including:
+
+- `current_stage_id`;
+- `stage_entered_at`;
+- `version`;
+- `updated_at`;
+- `updated_by`.
+
+The update must prove the expected current Stage 15 identifier and expected
+journey-state version.
+
+Exactly one row must update.
+
+Journey-state version increments by exactly one.
+
+### Frozen audit contract
+
+First success appends exactly one audit event:
+
+`booking.pixieset_gallery_ready`
+
+The audit is structural only.
+
+No free-text operational note is introduced.
+
+Audit values/metadata may contain only structural identifiers and timestamps
+required to prove the advancement, including:
+
+- booking identifier;
+- QC Pass evidence identifier;
+- stored source `qc_pending` transition identifier;
+- Stage 15 source identifier;
+- Stage 16 destination identifier;
+- transition timestamp.
+
+The audit must not introduce gallery URLs, client-visible secrets,
+credentials, arbitrary notes or external Pixieset payloads.
+
+### Frozen replay contract
+
+Idempotent replay is allowed only when the booking is already at exact:
+
+Stage 16 — `pixieset_gallery_ready`.
+
+Replay must prove exactly one historical canonical transition for the same
+organization and booking with:
+
+- source Stage 15 `qc_pending`;
+- destination equal to the current Stage 16 state;
+- `transition_key = 'pixieset_gallery_ready'`.
+
+Valid replay returns the booking without creating:
+
+- a second journey transition;
+- a second audit event;
+- a second version increment;
+- a QC Pass mutation;
+- any gallery or delivery persistence.
+
+Replay trusts the already-created canonical journey transition and does not
+re-execute the first-success QC Pass prerequisite workflow.
+
+A Stage 16 current state without exact canonical transition history is
+rejected.
+
+Stage 17 or later is rejected.
+
+### Frozen persistence boundary
+
+Slice 17 introduces no new business persistence relation.
+
+In particular, Slice 17 introduces no:
+
+- Pixieset gallery relation;
+- gallery URL relation;
+- gallery synchronization relation;
+- delivery relation;
+- QC result relation;
+- mutable QC job relation;
+- reviewer assignment relation.
+
+The only durable business mutation is the existing journey transition/state
+model plus existing audit infrastructure.
+
+### Frozen upstream containment
+
+Slice 17 must not mutate or recreate:
+
+- `booking_qc_passes`;
+- `booking_editing_completions`;
+- `booking_editing_starts`;
+- selection evidence;
+- image entitlement;
+- finance or payment state;
+- team assignments.
+
+Slice 17 must not call:
+
+- `record_booking_qc_pass`;
+- `record_booking_editing_completion`;
+- `record_booking_editing_start`;
+- `mark_booking_qc_pending`;
+- `mark_booking_editing_in_progress`.
+
+Existing immutable prerequisite records are consumed as evidence only.
+
+### Frozen downstream containment
+
+Slice 17 does not implement:
+
+- Pixieset API integration;
+- Pixieset credentials;
+- external API calls;
+- gallery creation;
+- gallery identifiers;
+- gallery URLs;
+- gallery synchronization;
+- client gallery access;
+- delivery persistence;
+- final delivery evidence;
+- Stage 16 -> 17;
+- review requests;
+- payment/refund mutation;
+- UI/runtime integration;
+- mock-store replacement.
+
+### Frozen generated-types expectation
+
+Generated Supabase types may change only as required to expose the new RPC:
+
+`mark_booking_pixieset_gallery_ready`
+
+No new table type is expected because Slice 17 introduces no relation.
+
+### Frozen implementation boundary
+
+Implementation is initially restricted to exactly three artifacts:
+
+1. `supabase/migrations/<timestamp>_sprint11_stage15_16_pixieset_gallery_ready_gate_foundation.sql`;
+2. `supabase/tests/sprint11_stage15_16_pixieset_gallery_ready_gate_test.sql`;
+3. `src/integrations/supabase/types.ts`.
+
+No fourth implementation artifact is authorized by this freeze.
+
+Historical Sprint 11 test files are not authorized for modification by this
+freeze.
+
+If focused or full regression later proves that a historical assertion
+legitimately requires a narrow compatibility exclusion because of the new
+canonical Slice 17 authority, implementation must STOP.
+
+The historical test must not be modified until a separate governance
+compatibility amendment explicitly authorizes:
+
+- the exact historical test file;
+- the exact assertion;
+- the exact compatibility exclusion;
+- the amended implementation-artifact boundary.
+
+### Frozen validation contract
+
+Before any implementation commit, Slice 17 must prove locally:
+
+- clean local database reset PASS;
+- local database lint PASS;
+- dedicated Slice 17 pgTAP PASS;
+- focused Sprint 11 historical compatibility PASS;
+- full local pgTAP regression PASS;
+- permissions remain exactly 68;
+- role-permission mappings remain exactly 241;
+- exact RPC signature exists;
+- RPC uses `SECURITY DEFINER`;
+- RPC uses empty `search_path`;
+- authenticated EXECUTE allowed;
+- PUBLIC EXECUTE denied;
+- anon EXECUTE denied;
+- service_role EXECUTE denied;
+- exact `booking.stage.advance` topology unchanged;
+- Editor cannot invoke the gate;
+- branch scope enforced;
+- missing QC Pass evidence rejected;
+- inconsistent QC Pass/current-Stage-15 lineage rejected;
+- exact Stage 15 -> 16 first success validated;
+- transition key exact;
+- version increments exactly once;
+- one first-success audit exact;
+- exact Stage 16 replay validated;
+- replay creates no second transition/audit/version mutation;
+- corrupt Stage 16 replay lineage rejected;
+- earlier-stage invocation rejected;
+- Stage 17-or-later invocation rejected;
+- no QC Pass mutation;
+- no new persistence relation;
+- zero gallery/Pixieset/delivery persistence remains true;
+- generated types freshly regenerated from the clean local database;
+- generated-types semantic delta limited to the new RPC;
+- Prettier PASS;
+- targeted ESLint PASS;
+- TypeScript `--noEmit` PASS;
+- production build PASS;
+- `git diff --check` PASS.
+
+### Remote-state restrictions
+
+Remote Supabase remains HOLD.
+
+Production remains HOLD.
+
+No remote migration is authorized by this freeze.
+
+No Stage 16 -> 17 authority is authorized by this freeze.
+
+### Freeze conclusion
+
+Sprint 11 Slice 17 is technically frozen as one controlled
+Stage 15 `qc_pending`
+->
+Stage 16 `pixieset_gallery_ready`
+journey gate consuming immutable QC Pass evidence.
+
+Implementation has not started.
+
+**SPRINT 11 SLICE 17 — TECHNICAL DESIGN FROZEN / IMPLEMENTATION NOT STARTED / REMOTE SUPABASE HOLD / PRODUCTION HOLD**
