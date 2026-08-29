@@ -3747,6 +3747,57 @@ export type Database = {
           },
         ];
       };
+      media_card_removals: {
+        Row: {
+          booking_id: string;
+          expected_file_count: number;
+          id: string;
+          media_card_assignment_id: string;
+          organization_id: string;
+          removed_at: string;
+          removed_by: string;
+          seal_condition: string;
+          seal_id: string;
+        };
+        Insert: {
+          booking_id: string;
+          expected_file_count: number;
+          id?: string;
+          media_card_assignment_id: string;
+          organization_id: string;
+          removed_at?: string;
+          removed_by: string;
+          seal_condition: string;
+          seal_id: string;
+        };
+        Update: {
+          booking_id?: string;
+          expected_file_count?: number;
+          id?: string;
+          media_card_assignment_id?: string;
+          organization_id?: string;
+          removed_at?: string;
+          removed_by?: string;
+          seal_condition?: string;
+          seal_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "media_card_removals_assignment_fkey";
+            columns: ["media_card_assignment_id", "organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "media_card_assignments";
+            referencedColumns: ["id", "organization_id", "booking_id"];
+          },
+          {
+            foreignKeyName: "media_card_removals_removed_by_fkey";
+            columns: ["removed_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
       media_cards: {
         Row: {
           card_code: string;
@@ -7368,6 +7419,31 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "media_cards";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      remove_and_seal_media_card: {
+        Args: {
+          p_expected_file_count: number;
+          p_media_card_assignment_id: string;
+          p_seal_condition: string;
+          p_seal_id: string;
+        };
+        Returns: {
+          booking_id: string;
+          expected_file_count: number;
+          id: string;
+          media_card_assignment_id: string;
+          organization_id: string;
+          removed_at: string;
+          removed_by: string;
+          seal_condition: string;
+          seal_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "media_card_removals";
           isOneToOne: true;
           isSetofReturn: false;
         };

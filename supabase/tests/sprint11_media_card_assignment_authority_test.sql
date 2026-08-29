@@ -35,8 +35,8 @@ SELECT is(
       || ':'
       || (SELECT count(*) FROM public.role_permissions)::text
   ),
-  '71:246'::text,
-  'canonical permission and role-mapping totals are exactly 71:246'
+  '72:247'::text,
+  'canonical permission and role-mapping totals are exactly 72:247'
 );
 
 
@@ -1931,7 +1931,7 @@ SELECT ok(
             'first'
     )
   ) =
-    'P0001:media card assignment evidence is immutable during B1'
+    'P0001:media card assignment evidence is immutable except controlled removal closure'
 
   AND
 

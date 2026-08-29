@@ -20,7 +20,7 @@ SELECT is(
     SELECT count(*)::bigint
     FROM public.permissions
   ),
-  71::bigint,
+  72::bigint,
   'canonical permission catalogue remains exactly 69'
 );
 
@@ -30,7 +30,7 @@ SELECT is(
     SELECT count(*)::bigint
     FROM public.role_permissions
   ),
-  246::bigint,
+  247::bigint,
   'canonical role-permission mapping count remains exactly 243'
 );
 

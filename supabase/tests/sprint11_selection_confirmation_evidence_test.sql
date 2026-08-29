@@ -33,14 +33,14 @@ SELECT plan(76);
 -- 1
 SELECT is(
   (SELECT count(*)::bigint FROM public.permissions),
-  71::bigint,
+  72::bigint,
   'canonical permission catalogue contains exactly 69 permissions'
 );
 
 -- 2
 SELECT is(
   (SELECT count(*)::bigint FROM public.role_permissions),
-  246::bigint,
+  247::bigint,
   'canonical repository-wide role-permission mapping count is 243'
 );
 
