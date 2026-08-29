@@ -27365,3 +27365,624 @@ artifact has no new lint diagnostic.
 **HOLD - REMOTE SUPABASE**
 
 **HOLD - PRODUCTION**
+## Corrective Slice B2 - Media Card Removal, Shot Accounting, and Seal Evidence - Technical Design Freeze
+
+### Authority
+
+Corrective Slice B2 extends the already-approved Sprint 11 US-125
+media-card custody authority.
+
+Source workflow:
+
+- CUS-502 - Removed from camera
+  - owner: Lead Photographer
+  - timing: card full / end
+  - evidence: Card ID; expected count; timestamp
+- CUS-503 - Write-protected and sealed
+  - owner: Lead Photographer
+  - timing: immediately after removal
+  - evidence: Seal ID; condition
+
+Source functional controls:
+
+- FT-651 - card removal records expected file count;
+- FT-652 - removed card has seal ID and condition.
+
+CUS-504 dual custody transfer is explicitly NOT B2.
+
+The accepted predecessor authority is:
+
+- B1 governance freeze:
+  `1d35c6aff340fc4f0280a138bf44b36c1dce128e`
+  - `docs: freeze media card assignment authority`
+- B1 implementation:
+  `4f65fd4a3bbfbd84f9bfd7e0873b9a3de5efb021`
+  - `feat: add media card assignment authority`
+
+B1 establishes:
+
+- `public.media_card_assignments`;
+- one active assignment per media card;
+- the initial internal custodian;
+- the `ended_at` / `ended_by` lifecycle closure seam;
+- an immutable B1 guard that B2 is explicitly authorized to evolve through a
+  separately frozen migration.
+
+### Atomic Custody Rule
+
+CUS-502 removal and CUS-503 write-protect/seal evidence MUST be committed as
+one atomic B2 operation.
+
+B2 MUST NOT create a durable intermediate state in which:
+
+- the card has been removed but not sealed;
+- the active assignment has been ended without immutable removal evidence;
+- immutable removal evidence exists while the assignment remains active.
+
+A successful B2 record itself is the canonical attestation that the card was
+removed from capture, write-protected, and sealed.
+
+No separate `write_protected` boolean is introduced because the source
+workflow defines the completed CUS-503 operation itself as the evidence state.
+
+### Permission Contract
+
+B2 introduces exactly one corrective permission:
+
+- key: `media.card.remove`
+- domain: `media`
+- label: `Remove and seal media cards`
+- description:
+  `Remove active media cards from capture devices, record expected file counts, and seal them while held by the current custodian.`
+- requires_server_enforcement: `true`
+
+Exactly one canonical role receives the permission:
+
+- `photographer`
+
+B2 does NOT grant `media.card.remove` to:
+
+- `founder`;
+- `studio_manager`;
+- any other existing canonical role.
+
+The Sprint 11 workbook does not define a separate CUS-502/CUS-503 permission.
+This permission is therefore a corrective authority introduced by this
+technical-design freeze rather than a claim that such a permission already
+exists in the source workbook.
+
+Canonical authority totals:
+
+- B2 precondition: `71` permissions / `246` role-permission mappings;
+- B2 final state: `72` permissions / `247` role-permission mappings.
+
+### Actor and Custody Authority
+
+The authenticated caller MUST resolve through:
+
+`auth.uid() -> organization_members.user_id -> active organization member`.
+
+For first-success removal/seal mutation, the caller MUST:
+
+1. be authenticated;
+2. be an active organization member;
+3. hold `media.card.remove` for the assignment booking's canonical branch;
+4. have valid booking branch scope where applicable;
+5. be exactly the existing
+   `media_card_assignments.custodian_member_id`.
+
+B2 MUST NOT re-resolve the booking's current Lead Photographer and substitute
+that actor for the historical B1 custodian.
+
+The B1 assignment is the custody authority.
+
+This preserves the physical custody chain if the booking team changes after
+the card was assigned.
+
+Because B1 custody is pinned to an internal organization member, B2 introduces
+no external-creative custody path.
+
+### Journey-State Contract
+
+A first successful B2 mutation is allowed only while the booking is exactly:
+
+- Stage order `10`;
+- stage key `shoot_scheduled`;
+- active canonical journey stage.
+
+B2 MUST NOT change the booking journey.
+
+A strict exact replay of already-recorded B2 evidence MAY return after the
+booking has subsequently advanced, provided authorization and historical
+evidence still validate.
+
+Replay MUST NOT:
+
+- create another removal row;
+- update the assignment again;
+- create another audit event;
+- re-run a Stage 10 mutation.
+
+### Canonical Relation
+
+B2 introduces exactly one new canonical relation:
+
+`public.media_card_removals`
+
+It contains exactly these nine columns:
+
+1. `id uuid`
+2. `organization_id uuid`
+3. `booking_id uuid`
+4. `media_card_assignment_id uuid`
+5. `expected_file_count bigint`
+6. `seal_id text`
+7. `seal_condition text`
+8. `removed_at timestamptz`
+9. `removed_by uuid`
+
+Required structural invariants:
+
+- `id` is the primary key with `gen_random_uuid()`;
+- all nine columns are required;
+- `expected_file_count >= 0`;
+- `seal_id` is trimmed and non-empty;
+- `seal_condition` is trimmed and non-empty;
+- B2 does not invent a seal-condition enum;
+- `(organization_id, seal_id)` is unique;
+- `media_card_assignment_id` is unique;
+- exactly one removal/seal evidence row may exist per B1 assignment;
+- `(media_card_assignment_id, organization_id, booking_id)` has a tenant-safe
+  foreign key to the exact B1 assignment;
+- `removed_by` has a tenant-safe organization-member foreign key;
+- `(id, organization_id, booking_id)` is available as a tenant-safe unique
+  identity seam for later custody slices;
+- `removed_at` is server-authoritative;
+- media-card ID and capture-device ID remain derived from the immutable B1
+  assignment and are not duplicated into this relation.
+
+The existence of a canonical `media_card_removals` row means CUS-502 and
+CUS-503 completed atomically.
+
+### B1 Assignment Closure Contract
+
+B2 uses the existing B1 closure seam:
+
+- `media_card_assignments.ended_at`
+- `media_card_assignments.ended_by`
+
+First success MUST produce:
+
+- `assignment.ended_at = removal.removed_at`;
+- `assignment.ended_by = removal.removed_by`.
+
+This closes the active B1 assignment and releases the existing partial
+uniqueness constraint:
+
+`(organization_id, media_card_id) WHERE ended_at IS NULL`
+
+for a later separately-authorized card lifecycle.
+
+B2 MUST evolve `public.lsh_media_card_assignment_guard()` rather than remove
+assignment protection.
+
+After B2, assignment DELETE remains forbidden.
+
+Assignment identity remains immutable.
+
+The only legal B1 assignment UPDATE is the one-way lifecycle transition:
+
+- OLD `ended_at IS NULL`;
+- OLD `ended_by IS NULL`;
+- NEW `ended_at IS NOT NULL`;
+- NEW `ended_by IS NOT NULL`;
+- all other assignment fields are unchanged;
+- a matching `public.media_card_removals` row already exists;
+- the matching removal row has the same organization, booking, assignment,
+  `removed_at`, and `removed_by`.
+
+A closed assignment:
+
+- cannot be reopened;
+- cannot be closed a second time;
+- cannot change attribution;
+- cannot change booking/card/device/lead/custodian identity;
+- cannot be deleted.
+
+The B1 initial-custodian invariant remains unchanged.
+
+### Removal-Evidence Immutability
+
+`public.media_card_removals` is append-only custody evidence.
+
+Authenticated users receive no direct INSERT, UPDATE, or DELETE application
+surface.
+
+Removal rows cannot be updated or deleted.
+
+Service-role table mutation is not an application mutation surface.
+
+A relation guard MUST reject privileged UPDATE and DELETE attempts.
+
+### Controlled RPC
+
+B2 introduces exactly one application mutation RPC:
+
+`public.remove_and_seal_media_card(
+  p_media_card_assignment_id uuid,
+  p_expected_file_count bigint,
+  p_seal_id text,
+  p_seal_condition text
+)`
+
+Return type:
+
+`public.media_card_removals`
+
+The caller MUST NOT provide:
+
+- organization ID;
+- booking ID;
+- media-card ID;
+- capture-device ID;
+- custodian member ID;
+- actor member ID;
+- removal timestamp;
+- assignment end timestamp.
+
+The RPC MUST be:
+
+- `SECURITY DEFINER`;
+- `SET search_path = ''`;
+- executable by `authenticated`;
+- unavailable to PUBLIC;
+- unavailable to `anon`;
+- unavailable to `service_role`.
+
+### Lock Order and Concurrency Contract
+
+The RPC may perform a non-locking assignment locator read solely to derive the
+canonical organization and booking synchronization roots.
+
+Canonical locking order after that locator read is:
+
+1. authoritative booking `FOR UPDATE`;
+2. exact canonical booking journey state `FOR UPDATE`;
+3. target media-card assignment `FOR UPDATE`.
+
+This order is aligned with the B2 hardening of
+`mark_booking_shoot_completed(uuid)`.
+
+The assignment MUST be revalidated after its lock is acquired.
+
+The RPC MUST serialize competing closure attempts against the exact B1
+assignment.
+
+### RPC Validation and Replay Contract
+
+The controlled RPC MUST:
+
+1. reject NULL required inputs;
+2. require `auth.uid()`;
+3. locate the referenced B1 assignment;
+4. lock the authoritative booking;
+5. derive organization and branch from canonical booking/assignment data;
+6. require active organization membership;
+7. require `media.card.remove` at the booking branch scope;
+8. require valid branch scope where applicable;
+9. require exactly one canonical journey state;
+10. lock and revalidate the referenced assignment;
+11. require the authenticated actor to equal the pinned B1 custodian;
+12. normalize and validate non-empty seal ID and condition;
+13. require non-negative expected file count;
+14. resolve existing B2 evidence before any first-success mutation;
+15. return exact authorized replay without mutation when historical evidence
+    matches;
+16. reject mismatched replay;
+17. for first success, require exact active Stage 10 `shoot_scheduled`;
+18. for first success, require `ended_at` and `ended_by` both NULL;
+19. require the seal ID to be unused in the organization;
+20. insert one immutable removal/seal evidence row;
+21. close the B1 assignment using the exact same server timestamp and actor;
+22. append exactly one canonical audit event;
+23. return the immutable B2 evidence row.
+
+Authorization MUST be evaluated before a replay is returned.
+
+Exact replay comparison MUST include:
+
+- assignment identity;
+- expected file count;
+- canonical trimmed seal ID;
+- canonical trimmed seal condition;
+- original actor/attribution;
+- assignment closure matching the evidence row.
+
+Replay creates no new audit event.
+
+### Stage 10 -> 11 Custody Gate Hardening
+
+B2 MUST harden the existing:
+
+`public.mark_booking_shoot_completed(uuid)`
+
+without changing its signature, owner model, permission model, return type, or
+journey authority.
+
+The existing `booking.stage.advance` authority remains unchanged.
+
+For first Stage 10 -> 11 advancement only, after validating exact Stage 10 and
+before creating the existing transition, the RPC MUST ensure that the booking
+has no active media-card assignment:
+
+`ended_at IS NULL`
+
+The active-assignment check MUST participate in the booking/state/assignment
+lock order so concurrent card closure and shoot completion cannot create a
+custody race.
+
+If an active assignment remains, first advancement MUST reject with:
+
+`mark_booking_shoot_completed: all media card assignments must be removed and sealed`
+
+No requirement is introduced that a booking must have at least one media-card
+assignment.
+
+A booking with zero assignments remains compatible with the existing
+Stage 10 -> 11 authority.
+
+The existing strict Stage 11 replay path MUST NOT be changed to create a new
+custody mutation.
+
+B2 introduces no new journey transition.
+
+### RLS and ACL Boundary
+
+`public.media_card_removals` MUST:
+
+- enable RLS;
+- force RLS.
+
+Authenticated SELECT is permitted only when:
+
+- the actor is an active organization member;
+- the actor holds `media.card.remove` for the removal booking's branch scope;
+- branch scope is valid where applicable.
+
+`booking.read` alone is insufficient.
+
+`media.card.assign` alone is insufficient.
+
+No authenticated direct INSERT, UPDATE, or DELETE privilege is permitted.
+
+B3 may later broaden custody-evidence read authority only through its own
+separately frozen governance.
+
+### Audit Contract
+
+First successful atomic removal/seal emits exactly one corrective audit event:
+
+- event_type/action_key: `media.card_removed_and_sealed`
+- entity_type: `media_card_removal`
+- entity_id: canonical `media_card_removals.id`
+- sensitive: `false`
+- old_values: NULL
+- new_values: NULL
+- source: `application`
+- request_id: NULL
+
+The Sprint 11 audit catalogue does not define a separate CUS-502/CUS-503 audit
+event. This event is therefore a corrective technical-design authority.
+
+Audit metadata is minimized to structural IDs:
+
+- `organization_id`
+- `booking_id`
+- `media_card_assignment_id`
+- `media_card_removal_id`
+- `media_card_id`
+- `capture_device_id`
+- `custodian_member_id`
+- `removed_by`
+
+Expected count, seal ID, seal condition, names, codes, email addresses, family
+data, and client data are not duplicated into audit metadata.
+
+The immutable B2 evidence row remains the source of truth for expected-count
+and seal evidence.
+
+### Runtime Non-Mutation Boundary
+
+A successful B2 first mutation may change only:
+
+- `public.media_card_removals`;
+- `media_card_assignments.ended_at`;
+- `media_card_assignments.ended_by`;
+- canonical audit storage through existing audit append authority.
+
+It MUST NOT mutate:
+
+- `public.media_cards`;
+- `public.capture_devices`;
+- booking-team assignment identity;
+- the pinned assignment custodian;
+- booking journey state;
+- booking stage-transition history;
+- shoot completion evidence;
+- shoot schedule state;
+- ingestion data;
+- backup data;
+- release data.
+
+### Explicitly Out of Scope
+
+B2 does NOT implement:
+
+- CUS-504 transfer to ingestion custodian;
+- recipient identity;
+- dual acknowledgement;
+- `media.custody.transfer`;
+- CUS-505 ingestion-station receipt;
+- seal verification at ingestion;
+- broken/mismatched-seal incident workflow;
+- ingestion batches;
+- copied-file counts;
+- byte reconciliation;
+- manifests;
+- SHA-256;
+- duplicate/missing/corrupt-file detection;
+- quarantine;
+- backups;
+- redundancy gates;
+- card release;
+- secure formatting;
+- secure reuse;
+- editing handover;
+- new shoot-stage advancement authority.
+
+Those remain B3 and later separately governed slices.
+
+### Compatibility Surface
+
+The B2 authority delta changes the canonical totals from:
+
+`71 / 246`
+
+to:
+
+`72 / 247`.
+
+The frozen compatibility surface is exactly eighteen existing test files:
+
+1. `supabase/tests/sprint10_extended_creative_assignments_test.sql`
+2. `supabase/tests/sprint11_additional_image_pricing_basis_authority_test.sql`
+3. `supabase/tests/sprint11_adjusted_financial_obligation_authority_test.sql`
+4. `supabase/tests/sprint11_capture_device_identity_test.sql`
+5. `supabase/tests/sprint11_editing_completion_evidence_test.sql`
+6. `supabase/tests/sprint11_editing_start_evidence_test.sql`
+7. `supabase/tests/sprint11_full_balance_settlement_read_authority_test.sql`
+8. `supabase/tests/sprint11_image_entitlement_authority_test.sql`
+9. `supabase/tests/sprint11_media_card_assignment_authority_test.sql`
+10. `supabase/tests/sprint11_media_card_inventory_authority_test.sql`
+11. `supabase/tests/sprint11_qc_pass_evidence_test.sql`
+12. `supabase/tests/sprint11_selection_confirmation_evidence_test.sql`
+13. `supabase/tests/sprint11_selection_entitlement_reconciliation_test.sql`
+14. `supabase/tests/sprint11_stage10_11_gate_test.sql`
+15. `supabase/tests/sprint11_stage12_13_editing_pending_gate_test.sql`
+16. `supabase/tests/sprint11_stage13_14_editing_in_progress_gate_test.sql`
+17. `supabase/tests/sprint11_stage14_15_qc_pending_gate_test.sql`
+18. `supabase/tests/sprint11_stage15_16_pixieset_gallery_ready_gate_test.sql`
+
+The current compatibility search contains exactly:
+
+- 39 live canonical-total expectations;
+- 5 associated explanatory assertion-message occurrences;
+- 44 matching `71 / 246` lines in total.
+
+The five explanatory message strings may change only to reconcile the canonical
+authority totals.
+
+Existing pgTAP test-number comments are not authority totals and MUST NOT be
+mechanically changed.
+
+The B1 assignment-authority test may additionally change only as required to
+validate the intentionally evolved B1 closure guard.
+
+The Stage 10 -> 11 test may additionally change only as required to validate
+the new active-media-card closure precondition.
+
+### Exact B2 Implementation Boundary
+
+After this governance freeze is committed and independently verified, the
+authorized B2 implementation boundary is exactly twenty-one files.
+
+CREATE:
+
+1. `supabase/migrations/20260829050000_sprint11_media_card_removal_seal_authority_foundation.sql`
+2. `supabase/tests/sprint11_media_card_removal_seal_authority_test.sql`
+
+UPDATE:
+
+3. `src/integrations/supabase/types.ts`
+
+4-21. the eighteen frozen compatibility files listed above.
+
+No other implementation file is authorized without a governance revision.
+
+The migration MAY:
+
+- create the B2 permission and photographer grant;
+- create `public.media_card_removals`;
+- create its indexes, constraints, guards, RLS, and ACL;
+- create `public.remove_and_seal_media_card(uuid,bigint,text,text)`;
+- evolve `public.lsh_media_card_assignment_guard()`;
+- replace the body of `public.mark_booking_shoot_completed(uuid)` only to add
+  the frozen active-card closure precondition;
+- append the corrective audit event through existing audit authority.
+
+It MUST NOT create B3 or later authority.
+
+### Required B2 Validation
+
+Before an implementation commit is authorized, local validation MUST include:
+
+- `git diff --check`;
+- clean local Supabase database reset;
+- local Supabase database lint;
+- dedicated B2 pgTAP;
+- all eighteen frozen compatibility tests;
+- full Supabase database regression suite;
+- exact authority totals `72 / 247`;
+- exact nine-column `public.media_card_removals` contract;
+- exact RPC signature and ACL;
+- exact atomic assignment closure;
+- exact replay behavior;
+- exact Stage 10 first-success gate;
+- later-stage exact replay behavior;
+- Stage 10 -> 11 rejection while any active assignment remains;
+- Stage 10 -> 11 success after all assignments are closed;
+- B1 assignment identity immutability remains intact;
+- privileged assignment reopen/re-close/delete rejection;
+- privileged B2 evidence update/delete rejection;
+- generated Supabase types freshly regenerated from local schema;
+- targeted generated-types formatting/lint validation;
+- production application build;
+- repository-wide lint reconciliation against the established baseline;
+- exact twenty-one-file implementation-boundary audit.
+
+Any new regression introduced by B2 requires revision.
+
+### Environment Boundary
+
+- Corrective Slice B2 governance/design: **APPROVED**
+- B2 implementation before governance freeze commit/remote verification:
+  **HOLD**
+- Corrective Slice B3 dual custody transfer: **HOLD**
+- `architecture-rebuild`: **AUTHORIZED development branch**
+- `main`: **NO CHANGE AUTHORIZED**
+- Remote Supabase mutation/deployment: **HOLD**
+- Production deployment: **HOLD**
+
+### Formal Checkpoint
+
+**APPROVE - CORRECTIVE SLICE B2 TECHNICAL DESIGN FROZEN**
+
+**APPROVE - CUS-502 REMOVAL AND CUS-503 WRITE-PROTECT/SEAL ARE ONE ATOMIC OPERATION**
+
+**APPROVE - B2 FIRST MUTATION IS EXACT STAGE 10; STRICT AUTHORIZED REPLAY MAY SURVIVE LATER JOURNEY ADVANCEMENT**
+
+**APPROVE - ACTIVE MEDIA-CARD ASSIGNMENTS BLOCK FIRST STAGE 10 -> 11 ADVANCEMENT**
+
+**APPROVE - EXACT B2 AUTHORITY TOTALS 72 / 247**
+
+**APPROVE - EXACT B2 COMPATIBILITY SURFACE: 18 FILES / 39 LIVE-TOTAL OCCURRENCES / 5 MESSAGE OCCURRENCES**
+
+**APPROVE - EXACT B2 IMPLEMENTATION BOUNDARY: 21 FILES**
+
+**HOLD - IMPLEMENTATION UNTIL THIS FREEZE IS COMMITTED AND REMOTELY VERIFIED**
+
+**HOLD - CORRECTIVE SLICE B3**
+
+**HOLD - REMOTE SUPABASE**
+
+**HOLD - PRODUCTION**
