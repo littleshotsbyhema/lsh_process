@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
@@ -55,11 +56,46 @@ export type BookingWorkspaceData = {
   families: BookingFamilySummary[];
 };
 
+export type BookingPaymentSummary =
+  Database["public"]["Functions"]["get_booking_payment_summary"]["Returns"][number];
+
+export type BookingPaymentRow = Database["public"]["Tables"]["booking_payments"]["Row"];
+
+export type BookingShootScheduleRow =
+  Database["public"]["Tables"]["booking_shoot_schedules"]["Row"];
+
+export type BookingConfirmationWorkspace = {
+  paymentSummary: BookingPaymentSummary | null;
+  currentSchedule: BookingShootScheduleRow | null;
+};
+
 function throwIfError(error: { message: string } | null) {
   if (error) {
     throw new Error(error.message);
   }
 }
+
+const bookingIdSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
+const recordBookingPaymentSchema = z.object({
+  bookingId: z.string().uuid(),
+  amountInr: z.number().int().positive(),
+  paymentMethod: z.enum(["cash", "upi", "bank_transfer", "card", "other"]),
+  receivedAt: z.string().datetime(),
+  externalReference: z.string().trim().min(1).max(160).optional(),
+  note: z.string().trim().min(1).max(1000).optional(),
+});
+
+const proposeBookingShootScheduleSchema = z.object({
+  bookingId: z.string().uuid(),
+  scheduledStartAt: z.string().datetime(),
+  scheduledEndAt: z.string().datetime(),
+  timezone: z.string().trim().min(1),
+  locationType: z.string().trim().min(1),
+  locationDetails: z.string().trim().min(1).optional(),
+});
 
 export const listBookingWorkspace = createServerFn({
   method: "GET",
@@ -202,4 +238,102 @@ export const listBookingWorkspace = createServerFn({
       leads,
       families,
     };
+  });
+
+export const getBookingConfirmationWorkspace = createServerFn({
+  method: "GET",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(bookingIdSchema)
+  .handler(async ({ context, data }): Promise<BookingConfirmationWorkspace> => {
+    const paymentResult = await context.supabase.rpc("get_booking_payment_summary", {
+      p_booking_id: data.bookingId,
+    });
+
+    throwIfError(paymentResult.error);
+
+    const scheduleResult = await context.supabase
+      .from("booking_shoot_schedules")
+      .select("*")
+      .eq("organization_id", ORGANIZATION_ID)
+      .eq("booking_id", data.bookingId)
+      .order("schedule_version", {
+        ascending: false,
+      })
+      .limit(1)
+      .maybeSingle();
+
+    throwIfError(scheduleResult.error);
+
+    return {
+      paymentSummary: paymentResult.data?.[0] ?? null,
+      currentSchedule: scheduleResult.data,
+    };
+  });
+
+export const recordBookingPayment = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(recordBookingPaymentSchema)
+  .handler(async ({ context, data }): Promise<BookingPaymentRow> => {
+    const result = await context.supabase.rpc("record_booking_payment", {
+      p_booking_id: data.bookingId,
+      p_amount_inr: data.amountInr,
+      p_payment_method: data.paymentMethod,
+      p_received_at: data.receivedAt,
+      p_external_reference: data.externalReference,
+      p_note: data.note,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Payment recording returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const proposeBookingShootSchedule = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(proposeBookingShootScheduleSchema)
+  .handler(async ({ context, data }): Promise<BookingShootScheduleRow> => {
+    const result = await context.supabase.rpc("propose_booking_shoot_schedule", {
+      p_booking_id: data.bookingId,
+      p_scheduled_start_at: data.scheduledStartAt,
+      p_scheduled_end_at: data.scheduledEndAt,
+      p_timezone: data.timezone,
+      p_location_type: data.locationType,
+      p_location_details: data.locationDetails,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Shoot schedule proposal returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const confirmBookingAfterAdvance = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(bookingIdSchema)
+  .handler(async ({ context, data }): Promise<BookingRow> => {
+    const result = await context.supabase.rpc("confirm_booking_after_advance", {
+      p_booking_id: data.bookingId,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Booking confirmation returned no row.");
+    }
+
+    return result.data;
   });
