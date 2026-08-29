@@ -1,4 +1,10 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
 
 export type Database = {
   graphql_public: {
@@ -423,6 +429,334 @@ export type Database = {
           },
         ];
       };
+      booking_preparation_items: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          id: string;
+          is_required: boolean;
+          is_satisfied: boolean;
+          item_key: string;
+          item_label: string;
+          organization_id: string;
+          preparation_id: string;
+          satisfied_at: string | null;
+          satisfied_by: string | null;
+          service_category: string;
+          sort_order: number;
+          taxonomy_version: number;
+          updated_at: string;
+          updated_by: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          is_required: boolean;
+          is_satisfied?: boolean;
+          item_key: string;
+          item_label: string;
+          organization_id: string;
+          preparation_id: string;
+          satisfied_at?: string | null;
+          satisfied_by?: string | null;
+          service_category: string;
+          sort_order: number;
+          taxonomy_version: number;
+          updated_at?: string;
+          updated_by: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          is_required?: boolean;
+          is_satisfied?: boolean;
+          item_key?: string;
+          item_label?: string;
+          organization_id?: string;
+          preparation_id?: string;
+          satisfied_at?: string | null;
+          satisfied_by?: string | null;
+          service_category?: string;
+          sort_order?: number;
+          taxonomy_version?: number;
+          updated_at?: string;
+          updated_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_preparation_items_created_by_fkey";
+            columns: ["created_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_preparation_items_preparation_fkey";
+            columns: ["organization_id", "preparation_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_preparations";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_preparation_items_satisfied_by_fkey";
+            columns: ["satisfied_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_preparation_items_updated_by_fkey";
+            columns: ["updated_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
+      booking_preparations: {
+        Row: {
+          booking_id: string;
+          id: string;
+          organization_id: string;
+          started_at: string;
+          started_by: string;
+        };
+        Insert: {
+          booking_id: string;
+          id?: string;
+          organization_id: string;
+          started_at?: string;
+          started_by: string;
+        };
+        Update: {
+          booking_id?: string;
+          id?: string;
+          organization_id?: string;
+          started_at?: string;
+          started_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_preparations_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_preparations_started_by_fkey";
+            columns: ["started_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
+      booking_safety_readiness: {
+        Row: {
+          booking_id: string;
+          comfort_state: string;
+          id: string;
+          organization_id: string;
+          recorded_at: string;
+          recorded_by: string;
+          revision_number: number;
+          safety_state: string;
+          service_category: string;
+          superseded_at: string | null;
+          superseded_by: string | null;
+        };
+        Insert: {
+          booking_id: string;
+          comfort_state: string;
+          id?: string;
+          organization_id: string;
+          recorded_at?: string;
+          recorded_by: string;
+          revision_number: number;
+          safety_state: string;
+          service_category: string;
+          superseded_at?: string | null;
+          superseded_by?: string | null;
+        };
+        Update: {
+          booking_id?: string;
+          comfort_state?: string;
+          id?: string;
+          organization_id?: string;
+          recorded_at?: string;
+          recorded_by?: string;
+          revision_number?: number;
+          safety_state?: string;
+          service_category?: string;
+          superseded_at?: string | null;
+          superseded_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_safety_readiness_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_safety_readiness_recorded_by_fkey";
+            columns: ["recorded_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_safety_readiness_superseded_by_fkey";
+            columns: ["superseded_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
+      booking_safety_signoffs: {
+        Row: {
+          booking_id: string;
+          id: string;
+          lead_assignment_id: string | null;
+          organization_id: string;
+          readiness_id: string;
+          signed_at: string;
+          signed_by: string;
+          signoff_authority: string;
+        };
+        Insert: {
+          booking_id: string;
+          id?: string;
+          lead_assignment_id?: string | null;
+          organization_id: string;
+          readiness_id: string;
+          signed_at?: string;
+          signed_by: string;
+          signoff_authority: string;
+        };
+        Update: {
+          booking_id?: string;
+          id?: string;
+          lead_assignment_id?: string | null;
+          organization_id?: string;
+          readiness_id?: string;
+          signed_at?: string;
+          signed_by?: string;
+          signoff_authority?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_safety_signoffs_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_safety_signoffs_lead_assignment_fkey";
+            columns: ["lead_assignment_id", "organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_team_assignments";
+            referencedColumns: ["id", "organization_id", "booking_id"];
+          },
+          {
+            foreignKeyName: "booking_safety_signoffs_readiness_fkey";
+            columns: ["readiness_id", "organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_safety_readiness";
+            referencedColumns: ["id", "organization_id", "booking_id"];
+          },
+          {
+            foreignKeyName: "booking_safety_signoffs_signed_by_fkey";
+            columns: ["signed_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
+      booking_shoot_schedules: {
+        Row: {
+          booking_id: string;
+          id: string;
+          location_details: string | null;
+          location_type: string;
+          organization_id: string;
+          predecessor_schedule_id: string | null;
+          recorded_at: string;
+          recorded_by: string;
+          reschedule_reason: string | null;
+          schedule_state: string;
+          schedule_version: number;
+          scheduled_end_at: string;
+          scheduled_start_at: string;
+          timezone: string;
+        };
+        Insert: {
+          booking_id: string;
+          id?: string;
+          location_details?: string | null;
+          location_type: string;
+          organization_id: string;
+          predecessor_schedule_id?: string | null;
+          recorded_at?: string;
+          recorded_by: string;
+          reschedule_reason?: string | null;
+          schedule_state: string;
+          schedule_version: number;
+          scheduled_end_at: string;
+          scheduled_start_at: string;
+          timezone: string;
+        };
+        Update: {
+          booking_id?: string;
+          id?: string;
+          location_details?: string | null;
+          location_type?: string;
+          organization_id?: string;
+          predecessor_schedule_id?: string | null;
+          recorded_at?: string;
+          recorded_by?: string;
+          reschedule_reason?: string | null;
+          schedule_state?: string;
+          schedule_version?: number;
+          scheduled_end_at?: string;
+          scheduled_start_at?: string;
+          timezone?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_shoot_schedules_booking_fkey";
+            columns: ["booking_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_shoot_schedules_predecessor_fkey";
+            columns: [
+              "predecessor_schedule_id",
+              "organization_id",
+              "booking_id",
+            ];
+            isOneToOne: false;
+            referencedRelation: "booking_shoot_schedules";
+            referencedColumns: ["id", "organization_id", "booking_id"];
+          },
+          {
+            foreignKeyName: "booking_shoot_schedules_recorded_by_fkey";
+            columns: ["recorded_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
       booking_stage_transitions: {
         Row: {
           booking_id: string;
@@ -482,6 +816,84 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "booking_journey_stages";
             referencedColumns: ["organization_id", "id"];
+          },
+        ];
+      };
+      booking_team_assignments: {
+        Row: {
+          assigned_at: string;
+          assigned_by: string;
+          assigned_external_creative_id: string | null;
+          assigned_member_id: string | null;
+          assignment_role: string;
+          booking_id: string;
+          end_reason: string | null;
+          ended_at: string | null;
+          ended_by: string | null;
+          id: string;
+          organization_id: string;
+        };
+        Insert: {
+          assigned_at?: string;
+          assigned_by: string;
+          assigned_external_creative_id?: string | null;
+          assigned_member_id?: string | null;
+          assignment_role: string;
+          booking_id: string;
+          end_reason?: string | null;
+          ended_at?: string | null;
+          ended_by?: string | null;
+          id?: string;
+          organization_id: string;
+        };
+        Update: {
+          assigned_at?: string;
+          assigned_by?: string;
+          assigned_external_creative_id?: string | null;
+          assigned_member_id?: string | null;
+          assignment_role?: string;
+          booking_id?: string;
+          end_reason?: string | null;
+          ended_at?: string | null;
+          ended_by?: string | null;
+          id?: string;
+          organization_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_team_assignments_assigned_by_fkey";
+            columns: ["assigned_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_team_assignments_assigned_external_fkey";
+            columns: ["assigned_external_creative_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "external_creatives";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_team_assignments_assigned_member_fkey";
+            columns: ["assigned_member_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_team_assignments_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_team_assignments_ended_by_fkey";
+            columns: ["ended_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
           },
         ];
       };
@@ -726,7 +1138,8 @@ export type Database = {
           first_name: string | null;
           id: string;
           organization_id: string;
-          privacy_restriction: Database["public"]["Enums"]["privacy_preference_type"] | null;
+          privacy_restriction:
+            Database["public"]["Enums"]["privacy_preference_type"] | null;
           status: Database["public"]["Enums"]["child_status"];
           updated_at: string;
           updated_by: string;
@@ -744,7 +1157,8 @@ export type Database = {
           first_name?: string | null;
           id?: string;
           organization_id: string;
-          privacy_restriction?: Database["public"]["Enums"]["privacy_preference_type"] | null;
+          privacy_restriction?:
+            Database["public"]["Enums"]["privacy_preference_type"] | null;
           status?: Database["public"]["Enums"]["child_status"];
           updated_at?: string;
           updated_by: string;
@@ -762,7 +1176,8 @@ export type Database = {
           first_name?: string | null;
           id?: string;
           organization_id?: string;
-          privacy_restriction?: Database["public"]["Enums"]["privacy_preference_type"] | null;
+          privacy_restriction?:
+            Database["public"]["Enums"]["privacy_preference_type"] | null;
           status?: Database["public"]["Enums"]["child_status"];
           updated_at?: string;
           updated_by?: string;
@@ -916,6 +1331,55 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "organizations";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      commercial_operational_requirements: {
+        Row: {
+          addon_version_id: string | null;
+          created_at: string;
+          id: string;
+          organization_id: string;
+          package_version_id: string | null;
+          requirement_key: string;
+        };
+        Insert: {
+          addon_version_id?: string | null;
+          created_at?: string;
+          id?: string;
+          organization_id: string;
+          package_version_id?: string | null;
+          requirement_key: string;
+        };
+        Update: {
+          addon_version_id?: string | null;
+          created_at?: string;
+          id?: string;
+          organization_id?: string;
+          package_version_id?: string | null;
+          requirement_key?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "commercial_operational_requirements_addon_fkey";
+            columns: ["organization_id", "addon_version_id"];
+            isOneToOne: false;
+            referencedRelation: "commercial_addon_versions";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "commercial_operational_requirements_organization_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "commercial_operational_requirements_package_fkey";
+            columns: ["organization_id", "package_version_id"];
+            isOneToOne: false;
+            referencedRelation: "commercial_package_versions";
+            referencedColumns: ["organization_id", "id"];
           },
         ];
       };
@@ -1514,6 +1978,45 @@ export type Database = {
           },
         ];
       };
+      external_creatives: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          display_name: string;
+          id: string;
+          organization_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          display_name: string;
+          id?: string;
+          organization_id: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          display_name?: string;
+          id?: string;
+          organization_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "external_creatives_created_by_fkey";
+            columns: ["created_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "external_creatives_organization_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       families: {
         Row: {
           archived_at: string | null;
@@ -1642,7 +2145,8 @@ export type Database = {
           id: string;
           notes: string | null;
           organization_id: string;
-          preferred_channel_type: Database["public"]["Enums"]["contact_channel_type"] | null;
+          preferred_channel_type:
+            Database["public"]["Enums"]["contact_channel_type"] | null;
           quiet_hours_end: string | null;
           quiet_hours_start: string | null;
           timezone: string;
@@ -1659,7 +2163,8 @@ export type Database = {
           id?: string;
           notes?: string | null;
           organization_id: string;
-          preferred_channel_type?: Database["public"]["Enums"]["contact_channel_type"] | null;
+          preferred_channel_type?:
+            Database["public"]["Enums"]["contact_channel_type"] | null;
           quiet_hours_end?: string | null;
           quiet_hours_start?: string | null;
           timezone?: string;
@@ -1676,7 +2181,8 @@ export type Database = {
           id?: string;
           notes?: string | null;
           organization_id?: string;
-          preferred_channel_type?: Database["public"]["Enums"]["contact_channel_type"] | null;
+          preferred_channel_type?:
+            Database["public"]["Enums"]["contact_channel_type"] | null;
           quiet_hours_end?: string | null;
           quiet_hours_start?: string | null;
           timezone?: string;
@@ -2358,7 +2864,8 @@ export type Database = {
           parent_name: string;
           phone: string | null;
           preferred_date: string | null;
-          privacy_preference: Database["public"]["Enums"]["privacy_preference_type"] | null;
+          privacy_preference:
+            Database["public"]["Enums"]["privacy_preference_type"] | null;
           session_type: string | null;
           source: string;
           status: Database["public"]["Enums"]["lead_status"];
@@ -2391,7 +2898,8 @@ export type Database = {
           parent_name: string;
           phone?: string | null;
           preferred_date?: string | null;
-          privacy_preference?: Database["public"]["Enums"]["privacy_preference_type"] | null;
+          privacy_preference?:
+            Database["public"]["Enums"]["privacy_preference_type"] | null;
           session_type?: string | null;
           source: string;
           status?: Database["public"]["Enums"]["lead_status"];
@@ -2424,7 +2932,8 @@ export type Database = {
           parent_name?: string;
           phone?: string | null;
           preferred_date?: string | null;
-          privacy_preference?: Database["public"]["Enums"]["privacy_preference_type"] | null;
+          privacy_preference?:
+            Database["public"]["Enums"]["privacy_preference_type"] | null;
           session_type?: string | null;
           source?: string;
           status?: Database["public"]["Enums"]["lead_status"];
@@ -4474,6 +4983,62 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      assign_booking_external_creative: {
+        Args: {
+          p_assignment_role: string;
+          p_booking_id: string;
+          p_change_reason?: string;
+          p_external_creative_id: string;
+          p_is_assigned: boolean;
+        };
+        Returns: {
+          assigned_at: string;
+          assigned_by: string;
+          assigned_external_creative_id: string | null;
+          assigned_member_id: string | null;
+          assignment_role: string;
+          booking_id: string;
+          end_reason: string | null;
+          ended_at: string | null;
+          ended_by: string | null;
+          id: string;
+          organization_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_team_assignments";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      assign_booking_team_member: {
+        Args: {
+          p_assignment_role: string;
+          p_booking_id: string;
+          p_change_reason?: string;
+          p_is_assigned: boolean;
+          p_member_id: string;
+        };
+        Returns: {
+          assigned_at: string;
+          assigned_by: string;
+          assigned_external_creative_id: string | null;
+          assigned_member_id: string | null;
+          assignment_role: string;
+          booking_id: string;
+          end_reason: string | null;
+          ended_at: string | null;
+          ended_by: string | null;
+          id: string;
+          organization_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_team_assignments";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       cancel_consultation: {
         Args: { p_consultation_id: string; p_reason: string };
         Returns: {
@@ -4655,7 +5220,8 @@ export type Database = {
           first_name: string | null;
           id: string;
           organization_id: string;
-          privacy_restriction: Database["public"]["Enums"]["privacy_preference_type"] | null;
+          privacy_restriction:
+            Database["public"]["Enums"]["privacy_preference_type"] | null;
           status: Database["public"]["Enums"]["child_status"];
           updated_at: string;
           updated_by: string;
@@ -4682,6 +5248,22 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "consultation_blackouts";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      create_external_creative: {
+        Args: { p_booking_id: string; p_display_name: string };
+        Returns: {
+          created_at: string;
+          created_by: string;
+          display_name: string;
+          id: string;
+          organization_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "external_creatives";
           isOneToOne: true;
           isSetofReturn: false;
         };
@@ -4795,7 +5377,8 @@ export type Database = {
           parent_name: string;
           phone: string | null;
           preferred_date: string | null;
-          privacy_preference: Database["public"]["Enums"]["privacy_preference_type"] | null;
+          privacy_preference:
+            Database["public"]["Enums"]["privacy_preference_type"] | null;
           session_type: string | null;
           source: string;
           status: Database["public"]["Enums"]["lead_status"];
@@ -5145,6 +5728,15 @@ export type Database = {
         };
         Returns: undefined;
       };
+      lsh_preparation_taxonomy_v1: {
+        Args: { p_service_category: string };
+        Returns: {
+          is_required: boolean;
+          item_key: string;
+          item_label: string;
+          sort_order: number;
+        }[];
+      };
       lsh_queue_consultation_notifications: {
         Args: { p_actor: string; p_consultation_id: string };
         Returns: undefined;
@@ -5187,6 +5779,28 @@ export type Database = {
           p_organization_id: string;
         };
         Returns: undefined;
+      };
+      mark_booking_shoot_scheduled: {
+        Args: { p_booking_id: string };
+        Returns: {
+          booking_reference: string;
+          branch_id: string | null;
+          created_at: string;
+          created_by: string;
+          family_id: string | null;
+          id: string;
+          lead_id: string | null;
+          organization_id: string;
+          source_quotation_id: string;
+          updated_at: string;
+          updated_by: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "bookings";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       mark_consultation_missed: {
         Args: { p_consultation_id: string };
@@ -5251,6 +5865,38 @@ export type Database = {
         Args: { p_access_token: string; p_expected_version: number };
         Returns: Json;
       };
+      propose_booking_shoot_schedule: {
+        Args: {
+          p_booking_id: string;
+          p_location_details?: string;
+          p_location_type: string;
+          p_scheduled_end_at: string;
+          p_scheduled_start_at: string;
+          p_timezone: string;
+        };
+        Returns: {
+          booking_id: string;
+          id: string;
+          location_details: string | null;
+          location_type: string;
+          organization_id: string;
+          predecessor_schedule_id: string | null;
+          recorded_at: string;
+          recorded_by: string;
+          reschedule_reason: string | null;
+          schedule_state: string;
+          schedule_version: number;
+          scheduled_end_at: string;
+          scheduled_start_at: string;
+          timezone: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_shoot_schedules";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       record_booking_payment: {
         Args: {
           p_amount_inr: number;
@@ -5278,6 +5924,32 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "booking_payments";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      record_booking_safety_readiness: {
+        Args: {
+          p_booking_id: string;
+          p_comfort_state: string;
+          p_safety_state: string;
+        };
+        Returns: {
+          booking_id: string;
+          comfort_state: string;
+          id: string;
+          organization_id: string;
+          recorded_at: string;
+          recorded_by: string;
+          revision_number: number;
+          safety_state: string;
+          service_category: string;
+          superseded_at: string | null;
+          superseded_by: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_safety_readiness";
           isOneToOne: true;
           isSetofReturn: false;
         };
@@ -5329,6 +6001,39 @@ export type Database = {
       remove_quotation_line: {
         Args: { p_line_item_id: string };
         Returns: undefined;
+      };
+      reschedule_booking_shoot: {
+        Args: {
+          p_booking_id: string;
+          p_location_details?: string;
+          p_location_type: string;
+          p_reschedule_reason: string;
+          p_scheduled_end_at: string;
+          p_scheduled_start_at: string;
+          p_timezone: string;
+        };
+        Returns: {
+          booking_id: string;
+          id: string;
+          location_details: string | null;
+          location_type: string;
+          organization_id: string;
+          predecessor_schedule_id: string | null;
+          recorded_at: string;
+          recorded_by: string;
+          reschedule_reason: string | null;
+          schedule_state: string;
+          schedule_version: number;
+          scheduled_end_at: string;
+          scheduled_start_at: string;
+          timezone: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_shoot_schedules";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       reschedule_consultation: {
         Args: {
@@ -5581,6 +6286,25 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      signoff_booking_safety_readiness: {
+        Args: { p_booking_id: string };
+        Returns: {
+          booking_id: string;
+          id: string;
+          lead_assignment_id: string | null;
+          organization_id: string;
+          readiness_id: string;
+          signed_at: string;
+          signed_by: string;
+          signoff_authority: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_safety_signoffs";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       start_memory_guide: {
         Args: {
           p_campaign_id?: string;
@@ -5597,6 +6321,22 @@ export type Database = {
           session_reference: string;
           session_version: number;
         }[];
+      };
+      start_pre_shoot_preparation: {
+        Args: { p_booking_id: string };
+        Returns: {
+          booking_id: string;
+          id: string;
+          organization_id: string;
+          started_at: string;
+          started_by: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_preparations";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       sync_memory_guide_to_crm: {
         Args: { p_session_id: string };
@@ -5676,7 +6416,8 @@ export type Database = {
           first_name: string | null;
           id: string;
           organization_id: string;
-          privacy_restriction: Database["public"]["Enums"]["privacy_preference_type"] | null;
+          privacy_restriction:
+            Database["public"]["Enums"]["privacy_preference_type"] | null;
           status: Database["public"]["Enums"]["child_status"];
           updated_at: string;
           updated_by: string;
@@ -5708,7 +6449,8 @@ export type Database = {
           id: string;
           notes: string | null;
           organization_id: string;
-          preferred_channel_type: Database["public"]["Enums"]["contact_channel_type"] | null;
+          preferred_channel_type:
+            Database["public"]["Enums"]["contact_channel_type"] | null;
           quiet_hours_end: string | null;
           quiet_hours_start: string | null;
           timezone: string;
@@ -5770,7 +6512,8 @@ export type Database = {
           parent_name: string;
           phone: string | null;
           preferred_date: string | null;
-          privacy_preference: Database["public"]["Enums"]["privacy_preference_type"] | null;
+          privacy_preference:
+            Database["public"]["Enums"]["privacy_preference_type"] | null;
           session_type: string | null;
           source: string;
           status: Database["public"]["Enums"]["lead_status"];
@@ -5827,6 +6570,33 @@ export type Database = {
       update_memory_guide_review: {
         Args: { p_review_id: string; p_status: string };
         Returns: Json;
+      };
+      update_pre_shoot_preparation_item: {
+        Args: { p_preparation_item_id: string; p_satisfied: boolean };
+        Returns: {
+          created_at: string;
+          created_by: string;
+          id: string;
+          is_required: boolean;
+          is_satisfied: boolean;
+          item_key: string;
+          item_label: string;
+          organization_id: string;
+          preparation_id: string;
+          satisfied_at: string | null;
+          satisfied_by: string | null;
+          service_category: string;
+          sort_order: number;
+          taxonomy_version: number;
+          updated_at: string;
+          updated_by: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_preparation_items";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       upsert_consultation_availability: {
         Args: {
@@ -5906,19 +6676,33 @@ export type Database = {
       };
     };
     Enums: {
-      booking_payment_method: "cash" | "upi" | "bank_transfer" | "card" | "other";
+      booking_payment_method:
+        "cash" | "upi" | "bank_transfer" | "card" | "other";
       branch_status: "active" | "inactive" | "archived";
-      child_stage: "expected" | "newborn" | "baby" | "sitter" | "toddler" | "child";
+      child_stage:
+        "expected" | "newborn" | "baby" | "sitter" | "toddler" | "child";
       child_status: "active" | "archived";
       commercial_package_status: "active" | "inactive" | "retired";
       commercial_package_tier: "bronze" | "gold" | "diamond" | "emerald";
       commercial_pricing_type: "fixed_amount" | "percentage" | "variable";
       commercial_version_approval_status: "draft" | "approved" | "retired";
       communication_channel:
-        "whatsapp" | "email" | "sms" | "phone" | "portal" | "in_person" | "manual";
+        | "whatsapp"
+        | "email"
+        | "sms"
+        | "phone"
+        | "portal"
+        | "in_person"
+        | "manual";
       communication_direction: "inbound" | "outbound" | "internal";
       communication_status:
-        "queued" | "accepted" | "delivered" | "read" | "failed" | "unknown" | "manual_confirmed";
+        | "queued"
+        | "accepted"
+        | "delivered"
+        | "read"
+        | "failed"
+        | "unknown"
+        | "manual_confirmed";
       consultation_outcome:
         | "quote_ready"
         | "needs_follow_up"
@@ -5951,7 +6735,8 @@ export type Database = {
         | "lost"
         | "archived";
       lead_task_priority: "low" | "normal" | "high" | "urgent";
-      lead_task_status: "open" | "in_progress" | "snoozed" | "completed" | "cancelled";
+      lead_task_status:
+        "open" | "in_progress" | "snoozed" | "completed" | "cancelled";
       lead_task_type:
         | "first_response"
         | "follow_up"
@@ -5975,7 +6760,12 @@ export type Database = {
         | "missed_follow_up"
         | "internal_upcoming";
       notification_status:
-        "queued" | "processing" | "sent" | "failed" | "superseded" | "manual_action_required";
+        | "queued"
+        | "processing"
+        | "sent"
+        | "failed"
+        | "superseded"
+        | "manual_action_required";
       organization_status: "active" | "suspended" | "archived";
       privacy_preference_type:
         | "full_privacy"
@@ -5984,9 +6774,16 @@ export type Database = {
         | "portfolio_release"
         | "decide_later";
       quotation_line_type: "package" | "addon" | "custom";
-      quotation_pricing_source: "catalogue" | "approved_offer" | "authorized_override";
+      quotation_pricing_source:
+        "catalogue" | "approved_offer" | "authorized_override";
       quotation_status:
-        "draft" | "ready" | "sent" | "accepted" | "declined" | "expired" | "superseded";
+        | "draft"
+        | "ready"
+        | "sent"
+        | "accepted"
+        | "declined"
+        | "expired"
+        | "superseded";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -5996,7 +6793,10 @@ export type Database = {
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
+type DefaultSchema = DatabaseWithoutInternals[Extract<
+  keyof Database,
+  "public"
+>];
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
@@ -6017,8 +6817,10 @@ export type Tables<
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R;
       }
       ? R
@@ -6091,7 +6893,8 @@ export type Enums<
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    keyof DefaultSchema["CompositeTypes"] | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
@@ -6113,13 +6916,28 @@ export const Constants = {
     Enums: {
       booking_payment_method: ["cash", "upi", "bank_transfer", "card", "other"],
       branch_status: ["active", "inactive", "archived"],
-      child_stage: ["expected", "newborn", "baby", "sitter", "toddler", "child"],
+      child_stage: [
+        "expected",
+        "newborn",
+        "baby",
+        "sitter",
+        "toddler",
+        "child",
+      ],
       child_status: ["active", "archived"],
       commercial_package_status: ["active", "inactive", "retired"],
       commercial_package_tier: ["bronze", "gold", "diamond", "emerald"],
       commercial_pricing_type: ["fixed_amount", "percentage", "variable"],
       commercial_version_approval_status: ["draft", "approved", "retired"],
-      communication_channel: ["whatsapp", "email", "sms", "phone", "portal", "in_person", "manual"],
+      communication_channel: [
+        "whatsapp",
+        "email",
+        "sms",
+        "phone",
+        "portal",
+        "in_person",
+        "manual",
+      ],
       communication_direction: ["inbound", "outbound", "internal"],
       communication_status: [
         "queued",
@@ -6165,7 +6983,13 @@ export const Constants = {
         "archived",
       ],
       lead_task_priority: ["low", "normal", "high", "urgent"],
-      lead_task_status: ["open", "in_progress", "snoozed", "completed", "cancelled"],
+      lead_task_status: [
+        "open",
+        "in_progress",
+        "snoozed",
+        "completed",
+        "cancelled",
+      ],
       lead_task_type: [
         "first_response",
         "follow_up",
@@ -6207,8 +7031,20 @@ export const Constants = {
         "decide_later",
       ],
       quotation_line_type: ["package", "addon", "custom"],
-      quotation_pricing_source: ["catalogue", "approved_offer", "authorized_override"],
-      quotation_status: ["draft", "ready", "sent", "accepted", "declined", "expired", "superseded"],
+      quotation_pricing_source: [
+        "catalogue",
+        "approved_offer",
+        "authorized_override",
+      ],
+      quotation_status: [
+        "draft",
+        "ready",
+        "sent",
+        "accepted",
+        "declined",
+        "expired",
+        "superseded",
+      ],
     },
   },
 } as const;
