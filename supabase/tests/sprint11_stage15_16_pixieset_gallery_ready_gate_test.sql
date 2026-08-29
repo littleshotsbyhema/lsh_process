@@ -17,14 +17,14 @@ SELECT plan(38);
 -- 1
 SELECT is(
   (SELECT count(*)::bigint FROM public.permissions),
-  70::bigint,
+  71::bigint,
   'canonical permission catalogue remains exactly 69'
 );
 
 -- 2
 SELECT is(
   (SELECT count(*)::bigint FROM public.role_permissions),
-  245::bigint,
+  246::bigint,
   'canonical role-permission mapping count remains exactly 243'
 );
 

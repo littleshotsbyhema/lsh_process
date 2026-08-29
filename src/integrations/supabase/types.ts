@@ -3655,6 +3655,98 @@ export type Database = {
           },
         ];
       };
+      media_card_assignments: {
+        Row: {
+          assigned_at: string;
+          assigned_by: string;
+          booking_id: string;
+          capture_device_id: string;
+          custodian_member_id: string;
+          ended_at: string | null;
+          ended_by: string | null;
+          id: string;
+          lead_photographer_assignment_id: string;
+          media_card_id: string;
+          organization_id: string;
+        };
+        Insert: {
+          assigned_at?: string;
+          assigned_by: string;
+          booking_id: string;
+          capture_device_id: string;
+          custodian_member_id: string;
+          ended_at?: string | null;
+          ended_by?: string | null;
+          id?: string;
+          lead_photographer_assignment_id: string;
+          media_card_id: string;
+          organization_id: string;
+        };
+        Update: {
+          assigned_at?: string;
+          assigned_by?: string;
+          booking_id?: string;
+          capture_device_id?: string;
+          custodian_member_id?: string;
+          ended_at?: string | null;
+          ended_by?: string | null;
+          id?: string;
+          lead_photographer_assignment_id?: string;
+          media_card_id?: string;
+          organization_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "media_card_assignments_assigned_by_fkey";
+            columns: ["assigned_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "media_card_assignments_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "media_card_assignments_capture_device_fkey";
+            columns: ["organization_id", "capture_device_id"];
+            isOneToOne: false;
+            referencedRelation: "capture_devices";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "media_card_assignments_custodian_fkey";
+            columns: ["custodian_member_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "media_card_assignments_ended_by_fkey";
+            columns: ["ended_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "media_card_assignments_lead_assignment_fkey";
+            columns: ["lead_photographer_assignment_id", "organization_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_team_assignments";
+            referencedColumns: ["id", "organization_id", "booking_id"];
+          },
+          {
+            foreignKeyName: "media_card_assignments_media_card_fkey";
+            columns: ["organization_id", "media_card_id"];
+            isOneToOne: false;
+            referencedRelation: "media_cards";
+            referencedColumns: ["organization_id", "id"];
+          },
+        ];
+      };
       media_cards: {
         Row: {
           card_code: string;
@@ -5879,6 +5971,32 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "booking_team_assignments";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      assign_media_card: {
+        Args: {
+          p_booking_id: string;
+          p_capture_device_id: string;
+          p_media_card_id: string;
+        };
+        Returns: {
+          assigned_at: string;
+          assigned_by: string;
+          booking_id: string;
+          capture_device_id: string;
+          custodian_member_id: string;
+          ended_at: string | null;
+          ended_by: string | null;
+          id: string;
+          lead_photographer_assignment_id: string;
+          media_card_id: string;
+          organization_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "media_card_assignments";
           isOneToOne: true;
           isSetofReturn: false;
         };

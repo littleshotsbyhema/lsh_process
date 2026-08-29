@@ -34,8 +34,8 @@ SELECT is(
       || ':'
       || (SELECT count(*) FROM public.role_permissions)::text
   ),
-  '70:245'::text,
-  'canonical permission and role-mapping totals are exactly 70:245'
+  '71:246'::text,
+  'canonical permission and role-mapping totals are exactly 71:246'
 );
 
 

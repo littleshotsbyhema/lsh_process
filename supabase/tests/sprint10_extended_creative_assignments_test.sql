@@ -288,7 +288,7 @@ SELECT is(
 -- 20
 SELECT is(
   (SELECT count(*)::bigint FROM public.role_permissions),
-  245::bigint,
+  246::bigint,
   'current canonical repository-wide role-permission mapping count is 243'
 );
 
