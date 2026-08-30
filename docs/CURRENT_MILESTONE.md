@@ -77,6 +77,87 @@ Purpose:
 Migrate the remaining approved Sprint 10 pre-shoot operational surface onto the
 current canonical application without replaying the legacy branch history.
 
+## Current Checkpoint Status
+
+Design-freeze commit:
+
+`2bcab08d2fabfaa1b9931a75b18a2dff322685b6`
+
+Pre-shoot implementation commit:
+
+`4da45678c0e0ba84423a96add761aea0a49ec8c2`
+
+The implementation commit contains exactly seven implementation paths:
+
+- `src/integrations/supabase/types.ts`
+- `src/lib/booking.functions.ts`
+- `src/routes/_authenticated/bookings.tsx`
+- `supabase/migrations/20260819150000_sprint10_booking_team_assignment_read_model.sql`
+- `supabase/migrations/20260819170000_sprint10_booking_team_assignment_candidates.sql`
+- `supabase/tests/sprint10_booking_team_assignment_mutation_surface_test.sql`
+- `supabase/tests/sprint10_booking_team_assignment_read_model_test.sql`
+
+Automated local verification is complete:
+
+- both authorized migrations applied successfully to local Supabase;
+- the imported read-model suite passes 30/30 assertions;
+- the imported mutation-surface suite passes 42/42 assertions;
+- all 11 `sprint10_*.sql` suites pass 794/794 assertions;
+- `supabase db lint --local` reports no schema errors;
+- generated Supabase types contain exactly 25 additions and no deletions;
+- application production build passes;
+- TypeScript verification passes;
+- Prettier verification passes;
+- `src/routeTree.gen.ts` was regenerated only by tooling during verification and
+  restored afterward;
+- exact seven-file implementation boundary was reviewed;
+- all four imported migration/test files match their approved frozen legacy
+  blobs exactly;
+- no Stage 10 -> Stage 11 or shoot-completion implementation was introduced;
+- no lead-role replacement/change-reason workflow was introduced;
+- existing Sales CRM payment, scheduling, and booking-confirmation controls were
+  retained.
+
+Manual local/E2E checkpoint is complete:
+
+- authenticated local Founder access was exercised through the rendered
+  Bookings UI;
+- a controlled local Newborn booking began at exact Stage 8
+  `booking_confirmed` with the required advance satisfied and a reserved shoot
+  schedule;
+- `start_pre_shoot_preparation` created the canonical preparation instance,
+  instantiated 11 checklist items, and performed the exact Stage 8 -> Stage 9
+  transition;
+- required preparation items were satisfied through the controlled rendered UI
+  operations;
+- initial Lead Photographer, Lead Videographer, and Stylist assignments were
+  performed successfully through the canonical assignment operations;
+- after Lead Photographer and Lead Videographer assignment, the rendered
+  candidate directory exposed the required change-reason condition and
+  suppressed the normal lead-replacement action;
+- an attempted Stage 9 -> Stage 10 transition before preparation completion was
+  rejected by canonical server authority with the expected required-preparation
+  gate;
+- Safety and Comfort readiness were recorded as `Ready`;
+- Newborn formal Safety Readiness sign-off was successfully recorded by the
+  authenticated Founder;
+- after all readiness gates were satisfied,
+  `mark_booking_shoot_scheduled` performed the exact Stage 9 -> Stage 10
+  transition;
+- rendered journey history records both
+  `Booking Confirmed -> Pre-Shoot Preparation` and
+  `Pre-Shoot Preparation -> Shoot Scheduled`;
+- at Stage 10 the preparation evidence is historical/read-only, current team
+  assignment evidence remains visible, and no Stage 11 or later operational
+  advancement was performed.
+
+The controlled local/E2E journey therefore stops at exact Stage 10
+`shoot_scheduled`, matching this milestone's approved boundary.
+
+No feature-branch push, Preview release, `main` integration, Production
+deployment, remote Supabase mutation, or Production schema mutation has been
+authorized by this checkpoint.
+
 ## Technical Design Freeze
 
 The frozen legacy pre-shoot functional endpoint is:
