@@ -1710,6 +1710,8 @@ function BookingsPage() {
               (assignment) => assignment.booking_id === booking.id,
             );
 
+            const capabilities = data.bookingCapabilities[booking.id];
+
             const currentOrder = currentStage?.stage_order ?? 0;
 
             const showConfirmationAuthority =
@@ -1719,25 +1721,25 @@ function BookingsPage() {
               currentStage?.stage_key === "booking_confirmed" &&
               currentOrder === 8 &&
               preparation === null &&
-              data.canWritePreparation &&
-              data.canAdvanceBookingStage;
+              capabilities.canWritePreparation &&
+              capabilities.canAdvanceBookingStage;
 
             const canMutatePreparationItems =
               currentStage?.stage_key === "pre_shoot_preparation" &&
               currentOrder === 9 &&
               preparation !== null &&
-              data.canWritePreparation;
+              capabilities.canWritePreparation;
 
             const canMarkShootScheduled =
               currentStage?.stage_key === "pre_shoot_preparation" &&
               currentOrder === 9 &&
-              data.canAdvanceBookingStage;
+              capabilities.canAdvanceBookingStage;
 
             const canManageBookingTeam =
-              data.canAssignBookingTeam && currentOrder >= 8 && currentOrder <= 10;
+              capabilities.canAssignBookingTeam && currentOrder >= 8 && currentOrder <= 10;
 
             const showPreparation =
-              data.canReadPreparation && (currentOrder >= 8 || preparation !== null);
+              capabilities.canReadPreparation && (currentOrder >= 8 || preparation !== null);
 
             const showBookingTeam = currentOrder >= 8 || bookingTeamAssignmentHistory.length > 0;
 
@@ -1893,7 +1895,7 @@ function BookingsPage() {
                   />
                 ) : null}
 
-                {data.canReadSafety &&
+                {capabilities.canReadSafety &&
                 currentOrder === 9 &&
                 currentStage?.stage_key === "pre_shoot_preparation" ? (
                   <SafetyReadinessSurface
@@ -1902,8 +1904,8 @@ function BookingsPage() {
                     serviceCategory={safetyServiceCategory}
                     currentReadiness={currentSafetyReadiness}
                     currentSignoffs={currentSafetySignoffs}
-                    canWrite={data.canWriteSafety}
-                    canSignoff={data.canSignoffSafety}
+                    canWrite={capabilities.canWriteSafety}
+                    canSignoff={capabilities.canSignoffSafety}
                     onSuccess={refreshBookingWorkspace}
                   />
                 ) : null}

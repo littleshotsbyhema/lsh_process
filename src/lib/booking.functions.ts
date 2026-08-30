@@ -45,6 +45,17 @@ export type BookingFamilySummary = {
   display_name: string;
 };
 
+export type BookingCapabilities = {
+  canReadBookingTeam: boolean;
+  canReadPreparation: boolean;
+  canWritePreparation: boolean;
+  canAdvanceBookingStage: boolean;
+  canAssignBookingTeam: boolean;
+  canReadSafety: boolean;
+  canWriteSafety: boolean;
+  canSignoffSafety: boolean;
+};
+
 export type BookingWorkspaceData = {
   bookings: BookingRow[];
   quotations: BookingQuotationSummary[];
@@ -59,13 +70,7 @@ export type BookingWorkspaceData = {
   bookingSafetyReadiness: BookingSafetyReadinessRow[];
   bookingSafetySignoffs: BookingSafetySignoffRow[];
   bookingTeamAssignmentHistory: BookingTeamAssignmentHistoryRow[];
-  canReadPreparation: boolean;
-  canWritePreparation: boolean;
-  canAdvanceBookingStage: boolean;
-  canAssignBookingTeam: boolean;
-  canReadSafety: boolean;
-  canWriteSafety: boolean;
-  canSignoffSafety: boolean;
+  bookingCapabilities: Record<string, BookingCapabilities>;
 };
 
 export type BookingPaymentSummary =
@@ -124,6 +129,19 @@ function throwIfError(error: { message: string } | null) {
   if (error) {
     throw new Error(error.message);
   }
+}
+
+function bookingCapabilitiesFromPermissions(permissions: Set<string>): BookingCapabilities {
+  return {
+    canReadBookingTeam: permissions.has("booking.read"),
+    canReadPreparation: permissions.has("prep.read"),
+    canWritePreparation: permissions.has("prep.write"),
+    canAdvanceBookingStage: permissions.has("booking.stage.advance"),
+    canAssignBookingTeam: permissions.has("booking.team.assign"),
+    canReadSafety: permissions.has("safety.read"),
+    canWriteSafety: permissions.has("safety.write"),
+    canSignoffSafety: permissions.has("safety.signoff"),
+  };
 }
 
 const bookingIdSchema = z.object({
@@ -197,35 +215,18 @@ export const listBookingWorkspace = createServerFn({
 })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<BookingWorkspaceData> => {
-    const [bookingsResult, permissionResult] = await Promise.all([
-      context.supabase
-        .from("bookings")
-        .select("*")
-        .eq("organization_id", ORGANIZATION_ID)
-        .order("created_at", {
-          ascending: false,
-        })
-        .limit(100),
-
-      context.supabase.rpc("effective_permissions", {
-        p_organization_id: ORGANIZATION_ID,
-      }),
-    ]);
+    const bookingsResult = await context.supabase
+      .from("bookings")
+      .select("*")
+      .eq("organization_id", ORGANIZATION_ID)
+      .order("created_at", {
+        ascending: false,
+      })
+      .limit(100);
 
     throwIfError(bookingsResult.error);
-    throwIfError(permissionResult.error);
 
     const bookings = bookingsResult.data ?? [];
-    const permissions = new Set(permissionResult.data ?? []);
-
-    const canReadBookingTeam = permissions.has("booking.read");
-    const canReadPreparation = permissions.has("prep.read");
-    const canWritePreparation = permissions.has("prep.write");
-    const canAdvanceBookingStage = permissions.has("booking.stage.advance");
-    const canAssignBookingTeam = permissions.has("booking.team.assign");
-    const canReadSafety = permissions.has("safety.read");
-    const canWriteSafety = permissions.has("safety.write");
-    const canSignoffSafety = permissions.has("safety.signoff");
 
     if (bookings.length === 0) {
       const stagesResult = await context.supabase
@@ -253,15 +254,35 @@ export const listBookingWorkspace = createServerFn({
         bookingSafetyReadiness: [],
         bookingSafetySignoffs: [],
         bookingTeamAssignmentHistory: [],
-        canReadPreparation,
-        canWritePreparation,
-        canAdvanceBookingStage,
-        canAssignBookingTeam,
-        canReadSafety,
-        canWriteSafety,
-        canSignoffSafety,
+        bookingCapabilities: {},
       };
     }
+
+    const distinctBranchIds = Array.from(new Set(bookings.map((booking) => booking.branch_id)));
+
+    const branchPermissionResults = await Promise.all(
+      distinctBranchIds.map(async (branchId) => ({
+        branchId,
+        result: await context.supabase.rpc("effective_permissions", {
+          p_organization_id: ORGANIZATION_ID,
+          ...(branchId ? { p_branch_id: branchId } : {}),
+        }),
+      })),
+    );
+
+    const permissionsByBranch = new Map<string | null, Set<string>>();
+
+    for (const { branchId, result } of branchPermissionResults) {
+      throwIfError(result.error);
+      permissionsByBranch.set(branchId, new Set(result.data ?? []));
+    }
+
+    const bookingCapabilities: Record<string, BookingCapabilities> = Object.fromEntries(
+      bookings.map((booking) => {
+        const permissions = permissionsByBranch.get(booking.branch_id) ?? new Set<string>();
+        return [booking.id, bookingCapabilitiesFromPermissions(permissions)];
+      }),
+    );
 
     const bookingIds = bookings.map((booking) => booking.id);
     const quotationIds = bookings.map((booking) => booking.source_quotation_id);
@@ -355,12 +376,16 @@ export const listBookingWorkspace = createServerFn({
     let bookingPreparations: BookingPreparationRow[] = [];
     let bookingPreparationItems: BookingPreparationItemRow[] = [];
 
-    if (canReadPreparation) {
+    const preparationReadableBookingIds = bookings
+      .filter((booking) => bookingCapabilities[booking.id].canReadPreparation)
+      .map((booking) => booking.id);
+
+    if (preparationReadableBookingIds.length > 0) {
       const preparationsResult = await context.supabase
         .from("booking_preparations")
         .select("*")
         .eq("organization_id", ORGANIZATION_ID)
-        .in("booking_id", bookingIds)
+        .in("booking_id", preparationReadableBookingIds)
         .order("started_at", {
           ascending: true,
         });
@@ -390,12 +415,16 @@ export const listBookingWorkspace = createServerFn({
     let bookingSafetyReadiness: BookingSafetyReadinessRow[] = [];
     let bookingSafetySignoffs: BookingSafetySignoffRow[] = [];
 
-    if (canReadSafety) {
+    const safetyReadableBookingIds = bookings
+      .filter((booking) => bookingCapabilities[booking.id].canReadSafety)
+      .map((booking) => booking.id);
+
+    if (safetyReadableBookingIds.length > 0) {
       const readinessResult = await context.supabase
         .from("booking_safety_readiness")
         .select("*")
         .eq("organization_id", ORGANIZATION_ID)
-        .in("booking_id", bookingIds)
+        .in("booking_id", safetyReadableBookingIds)
         .is("superseded_at", null)
         .order("revision_number", {
           ascending: true,
@@ -426,9 +455,13 @@ export const listBookingWorkspace = createServerFn({
 
     const bookingTeamAssignmentHistory: BookingTeamAssignmentHistoryRow[] = [];
 
-    if (canReadBookingTeam) {
+    const teamReadableBookingIds = bookings
+      .filter((booking) => bookingCapabilities[booking.id].canReadBookingTeam)
+      .map((booking) => booking.id);
+
+    if (teamReadableBookingIds.length > 0) {
       const historyResults = await Promise.all(
-        bookingIds.map((bookingId) =>
+        teamReadableBookingIds.map((bookingId) =>
           context.supabase.rpc("get_booking_team_assignment_history", {
             p_booking_id: bookingId,
           }),
@@ -455,13 +488,7 @@ export const listBookingWorkspace = createServerFn({
       bookingSafetyReadiness,
       bookingSafetySignoffs,
       bookingTeamAssignmentHistory,
-      canReadPreparation,
-      canWritePreparation,
-      canAdvanceBookingStage,
-      canAssignBookingTeam,
-      canReadSafety,
-      canWriteSafety,
-      canSignoffSafety,
+      bookingCapabilities,
     };
   });
 
