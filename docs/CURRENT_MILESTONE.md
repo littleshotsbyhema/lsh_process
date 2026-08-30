@@ -19,19 +19,16 @@ Durable product and engineering authority lives in:
 
 `main` is the single canonical source-of-truth branch for Memory Keeper OS.
 
-The repository-history canonicalization anchor is:
+Current pre-shoot migration base:
+
+`75a25b0822d62e6a06894b4733aa4a6a4daf3aa8`
+
+Repository-history canonicalization anchor:
 
 `d829ca66014f6e0f802425ff3af8368eea8d324b`
 
-That commit reconciled the former `main` ancestry onto the approved production
-lineage without changing the approved production tree.
-
-Canonical deployment relationship:
-
-`main` -> Vercel Production -> `memory-keeper-os.vercel.app`
-
-The approved Sales CRM booking-confirmation release is contained in canonical
-`main`.
+The approved Sales CRM booking-confirmation release and canonical repository
+governance are contained in `main`.
 
 ## Branch Model
 
@@ -41,147 +38,243 @@ Permanent source-of-truth branch:
 
 All normal development work must begin from current `main` on a short-lived branch.
 
-Approved branch purposes include:
-
-- `feature/...`
-- `fix/...`
-- `chore/...`
-- `release/...`
-- `hotfix/...`
-
-Do not create another long-lived development branch that competes with `main`
-as repository authority.
-
-Do not perform normal implementation work directly on `main`.
+Normal implementation work must not be performed directly on `main`.
 
 ## Main and Production
 
-The Vercel project treats `main` as its production Git branch.
+The Memory Keeper OS Vercel project treats `main` as its Production Git branch.
 
-Therefore an update to `main` may trigger a Vercel Production deployment even
-when the repository change is documentation-only.
+Advancing `main` is therefore production-affecting and requires a separate
+explicit approval gate.
 
-Advancing `main` is consequently a production-affecting action and requires an
-explicit human approval at that gate.
-
-Feature-branch pushes are expected to produce Preview deployments, not Production.
+Feature-branch implementation and Preview validation do not authorize Production.
 
 ## Frozen Legacy Architecture Branch
 
-`architecture-rebuild` is a frozen legacy reference branch.
+`architecture-rebuild` is frozen legacy reference history.
 
 Frozen head:
 
 `5ae04a5b971dfe0c4ae9657483d0386d649ce34f`
 
-Do not add new commits to `architecture-rebuild`.
+Do not add new commits to it.
 
-Do not merge `architecture-rebuild` wholesale into `main`.
+Do not merge it wholesale into `main`.
 
-The legacy branch contains validated but not universally production-approved
-Studio Operations work. Its history must therefore be treated as source material,
-not as an automatic release train.
-
-Approved legacy functionality must be migrated selectively onto fresh
-short-lived branches created from current `main`.
-
-Each migrated domain must be reconciled against the current production application
-and database contracts before integration.
-
-## Generated Artifact Rule
-
-Do not blindly copy generated artifacts from the frozen legacy branch.
-
-In particular:
-
-- `src/integrations/supabase/types.ts` must be regenerated from the applicable
-  validated database schema when a migrated slice changes the schema contract.
-- `src/routeTree.gen.ts` must be regenerated through the normal TanStack
-  application tooling when required.
-
-Generated artifacts are outputs of the validated source state, not migration
-authority by themselves.
-
-## Current Migration Programme
-
-The active programme is controlled extraction of valuable unreleased work from
-the frozen `architecture-rebuild` branch into the canonical `main` workflow.
-
-Planned migration domains are:
-
-1. repository governance;
-2. remaining pre-shoot operations;
-3. shoot completion and post-session handoff;
-4. selection and financial authority;
-5. editing, QC, and gallery progression;
-6. media custody and capture-device authority.
-
-Each domain must be migrated, reconciled, validated, reviewed, and integrated
-independently.
-
-Do not cherry-pick the complete legacy history.
-
-Do not assume that a legacy implementation remains compatible with current
-production contracts merely because it previously passed validation on
-`architecture-rebuild`.
+Legacy functionality must be migrated selectively onto short-lived branches
+created from current `main`.
 
 ## Current Active Branch
 
-`chore/repository-governance`
+`feature/pre-shoot-operations`
+
+Base:
+
+`75a25b0822d62e6a06894b4733aa4a6a4daf3aa8`
 
 Purpose:
 
-Establish canonical repository governance on top of `main` before migrating
-additional Studio Operations functionality.
+Migrate the remaining approved Sprint 10 pre-shoot operational surface onto the
+current canonical application without replaying the legacy branch history.
 
-Current authorized scope is governance documentation only.
+## Technical Design Freeze
 
-No application implementation change is authorized by this milestone.
+The frozen legacy pre-shoot functional endpoint is:
 
-No database migration is authorized by this milestone.
+`2543d1383641e2af85045e7a458b543993136e19`
+
+That commit is reference material for pre-shoot application semantics only.
+
+Do not restore its complete application files over current `main`.
+
+Current production application behavior remains authoritative for all existing
+Sales CRM, scheduling, payment, and booking-confirmation behavior.
+
+## Existing Canonical Database Authority
+
+The following required authorities already exist in canonical `main` and must
+not be recreated by this milestone:
+
+- `start_pre_shoot_preparation`
+- `update_pre_shoot_preparation_item`
+- `assign_booking_team_member`
+- `assign_booking_external_creative`
+- `record_booking_safety_readiness`
+- `signoff_booking_safety_readiness`
+- `mark_booking_shoot_scheduled`
+- `booking_preparations`
+- `booking_preparation_items`
+- `booking_team_assignments`
+- `booking_safety_readiness`
+- `booking_safety_signoffs`
+
+The current database contract remains authoritative.
+
+## Authorized Database Additions
+
+Exactly two additive read-model migrations are authorized:
+
+- `supabase/migrations/20260819150000_sprint10_booking_team_assignment_read_model.sql`
+- `supabase/migrations/20260819170000_sprint10_booking_team_assignment_candidates.sql`
+
+They introduce:
+
+- `get_booking_team_assignment_history(uuid)`
+- `get_booking_team_assignment_candidates(uuid)`
+
+The approved migration source is the stable frozen legacy blob for each file.
+
+These migrations do not authorize:
+
+- new permission keys;
+- new role grants;
+- assignment mutation redesign;
+- booking journey redesign;
+- destructive schema change.
+
+## Authorized Database Tests
+
+Exactly these legacy dedicated suites may be imported with the two migrations:
+
+- `supabase/tests/sprint10_booking_team_assignment_read_model_test.sql`
+- `supabase/tests/sprint10_booking_team_assignment_mutation_surface_test.sql`
+
+They must first run against the canonical branch schema after local reset.
+
+Do not copy the frozen legacy modification to:
+
+- `supabase/tests/sprint10_extended_creative_assignments_test.sql`
+
+That later change reflects repository-wide permission-count drift outside this
+pre-shoot slice and contains inconsistent expected-value/message text.
+
+The canonical `main` version remains authoritative unless this branch itself
+legitimately changes that tested contract.
+
+## Authorized Application Migration
+
+The current Bookings workspace may be extended with:
+
+1. canonical pre-shoot preparation read evidence;
+2. controlled preparation start;
+3. controlled preparation-item satisfaction mutation;
+4. canonical booking-team assignment history;
+5. booking-team candidate discovery;
+6. initial Lead Photographer assignment;
+7. Stylist assignment;
+8. initial Lead Videographer assignment;
+9. Safety & Comfort Readiness recording;
+10. qualifying Newborn Safety Readiness sign-off;
+11. controlled Stage 9 -> Stage 10 `mark_booking_shoot_scheduled` action.
+
+All critical mutations must delegate to existing canonical database RPCs.
+
+Client-side eligibility is presentation guidance only; database authority must
+continue to revalidate permissions, branch scope, lifecycle state, safety,
+staffing, preparation, and journey gates.
+
+## Lead Replacement Boundary
+
+This milestone does not introduce a lead-role replacement workflow.
+
+If a current Lead Photographer or Lead Videographer already exists, the UI must
+not silently replace that assignment without the canonical required
+`change_reason`.
+
+Candidate discovery may report that a change reason is required.
+
+A complete replacement/change-reason UX is outside the current authorized scope
+unless separately frozen.
+
+## Generated Artifact Rule
+
+Do not copy `src/integrations/supabase/types.ts` from `architecture-rebuild`.
+
+After the two authorized migrations are applied and validated locally, regenerate
+Supabase types from the canonical branch schema and inspect the semantic delta.
+
+Do not copy `src/routeTree.gen.ts` from the legacy branch.
+
+If normal application tooling regenerates the route tree, classify and verify
+that output before commit.
+
+## Implementation Order
+
+Use this dependency order:
+
+1. import the two stable team read-model migrations;
+2. import their two stable dedicated pgTAP suites;
+3. reset and validate local Supabase;
+4. run dedicated and relevant Sprint 10 regression tests;
+5. run database lint;
+6. regenerate Supabase application types from the validated local schema;
+7. reconcile and port pre-shoot application functions onto current
+   `src/lib/booking.functions.ts`;
+8. reconcile and port the pre-shoot Bookings UI onto current
+   `src/routes/_authenticated/bookings.tsx`;
+9. run TypeScript and application build verification;
+10. perform controlled local/E2E pre-shoot journey validation;
+11. review exact branch delta before any commit or push.
+
+## Explicitly Out of Scope
+
+This milestone does not authorize:
+
+- wholesale cherry-picking of legacy commits;
+- wholesale restoration of legacy application files;
+- legacy generated Supabase types;
+- legacy generated route tree;
+- stale legacy milestone/register content;
+- Stage 10 -> Stage 11 advancement;
+- shoot-completion workflow;
+- post-shoot handoff;
+- selection or financial-authority migration;
+- editing, QC, or gallery progression;
+- media custody;
+- B3 dual-custody transfer;
+- remote Supabase mutation;
+- Production schema mutation;
+- Production deployment;
+- public website changes.
 
 ## Supabase Trust Boundary
 
 Local Supabase and remote Supabase are separate trust boundaries.
 
-Authorization to inspect, reset, test, lint, or mutate the local development
-database does not authorize remote Supabase activity.
+Local reset, migration application, lint, pgTAP verification, fixtures, and type
+generation do not authorize any remote operation.
 
-Do not perform any of the following without explicit authorization for that
-exact action:
-
-- linked or remote migration deployment;
-- remote database mutation;
-- production data mutation;
-- Supabase branch merge;
-- production schema mutation.
-
-The repository-governance migration makes no Supabase production change.
+Do not use linked/remote migration deployment or mutate production without
+separate explicit authorization.
 
 ## Public Website Boundary
 
-The Little Shots public website and Memory Keeper OS are separate operational
-and deployment boundaries.
+The Little Shots public website remains outside Memory Keeper OS migration scope.
 
-Target architecture:
+Do not alter its repository, Vercel project, deployment, or domain.
 
-- Little Shots public website -> dedicated repository/project -> its own `main`;
-- Memory Keeper OS -> `memory-keeper-os` -> `main`.
+## Exit Criteria
 
-Memory Keeper OS repository work must not alter the public website repository,
-deployment, or domain unless that work is separately authorized.
+The pre-shoot migration is ready for review only when:
 
-## Current Exit Criteria
-
-Repository-governance migration is complete only when:
-
-- the stable governance documents are present on the governance branch;
-- this canonical milestone reflects the `main`-based operating model;
-- repository execution guidance reflects the new branch and production gates;
-- obsolete legacy milestone assumptions do not govern canonical development;
-- no application code or database migration has changed unintentionally;
-- the exact file boundary is reviewed;
-- applicable documentation validation passes;
-- the governance branch is pushed and reviewed;
-- integration into `main` receives explicit approval because it may trigger
-  Vercel Production.
+- both authorized read-model migrations apply cleanly from a fresh local reset;
+- both dedicated imported pgTAP suites pass;
+- relevant existing Sprint 10 regression suites pass;
+- database lint has no new implementation errors;
+- generated Supabase types reflect the validated branch schema;
+- no legacy generated type file was copied;
+- existing CRM scheduling/payment/booking-confirmation behavior remains intact;
+- preparation controls operate through canonical RPC authority;
+- team history and candidate discovery enforce organization, permission, branch,
+  and lifecycle boundaries;
+- Lead Photographer, Stylist, and Lead Videographer controls use canonical
+  assignment RPCs;
+- existing lead roles are not silently replaced;
+- Safety Readiness and Newborn sign-off remain permission- and lifecycle-gated;
+- Stage 9 -> Stage 10 remains database-controlled;
+- no Stage 10 -> Stage 11 behavior is introduced;
+- TypeScript verification passes;
+- application build passes;
+- required local/E2E verification passes;
+- exact file boundary is reviewed before commit;
+- remote Supabase and Production remain untouched until separately approved.
