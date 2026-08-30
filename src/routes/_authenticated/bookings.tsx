@@ -1741,6 +1741,11 @@ function BookingsPage() {
             const showPreparation =
               capabilities.canReadPreparation && (currentOrder >= 8 || preparation !== null);
 
+            const canMutateSafety =
+              currentStage?.stage_key === "pre_shoot_preparation" && currentOrder === 9;
+
+            const showSafety = capabilities.canReadSafety && currentOrder >= 9;
+
             const showBookingTeam = currentOrder >= 8 || bookingTeamAssignmentHistory.length > 0;
 
             return (
@@ -1895,17 +1900,15 @@ function BookingsPage() {
                   />
                 ) : null}
 
-                {capabilities.canReadSafety &&
-                currentOrder === 9 &&
-                currentStage?.stage_key === "pre_shoot_preparation" ? (
+                {showSafety ? (
                   <SafetyReadinessSurface
                     key={currentSafetyReadiness?.id ?? `${booking.id}-none`}
                     bookingId={booking.id}
                     serviceCategory={safetyServiceCategory}
                     currentReadiness={currentSafetyReadiness}
                     currentSignoffs={currentSafetySignoffs}
-                    canWrite={capabilities.canWriteSafety}
-                    canSignoff={capabilities.canSignoffSafety}
+                    canWrite={canMutateSafety && capabilities.canWriteSafety}
+                    canSignoff={canMutateSafety && capabilities.canSignoffSafety}
                     onSuccess={refreshBookingWorkspace}
                   />
                 ) : null}
