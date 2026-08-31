@@ -71,6 +71,7 @@ export type BookingWorkspaceData = {
   bookingSafetySignoffs: BookingSafetySignoffRow[];
   bookingTeamAssignmentHistory: BookingTeamAssignmentHistoryRow[];
   bookingServiceCategories: Record<string, string | null>;
+  bookingSafetySignoffAuthorities: Record<string, BookingSafetySignoffAuthority | null>;
   bookingCapabilities: Record<string, BookingCapabilities>;
 };
 
@@ -97,6 +98,8 @@ export type BookingSafetySignoffRow =
   Database["public"]["Tables"]["booking_safety_signoffs"]["Row"];
 
 export type BookingSafetyState = "pending" | "ready" | "not_ready" | "not_applicable";
+
+export type BookingSafetySignoffAuthority = "founder" | "studio_manager" | "lead_photographer";
 
 type GeneratedBookingTeamAssignmentHistoryRow =
   Database["public"]["Functions"]["get_booking_team_assignment_history"]["Returns"][number];
@@ -130,6 +133,10 @@ function throwIfError(error: { message: string } | null) {
   if (error) {
     throw new Error(error.message);
   }
+}
+
+function isBookingSafetySignoffAuthority(value: string): value is BookingSafetySignoffAuthority {
+  return value === "founder" || value === "studio_manager" || value === "lead_photographer";
 }
 
 function bookingCapabilitiesFromPermissions(permissions: Set<string>): BookingCapabilities {
@@ -257,6 +264,7 @@ export const listBookingWorkspace = createServerFn({
         bookingSafetySignoffs: [],
         bookingTeamAssignmentHistory: [],
         bookingServiceCategories: {},
+        bookingSafetySignoffAuthorities: {},
         bookingCapabilities: {},
       };
     }
@@ -426,6 +434,13 @@ export const listBookingWorkspace = createServerFn({
       bookings.map((booking) => [booking.id, null]),
     );
 
+    const bookingSafetySignoffAuthorities: Record<string, BookingSafetySignoffAuthority | null> =
+      Object.fromEntries(bookings.map((booking) => [booking.id, null]));
+
+    const signoffAuthorityReadableBookingIds = safetyReadableBookingIds.filter(
+      (bookingId) => bookingCapabilities[bookingId].canSignoffSafety,
+    );
+
     if (safetyReadableBookingIds.length > 0) {
       const serviceCategoryResults = await Promise.all(
         safetyReadableBookingIds.map(async (bookingId) => ({
@@ -439,6 +454,31 @@ export const listBookingWorkspace = createServerFn({
       for (const { bookingId, result } of serviceCategoryResults) {
         throwIfError(result.error);
         bookingServiceCategories[bookingId] = result.data ?? null;
+      }
+
+      if (signoffAuthorityReadableBookingIds.length > 0) {
+        const signoffAuthorityResults = await Promise.all(
+          signoffAuthorityReadableBookingIds.map(async (bookingId) => ({
+            bookingId,
+            result: await context.supabase.rpc("get_booking_safety_signoff_authority", {
+              p_booking_id: bookingId,
+            }),
+          })),
+        );
+
+        for (const { bookingId, result } of signoffAuthorityResults) {
+          throwIfError(result.error);
+
+          const authority = result.data ?? null;
+
+          if (authority !== null && !isBookingSafetySignoffAuthority(authority)) {
+            throw new Error(
+              `Unexpected Safety Readiness sign-off authority for booking ${bookingId}.`,
+            );
+          }
+
+          bookingSafetySignoffAuthorities[bookingId] = authority;
+        }
       }
 
       const readinessResult = await context.supabase
@@ -510,6 +550,7 @@ export const listBookingWorkspace = createServerFn({
       bookingSafetySignoffs,
       bookingTeamAssignmentHistory,
       bookingServiceCategories,
+      bookingSafetySignoffAuthorities,
       bookingCapabilities,
     };
   });

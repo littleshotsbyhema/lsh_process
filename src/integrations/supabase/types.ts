@@ -5681,6 +5681,10 @@ export type Database = {
         Args: { p_booking_id: string };
         Returns: string;
       };
+      get_booking_safety_signoff_authority: {
+        Args: { p_booking_id: string };
+        Returns: string;
+      };
       get_booking_team_assignment_candidates: {
         Args: { p_booking_id: string };
         Returns: {

@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(142);
+SELECT plan(149);
 
 -- =====================================================================
 -- Part 1 — Exact table surfaces
@@ -2034,6 +2034,73 @@ SELECT pg_temp.s10s_enter_stage9(
   '90000000-0000-0000-0000-000000000011'
 );
 
+-- ---------------------------------------------------------------------
+-- Corrective Safety read-model regressions.
+-- ---------------------------------------------------------------------
+
+-- 143
+SELECT ok(
+  public.get_booking_safety_service_category(
+    (SELECT id FROM s10s_booking_unsupported)
+  ) IS NULL,
+  'unsupported valid booking category returns NULL instead of failing the workspace'
+);
+
+-- 144
+SELECT ok(
+  (
+    SELECT
+      procedure.prosecdef
+      AND
+      COALESCE(
+        procedure.proconfig,
+        ARRAY[]::text[]
+      ) @> ARRAY['search_path=""']::text[]
+    FROM pg_catalog.pg_proc procedure
+    WHERE procedure.oid =
+          'public.get_booking_safety_signoff_authority(uuid)'::regprocedure
+  ),
+  'sign-off authority read model is SECURITY DEFINER with empty search_path'
+);
+
+-- 145
+SELECT ok(
+  has_function_privilege(
+    'authenticated',
+    'public.get_booking_safety_signoff_authority(uuid)',
+    'EXECUTE'
+  )
+  AND NOT has_function_privilege(
+    'anon',
+    'public.get_booking_safety_signoff_authority(uuid)',
+    'EXECUTE'
+  )
+  AND NOT has_function_privilege(
+    'service_role',
+    'public.get_booking_safety_signoff_authority(uuid)',
+    'EXECUTE'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_proc procedure
+    CROSS JOIN LATERAL
+      pg_catalog.aclexplode(
+        COALESCE(
+          procedure.proacl,
+          pg_catalog.acldefault(
+            'f',
+            procedure.proowner
+          )
+        )
+      ) acl
+    WHERE procedure.oid =
+          'public.get_booking_safety_signoff_authority(uuid)'::regprocedure
+      AND acl.grantee = 0
+      AND acl.privilege_type = 'EXECUTE'
+  ),
+  'sign-off authority read model is executable only by authenticated'
+);
+
 CREATE TEMP TABLE s10s_error_capture (
   test_key text PRIMARY KEY,
   sqlstate text,
@@ -3117,6 +3184,15 @@ FROM public.booking_journey_states state
 WHERE state.booking_id =
       (SELECT id FROM s10s_booking_newborn);
 
+-- 146
+SELECT is(
+  public.get_booking_safety_signoff_authority(
+    (SELECT id FROM s10s_booking_newborn)
+  ),
+  'founder'::text,
+  'sign-off authority read model resolves Founder precedence'
+);
+
 -- 91
 SELECT lives_ok(
   $$
@@ -3214,6 +3290,15 @@ SELECT set_config(
   true
 );
 
+-- 147
+SELECT is(
+  public.get_booking_safety_signoff_authority(
+    (SELECT id FROM s10s_booking_newborn)
+  ),
+  'studio_manager'::text,
+  'sign-off authority read model resolves Studio Manager before Photographer Lead authority'
+);
+
 -- 95
 SELECT lives_ok(
   $$
@@ -3270,6 +3355,14 @@ SELECT set_config(
   'request.jwt.claims',
   '{"sub":"90000000-0000-0000-0000-000000000006","role":"authenticated"}',
   true
+);
+
+-- 148
+SELECT ok(
+  public.get_booking_safety_signoff_authority(
+    (SELECT id FROM s10s_booking_newborn)
+  ) IS NULL,
+  'ordinary Photographer with safety.signoff but without current Lead assignment receives no sign-off authority'
 );
 
 DO $$
@@ -3383,6 +3476,15 @@ SELECT set_config(
   'request.jwt.claims',
   '{"sub":"90000000-0000-0000-0000-000000000006","role":"authenticated"}',
   true
+);
+
+-- 149
+SELECT is(
+  public.get_booking_safety_signoff_authority(
+    (SELECT id FROM s10s_booking_photographer)
+  ),
+  'lead_photographer'::text,
+  'current internal Lead Photographer receives Lead Photographer sign-off authority'
 );
 
 -- 100

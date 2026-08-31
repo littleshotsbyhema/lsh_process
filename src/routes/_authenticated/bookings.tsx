@@ -25,6 +25,7 @@ import {
   type BookingPreparationItemRow,
   type BookingPreparationRow,
   type BookingSafetyReadinessRow,
+  type BookingSafetySignoffAuthority,
   type BookingSafetySignoffRow,
   type BookingSafetyState,
   type BookingStageTransitionRow,
@@ -967,7 +968,7 @@ function SafetyReadinessSurface({
   currentReadiness,
   currentSignoffs,
   canWrite,
-  canSignoff,
+  signoffAuthority,
   onSuccess,
 }: {
   bookingId: string;
@@ -975,7 +976,7 @@ function SafetyReadinessSurface({
   currentReadiness: BookingSafetyReadinessRow | null;
   currentSignoffs: BookingSafetySignoffRow[];
   canWrite: boolean;
-  canSignoff: boolean;
+  signoffAuthority: BookingSafetySignoffAuthority | null;
   onSuccess: () => Promise<void>;
 }) {
   const initialSafetyState: BookingSafetyState =
@@ -1036,7 +1037,7 @@ function SafetyReadinessSurface({
   const canRecord = canWrite && isSafetyServiceCategory(serviceCategory);
 
   const canCreateNewbornSignoff =
-    canSignoff &&
+    signoffAuthority !== null &&
     serviceCategory === "newborn" &&
     currentReadiness?.safety_state === "ready" &&
     currentReadiness.comfort_state === "ready";
@@ -1708,6 +1709,8 @@ function BookingsPage() {
               data.bookingServiceCategories[booking.id] ??
               null;
 
+            const safetySignoffAuthority = data.bookingSafetySignoffAuthorities[booking.id] ?? null;
+
             const currentSafetySignoffs = currentSafetyReadiness
               ? data.bookingSafetySignoffs.filter(
                   (signoff) =>
@@ -1918,7 +1921,11 @@ function BookingsPage() {
                     currentReadiness={currentSafetyReadiness}
                     currentSignoffs={currentSafetySignoffs}
                     canWrite={canMutateSafety && capabilities.canWriteSafety}
-                    canSignoff={canMutateSafety && capabilities.canSignoffSafety}
+                    signoffAuthority={
+                      canMutateSafety && capabilities.canSignoffSafety
+                        ? safetySignoffAuthority
+                        : null
+                    }
                     onSuccess={refreshBookingWorkspace}
                   />
                 ) : null}

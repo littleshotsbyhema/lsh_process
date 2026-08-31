@@ -87,12 +87,15 @@ Pre-shoot implementation commit:
 
 `4da45678c0e0ba84423a96add761aea0a49ec8c2`
 
-Latest verified implementation/remediation commit:
+Latest committed reconciliation checkpoint before the final corrective
+remediation:
 
-`117bc3262b23c037d2488d89f11bacc21ca34c02`
+`74f018e759c1374a43e6f29d5fb4f564ab6ec683`
 
-The current PR scope, including checkpoint reconciliation and review remediation,
-contains exactly nine changed paths:
+Final-review corrective remediation is locally verified in this checkpoint.
+
+With this corrective remediation, the intended PR scope contains exactly eleven
+changed paths:
 
 - `docs/CURRENT_MILESTONE.md`
 - `src/integrations/supabase/types.ts`
@@ -101,30 +104,46 @@ contains exactly nine changed paths:
 - `supabase/migrations/20260819150000_sprint10_booking_team_assignment_read_model.sql`
 - `supabase/migrations/20260819170000_sprint10_booking_team_assignment_candidates.sql`
 - `supabase/migrations/20260831045642_booking_safety_service_category_read_model.sql`
+- `supabase/migrations/20260831080256_booking_safety_review_resilience.sql`
 - `supabase/tests/sprint10_booking_team_assignment_mutation_surface_test.sql`
 - `supabase/tests/sprint10_booking_team_assignment_read_model_test.sql`
+- `supabase/tests/sprint10_safety_readiness_test.sql`
 
 Automated local verification is complete:
 
-- all three authorized migrations applied successfully through the canonical local migration chain;
+- all four authorized migrations applied successfully through the canonical local migration chain;
 - the imported read-model suite passes 30/30 assertions;
-- the imported mutation-surface suite passes 42/42 assertions;
-- all 11 `sprint10_*.sql` suites pass 794/794 assertions;
+- the mutation-surface suite passes 42/42 assertions after a narrow
+  transaction-local candidate-isolation correction to assertions 10-12;
+- the Safety Readiness suite passes 149/149 assertions;
+- all 11 `sprint10_*.sql` suites pass 801/801 assertions;
 - `supabase db lint --local` reports no schema errors;
-- generated Supabase types contain exactly 29 additions and no deletions;
+- `supabase db advisors --local` reports no issues;
+- normalized local type generation proved the corrective generated-type delta is
+  exactly +4/-0 for `get_booking_safety_signoff_authority(uuid)`;
 - application production build passes;
-- TypeScript verification passes;
+- TypeScript verification passes against the freshly generated route tree;
 - Prettier verification passes;
+- `git diff --check` passes;
 - `src/routeTree.gen.ts` was regenerated only by tooling during verification and
   restored afterward;
-- exact nine-file PR boundary was reviewed;
-- all four imported legacy migration/test files match their approved frozen
-  legacy blobs exactly;
-- the corrective safety-category read model passed privileged runtime
+- the intended post-remediation PR boundary is exactly eleven paths;
+- both imported team read-model migrations and the imported read-model pgTAP
+  suite remain unchanged from their approved frozen legacy blobs;
+- the imported mutation-surface suite differs only in assertions 10-12 so its
+  seven transaction-local candidate identities are counted deterministically
+  without assuming an otherwise empty canonical organization;
+- the original safety-category read model passed privileged runtime
   authorization proof for the E2E Photographer while direct quotation-line
   visibility remained unavailable;
-- `supabase db advisors --local` reported no issues after the corrective
-  read-model migration;
+- unsupported authoritative service categories now return `NULL` from the
+  Safety category read model instead of failing the entire Bookings workspace;
+- `get_booking_safety_signoff_authority(uuid)` now exposes narrow,
+  booking-specific canonical sign-off authority for authenticated actors with
+  the required booking and Safety permissions;
+- regression coverage proves Founder -> `founder`, Studio Manager ->
+  `studio_manager`, non-Lead Photographer -> `NULL`, and current internal Lead
+  Photographer -> `lead_photographer`;
 - no Stage 10 -> Stage 11 or shoot-completion implementation was introduced;
 - no lead-role replacement/change-reason workflow was introduced;
 - existing Sales CRM payment, scheduling, and booking-confirmation controls were
@@ -172,7 +191,9 @@ Manual local/E2E checkpoint is complete:
 The controlled local/E2E journey therefore stops at exact Stage 10
 `shoot_scheduled`, matching this milestone's approved boundary.
 
-Feature-branch push and Preview validation are complete for this checkpoint.
+Feature-branch push and Preview validation were complete for the preceding
+`74f018e` checkpoint. Fresh push, Preview validation, and final review for this
+corrective remediation are separate gates from local verification and commit.
 
 No `main` integration, Production deployment, remote Supabase mutation, or
 Production schema mutation has been authorized by this checkpoint.
@@ -212,22 +233,28 @@ The current database contract remains authoritative.
 
 ## Authorized Database Additions
 
-Exactly three additive read-model migrations are authorized for this PR:
+Exactly four additive/corrective read-model migrations are authorized for
+this PR:
 
 - `supabase/migrations/20260819150000_sprint10_booking_team_assignment_read_model.sql`
 - `supabase/migrations/20260819170000_sprint10_booking_team_assignment_candidates.sql`
 - `supabase/migrations/20260831045642_booking_safety_service_category_read_model.sql`
+- `supabase/migrations/20260831080256_booking_safety_review_resilience.sql`
 
-They introduce:
+They introduce or correct:
 
 - `get_booking_team_assignment_history(uuid)`
 - `get_booking_team_assignment_candidates(uuid)`
 - `get_booking_safety_service_category(uuid)`
+- `get_booking_safety_signoff_authority(uuid)`
 
 The first two team read-model migrations are stable frozen legacy blobs.
 
-The safety-category read-model migration is a review remediation authored on
-this branch and validated against the canonical local schema.
+The first safety read-model migration introduced the restricted authoritative
+service-category lookup. The final corrective migration preserves genuine
+authorization/integrity failures, returns `NULL` for authoritative categories
+outside the Safety taxonomy, and adds the narrow booking-specific sign-off
+authority read model.
 
 These migrations do not authorize:
 
@@ -239,16 +266,27 @@ These migrations do not authorize:
 
 ## Authorized Database Tests
 
-Exactly these legacy dedicated suites may be imported with the two legacy team read-model migrations:
+The two legacy dedicated team read-model suites were imported with the two
+legacy team read-model migrations:
 
 - `supabase/tests/sprint10_booking_team_assignment_read_model_test.sql`
 - `supabase/tests/sprint10_booking_team_assignment_mutation_surface_test.sql`
 
-They must first run against the canonical branch schema after local reset.
+The read-model suite remains unchanged. The mutation-surface suite contains only
+a narrow candidate-fixture isolation correction in assertions 10-12: it now
+counts its seven transaction-local candidate identities instead of assuming the
+canonical organization contains no other legitimate candidates. The production
+candidate RPC is unchanged by that correction.
 
-The corrective safety-category read-model migration is validated separately
-through its embedded structural checks, runtime actor proof, rendered E2E
-verification, and local database advisors.
+The existing canonical Safety Readiness suite is also part of the corrective
+verification surface:
+
+- `supabase/tests/sprint10_safety_readiness_test.sql`
+
+It now includes regression assertions for unsupported-category resilience,
+SECURITY DEFINER/search-path/ACL structure, Founder authority, Studio Manager
+authority, non-Lead Photographer denial, and current internal Lead Photographer
+authority.
 
 Do not copy the frozen legacy modification to:
 
@@ -299,7 +337,7 @@ unless separately frozen.
 
 Do not copy `src/integrations/supabase/types.ts` from `architecture-rebuild`.
 
-After all three authorized migrations are applied and validated locally,
+After all four authorized migrations are applied and validated locally,
 regenerate Supabase types from the canonical branch schema and inspect the
 semantic delta.
 
@@ -313,19 +351,21 @@ that output before commit.
 Use this dependency order:
 
 1. import the two stable team read-model migrations;
-2. import their two stable dedicated pgTAP suites;
-3. add the approved safety-category corrective read-model migration;
-4. reset/apply and validate the canonical local migration chain;
-5. run dedicated and relevant Sprint 10 regression tests;
-6. run database lint and advisors;
-7. regenerate Supabase application types from the validated local schema;
-8. reconcile and port pre-shoot application functions onto current
+2. import their two dedicated pgTAP suites;
+3. add the approved safety-category read-model migration;
+4. add the final Safety review-resilience/sign-off-authority corrective migration;
+5. reset/apply and validate the canonical local migration chain;
+6. run dedicated and relevant Sprint 10 regression tests;
+7. run database lint and advisors;
+8. regenerate Supabase application types from the validated local schema;
+9. reconcile and port pre-shoot application functions onto current
    `src/lib/booking.functions.ts`;
-9. reconcile and port the pre-shoot Bookings UI onto current
+10. reconcile and port the pre-shoot Bookings UI onto current
    `src/routes/_authenticated/bookings.tsx`;
-10. run TypeScript and application build verification;
-11. perform controlled local/E2E pre-shoot journey validation;
-12. review exact branch delta before any commit or push.
+11. run TypeScript and application build verification;
+12. perform controlled local/E2E pre-shoot journey validation;
+13. reconcile review-remediation regression coverage and documentation;
+14. review exact branch delta before any commit or push.
 
 ## Explicitly Out of Scope
 
@@ -370,8 +410,8 @@ The pre-shoot migration is ready for review only when:
 
 - both imported legacy team read-model migrations apply cleanly from a fresh
   local reset;
-- the corrective safety-category read-model migration applies cleanly through
-  the canonical local migration chain;
+- both Safety read-model migrations apply cleanly through the canonical local
+  migration chain;
 - both dedicated imported pgTAP suites pass;
 - relevant existing Sprint 10 regression suites pass;
 - database lint has no new implementation errors;
@@ -384,7 +424,10 @@ The pre-shoot migration is ready for review only when:
 - Lead Photographer, Stylist, and Lead Videographer controls use canonical
   assignment RPCs;
 - existing lead roles are not silently replaced;
-- Safety Readiness and Newborn sign-off remain permission- and lifecycle-gated;
+- Safety Readiness remains permission- and lifecycle-gated;
+- Newborn sign-off presentation is additionally gated by canonical
+  booking-specific sign-off authority so an ordinary Photographer is eligible
+  only while they are the current internal Lead Photographer;
 - Stage 9 -> Stage 10 remains database-controlled;
 - no Stage 10 -> Stage 11 behavior is introduced;
 - TypeScript verification passes;

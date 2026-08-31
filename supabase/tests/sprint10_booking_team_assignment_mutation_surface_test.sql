@@ -955,10 +955,21 @@ SELECT is(
     SELECT count(*)::bigint
     FROM public.get_booking_team_assignment_candidates(
       (SELECT id FROM s10m_bookings WHERE fixture_key = 'stage8')
+    ) candidate
+    WHERE candidate.subject_id = ANY (
+      ARRAY[
+        '8b100000-0000-0000-0000-000000000002',
+        '8b100000-0000-0000-0000-000000000003',
+        '8b100000-0000-0000-0000-000000000004',
+        '8b100000-0000-0000-0000-000000000005',
+        '8b100000-0000-0000-0000-000000000006',
+        '8b100000-0000-0000-0000-000000000008',
+        '8b300000-0000-0000-0000-000000000001'
+      ]::uuid[]
     )
   ),
   7::bigint,
-  'Stage 8 candidate directory returns every qualifying internal and external candidate'
+  'Stage 8 candidate directory returns all seven transaction-local qualifying candidates'
 );
 
 -- 11
@@ -967,10 +978,21 @@ SELECT is(
     SELECT count(*)::bigint
     FROM public.get_booking_team_assignment_candidates(
       (SELECT id FROM s10m_bookings WHERE fixture_key = 'stage9')
+    ) candidate
+    WHERE candidate.subject_id = ANY (
+      ARRAY[
+        '8b100000-0000-0000-0000-000000000002',
+        '8b100000-0000-0000-0000-000000000003',
+        '8b100000-0000-0000-0000-000000000004',
+        '8b100000-0000-0000-0000-000000000005',
+        '8b100000-0000-0000-0000-000000000006',
+        '8b100000-0000-0000-0000-000000000008',
+        '8b300000-0000-0000-0000-000000000001'
+      ]::uuid[]
     )
   ),
   7::bigint,
-  'Stage 9 candidate directory returns the same qualifying candidate set'
+  'Stage 9 candidate directory returns all seven transaction-local qualifying candidates'
 );
 
 -- 12
@@ -979,10 +1001,21 @@ SELECT is(
     SELECT count(*)::bigint
     FROM public.get_booking_team_assignment_candidates(
       (SELECT id FROM s10m_bookings WHERE fixture_key = 'stage10')
+    ) candidate
+    WHERE candidate.subject_id = ANY (
+      ARRAY[
+        '8b100000-0000-0000-0000-000000000002',
+        '8b100000-0000-0000-0000-000000000003',
+        '8b100000-0000-0000-0000-000000000004',
+        '8b100000-0000-0000-0000-000000000005',
+        '8b100000-0000-0000-0000-000000000006',
+        '8b100000-0000-0000-0000-000000000008',
+        '8b300000-0000-0000-0000-000000000001'
+      ]::uuid[]
     )
   ),
   7::bigint,
-  'Stage 10 candidate directory returns the same qualifying candidate set'
+  'Stage 10 candidate directory returns all seven transaction-local qualifying candidates'
 );
 
 RESET ROLE;
