@@ -91,7 +91,7 @@ Production verification confirmed:
 - the canonical organization remains active with one active organization-wide Founder grant;
 - no synthetic Production invitation data was introduced.
 
-The generic Supabase SECURITY DEFININER advisor warnings remain review items, not evidence of a release invariant violation by themselves. Exact ACL and internal authorization checks remain authoritative for these deliberate RPC surfaces.
+The generic Supabase SECURITY DEFINER advisor warnings remain review items, not evidence of a release invariant violation by themselves. Exact ACL and internal authorization checks remain authoritative for these deliberate RPC surfaces.
 
 ## Canonical journey boundary
 
