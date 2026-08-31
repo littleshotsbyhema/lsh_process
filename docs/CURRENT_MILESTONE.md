@@ -4,8 +4,7 @@
 
 This file is the mutable execution pointer for canonical Memory Keeper OS development.
 
-Update it when an approved checkpoint changes the active programme, repository
-operating model, or release state.
+Update it when an approved checkpoint changes the active programme, repository operating model, release state, or next authorized milestone.
 
 Durable product and engineering authority lives in:
 
@@ -15,423 +14,163 @@ Durable product and engineering authority lives in:
 - `docs/IMPLEMENTATION_ROADMAP.md`
 - `docs/DEFINITION_OF_DONE.md`
 
-## Canonical Repository State
+Release and reconciliation evidence lives in:
 
-`main` is the single canonical source-of-truth branch for Memory Keeper OS.
+- `docs/releases/2026-09-01-sprint-10-production-release.md`
+- `docs/governance/2026-09-01-sprint10-post-release-reconciliation.md`
+- `docs/governance/2026-09-01-sprint11-scope-freeze.md`
 
-Current pre-shoot migration base:
+## Canonical repository state
 
-`75a25b0822d62e6a06894b4733aa4a6a4daf3aa8`
+`main` is the single canonical source-of-truth branch for Memory Keeper OS and the Vercel Production Git branch.
 
-Repository-history canonicalization anchor:
+Current `main` head at this checkpoint:
 
-`d829ca66014f6e0f802425ff3af8368eea8d324b`
+`8befb64fb51bfd637c79c1a86b903471d5b91016`
 
-The approved Sales CRM booking-confirmation release and canonical repository
-governance are contained in `main`.
+That commit records the completed Sprint 10 Production release.
 
-## Branch Model
-
-Permanent source-of-truth branch:
-
-- `main`
-
-All normal development work must begin from current `main` on a short-lived branch.
-
-Normal implementation work must not be performed directly on `main`.
-
-## Main and Production
-
-The Memory Keeper OS Vercel project treats `main` as its Production Git branch.
-
-Advancing `main` is therefore production-affecting and requires a separate
-explicit approval gate.
-
-Feature-branch implementation and Preview validation do not authorize Production.
-
-## Frozen Legacy Architecture Branch
-
-`architecture-rebuild` is frozen legacy reference history.
-
-Frozen head:
+`architecture-rebuild` remains frozen legacy reference history at:
 
 `5ae04a5b971dfe0c4ae9657483d0386d649ce34f`
 
-Do not add new commits to it.
+Do not add new commits to `architecture-rebuild` and do not merge it wholesale into `main`.
 
-Do not merge it wholesale into `main`.
+## Current governance branch
 
-Legacy functionality must be migrated selectively onto short-lived branches
-created from current `main`.
+Current branch:
 
-## Current Active Branch
-
-`feature/pre-shoot-operations`
-
-Base:
-
-`75a25b0822d62e6a06894b4733aa4a6a4daf3aa8`
+`chore/sprint10-post-release-reconciliation`
 
 Purpose:
 
-Migrate the remaining approved Sprint 10 pre-shoot operational surface onto the
-current canonical application without replaying the legacy branch history.
-
-## Current Checkpoint Status
-
-Design-freeze commit:
-
-`2bcab08d2fabfaa1b9931a75b18a2dff322685b6`
-
-Pre-shoot implementation commit:
-
-`4da45678c0e0ba84423a96add761aea0a49ec8c2`
-
-Latest committed reconciliation checkpoint before the final corrective
-remediation:
-
-`74f018e759c1374a43e6f29d5fb4f564ab6ec683`
-
-Final-review corrective remediation is locally verified in this checkpoint.
-
-With this corrective remediation, the intended PR scope contains exactly eleven
-changed paths:
-
-- `docs/CURRENT_MILESTONE.md`
-- `src/integrations/supabase/types.ts`
-- `src/lib/booking.functions.ts`
-- `src/routes/_authenticated/bookings.tsx`
-- `supabase/migrations/20260819150000_sprint10_booking_team_assignment_read_model.sql`
-- `supabase/migrations/20260819170000_sprint10_booking_team_assignment_candidates.sql`
-- `supabase/migrations/20260831045642_booking_safety_service_category_read_model.sql`
-- `supabase/migrations/20260831080256_booking_safety_review_resilience.sql`
-- `supabase/tests/sprint10_booking_team_assignment_mutation_surface_test.sql`
-- `supabase/tests/sprint10_booking_team_assignment_read_model_test.sql`
-- `supabase/tests/sprint10_safety_readiness_test.sql`
-
-Automated local verification is complete:
-
-- all four authorized migrations applied successfully through the canonical local migration chain;
-- the imported read-model suite passes 30/30 assertions;
-- the mutation-surface suite passes 42/42 assertions after a narrow
-  transaction-local candidate-isolation correction to assertions 10-12;
-- the Safety Readiness suite passes 149/149 assertions;
-- all 11 `sprint10_*.sql` suites pass 801/801 assertions;
-- `supabase db lint --local` reports no schema errors;
-- `supabase db advisors --local` reports no issues;
-- normalized local type generation proved the corrective generated-type delta is
-  exactly +4/-0 for `get_booking_safety_signoff_authority(uuid)`;
-- application production build passes;
-- TypeScript verification passes against the freshly generated route tree;
-- Prettier verification passes;
-- `git diff --check` passes;
-- `src/routeTree.gen.ts` was regenerated only by tooling during verification and
-  restored afterward;
-- the intended post-remediation PR boundary is exactly eleven paths;
-- both imported team read-model migrations and the imported read-model pgTAP
-  suite remain unchanged from their approved frozen legacy blobs;
-- the imported mutation-surface suite differs only in assertions 10-12 so its
-  seven transaction-local candidate identities are counted deterministically
-  without assuming an otherwise empty canonical organization;
-- the original safety-category read model passed privileged runtime
-  authorization proof for the E2E Photographer while direct quotation-line
-  visibility remained unavailable;
-- unsupported authoritative service categories now return `NULL` from the
-  Safety category read model instead of failing the entire Bookings workspace;
-- `get_booking_safety_signoff_authority(uuid)` now exposes narrow,
-  booking-specific canonical sign-off authority for authenticated actors with
-  the required booking and Safety permissions;
-- regression coverage proves Founder -> `founder`, Studio Manager ->
-  `studio_manager`, non-Lead Photographer -> `NULL`, and current internal Lead
-  Photographer -> `lead_photographer`;
-- no Stage 10 -> Stage 11 or shoot-completion implementation was introduced;
-- no lead-role replacement/change-reason workflow was introduced;
-- existing Sales CRM payment, scheduling, and booking-confirmation controls were
-  retained.
-
-Manual local/E2E checkpoint is complete:
-
-- authenticated local Founder access was exercised through the rendered
-  Bookings UI;
-- a controlled local Newborn booking began at exact Stage 8
-  `booking_confirmed` with the required advance satisfied and a reserved shoot
-  schedule;
-- `start_pre_shoot_preparation` created the canonical preparation instance,
-  instantiated 11 checklist items, and performed the exact Stage 8 -> Stage 9
-  transition;
-- required preparation items were satisfied through the controlled rendered UI
-  operations;
-- initial Lead Photographer, Lead Videographer, and Stylist assignments were
-  performed successfully through the canonical assignment operations;
-- an eligible external creative was successfully assigned as Lead Photographer
-  through the canonical external-creative assignment path;
-- after Lead Photographer and Lead Videographer assignment, the rendered
-  candidate directory exposed the required change-reason condition and
-  suppressed the normal lead-replacement action;
-- an attempted Stage 9 -> Stage 10 transition before preparation completion was
-  rejected by canonical server authority with the expected required-preparation
-  gate;
-- Safety and Comfort readiness were recorded as `Ready`;
-- an authenticated E2E Photographer with Safety access but without preparation
-  read access rendered the authoritative `maternity` service category and
-  recorded the initial canonical readiness revision as Safety `not_applicable`
-  and Comfort `ready`;
-- Newborn formal Safety Readiness sign-off was successfully recorded by the
-  authenticated Founder;
-- after all readiness gates were satisfied,
-  `mark_booking_shoot_scheduled` performed the exact Stage 9 -> Stage 10
-  transition;
-- rendered journey history records both
-  `Booking Confirmed -> Pre-Shoot Preparation` and
-  `Pre-Shoot Preparation -> Shoot Scheduled`;
-- at Stage 10 the preparation evidence is historical/read-only, current team
-  assignment evidence remains visible, and no Stage 11 or later operational
-  advancement was performed.
+- close the post-release Team contract reconciliation;
+- replace the stale pre-release milestone pointer;
+- freeze the functional boundary for Sprint 11 before any implementation begins.
 
-The controlled local/E2E journey therefore stops at exact Stage 10
-`shoot_scheduled`, matching this milestone's approved boundary.
+This branch is governance-only. Sprint 11 implementation must not begin on this branch.
 
-Feature-branch push and Preview validation were complete for the preceding
-`74f018e` checkpoint. Fresh push, Preview validation, and final review for this
-corrective remediation are separate gates from local verification and commit.
+## Production release state
 
-No `main` integration, Production deployment, remote Supabase mutation, or
-Production schema mutation has been authorized by this checkpoint.
+Sprint 10 is COMPLETE, RELEASED and CLOSED through exact Stage 10:
 
-## Technical Design Freeze
+`shoot_scheduled`
 
-The frozen legacy pre-shoot functional endpoint is:
+The released operational journey currently reaches:
 
-`2543d1383641e2af85045e7a458b543993136e19`
+Enquiry -> CRM -> Consultation -> Package -> Quotation -> Booking -> Advance Payment -> Booking Confirmed -> Pre-Shoot Preparation -> Team Assignment -> Safety Readiness -> Shoot Scheduled
 
-That commit is reference material for pre-shoot application semantics only.
+The Sprint 10 application release was merged through Production commit:
 
-Do not restore its complete application files over current `main`.
+`3a65cadf35abbfd3541859adf3946c47c0924ea3`
 
-Current production application behavior remains authoritative for all existing
-Sales CRM, scheduling, payment, and booking-confirmation behavior.
+The formal release-record commit on `main` is:
 
-## Existing Canonical Database Authority
+`8befb64fb51bfd637c79c1a86b903471d5b91016`
 
-The following required authorities already exist in canonical `main` and must
-not be recreated by this milestone:
+## Team contract reconciliation
 
-- `start_pre_shoot_preparation`
-- `update_pre_shoot_preparation_item`
-- `assign_booking_team_member`
-- `assign_booking_external_creative`
-- `record_booking_safety_readiness`
-- `signoff_booking_safety_readiness`
-- `mark_booking_shoot_scheduled`
-- `booking_preparations`
-- `booking_preparation_items`
-- `booking_team_assignments`
-- `booking_safety_readiness`
-- `booking_safety_signoffs`
+The post-release application/database mismatch for the authenticated Team workspace is CLOSED.
 
-The current database contract remains authoritative.
+The following canonical migrations are now deployed to Production and recorded in the Production migration ledger:
 
-## Authorized Database Additions
+- `20260816221825_sprint10_canonical_team_access_foundation.sql`
+- `20260817042405_sprint10_team_role_admin_read_model.sql`
 
-Exactly four additive/corrective read-model migrations are authorized for
-this PR:
+Production verification confirmed:
 
-- `supabase/migrations/20260819150000_sprint10_booking_team_assignment_read_model.sql`
-- `supabase/migrations/20260819170000_sprint10_booking_team_assignment_candidates.sql`
-- `supabase/migrations/20260831045642_booking_safety_service_category_read_model.sql`
-- `supabase/migrations/20260831080256_booking_safety_review_resilience.sql`
+- all ten Team RPCs are present;
+- expected RPC ACLs are in place;
+- `PUBLIC` execution is denied for all ten Team RPCs;
+- anonymous execution is limited to the intentionally token-gated `preview_organization_invitation(text)` endpoint;
+- invitation tables have RLS enabled and forced;
+- `anon` and `authenticated` have no direct table DML privileges;
+- the Founder Team permission contract remains `team.read`, `team.invite`, `team.role.assign`, `team.suspend`;
+- the canonical organization remains active with one active organization-wide Founder grant;
+- no synthetic Production invitation data was introduced.
 
-They introduce or correct:
+The generic Supabase SECURITY DEFINER advisor warnings remain review items, not evidence of a release invariant violation by themselves. Exact ACL and internal authorization checks remain authoritative for these deliberate RPC surfaces.
 
-- `get_booking_team_assignment_history(uuid)`
-- `get_booking_team_assignment_candidates(uuid)`
-- `get_booking_safety_service_category(uuid)`
-- `get_booking_safety_signoff_authority(uuid)`
+## Canonical journey boundary
 
-The first two team read-model migrations are stable frozen legacy blobs.
+The Production journey-stage catalogue confirms:
 
-The first safety read-model migration introduced the restricted authoritative
-service-category lookup. The final corrective migration preserves genuine
-authorization/integrity failures, returns `NULL` for authoritative categories
-outside the Safety taxonomy, and adds the narrow booking-specific sign-off
-authority read model.
+- Stage 10: `shoot_scheduled` — Shoot Scheduled
+- Stage 11: `shoot_completed` — Shoot Completed
+- Stage 12: `selection_pending` — Selection Pending
 
-These migrations do not authorize:
+No Stage 11 or later operational advancement is currently released.
 
-- new permission keys;
-- new role grants;
-- assignment mutation redesign;
-- booking journey redesign;
-- destructive schema change.
+## Current programme
 
-## Authorized Database Tests
+The next programme milestone is **Sprint 11 — Shoot Completion**.
 
-The two legacy dedicated team read-model suites were imported with the two
-legacy team read-model migrations:
+Functional scope is frozen in:
 
-- `supabase/tests/sprint10_booking_team_assignment_read_model_test.sql`
-- `supabase/tests/sprint10_booking_team_assignment_mutation_surface_test.sql`
+`docs/governance/2026-09-01-sprint11-scope-freeze.md`
 
-The read-model suite remains unchanged. The mutation-surface suite contains only
-a narrow candidate-fixture isolation correction in assertions 10-12: it now
-counts its seven transaction-local candidate identities instead of assuming the
-canonical organization contains no other legitimate candidates. The production
-candidate RPC is unchanged by that correction.
+Exact authorized journey boundary:
 
-The existing canonical Safety Readiness suite is also part of the corrective
-verification surface:
+`Stage 10 shoot_scheduled -> Stage 11 shoot_completed`
 
-- `supabase/tests/sprint10_safety_readiness_test.sql`
+Sprint 11 must stop at exact Stage 11. Stage 11 -> Stage 12 is not authorized.
 
-It now includes regression assertions for unsupported-category resilience,
-SECURITY DEFINER/search-path/ACL structure, Founder authority, Studio Manager
-authority, non-Lead Photographer denial, and current internal Lead Photographer
-authority.
+## Sprint 11 status
 
-Do not copy the frozen legacy modification to:
+Functional scope: FROZEN.
 
-- `supabase/tests/sprint10_extended_creative_assignments_test.sql`
+Technical design: NEXT GATE.
 
-That later change reflects repository-wide permission-count drift outside this
-pre-shoot slice and contains inconsistent expected-value/message text.
+Implementation: HOLD until a technical design freeze explicitly defines the evidence model, controlled RPC contract, authorization and branch-scope rules, audit/journey semantics, read model, exact file/migration boundary and acceptance tests.
 
-The canonical `main` version remains authoritative unless this branch itself
-legitimately changes that tested contract.
+Production deployment: NOT AUTHORIZED.
 
-## Authorized Application Migration
+## Sprint 11 functional boundary
 
-The current Bookings workspace may be extended with:
+Sprint 11 may cover only the minimum canonical capability required to record that a scheduled photography session has been completed and to expose that evidence safely in the authenticated studio application.
 
-1. canonical pre-shoot preparation read evidence;
-2. controlled preparation start;
-3. controlled preparation-item satisfaction mutation;
-4. canonical booking-team assignment history;
-5. booking-team candidate discovery;
-6. initial Lead Photographer assignment;
-7. Stylist assignment;
-8. initial Lead Videographer assignment;
-9. Safety & Comfort Readiness recording;
-10. qualifying Newborn Safety Readiness sign-off;
-11. controlled Stage 9 -> Stage 10 `mark_booking_shoot_scheduled` action.
+Permitted areas are:
 
-All critical mutations must delegate to existing canonical database RPCs.
+- authoritative shoot-completion evidence;
+- exact Stage 10 -> Stage 11 server-controlled advancement;
+- safe authenticated completion read model;
+- Bookings UI completion action and historical completion rendering;
+- canonical audit and journey evidence;
+- dedicated database/application/E2E verification.
 
-Client-side eligibility is presentation guidance only; database authority must
-continue to revalidate permissions, branch scope, lifecycle state, safety,
-staffing, preparation, and journey gates.
+The implementation must preserve all released Stage 10 authority, including booking confirmation, payment, scheduling, pre-shoot preparation, team assignment and Safety Readiness controls.
 
-## Lead Replacement Boundary
+## Explicitly out of scope
 
-This milestone does not introduce a lead-role replacement workflow.
+The current milestone does not authorize:
 
-If a current Lead Photographer or Lead Videographer already exists, the UI must
-not silently replace that assignment without the canonical required
-`change_reason`.
-
-Candidate discovery may report that a change reason is required.
-
-A complete replacement/change-reason UX is outside the current authorized scope
-unless separately frozen.
-
-## Generated Artifact Rule
-
-Do not copy `src/integrations/supabase/types.ts` from `architecture-rebuild`.
-
-After all four authorized migrations are applied and validated locally,
-regenerate Supabase types from the canonical branch schema and inspect the
-semantic delta.
-
-Do not copy `src/routeTree.gen.ts` from the legacy branch.
-
-If normal application tooling regenerates the route tree, classify and verify
-that output before commit.
-
-## Implementation Order
-
-Use this dependency order:
-
-1. import the two stable team read-model migrations;
-2. import their two dedicated pgTAP suites;
-3. add the approved safety-category read-model migration;
-4. add the final Safety review-resilience/sign-off-authority corrective migration;
-5. reset/apply and validate the canonical local migration chain;
-6. run dedicated and relevant Sprint 10 regression tests;
-7. run database lint and advisors;
-8. regenerate Supabase application types from the validated local schema;
-9. reconcile and port pre-shoot application functions onto current
-   `src/lib/booking.functions.ts`;
-10. reconcile and port the pre-shoot Bookings UI onto current
-   `src/routes/_authenticated/bookings.tsx`;
-11. run TypeScript and application build verification;
-12. perform controlled local/E2E pre-shoot journey validation;
-13. reconcile review-remediation regression coverage and documentation;
-14. review exact branch delta before any commit or push.
-
-## Explicitly Out of Scope
-
-This milestone does not authorize:
-
-- wholesale cherry-picking of legacy commits;
-- wholesale restoration of legacy application files;
-- legacy generated Supabase types;
-- legacy generated route tree;
-- stale legacy milestone/register content;
-- Stage 10 -> Stage 11 advancement;
-- shoot-completion workflow;
-- post-shoot handoff;
-- selection or financial-authority migration;
-- editing, QC, or gallery progression;
-- media custody;
-- B3 dual-custody transfer;
-- remote Supabase mutation;
-- Production schema mutation;
-- Production deployment;
-- public website changes.
-
-## Supabase Trust Boundary
-
-Local Supabase and remote Supabase are separate trust boundaries.
-
-Local reset, migration application, lint, pgTAP verification, fixtures, and type
-generation do not authorize any remote operation.
-
-Do not use linked/remote migration deployment or mutate production without
-separate explicit authorization.
-
-## Public Website Boundary
-
-The Little Shots public website remains outside Memory Keeper OS migration scope.
-
-Do not alter its repository, Vercel project, deployment, or domain.
-
-## Exit Criteria
-
-The pre-shoot migration is ready for review only when:
-
-- both imported legacy team read-model migrations apply cleanly from a fresh
-  local reset;
-- both Safety read-model migrations apply cleanly through the canonical local
-  migration chain;
-- both dedicated imported pgTAP suites pass;
-- relevant existing Sprint 10 regression suites pass;
-- database lint has no new implementation errors;
-- generated Supabase types reflect the validated branch schema;
-- no legacy generated type file was copied;
-- existing CRM scheduling/payment/booking-confirmation behavior remains intact;
-- preparation controls operate through canonical RPC authority;
-- team history and candidate discovery enforce organization, permission, branch,
-  and lifecycle boundaries;
-- Lead Photographer, Stylist, and Lead Videographer controls use canonical
-  assignment RPCs;
-- existing lead roles are not silently replaced;
-- Safety Readiness remains permission- and lifecycle-gated;
-- Newborn sign-off presentation is additionally gated by canonical
-  booking-specific sign-off authority so an ordinary Photographer is eligible
-  only while they are the current internal Lead Photographer;
-- Stage 9 -> Stage 10 remains database-controlled;
-- no Stage 10 -> Stage 11 behavior is introduced;
-- TypeScript verification passes;
-- application build passes;
-- required local/E2E verification passes;
-- exact file boundary is reviewed before commit;
-- remote Supabase and Production remain untouched until separately approved.
+- Stage 11 -> Stage 12 `selection_pending` advancement;
+- client selection/proofing workflow;
+- editing or retouching workflow;
+- QC progression;
+- Pixieset gallery readiness/publication;
+- final delivery;
+- album/frame production;
+- review or milestone-follow-up workflow;
+- AI culling/editing or later creative-intelligence features;
+- unrelated Team/RBAC redesign;
+- unrelated CRM, quotations, packages or payment redesign;
+- public website changes;
+- wholesale legacy-branch migration;
+- Production database mutation or Production deployment for Sprint 11 without a separate explicit release approval.
+
+## Branch model for Sprint 11
+
+Before Sprint 11 implementation begins:
+
+1. integrate the governance closeout and scope-freeze documents into current `main` through an explicit reviewed repository change;
+2. verify the resulting `main` head;
+3. create a new short-lived Sprint 11 implementation branch from that exact `main` head;
+4. perform technical design freeze on that branch or in a dedicated governance branch before implementation;
+5. do not reuse `feature/pre-shoot-operations` or `architecture-rebuild` as the implementation base.
+
+## Current next action
+
+Prepare and review the Sprint 11 technical design freeze for exact Stage 10 -> Stage 11 Shoot Completion.
+
+No implementation code, migration, Production mutation or Stage 12 work is authorized until that design freeze is accepted.
