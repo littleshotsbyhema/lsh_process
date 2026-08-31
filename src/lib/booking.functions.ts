@@ -45,6 +45,17 @@ export type BookingFamilySummary = {
   display_name: string;
 };
 
+export type BookingCapabilities = {
+  canReadBookingTeam: boolean;
+  canReadPreparation: boolean;
+  canWritePreparation: boolean;
+  canAdvanceBookingStage: boolean;
+  canAssignBookingTeam: boolean;
+  canReadSafety: boolean;
+  canWriteSafety: boolean;
+  canSignoffSafety: boolean;
+};
+
 export type BookingWorkspaceData = {
   bookings: BookingRow[];
   quotations: BookingQuotationSummary[];
@@ -54,6 +65,14 @@ export type BookingWorkspaceData = {
   transitions: BookingStageTransitionRow[];
   leads: BookingLeadSummary[];
   families: BookingFamilySummary[];
+  bookingPreparations: BookingPreparationRow[];
+  bookingPreparationItems: BookingPreparationItemRow[];
+  bookingSafetyReadiness: BookingSafetyReadinessRow[];
+  bookingSafetySignoffs: BookingSafetySignoffRow[];
+  bookingTeamAssignmentHistory: BookingTeamAssignmentHistoryRow[];
+  bookingServiceCategories: Record<string, string | null>;
+  bookingSafetySignoffAuthorities: Record<string, BookingSafetySignoffAuthority | null>;
+  bookingCapabilities: Record<string, BookingCapabilities>;
 };
 
 export type BookingPaymentSummary =
@@ -64,6 +83,47 @@ export type BookingPaymentRow = Database["public"]["Tables"]["booking_payments"]
 export type BookingShootScheduleRow =
   Database["public"]["Tables"]["booking_shoot_schedules"]["Row"];
 
+export type BookingTeamAssignmentRow =
+  Database["public"]["Tables"]["booking_team_assignments"]["Row"];
+
+export type BookingPreparationRow = Database["public"]["Tables"]["booking_preparations"]["Row"];
+
+export type BookingPreparationItemRow =
+  Database["public"]["Tables"]["booking_preparation_items"]["Row"];
+
+export type BookingSafetyReadinessRow =
+  Database["public"]["Tables"]["booking_safety_readiness"]["Row"];
+
+export type BookingSafetySignoffRow =
+  Database["public"]["Tables"]["booking_safety_signoffs"]["Row"];
+
+export type BookingSafetyState = "pending" | "ready" | "not_ready" | "not_applicable";
+
+export type BookingSafetySignoffAuthority = "founder" | "studio_manager" | "lead_photographer";
+
+type GeneratedBookingTeamAssignmentHistoryRow =
+  Database["public"]["Functions"]["get_booking_team_assignment_history"]["Returns"][number];
+
+export type BookingTeamAssignmentHistoryRow = Omit<
+  GeneratedBookingTeamAssignmentHistoryRow,
+  "ended_at" | "end_reason" | "subject_display_name" | "subject_id"
+> & {
+  ended_at: string | null;
+  end_reason: string | null;
+  subject_display_name: string | null;
+  subject_id: string | null;
+};
+
+type GeneratedBookingTeamAssignmentCandidateRow =
+  Database["public"]["Functions"]["get_booking_team_assignment_candidates"]["Returns"][number];
+
+export type BookingTeamAssignmentCandidateRow = Omit<
+  GeneratedBookingTeamAssignmentCandidateRow,
+  "subject_display_name"
+> & {
+  subject_display_name: string | null;
+};
+
 export type BookingConfirmationWorkspace = {
   paymentSummary: BookingPaymentSummary | null;
   currentSchedule: BookingShootScheduleRow | null;
@@ -73,6 +133,23 @@ function throwIfError(error: { message: string } | null) {
   if (error) {
     throw new Error(error.message);
   }
+}
+
+function isBookingSafetySignoffAuthority(value: string): value is BookingSafetySignoffAuthority {
+  return value === "founder" || value === "studio_manager" || value === "lead_photographer";
+}
+
+function bookingCapabilitiesFromPermissions(permissions: Set<string>): BookingCapabilities {
+  return {
+    canReadBookingTeam: permissions.has("booking.read"),
+    canReadPreparation: permissions.has("prep.read"),
+    canWritePreparation: permissions.has("prep.write"),
+    canAdvanceBookingStage: permissions.has("booking.stage.advance"),
+    canAssignBookingTeam: permissions.has("booking.team.assign"),
+    canReadSafety: permissions.has("safety.read"),
+    canWriteSafety: permissions.has("safety.write"),
+    canSignoffSafety: permissions.has("safety.signoff"),
+  };
 }
 
 const bookingIdSchema = z.object({
@@ -95,6 +172,51 @@ const proposeBookingShootScheduleSchema = z.object({
   timezone: z.string().trim().min(1),
   locationType: z.string().trim().min(1),
   locationDetails: z.string().trim().min(1).optional(),
+});
+
+const startPreShootPreparationSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
+const updatePreShootPreparationItemSchema = z.object({
+  preparationItemId: z.string().uuid(),
+  satisfied: z.boolean(),
+});
+
+const recordBookingSafetyReadinessSchema = z.object({
+  bookingId: z.string().uuid(),
+  safetyState: z.enum(["pending", "ready", "not_ready", "not_applicable"]),
+  comfortState: z.enum(["pending", "ready", "not_ready", "not_applicable"]),
+});
+
+const signoffBookingSafetyReadinessSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
+const markBookingShootScheduledSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
+const bookingTeamAssignmentCandidatesSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
+const assignLeadPhotographerSchema = z.object({
+  bookingId: z.string().uuid(),
+  subjectType: z.enum(["internal_member", "external_creative"]),
+  subjectId: z.string().uuid(),
+});
+
+const assignStylistSchema = z.object({
+  bookingId: z.string().uuid(),
+  subjectType: z.enum(["internal_member", "external_creative"]),
+  subjectId: z.string().uuid(),
+});
+
+const assignLeadVideographerSchema = z.object({
+  bookingId: z.string().uuid(),
+  subjectType: z.enum(["internal_member", "external_creative"]),
+  subjectId: z.string().uuid(),
 });
 
 export const listBookingWorkspace = createServerFn({
@@ -136,8 +258,42 @@ export const listBookingWorkspace = createServerFn({
         transitions: [],
         leads: [],
         families: [],
+        bookingPreparations: [],
+        bookingPreparationItems: [],
+        bookingSafetyReadiness: [],
+        bookingSafetySignoffs: [],
+        bookingTeamAssignmentHistory: [],
+        bookingServiceCategories: {},
+        bookingSafetySignoffAuthorities: {},
+        bookingCapabilities: {},
       };
     }
+
+    const distinctBranchIds = Array.from(new Set(bookings.map((booking) => booking.branch_id)));
+
+    const branchPermissionResults = await Promise.all(
+      distinctBranchIds.map(async (branchId) => ({
+        branchId,
+        result: await context.supabase.rpc("effective_permissions", {
+          p_organization_id: ORGANIZATION_ID,
+          ...(branchId ? { p_branch_id: branchId } : {}),
+        }),
+      })),
+    );
+
+    const permissionsByBranch = new Map<string | null, Set<string>>();
+
+    for (const { branchId, result } of branchPermissionResults) {
+      throwIfError(result.error);
+      permissionsByBranch.set(branchId, new Set(result.data ?? []));
+    }
+
+    const bookingCapabilities: Record<string, BookingCapabilities> = Object.fromEntries(
+      bookings.map((booking) => {
+        const permissions = permissionsByBranch.get(booking.branch_id) ?? new Set<string>();
+        return [booking.id, bookingCapabilitiesFromPermissions(permissions)];
+      }),
+    );
 
     const bookingIds = bookings.map((booking) => booking.id);
     const quotationIds = bookings.map((booking) => booking.source_quotation_id);
@@ -228,6 +384,157 @@ export const listBookingWorkspace = createServerFn({
       families = familiesResult.data ?? [];
     }
 
+    let bookingPreparations: BookingPreparationRow[] = [];
+    let bookingPreparationItems: BookingPreparationItemRow[] = [];
+
+    const preparationReadableBookingIds = bookings
+      .filter((booking) => bookingCapabilities[booking.id].canReadPreparation)
+      .map((booking) => booking.id);
+
+    if (preparationReadableBookingIds.length > 0) {
+      const preparationsResult = await context.supabase
+        .from("booking_preparations")
+        .select("*")
+        .eq("organization_id", ORGANIZATION_ID)
+        .in("booking_id", preparationReadableBookingIds)
+        .order("started_at", {
+          ascending: true,
+        });
+
+      throwIfError(preparationsResult.error);
+
+      bookingPreparations = preparationsResult.data ?? [];
+
+      const preparationIds = bookingPreparations.map((preparation) => preparation.id);
+
+      if (preparationIds.length > 0) {
+        const preparationItemsResult = await context.supabase
+          .from("booking_preparation_items")
+          .select("*")
+          .eq("organization_id", ORGANIZATION_ID)
+          .in("preparation_id", preparationIds)
+          .order("sort_order", {
+            ascending: true,
+          });
+
+        throwIfError(preparationItemsResult.error);
+
+        bookingPreparationItems = preparationItemsResult.data ?? [];
+      }
+    }
+
+    let bookingSafetyReadiness: BookingSafetyReadinessRow[] = [];
+    let bookingSafetySignoffs: BookingSafetySignoffRow[] = [];
+
+    const safetyReadableBookingIds = bookings
+      .filter((booking) => bookingCapabilities[booking.id].canReadSafety)
+      .map((booking) => booking.id);
+
+    const bookingServiceCategories: Record<string, string | null> = Object.fromEntries(
+      bookings.map((booking) => [booking.id, null]),
+    );
+
+    const bookingSafetySignoffAuthorities: Record<string, BookingSafetySignoffAuthority | null> =
+      Object.fromEntries(bookings.map((booking) => [booking.id, null]));
+
+    const signoffAuthorityReadableBookingIds = safetyReadableBookingIds.filter(
+      (bookingId) => bookingCapabilities[bookingId].canSignoffSafety,
+    );
+
+    if (safetyReadableBookingIds.length > 0) {
+      const serviceCategoryResults = await Promise.all(
+        safetyReadableBookingIds.map(async (bookingId) => ({
+          bookingId,
+          result: await context.supabase.rpc("get_booking_safety_service_category", {
+            p_booking_id: bookingId,
+          }),
+        })),
+      );
+
+      for (const { bookingId, result } of serviceCategoryResults) {
+        throwIfError(result.error);
+        bookingServiceCategories[bookingId] = result.data ?? null;
+      }
+
+      if (signoffAuthorityReadableBookingIds.length > 0) {
+        const signoffAuthorityResults = await Promise.all(
+          signoffAuthorityReadableBookingIds.map(async (bookingId) => ({
+            bookingId,
+            result: await context.supabase.rpc("get_booking_safety_signoff_authority", {
+              p_booking_id: bookingId,
+            }),
+          })),
+        );
+
+        for (const { bookingId, result } of signoffAuthorityResults) {
+          throwIfError(result.error);
+
+          const authority = result.data ?? null;
+
+          if (authority !== null && !isBookingSafetySignoffAuthority(authority)) {
+            throw new Error(
+              `Unexpected Safety Readiness sign-off authority for booking ${bookingId}.`,
+            );
+          }
+
+          bookingSafetySignoffAuthorities[bookingId] = authority;
+        }
+      }
+
+      const readinessResult = await context.supabase
+        .from("booking_safety_readiness")
+        .select("*")
+        .eq("organization_id", ORGANIZATION_ID)
+        .in("booking_id", safetyReadableBookingIds)
+        .is("superseded_at", null)
+        .order("revision_number", {
+          ascending: true,
+        });
+
+      throwIfError(readinessResult.error);
+
+      bookingSafetyReadiness = readinessResult.data ?? [];
+
+      const readinessIds = bookingSafetyReadiness.map((readiness) => readiness.id);
+
+      if (readinessIds.length > 0) {
+        const signoffsResult = await context.supabase
+          .from("booking_safety_signoffs")
+          .select("*")
+          .eq("organization_id", ORGANIZATION_ID)
+          .in("booking_id", bookingIds)
+          .in("readiness_id", readinessIds)
+          .order("signed_at", {
+            ascending: true,
+          });
+
+        throwIfError(signoffsResult.error);
+
+        bookingSafetySignoffs = signoffsResult.data ?? [];
+      }
+    }
+
+    const bookingTeamAssignmentHistory: BookingTeamAssignmentHistoryRow[] = [];
+
+    const teamReadableBookingIds = bookings
+      .filter((booking) => bookingCapabilities[booking.id].canReadBookingTeam)
+      .map((booking) => booking.id);
+
+    if (teamReadableBookingIds.length > 0) {
+      const historyResults = await Promise.all(
+        teamReadableBookingIds.map((bookingId) =>
+          context.supabase.rpc("get_booking_team_assignment_history", {
+            p_booking_id: bookingId,
+          }),
+        ),
+      );
+
+      for (const historyResult of historyResults) {
+        throwIfError(historyResult.error);
+        bookingTeamAssignmentHistory.push(...(historyResult.data ?? []));
+      }
+    }
+
     return {
       bookings,
       quotations: quotationsResult.data ?? [],
@@ -237,7 +544,126 @@ export const listBookingWorkspace = createServerFn({
       transitions: transitionsResult.data ?? [],
       leads,
       families,
+      bookingPreparations,
+      bookingPreparationItems,
+      bookingSafetyReadiness,
+      bookingSafetySignoffs,
+      bookingTeamAssignmentHistory,
+      bookingServiceCategories,
+      bookingSafetySignoffAuthorities,
+      bookingCapabilities,
     };
+  });
+
+export const listBookingTeamAssignmentCandidates = createServerFn({
+  method: "GET",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(bookingTeamAssignmentCandidatesSchema)
+  .handler(async ({ context, data }): Promise<BookingTeamAssignmentCandidateRow[]> => {
+    const result = await context.supabase.rpc("get_booking_team_assignment_candidates", {
+      p_booking_id: data.bookingId,
+    });
+
+    throwIfError(result.error);
+
+    return result.data ?? [];
+  });
+
+export const assignLeadPhotographer = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(assignLeadPhotographerSchema)
+  .handler(async ({ context, data }): Promise<BookingTeamAssignmentRow> => {
+    const result =
+      data.subjectType === "internal_member"
+        ? await context.supabase.rpc("assign_booking_team_member", {
+            p_booking_id: data.bookingId,
+            p_assignment_role: "lead_photographer",
+            p_member_id: data.subjectId,
+            p_is_assigned: true,
+            p_change_reason: undefined,
+          })
+        : await context.supabase.rpc("assign_booking_external_creative", {
+            p_booking_id: data.bookingId,
+            p_assignment_role: "lead_photographer",
+            p_external_creative_id: data.subjectId,
+            p_is_assigned: true,
+            p_change_reason: undefined,
+          });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Lead Photographer assignment returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const assignStylist = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(assignStylistSchema)
+  .handler(async ({ context, data }): Promise<BookingTeamAssignmentRow> => {
+    const result =
+      data.subjectType === "internal_member"
+        ? await context.supabase.rpc("assign_booking_team_member", {
+            p_booking_id: data.bookingId,
+            p_assignment_role: "stylist",
+            p_member_id: data.subjectId,
+            p_is_assigned: true,
+            p_change_reason: undefined,
+          })
+        : await context.supabase.rpc("assign_booking_external_creative", {
+            p_booking_id: data.bookingId,
+            p_assignment_role: "stylist",
+            p_external_creative_id: data.subjectId,
+            p_is_assigned: true,
+            p_change_reason: undefined,
+          });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Stylist assignment returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const assignLeadVideographer = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(assignLeadVideographerSchema)
+  .handler(async ({ context, data }): Promise<BookingTeamAssignmentRow> => {
+    const result =
+      data.subjectType === "internal_member"
+        ? await context.supabase.rpc("assign_booking_team_member", {
+            p_booking_id: data.bookingId,
+            p_assignment_role: "lead_videographer",
+            p_member_id: data.subjectId,
+            p_is_assigned: true,
+            p_change_reason: undefined,
+          })
+        : await context.supabase.rpc("assign_booking_external_creative", {
+            p_booking_id: data.bookingId,
+            p_assignment_role: "lead_videographer",
+            p_external_creative_id: data.subjectId,
+            p_is_assigned: true,
+            p_change_reason: undefined,
+          });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Lead Videographer assignment returned no row.");
+    }
+
+    return result.data;
   });
 
 export const getBookingConfirmationWorkspace = createServerFn({
@@ -333,6 +759,104 @@ export const confirmBookingAfterAdvance = createServerFn({
 
     if (!result.data) {
       throw new Error("Booking confirmation returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const startPreShootPreparation = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(startPreShootPreparationSchema)
+  .handler(async ({ context, data }): Promise<BookingPreparationRow> => {
+    const result = await context.supabase.rpc("start_pre_shoot_preparation", {
+      p_booking_id: data.bookingId,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Pre-shoot preparation start returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const updatePreShootPreparationItem = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(updatePreShootPreparationItemSchema)
+  .handler(async ({ context, data }): Promise<BookingPreparationItemRow> => {
+    const result = await context.supabase.rpc("update_pre_shoot_preparation_item", {
+      p_preparation_item_id: data.preparationItemId,
+      p_satisfied: data.satisfied,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Preparation item update returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const recordBookingSafetyReadiness = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(recordBookingSafetyReadinessSchema)
+  .handler(async ({ context, data }): Promise<BookingSafetyReadinessRow> => {
+    const result = await context.supabase.rpc("record_booking_safety_readiness", {
+      p_booking_id: data.bookingId,
+      p_safety_state: data.safetyState,
+      p_comfort_state: data.comfortState,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Safety readiness recording returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const signoffBookingSafetyReadiness = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(signoffBookingSafetyReadinessSchema)
+  .handler(async ({ context, data }): Promise<BookingSafetySignoffRow> => {
+    const result = await context.supabase.rpc("signoff_booking_safety_readiness", {
+      p_booking_id: data.bookingId,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Safety readiness sign-off returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const markBookingShootScheduled = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(markBookingShootScheduledSchema)
+  .handler(async ({ context, data }): Promise<BookingRow> => {
+    const result = await context.supabase.rpc("mark_booking_shoot_scheduled", {
+      p_booking_id: data.bookingId,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Shoot scheduled advancement returned no row.");
     }
 
     return result.data;
