@@ -1,65 +1,27 @@
 # Sprint 10 Post-Release Reconciliation
 
 Date: 2026-09-01 (Asia/Kolkata)
-Status: READY FOR PRODUCTION AUTHORIZATION / SPRINT 11 HOLD
+Status: CLOSED / PRODUCTION RECONCILED / SPRINT 11 HOLD RELEASED
 
 ## Authority
 
 Sprint 10 runtime release remains closed through exact Stage 10 `shoot_scheduled`.
-This reconciliation does not authorize Stage 11 functionality.
-Production mutation for the Team reconciliation remains separately approval-gated.
+This reconciliation does not authorize Stage 11 functionality by itself; it only removes the Team contract blocker that was holding Sprint 11.
 
-## Confirmed documentation drift
+## Original reconciliation issue
 
-`docs/CURRENT_MILESTONE.md` still describes the pre-release feature branch and states that remote Supabase mutation / Production deployment are unauthorized. That is stale after the approved Sprint 10 Production release recorded in `docs/releases/2026-09-01-sprint-10-production-release.md`.
-
-## Confirmed migration-chain drift
-
-The active repository migration directory contains two migrations that are not recorded in the Production migration ledger and whose schema objects are absent from Production:
+The active repository migration directory contained two migrations that were absent from the Production migration ledger and whose schema objects were absent from Production:
 
 - `20260816221825_sprint10_canonical_team_access_foundation.sql`
 - `20260817042405_sprint10_team_role_admin_read_model.sql`
 
-They must not be marked applied through migration repair while their schema objects are absent.
+The shipped authenticated `/team` application surface depended on the RPCs supplied by those migrations, while the Production Founder role already held `team.read`, `team.invite`, `team.role.assign`, and `team.suspend`.
 
-The four authorized Sprint 10 Production migrations remain recorded canonically:
+This created a real application/database contract mismatch separate from the already healthy Sprint 10 booking/pre-shoot runtime.
 
-- `20260819150000`
-- `20260819170000`
-- `20260831045642`
-- `20260831080256`
+## Local verification completed before Production authorization
 
-## Confirmed application / database contract mismatch
-
-The current application contains an authenticated `/team` route and server functions that depend on database objects supplied by the two unapplied migrations.
-
-Current application dependencies include:
-
-- `team_access_directory(uuid)`
-- `team_invitation_directory(uuid)`
-- `create_organization_invitation(...)`
-- `revoke_organization_invitation(...)`
-- `preview_organization_invitation(text)`
-- `accept_organization_invitation(text)`
-- `grant_organization_member_role(...)`
-- `revoke_organization_member_role(...)`
-- `team_role_grant_directory(uuid,uuid)`
-- `team_role_scope_catalogue(uuid)`
-
-Production verification on 2026-09-01 confirmed these objects are absent.
-
-The Production Founder role currently has:
-
-- `team.read`
-- `team.invite`
-- `team.role.assign`
-- `team.suspend`
-
-Therefore the current Founder `/team` page is eligible to invoke database RPCs that do not exist in Production. This is a real Production contract mismatch, separate from the released Sprint 10 booking/pre-shoot runtime.
-
-## Path 1 verification result
-
-Path 1, **Complete the Team contract**, has completed local verification on the reconciliation branch.
+Path 1, **Complete the Team contract**, completed the full local verification gate on the reconciliation branch.
 
 Verified gates:
 
@@ -80,16 +42,9 @@ Verified gates:
 
 The local verification initially exposed a suspended canonical organization after `db reset`. This was confirmed to be intentional bootstrap behavior, not a Team migration defect. Once the local canonical Founder bootstrap state was completed and the organization activated, `current_organization_member(...)` and `effective_permissions(...)` resolved correctly.
 
-Founder Team permissions verified locally:
-
-- `team.read`
-- `team.invite`
-- `team.role.assign`
-- `team.suspend`
-
 ## ACL and security verification
 
-The ten Team RPCs were independently inspected locally.
+The ten Team RPCs were independently inspected locally and again in Production after deployment.
 
 Confirmed controls:
 
@@ -106,41 +61,46 @@ Confirmed controls:
 - `authenticated` has no direct SELECT/INSERT/UPDATE/DELETE privilege on either invitation table
 - `service_role` retains direct table access
 
-Local ACL/security gate: APPROVED.
+The Supabase security advisor reports its generic warning for exposed `SECURITY DEFINER` RPCs, including the intentionally anonymous token-gated invitation preview and authenticated Team RPCs. The exact ACL verification above confirms no unintended `PUBLIC` execution and no direct authenticated table DML. Existing unrelated advisor notices remain outside this reconciliation scope.
 
-## Frozen Production reconciliation manifest
+## Frozen and deployed Production reconciliation manifest
 
-The exact Production database reconciliation manifest is frozen to these two migrations only, in canonical migration order:
+The exact Production database reconciliation manifest was frozen and explicitly authorized as these two migrations only, in canonical migration order:
 
 1. `20260816221825_sprint10_canonical_team_access_foundation.sql`
 2. `20260817042405_sprint10_team_role_admin_read_model.sql`
 
-No other migration is authorized by this manifest.
+The linked Supabase CLI dry run listed exactly those two migrations and no others.
 
-Specifically excluded unless separately approved:
+The authorized Production deployment then applied exactly those two migrations successfully.
 
-- generic `supabase db push` across any wider migration set
-- migration-ledger repair used as a substitute for deploying missing schema
-- Stage 11 or later schema/functionality
-- unrelated permission, role, booking, journey, safety or production workflow changes
-- deletion or archival of the two Team migrations
+## Independent Production verification
 
-## Production deployment gate
+Post-deployment verification confirmed:
 
-Technical verification is complete and the two-migration manifest is approved to freeze.
+- `20260816221825 | sprint10_canonical_team_access_foundation` is present in the Production migration ledger
+- `20260817042405 | sprint10_team_role_admin_read_model` is present in the Production migration ledger
+- all ten expected Team RPCs are present with the verified signatures and ACL contract
+- both invitation tables are present with RLS enabled and forced
+- `anon` and `authenticated` have no direct DML on the invitation tables
+- service role retains intended direct access
+- Founder role maps to exactly the four Team permissions: `team.invite`, `team.read`, `team.role.assign`, `team.suspend`
+- the canonical organization is active and not deleted
+- exactly one active organization-wide Founder grant remains
+- the new invitation tables contain zero rows immediately after deployment, confirming no synthetic Production invite data was introduced
 
-Production deployment remains **HOLD** until a separate explicit authorization is given for this exact two-migration manifest.
+No Stage 11 schema or functionality was deployed by this reconciliation.
 
-After authorization, deployment must be followed by independent Production verification of:
+## Closure decision
 
-- both canonical migration ledger versions
-- presence and signatures of all Team RPCs
-- exact RPC ACLs
-- invitation-table RLS / forced-RLS state
-- direct table privilege boundaries
-- Production Founder `/team` contract behavior
-- absence of unintended migration or schema changes
+Team reconciliation: **CLOSED**.
 
-## Sprint boundary
+Production Team application/database contract: **RECONCILED**.
 
-Sprint 11 remains HOLD until the Team reconciliation is deployed to Production, independently verified, and formally closed.
+Sprint 10 booking/pre-shoot release remains healthy and closed.
+
+The reconciliation-specific Sprint 11 HOLD is now released. Any Sprint 11 implementation still requires its own scope freeze, dependency review, verification plan, and explicit Production authorization gates.
+
+## Remaining documentation drift
+
+`docs/CURRENT_MILESTONE.md` still contains stale pre-release Sprint 10 wording and should be reconciled separately before Sprint 11 execution begins.
