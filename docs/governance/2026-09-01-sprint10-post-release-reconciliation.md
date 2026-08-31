@@ -1,12 +1,13 @@
 # Sprint 10 Post-Release Reconciliation
 
 Date: 2026-09-01 (Asia/Kolkata)
-Status: INVESTIGATION / SPRINT 11 HOLD
+Status: READY FOR PRODUCTION AUTHORIZATION / SPRINT 11 HOLD
 
 ## Authority
 
 Sprint 10 runtime release remains closed through exact Stage 10 `shoot_scheduled`.
-This reconciliation does not authorize Stage 11 functionality or any Production mutation.
+This reconciliation does not authorize Stage 11 functionality.
+Production mutation for the Team reconciliation remains separately approval-gated.
 
 ## Confirmed documentation drift
 
@@ -56,21 +57,90 @@ The Production Founder role currently has:
 
 Therefore the current Founder `/team` page is eligible to invoke database RPCs that do not exist in Production. This is a real Production contract mismatch, separate from the released Sprint 10 booking/pre-shoot runtime.
 
-## Control decision required
+## Path 1 verification result
 
-Do not archive/delete the two migration files yet. The application currently depends on their contracts.
+Path 1, **Complete the Team contract**, has completed local verification on the reconciliation branch.
 
-Do not run a generic `supabase db push` while the migration-chain decision remains unresolved.
+Verified gates:
 
-Do not mark either migration applied with `supabase migration repair` unless the corresponding schema has actually been deployed.
+- full local migration replay: PASS
+- dedicated Team Access pgTAP: 42/42 PASS
+- dedicated Team Role Admin pgTAP: 21/21 PASS
+- full `sprint10_*.sql` suite: 801/801 PASS
+- local database lint: PASS
+- local database advisors: PASS
+- Founder local authorization chain: PASS
+- Founder `/team` read-model rendering: PASS
+- role administration rendering: PASS
+- invitation creation: PASS
+- one-time invitation link generation: PASS
+- pending invitation rendering: PASS
+- invitation revocation: PASS
+- revoked-state rendering: PASS
 
-Before Sprint 11 begins, choose and verify one canonical reconciliation path:
+The local verification initially exposed a suspended canonical organization after `db reset`. This was confirmed to be intentional bootstrap behavior, not a Team migration defect. Once the local canonical Founder bootstrap state was completed and the organization activated, `current_organization_member(...)` and `effective_permissions(...)` resolved correctly.
 
-1. **Complete the Team contract** — review, validate and separately authorize deployment of the two Team migrations to Production; or
-2. **Withdraw the Team contract** — remove/disable the application surfaces and generated contracts that depend on the unapplied schema, then archive/restructure the migrations through an explicit repository-governance change.
+Founder Team permissions verified locally:
 
-Current recommendation: evaluate Path 1 first because the shipped application and generated Supabase types already express the Team contract. Production mutation still requires a separate explicit approval gate after verification.
+- `team.read`
+- `team.invite`
+- `team.role.assign`
+- `team.suspend`
+
+## ACL and security verification
+
+The ten Team RPCs were independently inspected locally.
+
+Confirmed controls:
+
+- all ten functions are `SECURITY DEFINER`
+- all ten functions use an empty `search_path`
+- `PUBLIC` execute is denied for all ten functions
+- `anon` execute is denied for all Team RPCs except `preview_organization_invitation(text)`
+- `preview_organization_invitation(text)` intentionally permits anonymous execution for token-gated invitation preview
+- authenticated execution is granted to the application-facing Team RPCs
+- service-role execution is available as designed
+- `organization_invitations` has RLS enabled and forced
+- `organization_invitation_roles` has RLS enabled and forced
+- `anon` has no direct SELECT/INSERT/UPDATE/DELETE privilege on either invitation table
+- `authenticated` has no direct SELECT/INSERT/UPDATE/DELETE privilege on either invitation table
+- `service_role` retains direct table access
+
+Local ACL/security gate: APPROVED.
+
+## Frozen Production reconciliation manifest
+
+The exact Production database reconciliation manifest is frozen to these two migrations only, in canonical migration order:
+
+1. `20260816221825_sprint10_canonical_team_access_foundation.sql`
+2. `20260817042405_sprint10_team_role_admin_read_model.sql`
+
+No other migration is authorized by this manifest.
+
+Specifically excluded unless separately approved:
+
+- generic `supabase db push` across any wider migration set
+- migration-ledger repair used as a substitute for deploying missing schema
+- Stage 11 or later schema/functionality
+- unrelated permission, role, booking, journey, safety or production workflow changes
+- deletion or archival of the two Team migrations
+
+## Production deployment gate
+
+Technical verification is complete and the two-migration manifest is approved to freeze.
+
+Production deployment remains **HOLD** until a separate explicit authorization is given for this exact two-migration manifest.
+
+After authorization, deployment must be followed by independent Production verification of:
+
+- both canonical migration ledger versions
+- presence and signatures of all Team RPCs
+- exact RPC ACLs
+- invitation-table RLS / forced-RLS state
+- direct table privilege boundaries
+- Production Founder `/team` contract behavior
+- absence of unintended migration or schema changes
 
 ## Sprint boundary
 
-Sprint 11 remains HOLD until this reconciliation is closed.
+Sprint 11 remains HOLD until the Team reconciliation is deployed to Production, independently verified, and formally closed.
