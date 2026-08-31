@@ -1374,11 +1374,15 @@ function BookingTeamCandidatePicker({
     );
 
   const assignLeadPhotographerMutation = useMutation({
-    mutationFn: (memberId: string) =>
+    mutationFn: (vars: {
+      subjectType: "internal_member" | "external_creative";
+      subjectId: string;
+    }) =>
       assignLeadPhotographerFn({
         data: {
           bookingId,
-          memberId,
+          subjectType: vars.subjectType,
+          subjectId: vars.subjectId,
         },
       }),
     onSuccess: async () => {
@@ -1507,17 +1511,26 @@ function BookingTeamCandidatePicker({
                 </p>
               ) : null}
 
-              {candidate.subject_type === "internal_member" &&
+              {(candidate.subject_type === "internal_member" ||
+                candidate.subject_type === "external_creative") &&
               candidate.eligible_assignment_roles.includes("lead_photographer") &&
               canAssignLeadPhotographer ? (
                 <button
                   type="button"
-                  onClick={() => assignLeadPhotographerMutation.mutate(candidate.subject_id)}
+                  onClick={() =>
+                    assignLeadPhotographerMutation.mutate({
+                      subjectType: candidate.subject_type as
+                        "internal_member" | "external_creative",
+                      subjectId: candidate.subject_id,
+                    })
+                  }
                   disabled={assignLeadPhotographerMutation.isPending}
                   className="mt-3 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
                 >
                   {assignLeadPhotographerMutation.isPending &&
-                  assignLeadPhotographerMutation.variables === candidate.subject_id
+                  assignLeadPhotographerMutation.variables?.subjectType ===
+                    candidate.subject_type &&
+                  assignLeadPhotographerMutation.variables?.subjectId === candidate.subject_id
                     ? "Assigning…"
                     : "Assign as Lead Photographer"}
                 </button>
@@ -1690,13 +1703,10 @@ function BookingsPage() {
                   readiness.booking_id === booking.id && readiness.superseded_at === null,
               ) ?? null;
 
-            const preparationServiceCategories = Array.from(
-              new Set(preparationItems.map((item) => item.service_category)),
-            );
-
             const safetyServiceCategory =
               currentSafetyReadiness?.service_category ??
-              (preparationServiceCategories.length === 1 ? preparationServiceCategories[0] : null);
+              data.bookingServiceCategories[booking.id] ??
+              null;
 
             const currentSafetySignoffs = currentSafetyReadiness
               ? data.bookingSafetySignoffs.filter(

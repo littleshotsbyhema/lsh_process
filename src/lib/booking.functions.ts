@@ -70,6 +70,7 @@ export type BookingWorkspaceData = {
   bookingSafetyReadiness: BookingSafetyReadinessRow[];
   bookingSafetySignoffs: BookingSafetySignoffRow[];
   bookingTeamAssignmentHistory: BookingTeamAssignmentHistoryRow[];
+  bookingServiceCategories: Record<string, string | null>;
   bookingCapabilities: Record<string, BookingCapabilities>;
 };
 
@@ -195,7 +196,8 @@ const bookingTeamAssignmentCandidatesSchema = z.object({
 
 const assignLeadPhotographerSchema = z.object({
   bookingId: z.string().uuid(),
-  memberId: z.string().uuid(),
+  subjectType: z.enum(["internal_member", "external_creative"]),
+  subjectId: z.string().uuid(),
 });
 
 const assignStylistSchema = z.object({
@@ -254,6 +256,7 @@ export const listBookingWorkspace = createServerFn({
         bookingSafetyReadiness: [],
         bookingSafetySignoffs: [],
         bookingTeamAssignmentHistory: [],
+        bookingServiceCategories: {},
         bookingCapabilities: {},
       };
     }
@@ -419,7 +422,25 @@ export const listBookingWorkspace = createServerFn({
       .filter((booking) => bookingCapabilities[booking.id].canReadSafety)
       .map((booking) => booking.id);
 
+    const bookingServiceCategories: Record<string, string | null> = Object.fromEntries(
+      bookings.map((booking) => [booking.id, null]),
+    );
+
     if (safetyReadableBookingIds.length > 0) {
+      const serviceCategoryResults = await Promise.all(
+        safetyReadableBookingIds.map(async (bookingId) => ({
+          bookingId,
+          result: await context.supabase.rpc("get_booking_safety_service_category", {
+            p_booking_id: bookingId,
+          }),
+        })),
+      );
+
+      for (const { bookingId, result } of serviceCategoryResults) {
+        throwIfError(result.error);
+        bookingServiceCategories[bookingId] = result.data ?? null;
+      }
+
       const readinessResult = await context.supabase
         .from("booking_safety_readiness")
         .select("*")
@@ -488,6 +509,7 @@ export const listBookingWorkspace = createServerFn({
       bookingSafetyReadiness,
       bookingSafetySignoffs,
       bookingTeamAssignmentHistory,
+      bookingServiceCategories,
       bookingCapabilities,
     };
   });
@@ -513,13 +535,22 @@ export const assignLeadPhotographer = createServerFn({
   .middleware([requireSupabaseAuth])
   .validator(assignLeadPhotographerSchema)
   .handler(async ({ context, data }): Promise<BookingTeamAssignmentRow> => {
-    const result = await context.supabase.rpc("assign_booking_team_member", {
-      p_booking_id: data.bookingId,
-      p_assignment_role: "lead_photographer",
-      p_member_id: data.memberId,
-      p_is_assigned: true,
-      p_change_reason: undefined,
-    });
+    const result =
+      data.subjectType === "internal_member"
+        ? await context.supabase.rpc("assign_booking_team_member", {
+            p_booking_id: data.bookingId,
+            p_assignment_role: "lead_photographer",
+            p_member_id: data.subjectId,
+            p_is_assigned: true,
+            p_change_reason: undefined,
+          })
+        : await context.supabase.rpc("assign_booking_external_creative", {
+            p_booking_id: data.bookingId,
+            p_assignment_role: "lead_photographer",
+            p_external_creative_id: data.subjectId,
+            p_is_assigned: true,
+            p_change_reason: undefined,
+          });
 
     throwIfError(result.error);
 

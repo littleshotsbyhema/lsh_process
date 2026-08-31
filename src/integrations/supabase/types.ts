@@ -5677,6 +5677,10 @@ export type Database = {
           valid_collected_inr: number;
         }[];
       };
+      get_booking_safety_service_category: {
+        Args: { p_booking_id: string };
+        Returns: string;
+      };
       get_booking_team_assignment_candidates: {
         Args: { p_booking_id: string };
         Returns: {
