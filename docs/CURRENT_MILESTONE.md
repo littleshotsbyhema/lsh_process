@@ -21,6 +21,8 @@ Current release and governance evidence includes:
 - `docs/releases/2026-09-01-sprint-11-production-release.md`
 - `docs/governance/2026-09-01-sprint11-post-release-reconciliation.md`
 - `docs/governance/2026-09-01-sprint12-scope-freeze.md`
+- `docs/governance/2026-09-01-sprint12-technical-design-freeze.md`
+- `docs/governance/2026-09-02-sprint12-post-release-reconciliation.md`
 
 ## Canonical repository state
 
@@ -28,9 +30,9 @@ Current release and governance evidence includes:
 
 Current released `main` head:
 
-`8ca0b8ff64ece7a579540e9bae0ef708c77bc8d5`
+`ec05bba81d19fed31cdf0d8ff9e42ac8a713099e`
 
-This commit merged PR #11 and released Sprint 11 application code.
+This commit merged PR #14 and released Sprint 12 application code.
 
 `architecture-rebuild` remains frozen legacy reference history at:
 
@@ -42,63 +44,55 @@ Do not add new work to `architecture-rebuild` and do not merge it wholesale into
 
 Current branch:
 
-`chore/sprint11-post-release-reconciliation`
+`chore/sprint12-post-release-reconciliation`
 
 Purpose:
 
-- record the completed Sprint 11 Production release;
+- record the completed Sprint 12 Production release;
 - reconcile repository, application, database and migration-history state;
-- close Sprint 11;
-- freeze the next functional journey boundary;
-- keep Sprint 12 implementation on HOLD pending technical design and explicit authorization.
+- close Sprint 12;
+- correct the mutable milestone pointer to the actual released state;
+- hold any Stage 12 -> Stage 13 implementation until a new milestone is explicitly frozen and authorized.
 
 This branch is governance-only.
 
 ## Production release state
 
-Sprint 11 is COMPLETE, RELEASED, VERIFIED and CLOSED through exact Stage 11:
+Sprint 12 is COMPLETE, RELEASED, VERIFIED and CLOSED through exact Stage 12:
 
-`shoot_completed`
+`selection_pending`
 
 Released journey boundary:
 
-`Stage 10 shoot_scheduled -> Stage 11 shoot_completed`
-
-Production application deployment:
-
-`dpl_G3PGcySexqXS1W7mAG3GX4md87HT`
+`Stage 11 shoot_completed -> Stage 12 selection_pending`
 
 Production application SHA:
 
-`8ca0b8ff64ece7a579540e9bae0ef708c77bc8d5`
+`ec05bba81d19fed31cdf0d8ff9e42ac8a713099e`
 
-Canonical Sprint 11 Production migrations:
+Canonical Sprint 12 Production migration:
 
-- `20260901160123_sprint11_shoot_completion_evidence_foundation.sql`
-- `20260901160125_sprint11_stage10_11_gate_foundation.sql`
+- `20260901180856_sprint12_stage11_12_selection_pending_gate_foundation.sql`
 
-Production migration history has been reconciled to these exact repository versions.
+Production migration history is aligned with this exact repository version.
 
-## Sprint 11 released contract
+## Sprint 12 released contract
 
 Production verification confirms:
 
-- immutable `booking_shoot_completions` evidence;
-- narrow `shoot.complete` permission;
-- exact grants to Founder, Studio Manager and Photographer;
-- canonical role-permission count `233`;
-- controlled `record_booking_shoot_completion(uuid,timestamptz)`;
-- controlled `mark_booking_shoot_completed(uuid)`;
-- forced RLS and authenticated read containment;
-- no authenticated direct completion-table mutation;
-- explicit separation between completion-recording and journey-advancement authority;
-- exact Stage 10 -> Stage 11 advancement;
-- completion-terminal shoot scheduling;
-- strict Stage 11 replay;
-- structural audit evidence;
-- no Stage 12 action.
+- controlled `mark_booking_selection_pending(uuid)`;
+- `SECURITY DEFINER` execution with empty search path;
+- reuse of the existing `booking.stage.advance` permission;
+- exact journey-advancement role boundary of Founder, Studio Manager and Client Coordinator;
+- canonical shoot-completion evidence required before Stage 12 entry;
+- canonical Stage 10 -> Stage 11 completion lineage required;
+- exact Stage 11 -> Stage 12 advancement;
+- strict mutation-free Stage 12 replay;
+- no new selection-specific permission or role grant;
+- no Stage 12 -> Stage 13 action;
+- Stage 12 application surface remains read-only after advancement.
 
-Sprint 11 post-release reconciliation is CLOSED.
+Sprint 12 post-release reconciliation is CLOSED.
 
 ## Canonical journey boundary
 
@@ -107,64 +101,56 @@ The canonical journey-stage catalogue includes:
 - Stage 10: `shoot_scheduled` — Shoot Scheduled
 - Stage 11: `shoot_completed` — Shoot Completed
 - Stage 12: `selection_pending` — Selection Pending
+- Stage 13: `editing_pending` — Editing Pending
 
-Production is released through Stage 11 only.
+Production is released through Stage 12 only.
 
-## Current programme
+Stage 12 means the completed session has been formally handed into the selection phase and is waiting for selection activity. It does not mean selections are complete, proofs are ready, editing has started, a gallery has been published, or delivery is complete.
 
-The next programme milestone is:
+## Sprint 12 validation state
 
-**Sprint 12 — Selection Pending**
+Release validation completed with:
 
-Frozen functional boundary:
+- dedicated Sprint 12 pgTAP: `43/43` PASS;
+- full local DB regression: `1311/1311` PASS;
+- local DB lint: PASS;
+- local DB advisors: PASS;
+- canonical role-permission count unchanged at `233` before release;
+- scoped ESLint: PASS;
+- Production build: PASS;
+- `git diff --check`: PASS;
+- exact five-file implementation boundary preserved;
+- Vercel success on the exact merged `main` SHA;
+- Production migration dry run identified exactly one pending migration;
+- Production migration applied successfully;
+- final local/remote migration ledger aligned;
+- Production performance advisor: no issues;
+- Production security advisor: WARN-level authenticated `SECURITY DEFINER` notices, consistent with the intentional controlled-RPC architecture and with no blocking error identified.
 
-`Stage 11 shoot_completed -> Stage 12 selection_pending`
+Known repository-wide route-tree TypeScript issues remain pre-existing and unrelated to Sprint 12.
 
-Functional scope is frozen in:
+## Next programme state
 
-`docs/governance/2026-09-01-sprint12-scope-freeze.md`
+No Sprint 13 functional scope is frozen by this closeout.
 
-## Sprint 12 status
+The next journey catalogue boundary is:
 
-Functional scope: **FROZEN**.
+`Stage 12 selection_pending -> Stage 13 editing_pending`
 
-Technical design: **NOT YET FROZEN**.
+That catalogue adjacency does not itself authorize implementation.
 
-Migration filenames: **NOT YET AUTHORIZED OR LOCKED**.
+Any Sprint 13 work must begin with a new functional scope freeze that defines what authoritative evidence, client-selection state, operational readiness and permissions are actually required before a booking may enter `editing_pending`.
 
-Implementation: **NOT AUTHORIZED**.
+## Explicitly not authorized
 
-Production deployment: **NOT AUTHORIZED**.
+This closeout does not authorize:
 
-Sprint 12 must stop at exact Stage 12. No Stage 12 -> Stage 13 work is authorized.
-
-## Sprint 12 design gate
-
-Before implementation, the technical-design phase must explicitly resolve:
-
-- the minimum authoritative evidence required to enter Selection Pending;
-- whether that evidence is internal readiness, client-facing proof readiness or another narrower concept;
-- whether any gallery/provider reference belongs at Stage 12;
-- exact recording and advancement authorities;
-- permission and branch-scope enforcement;
-- RLS and RPC ACLs;
-- replay/idempotency behavior;
-- evidence lifecycle semantics;
-- structural audit events;
-- exact application read/write boundary;
-- exact migration filenames and implementation paths.
-
-No implementation assumption may substitute for this design gate.
-
-## Explicitly out of scope at this checkpoint
-
-The current milestone does not authorize:
-
-- Stage 12 -> Stage 13 or later advancement;
-- client selection decisions unless proven necessary for Stage 12 entry;
+- Stage 12 -> Stage 13 implementation;
+- client-selection data structures or decision capture;
+- proofing workflow;
 - editing or retouching workflow;
 - QC progression;
-- gallery publication beyond any minimum evidence explicitly frozen by the technical design;
+- gallery publication;
 - final delivery;
 - album/frame production;
 - review or milestone-follow-up workflow;
@@ -177,12 +163,12 @@ The current milestone does not authorize:
 
 ## Deferred non-blocking technical debt
 
-Production advisors identify an INFO-level performance item for `booking_shoot_completions_recorded_by_fkey` lacking a dedicated covering index, alongside pre-existing repository-wide advisory notices.
+Repository-wide authenticated `SECURITY DEFINER` advisor warnings should be handled through separately scoped architecture/security hardening rather than opportunistic changes inside a completed journey-stage sprint.
 
-These are not authorized for modification by the current governance branch and must be handled through separately scoped hardening work.
+Previously recorded route-tree typing issues and database performance-hardening candidates remain separately governed technical debt.
 
 ## Current next action
 
-Prepare and review the Sprint 12 technical-design freeze for the exact Stage 11 -> Stage 12 boundary.
+Review and merge the Sprint 12 post-release reconciliation governance change.
 
-Do not create Sprint 12 migrations, modify implementation code, or mutate Production until the technical design is frozen and explicit implementation authorization is granted.
+After Sprint 12 closeout is merged to `main`, prepare a separate Sprint 13 functional scope proposal for the exact Stage 12 -> Stage 13 boundary. Do not create Sprint 13 migrations, modify Sprint 13 implementation code, or mutate Production until that new scope and technical design are explicitly authorized.
