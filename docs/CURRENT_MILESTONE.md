@@ -23,16 +23,21 @@ Current release and governance evidence includes:
 - `docs/governance/2026-09-01-sprint12-scope-freeze.md`
 - `docs/governance/2026-09-01-sprint12-technical-design-freeze.md`
 - `docs/governance/2026-09-02-sprint12-post-release-reconciliation.md`
+- `docs/governance/2026-09-02-sprint13-scope-freeze.md`
 
 ## Canonical repository state
 
 `main` is the single canonical source-of-truth branch and the Vercel Production Git branch.
 
-Current released `main` head:
+Current canonical `main` head before this Sprint 13 governance branch:
+
+`622e09ea7d19dbd7acfd9df044a037caaf87f0cf`
+
+This commit merged PR #15 and closed Sprint 12 governance.
+
+The released Sprint 12 application SHA remains:
 
 `ec05bba81d19fed31cdf0d8ff9e42ac8a713099e`
-
-This commit merged PR #14 and released Sprint 12 application code.
 
 `architecture-rebuild` remains frozen legacy reference history at:
 
@@ -44,15 +49,14 @@ Do not add new work to `architecture-rebuild` and do not merge it wholesale into
 
 Current branch:
 
-`chore/sprint12-post-release-reconciliation`
+`chore/sprint13-functional-scope-freeze`
 
 Purpose:
 
-- record the completed Sprint 12 Production release;
-- reconcile repository, application, database and migration-history state;
-- close Sprint 12;
-- correct the mutable milestone pointer to the actual released state;
-- hold any Stage 12 -> Stage 13 implementation until a new milestone is explicitly frozen and authorized.
+- freeze the Sprint 13 functional boundary;
+- define the business meaning of Stage 13 `editing_pending`;
+- preserve Sprint 12 as the released Production boundary;
+- hold technical design, migration creation, implementation and Production mutation until separately authorized.
 
 This branch is governance-only.
 
@@ -76,86 +80,94 @@ Canonical Sprint 12 Production migration:
 
 Production migration history is aligned with this exact repository version.
 
-## Sprint 12 released contract
-
-Production verification confirms:
-
-- controlled `mark_booking_selection_pending(uuid)`;
-- `SECURITY DEFINER` execution with empty search path;
-- reuse of the existing `booking.stage.advance` permission;
-- exact journey-advancement role boundary of Founder, Studio Manager and Client Coordinator;
-- canonical shoot-completion evidence required before Stage 12 entry;
-- canonical Stage 10 -> Stage 11 completion lineage required;
-- exact Stage 11 -> Stage 12 advancement;
-- strict mutation-free Stage 12 replay;
-- no new selection-specific permission or role grant;
-- no Stage 12 -> Stage 13 action;
-- Stage 12 application surface remains read-only after advancement.
-
-Sprint 12 post-release reconciliation is CLOSED.
-
 ## Canonical journey boundary
 
 The canonical journey-stage catalogue includes:
 
-- Stage 10: `shoot_scheduled` — Shoot Scheduled
 - Stage 11: `shoot_completed` — Shoot Completed
 - Stage 12: `selection_pending` — Selection Pending
 - Stage 13: `editing_pending` — Editing Pending
+- Stage 14: `editing_in_progress` — Editing In Progress
 
 Production is released through Stage 12 only.
 
-Stage 12 means the completed session has been formally handed into the selection phase and is waiting for selection activity. It does not mean selections are complete, proofs are ready, editing has started, a gallery has been published, or delivery is complete.
+Stage 12 means the completed session has been formally handed into the selection phase and is waiting for selection activity. It does not mean selections are complete or editing has started.
 
-## Sprint 12 validation state
+## Current programme
 
-Release validation completed with:
+The current programme milestone is:
 
-- dedicated Sprint 12 pgTAP: `43/43` PASS;
-- full local DB regression: `1311/1311` PASS;
-- local DB lint: PASS;
-- local DB advisors: PASS;
-- canonical role-permission count unchanged at `233` before release;
-- scoped ESLint: PASS;
-- Production build: PASS;
-- `git diff --check`: PASS;
-- exact five-file implementation boundary preserved;
-- Vercel success on the exact merged `main` SHA;
-- Production migration dry run identified exactly one pending migration;
-- Production migration applied successfully;
-- final local/remote migration ledger aligned;
-- Production performance advisor: no issues;
-- Production security advisor: WARN-level authenticated `SECURITY DEFINER` notices, consistent with the intentional controlled-RPC architecture and with no blocking error identified.
+**Sprint 13 — Editing Pending**
 
-Known repository-wide route-tree TypeScript issues remain pre-existing and unrelated to Sprint 12.
-
-## Next programme state
-
-No Sprint 13 functional scope is frozen by this closeout.
-
-The next journey catalogue boundary is:
+Frozen functional boundary:
 
 `Stage 12 selection_pending -> Stage 13 editing_pending`
 
-That catalogue adjacency does not itself authorize implementation.
+Functional scope is frozen in:
 
-Any Sprint 13 work must begin with a new functional scope freeze that defines what authoritative evidence, client-selection state, operational readiness and permissions are actually required before a booking may enter `editing_pending`.
+`docs/governance/2026-09-02-sprint13-scope-freeze.md`
 
-## Explicitly not authorized
+Stage 13 means the authoritative client selection is complete, the canonical selected-image set is stable/locked according to the future technical design, and the booking has been accepted into the editing queue. It does not mean editing has started.
 
-This closeout does not authorize:
+Functional truth:
 
-- Stage 12 -> Stage 13 implementation;
-- client-selection data structures or decision capture;
-- proofing workflow;
-- editing or retouching workflow;
-- QC progression;
-- gallery publication;
+`Selection completed + canonical selected-image set locked + editing handoff accepted`
+
+## Sprint 13 status
+
+Functional scope: **FROZEN**.
+
+Technical design: **NOT YET AUTHORIZED OR FROZEN**.
+
+Migration filenames: **NOT YET AUTHORIZED OR LOCKED**.
+
+Implementation: **NOT AUTHORIZED**.
+
+Production deployment: **NOT AUTHORIZED**.
+
+Sprint 13 must stop at exact Stage 13. No Stage 13 -> Stage 14 work is authorized.
+
+## Sprint 13 technical-design gate
+
+Before implementation, the technical-design phase must explicitly resolve:
+
+- the exact authoritative evidence for `selection complete`;
+- minimum selection cardinality, if any;
+- partial-save versus finalization semantics;
+- revision rules and the point at which selection becomes immutable;
+- the canonical selection data model, including whether individual selected-image records, a selection-set record or both are required;
+- whether any external provider is required for the narrow boundary;
+- validation and reconciliation of provider identifiers if external evidence is accepted;
+- exact recording and advancement authorities;
+- whether `booking.stage.advance` remains sufficient or a narrower permission is justified;
+- organization membership, branch-scope, RLS and RPC ACL enforcement;
+- replay/idempotency behavior;
+- behavior if external selection data changes after Stage 13;
+- structural audit events;
+- exact application read/write boundary;
+- exact migration filenames and implementation paths.
+
+A Pixieset checkbox, webhook, gallery URL, provider selected-count, browser state or any other external/client signal may provide evidence but must never become authoritative journey truth by itself.
+
+The canonical authority chain remains:
+
+`Auth -> Org Membership -> Role -> Permission -> RLS -> Approved RPC -> Validation -> Transaction -> Audit`
+
+## Explicitly out of scope
+
+The current milestone does not authorize:
+
+- Stage 13 -> Stage 14 `editing_in_progress` or later advancement;
+- actual editing or retouching workflow;
+- editor task allocation unless proven indispensable to Stage 13 entry;
+- AI culling, AI editing or automated creative judgment;
+- creative QC progression;
+- gallery publication beyond minimum selection evidence proven necessary by technical design;
 - final delivery;
 - album/frame production;
 - review or milestone-follow-up workflow;
-- AI culling/editing or automated creative judgment;
 - media custody/DAM redesign;
+- broad Pixieset integration unrelated to the narrow Stage 12 -> 13 contract;
 - unrelated Team/RBAC redesign;
 - unrelated CRM, quotation, payment, package or public-website changes;
 - wholesale legacy-branch migration;
@@ -163,12 +175,12 @@ This closeout does not authorize:
 
 ## Deferred non-blocking technical debt
 
-Repository-wide authenticated `SECURITY DEFINER` advisor warnings should be handled through separately scoped architecture/security hardening rather than opportunistic changes inside a completed journey-stage sprint.
+Repository-wide authenticated `SECURITY DEFINER` advisor warnings remain separately governed architecture/security hardening work.
 
 Previously recorded route-tree typing issues and database performance-hardening candidates remain separately governed technical debt.
 
 ## Current next action
 
-Review and merge the Sprint 12 post-release reconciliation governance change.
+Prepare and review the Sprint 13 technical-design freeze for the exact Stage 12 -> Stage 13 boundary.
 
-After Sprint 12 closeout is merged to `main`, prepare a separate Sprint 13 functional scope proposal for the exact Stage 12 -> Stage 13 boundary. Do not create Sprint 13 migrations, modify Sprint 13 implementation code, or mutate Production until that new scope and technical design are explicitly authorized.
+Do not create Sprint 13 migrations, modify Sprint 13 implementation code, or mutate Production until the technical design is explicitly authorized and frozen and later implementation authorization is granted.
