@@ -1,7 +1,7 @@
 # Sprint 11 Technical Design Freeze
 
 Date: 2026-09-01 (Asia/Kolkata)
-Status: PREPARED FOR FINAL FREEZE / MIGRATION FILENAME LOCK PENDING / IMPLEMENTATION HOLD
+Status: FINAL FROZEN / MIGRATION FILENAMES LOCKED / IMPLEMENTATION HOLD
 
 ## Authority
 
@@ -447,26 +447,26 @@ The technical contracts and logical migration names are frozen as:
 1. `sprint11_shoot_completion_evidence_foundation`
 2. `sprint11_stage10_11_gate_foundation`
 
-Exact timestamped filenames are intentionally not invented in this governance-only checkpoint.
+The migration filename-lock protocol is complete.
 
-Before implementation SQL is written:
+Exact CLI-generated filenames are frozen as:
 
-1. integrate the approved Sprint 10 reconciliation + Sprint 11 governance into current `main` through explicit review;
-2. create a short-lived Sprint 11 implementation branch from that exact `main` head;
-3. run the installed Supabase CLI help/version checks;
-4. create each migration file using `npx supabase migration new <logical_name>`;
-5. record the exact generated filenames in this document or an explicit freeze amendment;
-6. only then may SQL implementation begin after explicit implementation authorization.
+1. `20260901160123_sprint11_shoot_completion_evidence_foundation.sql`
+2. `20260901160125_sprint11_stage10_11_gate_foundation.sql`
 
-This protocol prevents invented migration timestamps and prevents implementation on the governance branch.
+They were generated on `feature/sprint11-shoot-completion`, created from canonical `main` commit `8d9ee058dd37973295e16a055bb5c9d65f60f4ac`, using the installed Supabase CLI `migration new` command.
+
+These filenames must not be renamed, deleted, replaced with invented timestamps, or regenerated.
+
+Migration filename lock is complete. SQL implementation remains subject to explicit implementation authorization.
 
 ## Frozen implementation file boundary after filename lock
 
-Expected implementation boundary is exactly eight paths, with two migration filenames pending CLI generation:
+The frozen implementation boundary is exactly eight paths:
 
-1. `supabase/migrations/<generated>_sprint11_shoot_completion_evidence_foundation.sql`
+1. `supabase/migrations/20260901160123_sprint11_shoot_completion_evidence_foundation.sql`
 2. `supabase/tests/sprint11_shoot_completion_evidence_test.sql`
-3. `supabase/migrations/<generated>_sprint11_stage10_11_gate_foundation.sql`
+3. `supabase/migrations/20260901160125_sprint11_stage10_11_gate_foundation.sql`
 4. `supabase/tests/sprint11_stage10_11_gate_test.sql`
 5. `src/integrations/supabase/types.ts`
 6. `supabase/tests/sprint10_extended_creative_assignments_test.sql` — only the repository-wide role-permission count/message compatibility assertion required by the three intentional `shoot.complete` grants;
@@ -678,14 +678,17 @@ Sprint 11 Technical Design does not authorize:
 
 ## Final-freeze gate
 
-The technical architecture, data model, permissions, RPC contracts, replay semantics, UI boundary, test matrices and logical implementation boundary are PREPARED and approved for review by this document.
+The technical architecture, data model, permissions, RPC contracts, replay semantics, UI boundary, test matrices, exact implementation file boundary and exact CLI-generated migration filenames are now FINAL FROZEN.
 
-This is not yet the final implementation authorization because two repository-control prerequisites remain:
+Repository-control prerequisites are complete:
 
-1. integrate the completed reconciliation/scope governance into canonical `main`;
-2. create the two timestamped migration files on a new Sprint 11 branch using `npx supabase migration new ...`, then record those exact generated filenames in a freeze amendment.
+1. Sprint 10 reconciliation and Sprint 11 governance are integrated into canonical `main`;
+2. the Sprint 11 implementation branch was created from exact canonical main commit `8d9ee058dd37973295e16a055bb5c9d65f60f4ac`;
+3. both timestamped migration files were generated using the installed Supabase CLI and are explicitly locked above.
 
-Until those prerequisites are completed:
+Implementation still requires a separate explicit authorization.
+
+Until that authorization:
 
 - implementation remains HOLD;
 - no Sprint 11 SQL/application code should be written;
@@ -693,4 +696,4 @@ Until those prerequisites are completed:
 
 Decision state:
 
-**SPRINT 11 TECHNICAL DESIGN PREPARED / FINAL FILENAME LOCK PENDING / IMPLEMENTATION HOLD / PRODUCTION NOT AUTHORIZED**
+**SPRINT 11 TECHNICAL DESIGN FINAL FROZEN / MIGRATION FILENAMES LOCKED / IMPLEMENTATION HOLD / PRODUCTION NOT AUTHORIZED**
