@@ -4,8 +4,6 @@
 
 This file is the mutable execution pointer for canonical Memory Keeper OS development.
 
-Update it when an approved checkpoint changes the active programme, repository operating model, release state, or next authorized milestone.
-
 Durable product and engineering authority lives in:
 
 - `docs/PRODUCT_CONSTITUTION.md`
@@ -14,201 +12,177 @@ Durable product and engineering authority lives in:
 - `docs/IMPLEMENTATION_ROADMAP.md`
 - `docs/DEFINITION_OF_DONE.md`
 
-Release and reconciliation evidence lives in:
+Current release and governance evidence includes:
 
 - `docs/releases/2026-09-01-sprint-10-production-release.md`
 - `docs/governance/2026-09-01-sprint10-post-release-reconciliation.md`
 - `docs/governance/2026-09-01-sprint11-scope-freeze.md`
 - `docs/governance/2026-09-01-sprint11-technical-design-freeze.md`
+- `docs/releases/2026-09-01-sprint-11-production-release.md`
+- `docs/governance/2026-09-01-sprint11-post-release-reconciliation.md`
+- `docs/governance/2026-09-01-sprint12-scope-freeze.md`
 
 ## Canonical repository state
 
-`main` is the single canonical source-of-truth branch for Memory Keeper OS and the Vercel Production Git branch.
+`main` is the single canonical source-of-truth branch and the Vercel Production Git branch.
 
-Current `main` head at this checkpoint:
+Current released `main` head:
 
-`8befb64fb51bfd637c79c1a86b903471d5b91016`
+`8ca0b8ff64ece7a579540e9bae0ef708c77bc8d5`
 
-That commit records the completed Sprint 10 Production release.
+This commit merged PR #11 and released Sprint 11 application code.
 
 `architecture-rebuild` remains frozen legacy reference history at:
 
 `5ae04a5b971dfe0c4ae9657483d0386d649ce34f`
 
-Do not add new commits to `architecture-rebuild` and do not merge it wholesale into `main`.
+Do not add new work to `architecture-rebuild` and do not merge it wholesale into `main`.
 
 ## Current governance branch
 
 Current branch:
 
-`chore/sprint10-post-release-reconciliation`
+`chore/sprint11-post-release-reconciliation`
 
 Purpose:
 
-- close the post-release Team contract reconciliation;
-- replace the stale pre-release milestone pointer;
-- freeze Sprint 11 functional scope;
-- prepare the Sprint 11 technical design without beginning implementation.
+- record the completed Sprint 11 Production release;
+- reconcile repository, application, database and migration-history state;
+- close Sprint 11;
+- freeze the next functional journey boundary;
+- keep Sprint 12 implementation on HOLD pending technical design and explicit authorization.
 
-This branch is governance-only. Sprint 11 implementation must not begin on this branch.
+This branch is governance-only.
 
 ## Production release state
 
-Sprint 10 is COMPLETE, RELEASED and CLOSED through exact Stage 10:
+Sprint 11 is COMPLETE, RELEASED, VERIFIED and CLOSED through exact Stage 11:
 
-`shoot_scheduled`
+`shoot_completed`
 
-The released operational journey currently reaches:
+Released journey boundary:
 
-Enquiry -> CRM -> Consultation -> Package -> Quotation -> Booking -> Advance Payment -> Booking Confirmed -> Pre-Shoot Preparation -> Team Assignment -> Safety Readiness -> Shoot Scheduled
+`Stage 10 shoot_scheduled -> Stage 11 shoot_completed`
 
-The Sprint 10 application release was merged through Production commit:
+Production application deployment:
 
-`3a65cadf35abbfd3541859adf3946c47c0924ea3`
+`dpl_G3PGcySexqXS1W7mAG3GX4md87HT`
 
-The formal release-record commit on `main` is:
+Production application SHA:
 
-`8befb64fb51bfd637c79c1a86b903471d5b91016`
+`8ca0b8ff64ece7a579540e9bae0ef708c77bc8d5`
 
-## Team contract reconciliation
+Canonical Sprint 11 Production migrations:
 
-The post-release application/database mismatch for the authenticated Team workspace is CLOSED.
+- `20260901160123_sprint11_shoot_completion_evidence_foundation.sql`
+- `20260901160125_sprint11_stage10_11_gate_foundation.sql`
 
-The following canonical migrations are now deployed to Production and recorded in the Production migration ledger:
+Production migration history has been reconciled to these exact repository versions.
 
-- `20260816221825_sprint10_canonical_team_access_foundation.sql`
-- `20260817042405_sprint10_team_role_admin_read_model.sql`
+## Sprint 11 released contract
 
-Production verification confirmed:
+Production verification confirms:
 
-- all ten Team RPCs are present;
-- expected RPC ACLs are in place;
-- `PUBLIC` execution is denied for all ten Team RPCs;
-- anonymous execution is limited to the intentionally token-gated `preview_organization_invitation(text)` endpoint;
-- invitation tables have RLS enabled and forced;
-- `anon` and `authenticated` have no direct table DML privileges;
-- the Founder Team permission contract remains `team.read`, `team.invite`, `team.role.assign`, `team.suspend`;
-- the canonical organization remains active with one active organization-wide Founder grant;
-- no synthetic Production invitation data was introduced.
+- immutable `booking_shoot_completions` evidence;
+- narrow `shoot.complete` permission;
+- exact grants to Founder, Studio Manager and Photographer;
+- canonical role-permission count `233`;
+- controlled `record_booking_shoot_completion(uuid,timestamptz)`;
+- controlled `mark_booking_shoot_completed(uuid)`;
+- forced RLS and authenticated read containment;
+- no authenticated direct completion-table mutation;
+- explicit separation between completion-recording and journey-advancement authority;
+- exact Stage 10 -> Stage 11 advancement;
+- completion-terminal shoot scheduling;
+- strict Stage 11 replay;
+- structural audit evidence;
+- no Stage 12 action.
 
-The generic Supabase SECURITY DEFINER advisor warnings remain review items, not evidence of a release invariant violation by themselves. Exact ACL and internal authorization checks remain authoritative for these deliberate RPC surfaces.
+Sprint 11 post-release reconciliation is CLOSED.
 
 ## Canonical journey boundary
 
-The Production journey-stage catalogue confirms:
+The canonical journey-stage catalogue includes:
 
 - Stage 10: `shoot_scheduled` — Shoot Scheduled
 - Stage 11: `shoot_completed` — Shoot Completed
 - Stage 12: `selection_pending` — Selection Pending
 
-No Stage 11 or later operational advancement is currently released.
+Production is released through Stage 11 only.
 
 ## Current programme
 
-The next programme milestone is **Sprint 11 — Shoot Completion**.
+The next programme milestone is:
+
+**Sprint 12 — Selection Pending**
+
+Frozen functional boundary:
+
+`Stage 11 shoot_completed -> Stage 12 selection_pending`
 
 Functional scope is frozen in:
 
-`docs/governance/2026-09-01-sprint11-scope-freeze.md`
+`docs/governance/2026-09-01-sprint12-scope-freeze.md`
 
-Technical design is prepared in:
+## Sprint 12 status
 
-`docs/governance/2026-09-01-sprint11-technical-design-freeze.md`
+Functional scope: **FROZEN**.
 
-Exact authorized journey boundary:
+Technical design: **NOT YET FROZEN**.
 
-`Stage 10 shoot_scheduled -> Stage 11 shoot_completed`
+Migration filenames: **NOT YET AUTHORIZED OR LOCKED**.
 
-Sprint 11 must stop at exact Stage 11. Stage 11 -> Stage 12 is not authorized.
+Implementation: **NOT AUTHORIZED**.
 
-## Sprint 11 status
+Production deployment: **NOT AUTHORIZED**.
 
-Functional scope: FROZEN.
+Sprint 12 must stop at exact Stage 12. No Stage 12 -> Stage 13 work is authorized.
 
-Technical design: FINAL FROZEN.
+## Sprint 12 design gate
 
-Migration filenames are locked exactly to:
+Before implementation, the technical-design phase must explicitly resolve:
 
-- `20260901160123_sprint11_shoot_completion_evidence_foundation.sql`
-- `20260901160125_sprint11_stage10_11_gate_foundation.sql`
+- the minimum authoritative evidence required to enter Selection Pending;
+- whether that evidence is internal readiness, client-facing proof readiness or another narrower concept;
+- whether any gallery/provider reference belongs at Stage 12;
+- exact recording and advancement authorities;
+- permission and branch-scope enforcement;
+- RLS and RPC ACLs;
+- replay/idempotency behavior;
+- evidence lifecycle semantics;
+- structural audit events;
+- exact application read/write boundary;
+- exact migration filenames and implementation paths.
 
-Implementation: HOLD pending explicit authorization.
+No implementation assumption may substitute for this design gate.
 
-Production deployment: NOT AUTHORIZED.
-
-## Prepared technical contract
-
-The prepared design freezes, subject only to final migration filename lock:
-
-- new immutable `booking_shoot_completions` evidence;
-- one narrow `shoot.complete` permission initially granted exactly to Founder, Studio Manager and Photographer;
-- controlled `record_booking_shoot_completion(uuid,timestamptz)`;
-- exact same-timestamp replay and conflicting-replay rejection;
-- forced RLS and authenticated read containment through `booking.read` + branch scope;
-- no authenticated direct completion-table mutation;
-- completion evidence terminalizes future shoot-schedule inserts without rewriting history;
-- controlled `mark_booking_shoot_completed(uuid)` using existing `booking.stage.advance`;
-- explicit separation between completion-recording and journey-advancement authority;
-- exact Stage 10 -> Stage 11 transition and journey-version update;
-- strict Stage 11 replay;
-- structural audit events `booking.shoot_completion_recorded` and `booking.shoot_completed`;
-- no re-running of Stage 9 preparation/staffing/Safety gates;
-- batched completion reads in the Bookings workspace rather than another per-booking read RPC;
-- exact application boundary limited to `src/lib/booking.functions.ts` and `src/routes/_authenticated/bookings.tsx`;
-- no Stage 12 action.
-
-## Expected implementation boundary after filename lock
-
-Expected implementation boundary is eight paths:
-
-1. generated Sprint 11 completion-evidence migration;
-2. `supabase/tests/sprint11_shoot_completion_evidence_test.sql`;
-3. generated Sprint 11 Stage 10 -> 11 gate migration;
-4. `supabase/tests/sprint11_stage10_11_gate_test.sql`;
-5. `src/integrations/supabase/types.ts`;
-6. `supabase/tests/sprint10_extended_creative_assignments_test.sql` limited only to the repository-wide role-permission count compatibility update caused by the three intentional `shoot.complete` grants;
-7. `src/lib/booking.functions.ts`;
-8. `src/routes/_authenticated/bookings.tsx`.
-
-Any additional implementation file requires an explicit governance amendment before modification.
-
-## Explicitly out of scope
+## Explicitly out of scope at this checkpoint
 
 The current milestone does not authorize:
 
-- Stage 11 -> Stage 12 `selection_pending` advancement;
-- client selection/proofing workflow;
+- Stage 12 -> Stage 13 or later advancement;
+- client selection decisions unless proven necessary for Stage 12 entry;
 - editing or retouching workflow;
 - QC progression;
-- Pixieset gallery readiness/publication;
+- gallery publication beyond any minimum evidence explicitly frozen by the technical design;
 - final delivery;
 - album/frame production;
 - review or milestone-follow-up workflow;
-- shoot-day Safety incident or post-session medical-note modeling;
-- free-text completion notes;
-- AI culling/editing or later creative-intelligence features;
+- AI culling/editing or automated creative judgment;
+- media custody/DAM redesign;
 - unrelated Team/RBAC redesign;
-- unrelated CRM, quotations, packages or payment redesign;
-- public website changes;
+- unrelated CRM, quotation, payment, package or public-website changes;
 - wholesale legacy-branch migration;
-- Production database mutation or Production deployment for Sprint 11 without a separate explicit release approval.
+- Production mutation without separate explicit approval.
 
-## Branch model for Sprint 11
+## Deferred non-blocking technical debt
 
-Before Sprint 11 implementation begins:
+Production advisors identify an INFO-level performance item for `booking_shoot_completions_recorded_by_fkey` lacking a dedicated covering index, alongside pre-existing repository-wide advisory notices.
 
-1. integrate the completed reconciliation, scope-freeze and technical-design governance into current `main` through an explicit reviewed repository change;
-2. verify the resulting `main` head;
-3. create a new short-lived Sprint 11 implementation branch from that exact `main` head;
-4. use `npx supabase migration new sprint11_shoot_completion_evidence_foundation` and `npx supabase migration new sprint11_stage10_11_gate_foundation` to create the exact timestamped migration files;
-5. record those exact filenames in the technical-design freeze amendment;
-6. obtain explicit implementation authorization;
-7. only then begin Sprint 11 SQL/application implementation.
-
-Do not reuse `feature/pre-shoot-operations` or `architecture-rebuild` as the implementation base.
+These are not authorized for modification by the current governance branch and must be handled through separately scoped hardening work.
 
 ## Current next action
 
-Integrate the governance branch into canonical `main` through a reviewed repository change, then create the Sprint 11 implementation branch and lock the two CLI-generated migration filenames.
+Prepare and review the Sprint 12 technical-design freeze for the exact Stage 11 -> Stage 12 boundary.
 
-No Sprint 11 implementation code, migration SQL, Production mutation or Stage 12 work is authorized until that final filename-lock gate and explicit implementation authorization are complete.
+Do not create Sprint 12 migrations, modify implementation code, or mutate Production until the technical design is frozen and explicit implementation authorization is granted.
