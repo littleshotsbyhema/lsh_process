@@ -54,6 +54,7 @@ export type BookingCapabilities = {
   canReadSafety: boolean;
   canWriteSafety: boolean;
   canSignoffSafety: boolean;
+  canCompleteShoot: boolean;
 };
 
 export type BookingWorkspaceData = {
@@ -69,6 +70,7 @@ export type BookingWorkspaceData = {
   bookingPreparationItems: BookingPreparationItemRow[];
   bookingSafetyReadiness: BookingSafetyReadinessRow[];
   bookingSafetySignoffs: BookingSafetySignoffRow[];
+  bookingShootCompletions: BookingShootCompletionRow[];
   bookingTeamAssignmentHistory: BookingTeamAssignmentHistoryRow[];
   bookingServiceCategories: Record<string, string | null>;
   bookingSafetySignoffAuthorities: Record<string, BookingSafetySignoffAuthority | null>;
@@ -82,6 +84,9 @@ export type BookingPaymentRow = Database["public"]["Tables"]["booking_payments"]
 
 export type BookingShootScheduleRow =
   Database["public"]["Tables"]["booking_shoot_schedules"]["Row"];
+
+export type BookingShootCompletionRow =
+  Database["public"]["Tables"]["booking_shoot_completions"]["Row"];
 
 export type BookingTeamAssignmentRow =
   Database["public"]["Tables"]["booking_team_assignments"]["Row"];
@@ -149,6 +154,7 @@ function bookingCapabilitiesFromPermissions(permissions: Set<string>): BookingCa
     canReadSafety: permissions.has("safety.read"),
     canWriteSafety: permissions.has("safety.write"),
     canSignoffSafety: permissions.has("safety.signoff"),
+    canCompleteShoot: permissions.has("shoot.complete"),
   };
 }
 
@@ -194,6 +200,15 @@ const signoffBookingSafetyReadinessSchema = z.object({
 });
 
 const markBookingShootScheduledSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
+const recordBookingShootCompletionSchema = z.object({
+  bookingId: z.string().uuid(),
+  completedAt: z.string().datetime(),
+});
+
+const markBookingShootCompletedSchema = z.object({
   bookingId: z.string().uuid(),
 });
 
@@ -262,6 +277,7 @@ export const listBookingWorkspace = createServerFn({
         bookingPreparationItems: [],
         bookingSafetyReadiness: [],
         bookingSafetySignoffs: [],
+        bookingShootCompletions: [],
         bookingTeamAssignmentHistory: [],
         bookingServiceCategories: {},
         bookingSafetySignoffAuthorities: {},
@@ -514,6 +530,17 @@ export const listBookingWorkspace = createServerFn({
       }
     }
 
+    const bookingShootCompletionsResult = await context.supabase
+      .from("booking_shoot_completions")
+      .select("*")
+      .eq("organization_id", ORGANIZATION_ID)
+      .in("booking_id", bookingIds)
+      .order("completed_at", {
+        ascending: true,
+      });
+
+    throwIfError(bookingShootCompletionsResult.error);
+
     const bookingTeamAssignmentHistory: BookingTeamAssignmentHistoryRow[] = [];
 
     const teamReadableBookingIds = bookings
@@ -548,6 +575,7 @@ export const listBookingWorkspace = createServerFn({
       bookingPreparationItems,
       bookingSafetyReadiness,
       bookingSafetySignoffs,
+      bookingShootCompletions: bookingShootCompletionsResult.data ?? [],
       bookingTeamAssignmentHistory,
       bookingServiceCategories,
       bookingSafetySignoffAuthorities,
@@ -857,6 +885,45 @@ export const markBookingShootScheduled = createServerFn({
 
     if (!result.data) {
       throw new Error("Shoot scheduled advancement returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const recordBookingShootCompletion = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(recordBookingShootCompletionSchema)
+  .handler(async ({ context, data }): Promise<BookingShootCompletionRow> => {
+    const result = await context.supabase.rpc("record_booking_shoot_completion", {
+      p_booking_id: data.bookingId,
+      p_completed_at: data.completedAt,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Shoot completion recording returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const markBookingShootCompleted = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(markBookingShootCompletedSchema)
+  .handler(async ({ context, data }): Promise<BookingRow> => {
+    const result = await context.supabase.rpc("mark_booking_shoot_completed", {
+      p_booking_id: data.bookingId,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Shoot completed advancement returned no row.");
     }
 
     return result.data;

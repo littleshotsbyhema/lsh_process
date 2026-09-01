@@ -125,11 +125,14 @@ Sprint 11 must stop at exact Stage 11. Stage 11 -> Stage 12 is not authorized.
 
 Functional scope: FROZEN.
 
-Technical design: PREPARED FOR FINAL FREEZE.
+Technical design: FINAL FROZEN.
 
-Remaining design-control gate: exact timestamped migration filenames must be generated on a new Sprint 11 branch using the Supabase CLI and recorded through a freeze amendment. No migration timestamp is to be invented on this governance branch.
+Migration filenames are locked exactly to:
 
-Implementation: HOLD.
+- `20260901160123_sprint11_shoot_completion_evidence_foundation.sql`
+- `20260901160125_sprint11_stage10_11_gate_foundation.sql`
+
+Implementation: HOLD pending explicit authorization.
 
 Production deployment: NOT AUTHORIZED.
 

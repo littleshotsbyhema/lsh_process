@@ -288,8 +288,8 @@ SELECT is(
 -- 20
 SELECT is(
   (SELECT count(*)::bigint FROM public.role_permissions),
-  230::bigint,
-  'Slice 6A canonical role-permission mapping count is 230'
+  233::bigint,
+  'current canonical role-permission mapping count is 233'
 );
 
 -- =====================================================================
