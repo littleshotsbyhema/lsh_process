@@ -212,6 +212,10 @@ const markBookingShootCompletedSchema = z.object({
   bookingId: z.string().uuid(),
 });
 
+const markBookingSelectionPendingSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
 const bookingTeamAssignmentCandidatesSchema = z.object({
   bookingId: z.string().uuid(),
 });
@@ -924,6 +928,25 @@ export const markBookingShootCompleted = createServerFn({
 
     if (!result.data) {
       throw new Error("Shoot completed advancement returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const markBookingSelectionPending = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(markBookingSelectionPendingSchema)
+  .handler(async ({ context, data }): Promise<BookingRow> => {
+    const result = await context.supabase.rpc("mark_booking_selection_pending", {
+      p_booking_id: data.bookingId,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Selection pending advancement returned no row.");
     }
 
     return result.data;

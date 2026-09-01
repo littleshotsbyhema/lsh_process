@@ -14,6 +14,7 @@ import {
   getBookingConfirmationWorkspace,
   listBookingTeamAssignmentCandidates,
   listBookingWorkspace,
+  markBookingSelectionPending,
   markBookingShootCompleted,
   markBookingShootScheduled,
   proposeBookingShootSchedule,
@@ -372,11 +373,8 @@ function BookingConfirmationPanel({
   const currentSchedule = confirmation?.currentSchedule ?? null;
 
   const advanceSatisfied = paymentSummary?.advance_satisfied ?? false;
-
   const proposedScheduleReady = currentSchedule?.schedule_state === "proposed";
-
   const reservedSchedule = currentSchedule?.schedule_state === "reserved";
-
   const confirmationReady = advanceSatisfied && proposedScheduleReady;
 
   const mutationError = paymentMutation.error ?? scheduleMutation.error ?? confirmMutation.error;
@@ -930,8 +928,120 @@ function ShootCompletionSurface({
 
       {isHistorical ? (
         <p className="mt-4 text-xs leading-5 text-muted-foreground">
-          Shoot completion is historical and read-only at the current journey stage. No later-stage
-          action is exposed by this Sprint 11 surface.
+          Shoot completion is historical and read-only at the current journey stage.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function SelectionPendingSurface({
+  bookingId,
+  completion,
+  canAdvance,
+  isSelectionPending,
+  onSuccess,
+}: {
+  bookingId: string;
+  completion: BookingShootCompletionRow | null;
+  canAdvance: boolean;
+  isSelectionPending: boolean;
+  onSuccess: () => Promise<void>;
+}) {
+  const markSelectionPendingFn = useServerFn(markBookingSelectionPending);
+
+  const advanceMutation = useMutation({
+    mutationFn: () =>
+      markSelectionPendingFn({
+        data: {
+          bookingId,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Booking moved to Selection Pending.");
+      await onSuccess();
+    },
+    onError: (error: unknown) =>
+      toast.error(
+        error instanceof Error ? error.message : "Could not move the booking to Selection Pending.",
+      ),
+  });
+
+  return (
+    <div className="mt-7 border-t border-border pt-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Post-shoot handoff
+          </div>
+
+          <h3 className="mt-1 font-serif text-xl text-primary">Selection Pending</h3>
+        </div>
+
+        <span className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] uppercase tracking-wider text-primary">
+          {isSelectionPending ? "Selection pending" : "Ready for handoff"}
+        </span>
+      </div>
+
+      {completion ? (
+        <div className="mt-5 rounded-lg border border-border bg-card p-5">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Canonical shoot completion
+          </div>
+
+          <div className="mt-1 text-sm font-medium text-primary">
+            {formatDateTime(completion.completed_at)}
+          </div>
+
+          <p className="mt-3 text-xs leading-5 text-muted-foreground">
+            Immutable shoot-completion evidence is present. Selection Pending records the
+            operational handoff into the selection phase; it does not mean client selections,
+            proofs, editing, or gallery publication are complete.
+          </p>
+        </div>
+      ) : (
+        <Card className="mt-5 p-5">
+          <p className="text-sm font-medium text-primary">
+            Canonical shoot-completion evidence is unavailable.
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Journey position does not substitute for the completion evidence required by the
+            controlled Stage 11 to Stage 12 gate.
+          </p>
+        </Card>
+      )}
+
+      {canAdvance ? (
+        <div className="mt-5 rounded-lg border border-border bg-card p-5">
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Controlled journey advancement
+          </div>
+
+          <h4 className="mt-1 font-serif text-lg text-primary">Move to Selection Pending</h4>
+
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            This operation attempts only the exact Stage 11 to Stage 12 transition. It does not
+            create a gallery, record image selections, start editing, or advance to Stage 13.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => advanceMutation.mutate()}
+            disabled={advanceMutation.isPending}
+            className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+          >
+            {advanceMutation.isPending
+              ? "Moving to Selection Pending..."
+              : "Move to Selection Pending"}
+          </button>
+        </div>
+      ) : null}
+
+      {isSelectionPending ? (
+        <p className="mt-4 text-xs leading-5 text-muted-foreground">
+          This booking is waiting in the Selection Pending stage. Sprint 12 exposes this state as
+          read-only and provides no Stage 13 action.
         </p>
       ) : null}
     </div>
@@ -1544,7 +1654,6 @@ function BookingTeamCandidatePicker({
   const rolesRequiringChangeReason = new Set(candidates[0]?.roles_requiring_change_reason ?? []);
 
   const canAssignLeadPhotographer = !rolesRequiringChangeReason.has("lead_photographer");
-
   const canAssignLeadVideographer = !rolesRequiringChangeReason.has("lead_videographer");
 
   const isCurrentStylistSubject = (candidate: BookingTeamAssignmentCandidateRow) =>
@@ -1946,6 +2055,19 @@ function BookingsPage() {
               shootCompletion !== null &&
               capabilities.canAdvanceBookingStage;
 
+            const isShootCompletedStage =
+              currentStage?.stage_key === "shoot_completed" && currentOrder === 11;
+
+            const isSelectionPendingStage =
+              currentStage?.stage_key === "selection_pending" && currentOrder === 12;
+
+            const canAdvanceSelectionPending =
+              isShootCompletedStage &&
+              shootCompletion !== null &&
+              capabilities.canAdvanceBookingStage;
+
+            const showSelectionPending = isShootCompletedStage || isSelectionPendingStage;
+
             const showShootCompletion = currentOrder >= 10 || shootCompletion !== null;
 
             const canManageBookingTeam =
@@ -2058,7 +2180,7 @@ function BookingsPage() {
 
                     <p className="max-w-xl text-xs leading-5 text-muted-foreground">
                       Journey state remains database-authoritative. This branch exposes only
-                      dedicated controlled operations through Stage 11 and never a general
+                      dedicated controlled operations through Stage 12 and never a general
                       stage-transition control.
                     </p>
                   </div>
@@ -2171,6 +2293,16 @@ function BookingsPage() {
                   />
                 ) : null}
 
+                {showSelectionPending ? (
+                  <SelectionPendingSurface
+                    bookingId={booking.id}
+                    completion={shootCompletion}
+                    canAdvance={canAdvanceSelectionPending}
+                    isSelectionPending={isSelectionPendingStage}
+                    onSuccess={refreshBookingWorkspace}
+                  />
+                ) : null}
+
                 <div className="mt-7 border-t border-border pt-6">
                   <div className="mb-4">
                     <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -2184,10 +2316,10 @@ function BookingsPage() {
 
                 <Card className="mt-6 p-5">
                   <p className="text-xs leading-5 text-muted-foreground">
-                    Sprint 11 extends the controlled booking journey through immutable shoot
-                    completion evidence and the exact Stage 10 → Stage 11 Shoot Completed
-                    transition. Selection, proofing, editing, post-shoot handoff, gallery delivery,
-                    heirloom production and media custody remain outside this slice.
+                    Sprint 12 extends the controlled booking journey through the exact Stage 11 →
+                    Stage 12 Selection Pending handoff. Selection decisions, proofing, editing,
+                    gallery publication, delivery, heirloom production, media custody and Stage 13
+                    progression remain outside this slice.
                   </p>
                 </Card>
               </Card>
