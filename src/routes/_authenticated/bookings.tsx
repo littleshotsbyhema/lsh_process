@@ -14,10 +14,12 @@ import {
   getBookingConfirmationWorkspace,
   listBookingTeamAssignmentCandidates,
   listBookingWorkspace,
+  markBookingShootCompleted,
   markBookingShootScheduled,
   proposeBookingShootSchedule,
   recordBookingPayment,
   recordBookingSafetyReadiness,
+  recordBookingShootCompletion,
   signoffBookingSafetyReadiness,
   startPreShootPreparation,
   updatePreShootPreparationItem,
@@ -28,6 +30,7 @@ import {
   type BookingSafetySignoffAuthority,
   type BookingSafetySignoffRow,
   type BookingSafetyState,
+  type BookingShootCompletionRow,
   type BookingStageTransitionRow,
   type BookingTeamAssignmentCandidateRow,
   type BookingTeamAssignmentHistoryRow,
@@ -752,6 +755,185 @@ function ShootScheduledAdvancementControl({
           {markShootScheduledMutation.isPending ? "Checking readiness..." : "Mark shoot scheduled"}
         </button>
       </div>
+    </div>
+  );
+}
+
+function ShootCompletionSurface({
+  bookingId,
+  completion,
+  canRecord,
+  canAdvance,
+  isHistorical,
+  onSuccess,
+}: {
+  bookingId: string;
+  completion: BookingShootCompletionRow | null;
+  canRecord: boolean;
+  canAdvance: boolean;
+  isHistorical: boolean;
+  onSuccess: () => Promise<void>;
+}) {
+  const [completedAt, setCompletedAt] = useState(() => toLocalDateTimeInput(new Date()));
+
+  const recordShootCompletionFn = useServerFn(recordBookingShootCompletion);
+  const markShootCompletedFn = useServerFn(markBookingShootCompleted);
+
+  const recordCompletionMutation = useMutation({
+    mutationFn: () =>
+      recordShootCompletionFn({
+        data: {
+          bookingId,
+          completedAt: new Date(completedAt).toISOString(),
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Shoot completion recorded.");
+      await onSuccess();
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not record shoot completion."),
+  });
+
+  const advanceMutation = useMutation({
+    mutationFn: () =>
+      markShootCompletedFn({
+        data: {
+          bookingId,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Booking advanced to Shoot Completed.");
+      await onSuccess();
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not mark the shoot completed."),
+  });
+
+  return (
+    <div className="mt-7 border-t border-border pt-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Canonical shoot completion
+          </div>
+          <h3 className="mt-1 font-serif text-xl text-primary">Shoot completion evidence</h3>
+        </div>
+
+        <span className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] uppercase tracking-wider text-primary">
+          {completion ? "Recorded" : "Awaiting evidence"}
+        </span>
+      </div>
+
+      {completion ? (
+        <div className="mt-5 rounded-lg border border-border bg-card p-5">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Shoot completed
+              </div>
+              <div className="mt-1 text-sm font-medium text-primary">
+                {formatDateTime(completion.completed_at)}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Evidence recorded
+              </div>
+              <div className="mt-1 text-sm font-medium text-primary">
+                {formatDateTime(completion.recorded_at)}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Recorded by
+              </div>
+              <div className="mt-1 break-all text-xs font-medium text-primary">
+                {completion.recorded_by}
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-4 text-xs leading-5 text-muted-foreground">
+            This is immutable canonical completion evidence. The recorded completion time and
+            provenance cannot be edited from the booking workspace.
+          </p>
+        </div>
+      ) : (
+        <Card className="mt-5 p-5">
+          <p className="text-sm font-medium text-primary">
+            No canonical shoot-completion evidence is recorded.
+          </p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Journey position alone does not manufacture completion evidence.
+          </p>
+        </Card>
+      )}
+
+      {canRecord && !completion ? (
+        <div className="mt-5 rounded-lg border border-border bg-card p-5">
+          <div className="text-sm font-medium text-primary">Record actual completion time</div>
+
+          <label className="mt-4 block text-xs text-muted-foreground">
+            Completed at
+            <input
+              type="datetime-local"
+              value={completedAt}
+              onChange={(event) => setCompletedAt(event.target.value)}
+              className={`${fieldClass} mt-2`}
+            />
+          </label>
+
+          <button
+            type="button"
+            onClick={() => recordCompletionMutation.mutate()}
+            disabled={!completedAt || recordCompletionMutation.isPending}
+            className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+          >
+            {recordCompletionMutation.isPending
+              ? "Recording completion..."
+              : "Record shoot completion"}
+          </button>
+
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            This records completion evidence only. It does not advance the booking journey.
+          </p>
+        </div>
+      ) : null}
+
+      {canAdvance && completion ? (
+        <div className="mt-5 rounded-lg border border-border bg-card p-5">
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Controlled journey advancement
+          </div>
+
+          <h4 className="mt-1 font-serif text-lg text-primary">Advance to Shoot Completed</h4>
+
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            Canonical completion evidence is present. This separate operation attempts only the
+            exact Stage 10 to Stage 11 transition and does not advance into selection or any later
+            production stage.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => advanceMutation.mutate()}
+            disabled={advanceMutation.isPending}
+            className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+          >
+            {advanceMutation.isPending ? "Advancing..." : "Mark shoot completed"}
+          </button>
+        </div>
+      ) : null}
+
+      {isHistorical ? (
+        <p className="mt-4 text-xs leading-5 text-muted-foreground">
+          Shoot completion is historical and read-only at the current journey stage. No later-stage
+          action is exposed by this Sprint 11 surface.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -1723,6 +1905,11 @@ function BookingsPage() {
               (assignment) => assignment.booking_id === booking.id,
             );
 
+            const shootCompletion =
+              data.bookingShootCompletions.find(
+                (completion) => completion.booking_id === booking.id,
+              ) ?? null;
+
             const capabilities = data.bookingCapabilities[booking.id];
 
             const currentOrder = currentStage?.stage_order ?? 0;
@@ -1747,6 +1934,19 @@ function BookingsPage() {
               currentStage?.stage_key === "pre_shoot_preparation" &&
               currentOrder === 9 &&
               capabilities.canAdvanceBookingStage;
+
+            const isShootScheduledStage =
+              currentStage?.stage_key === "shoot_scheduled" && currentOrder === 10;
+
+            const canRecordShootCompletion =
+              isShootScheduledStage && shootCompletion === null && capabilities.canCompleteShoot;
+
+            const canAdvanceShootCompleted =
+              isShootScheduledStage &&
+              shootCompletion !== null &&
+              capabilities.canAdvanceBookingStage;
+
+            const showShootCompletion = currentOrder >= 10 || shootCompletion !== null;
 
             const canManageBookingTeam =
               capabilities.canAssignBookingTeam && currentOrder >= 8 && currentOrder <= 10;
@@ -1858,7 +2058,7 @@ function BookingsPage() {
 
                     <p className="max-w-xl text-xs leading-5 text-muted-foreground">
                       Journey state remains database-authoritative. This branch exposes only
-                      dedicated controlled operations through Stage 10 and never a general
+                      dedicated controlled operations through Stage 11 and never a general
                       stage-transition control.
                     </p>
                   </div>
@@ -1960,6 +2160,17 @@ function BookingsPage() {
                   />
                 ) : null}
 
+                {showShootCompletion ? (
+                  <ShootCompletionSurface
+                    bookingId={booking.id}
+                    completion={shootCompletion}
+                    canRecord={canRecordShootCompletion}
+                    canAdvance={canAdvanceShootCompleted}
+                    isHistorical={currentOrder >= 11}
+                    onSuccess={refreshBookingWorkspace}
+                  />
+                ) : null}
+
                 <div className="mt-7 border-t border-border pt-6">
                   <div className="mb-4">
                     <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -1973,11 +2184,10 @@ function BookingsPage() {
 
                 <Card className="mt-6 p-5">
                   <p className="text-xs leading-5 text-muted-foreground">
-                    This pre-shoot slice extends the controlled booking journey through preparation,
-                    staffing, Safety Readiness and the exact Stage 9 → Stage 10 shoot-scheduled
-                    transition. Shoot completion, post-shoot handoff, selection, financial
-                    authority, editing, gallery delivery and media custody remain outside this
-                    slice.
+                    Sprint 11 extends the controlled booking journey through immutable shoot
+                    completion evidence and the exact Stage 10 → Stage 11 Shoot Completed
+                    transition. Selection, proofing, editing, post-shoot handoff, gallery delivery,
+                    heirloom production and media custody remain outside this slice.
                   </p>
                 </Card>
               </Card>

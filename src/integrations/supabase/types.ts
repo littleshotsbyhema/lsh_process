@@ -674,6 +674,48 @@ export type Database = {
           },
         ];
       };
+      booking_shoot_completions: {
+        Row: {
+          booking_id: string;
+          completed_at: string;
+          id: string;
+          organization_id: string;
+          recorded_at: string;
+          recorded_by: string;
+        };
+        Insert: {
+          booking_id: string;
+          completed_at: string;
+          id?: string;
+          organization_id: string;
+          recorded_at?: string;
+          recorded_by: string;
+        };
+        Update: {
+          booking_id?: string;
+          completed_at?: string;
+          id?: string;
+          organization_id?: string;
+          recorded_at?: string;
+          recorded_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_shoot_completions_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_shoot_completions_recorded_by_fkey";
+            columns: ["recorded_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
       booking_shoot_schedules: {
         Row: {
           booking_id: string;
@@ -5967,6 +6009,28 @@ export type Database = {
         };
         Returns: undefined;
       };
+      mark_booking_shoot_completed: {
+        Args: { p_booking_id: string };
+        Returns: {
+          booking_reference: string;
+          branch_id: string | null;
+          created_at: string;
+          created_by: string;
+          family_id: string | null;
+          id: string;
+          lead_id: string | null;
+          organization_id: string;
+          source_quotation_id: string;
+          updated_at: string;
+          updated_by: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "bookings";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       mark_booking_shoot_scheduled: {
         Args: { p_booking_id: string };
         Returns: {
@@ -6148,6 +6212,23 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "booking_safety_readiness";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      record_booking_shoot_completion: {
+        Args: { p_booking_id: string; p_completed_at: string };
+        Returns: {
+          booking_id: string;
+          completed_at: string;
+          id: string;
+          organization_id: string;
+          recorded_at: string;
+          recorded_by: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_shoot_completions";
           isOneToOne: true;
           isSetofReturn: false;
         };
