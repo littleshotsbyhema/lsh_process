@@ -315,7 +315,9 @@ function AuthPage() {
       setConfirmationCode("");
       toast.success("A fresh six-digit confirmation code is on its way.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not resend the confirmation code.");
+      toast.error(
+        error instanceof Error ? error.message : "Could not resend the confirmation code.",
+      );
     } finally {
       setResendBusy(false);
     }
@@ -442,10 +444,11 @@ function AuthPage() {
           {signedInEmailMismatch && invite.data && (
             <div className="mt-6 rounded-xl border border-border bg-card p-4">
               <p className="text-sm leading-relaxed text-muted-foreground">
-                You&apos;re signed in as <span className="font-medium text-primary">{signedInEmailMismatch}</span>,
-                but this invitation belongs to{" "}
-                <span className="font-medium text-primary">{invite.data.email}</span>. Sign out before
-                continuing with the invited email.
+                You&apos;re signed in as{" "}
+                <span className="font-medium text-primary">{signedInEmailMismatch}</span>, but this
+                invitation belongs to{" "}
+                <span className="font-medium text-primary">{invite.data.email}</span>. Sign out
+                before continuing with the invited email.
               </p>
 
               <button
