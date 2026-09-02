@@ -51,8 +51,8 @@ function AuthenticatedLayout() {
   if (!hasRole) {
     return (
       <Centered
-        title="Waiting for your studio role"
-        body="Your account is created. A Founder needs to assign your role before the control room opens."
+        title="Studio access is not ready yet"
+        body="Your account is signed in, but no active studio role is available yet. If you joined through a studio invitation, reopen that invitation to finish acceptance. If the invitation had no preassigned role, an authorized teammate can assign access from Team."
       />
     );
   }
