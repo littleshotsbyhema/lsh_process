@@ -24,16 +24,17 @@ Current release and governance evidence includes:
 - `docs/governance/2026-09-01-sprint12-technical-design-freeze.md`
 - `docs/governance/2026-09-02-sprint12-post-release-reconciliation.md`
 - `docs/governance/2026-09-02-sprint13-scope-freeze.md`
+- `docs/governance/2026-09-02-sprint13-technical-design-freeze.md`
 
 ## Canonical repository state
 
 `main` is the single canonical source-of-truth branch and the Vercel Production Git branch.
 
-Current canonical `main` head before this Sprint 13 governance branch:
+Current canonical `main` head before this Sprint 13 technical-design governance branch:
 
-`622e09ea7d19dbd7acfd9df044a037caaf87f0cf`
+`bf7e06ec362dc748f4c8869f406ca1552298dad2`
 
-This commit merged PR #15 and closed Sprint 12 governance.
+This commit merged PR #16 and froze the Sprint 13 functional scope on `main`.
 
 The released Sprint 12 application SHA remains:
 
@@ -49,14 +50,15 @@ Do not add new work to `architecture-rebuild` and do not merge it wholesale into
 
 Current branch:
 
-`chore/sprint13-functional-scope-freeze`
+`chore/sprint13-technical-design-freeze`
 
 Purpose:
 
-- freeze the Sprint 13 functional boundary;
-- define the business meaning of Stage 13 `editing_pending`;
-- preserve Sprint 12 as the released Production boundary;
-- hold technical design, migration creation, implementation and Production mutation until separately authorized.
+- freeze the exact Sprint 13 evidence model and authority boundary;
+- define the controlled finalized-selection recording contract;
+- define the exact Stage 12 -> Stage 13 advancement contract;
+- lock the logical migration name and implementation path boundary;
+- keep migration creation, implementation and Production mutation on HOLD until separately authorized.
 
 This branch is governance-only.
 
@@ -103,55 +105,145 @@ Frozen functional boundary:
 
 `Stage 12 selection_pending -> Stage 13 editing_pending`
 
-Functional scope is frozen in:
+Functional scope:
 
 `docs/governance/2026-09-02-sprint13-scope-freeze.md`
 
-Stage 13 means the authoritative client selection is complete, the canonical selected-image set is stable/locked according to the future technical design, and the booking has been accepted into the editing queue. It does not mean editing has started.
+Technical design:
+
+`docs/governance/2026-09-02-sprint13-technical-design-freeze.md`
+
+Stage 13 means the authoritative client selection is complete, the canonical selected-image set is locked, and the booking has been accepted into the editing queue. It does not mean editing has started.
 
 Functional truth:
 
 `Selection completed + canonical selected-image set locked + editing handoff accepted`
 
+## Sprint 13 frozen evidence model
+
+The technical design freezes two new canonical evidence relations:
+
+- `public.booking_selection_completions` — exactly one immutable finalized-selection completion per booking;
+- `public.booking_selected_images` — immutable non-empty selected-image manifest rows for the canonical completion.
+
+The selected-image `image_key` is an opaque booking-scoped operational identifier. It is not a signed URL, gallery credential, media binary, EXIF payload or DAM contract.
+
+Sprint 13 does not implement draft selection, autosave, client favourites, progress tracking or gallery-interaction history.
+
+A finalized selection must contain at least one unique non-empty image key.
+
+## Sprint 13 frozen authority model
+
+Selection evidence recording introduces exactly one narrow permission:
+
+`selection.confirm`
+
+Expected grants:
+
+- Founder
+- Studio Manager
+- Client Coordinator
+
+Journey advancement continues to use:
+
+`booking.stage.advance`
+
+Selection recording and journey advancement remain separate authorities.
+
+Expected canonical role-permission compatibility count after Sprint 13 migration:
+
+`236`
+
+Any other count requires STOP/governance review.
+
+## Sprint 13 frozen RPC contracts
+
+Selection-completion recording RPC:
+
+`public.record_booking_selection_completion(uuid,text[],text,text)`
+
+Journey advancement RPC:
+
+`public.mark_booking_editing_pending(uuid)`
+
+Both must use controlled authenticated `SECURITY DEFINER` execution with fixed empty `search_path`, explicit active membership, permission and branch-scope validation, explicit ACL containment, deterministic transaction behavior and structural audit evidence.
+
+Selection completion is immutable and exact replay is mutation-free. A conflicting manifest must reject rather than overwrite canonical history.
+
+Stage 12 -> 13 advancement requires one canonical finalized selection with a non-empty valid manifest and exact canonical Stage 11 -> 12 lineage.
+
+Stage 13 replay is mutation-free when canonical lineage remains intact.
+
+## Sprint 13 audit contracts
+
+First finalized-selection success:
+
+`booking.selection_completed`
+
+First Stage 12 -> 13 advancement:
+
+`booking.editing_pending`
+
+Structural audit metadata may include IDs, counts, timestamps and journey versions, but must not contain selected image keys, image content, gallery credentials, private family notes, child-sensitive data or Safety/medical details.
+
+## Sprint 13 RLS and external-provider boundary
+
+Both new selection evidence relations must have RLS enabled and forced.
+
+Authenticated reads must remain contained by booking-read authority, organization membership and branch scope.
+
+Authenticated direct INSERT/UPDATE/DELETE is denied. Controlled RPCs are the only Sprint 13 mutation path.
+
+Sprint 13 remains provider-neutral. Pixieset or another provider may be recorded only as non-authoritative provenance if implementation uses an optional external reference. No provider API integration, webhook ingestion, gallery publication, provider credentials, image download or provider-specific schema is authorized.
+
+External/client/browser state never becomes journey authority by itself.
+
+Canonical authority chain:
+
+`Auth -> Org Membership -> Role -> Permission -> RLS -> Approved RPC -> Validation -> Transaction -> Audit`
+
+## Sprint 13 application boundary
+
+After migration filename lock, the frozen implementation boundary is exactly six paths:
+
+1. the locked Sprint 13 migration;
+2. `supabase/tests/sprint13_selection_completion_stage12_13_gate_test.sql`;
+3. `src/integrations/supabase/types.ts`;
+4. `supabase/tests/sprint10_extended_creative_assignments_test.sql` only for the compatibility-count update `233 -> 236`;
+5. `src/lib/booking.functions.ts`;
+6. `src/routes/_authenticated/bookings.tsx`.
+
+Any seventh implementation path requires an explicit governance amendment.
+
+`src/routeTree.gen.ts` is not an authorized Sprint 13 implementation path.
+
+## Sprint 13 migration state
+
+Logical migration name is frozen as:
+
+`sprint13_selection_completion_stage12_13_editing_pending_foundation`
+
+Exact timestamped migration filename: **NOT YET LOCKED**.
+
+The exact filename must be generated using the installed Supabase CLI from the canonical Sprint 13 implementation branch only after this technical-design governance change is merged and the filename-lock checkpoint is separately authorized.
+
+No migration SQL may be written before that filename is locked.
+
 ## Sprint 13 status
 
 Functional scope: **FROZEN**.
 
-Technical design: **NOT YET AUTHORIZED OR FROZEN**.
+Technical design: **FINAL FROZEN ON THIS GOVERNANCE BRANCH**.
 
-Migration filenames: **NOT YET AUTHORIZED OR LOCKED**.
+Migration logical name: **FROZEN**.
 
-Implementation: **NOT AUTHORIZED**.
+Exact timestamped migration filename: **PENDING FILENAME-LOCK CHECKPOINT**.
+
+Implementation: **HOLD**.
 
 Production deployment: **NOT AUTHORIZED**.
 
 Sprint 13 must stop at exact Stage 13. No Stage 13 -> Stage 14 work is authorized.
-
-## Sprint 13 technical-design gate
-
-Before implementation, the technical-design phase must explicitly resolve:
-
-- the exact authoritative evidence for `selection complete`;
-- minimum selection cardinality, if any;
-- partial-save versus finalization semantics;
-- revision rules and the point at which selection becomes immutable;
-- the canonical selection data model, including whether individual selected-image records, a selection-set record or both are required;
-- whether any external provider is required for the narrow boundary;
-- validation and reconciliation of provider identifiers if external evidence is accepted;
-- exact recording and advancement authorities;
-- whether `booking.stage.advance` remains sufficient or a narrower permission is justified;
-- organization membership, branch-scope, RLS and RPC ACL enforcement;
-- replay/idempotency behavior;
-- behavior if external selection data changes after Stage 13;
-- structural audit events;
-- exact application read/write boundary;
-- exact migration filenames and implementation paths.
-
-A Pixieset checkbox, webhook, gallery URL, provider selected-count, browser state or any other external/client signal may provide evidence but must never become authoritative journey truth by itself.
-
-The canonical authority chain remains:
-
-`Auth -> Org Membership -> Role -> Permission -> RLS -> Approved RPC -> Validation -> Transaction -> Audit`
 
 ## Explicitly out of scope
 
@@ -159,15 +251,15 @@ The current milestone does not authorize:
 
 - Stage 13 -> Stage 14 `editing_in_progress` or later advancement;
 - actual editing or retouching workflow;
-- editor task allocation unless proven indispensable to Stage 13 entry;
+- editor assignment/task allocation unless separately governed;
 - AI culling, AI editing or automated creative judgment;
-- creative QC progression;
-- gallery publication beyond minimum selection evidence proven necessary by technical design;
-- final delivery;
+- QC progression;
+- gallery publication or final delivery;
+- additional-image pricing or entitlement authority;
 - album/frame production;
 - review or milestone-follow-up workflow;
 - media custody/DAM redesign;
-- broad Pixieset integration unrelated to the narrow Stage 12 -> 13 contract;
+- broad Pixieset integration;
 - unrelated Team/RBAC redesign;
 - unrelated CRM, quotation, payment, package or public-website changes;
 - wholesale legacy-branch migration;
@@ -181,6 +273,8 @@ Previously recorded route-tree typing issues and database performance-hardening 
 
 ## Current next action
 
-Prepare and review the Sprint 13 technical-design freeze for the exact Stage 12 -> Stage 13 boundary.
+Review and merge the Sprint 13 technical-design freeze governance change.
 
-Do not create Sprint 13 migrations, modify Sprint 13 implementation code, or mutate Production until the technical design is explicitly authorized and frozen and later implementation authorization is granted.
+After merge, create the Sprint 13 implementation branch from the exact resulting `main` SHA, generate the migration with the installed Supabase CLI, record the exact filename in a filename-lock checkpoint, and request separate Sprint 13 implementation authorization.
+
+Do not write Sprint 13 migration SQL, modify implementation code, or mutate Production before those gates are satisfied.
