@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(77);
+SELECT plan(78);
 
 -- =====================================================================
 -- LSH FOUR-BRANCH ROLE AND SALES HIERARCHY
@@ -2339,6 +2339,28 @@ SELECT is(
   ),
   0::bigint,
   'no live pending invitation retains role scope invalid under the canonical role-scope constitution'
+);
+
+
+-- 78
+SELECT is(
+  (
+    SELECT count(*)::bigint
+    FROM public.organizations o
+    WHERE o.status =
+          'active'::public.organization_status
+      AND o.deleted_at IS NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.branches b
+        WHERE b.organization_id = o.id
+          AND b.status =
+              'active'::public.branch_status
+          AND b.deleted_at IS NULL
+      )
+  ),
+  0::bigint,
+  'every active non-deleted organization has at least one active branch before global branch-only role enforcement'
 );
 
 

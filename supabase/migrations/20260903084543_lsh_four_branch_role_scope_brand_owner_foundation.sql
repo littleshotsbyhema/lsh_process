@@ -221,6 +221,46 @@ VALUES
 
 
 -- =====================================================================
+-- 2A. Active organization branch-coverage prerequisite
+--
+-- Migration A applies the role-scope constitution globally. Every active
+-- non-deleted organization must therefore already have at least one
+-- active, non-deleted branch before operational roles become branch-only.
+--
+-- The migration must not invent branch identity or topology for an
+-- unknown tenant. If branch coverage is missing, abort transactionally
+-- and require explicit branch provisioning before Migration A is retried.
+-- =====================================================================
+
+DO $active_organization_branch_coverage$
+DECLARE
+  v_branchless_organization_ids uuid[];
+BEGIN
+  SELECT array_agg(o.id ORDER BY o.id)
+  INTO v_branchless_organization_ids
+  FROM public.organizations o
+  WHERE o.status =
+        'active'::public.organization_status
+    AND o.deleted_at IS NULL
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.branches b
+      WHERE b.organization_id = o.id
+        AND b.status =
+            'active'::public.branch_status
+        AND b.deleted_at IS NULL
+    );
+
+  IF v_branchless_organization_ids IS NOT NULL THEN
+    RAISE EXCEPTION
+      'Migration A branch coverage failed: active non-deleted organization(s) % have no active branch; provision explicit branch data before retrying Migration A',
+      v_branchless_organization_ids;
+  END IF;
+END
+$active_organization_branch_coverage$;
+
+
+-- =====================================================================
 -- 3. Role catalogue evolution
 -- =====================================================================
 
