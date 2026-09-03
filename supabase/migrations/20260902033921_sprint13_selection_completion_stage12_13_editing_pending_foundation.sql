@@ -22,6 +22,7 @@
 DO $s13_preconditions$
 DECLARE
   v_count integer;
+  v_expected_role_permission_count integer;
 BEGIN
   IF to_regclass('public.booking_selection_completions') IS NOT NULL
      OR to_regclass('public.booking_selected_images') IS NOT NULL THEN
@@ -79,13 +80,40 @@ BEGIN
       'Sprint 13 precondition failed: required canonical helper unavailable';
   END IF;
 
+  -- Chronology compatibility:
+  --
+  -- Clean repository replay reaches Sprint 13 before Migration A:
+  --   233 -> Sprint 13 -> 236.
+  --
+  -- An environment where Migration A is already recorded reaches
+  -- Sprint 13 after Migration A:
+  --   257 -> Sprint 13 -> 260.
+  --
+  -- The two Migration A constitutional relations are transactionally
+  -- created together. A one-sided presence is treated as schema drift.
+  IF to_regclass('public.role_scope_policies') IS NULL
+     AND to_regclass('public.organization_brand_owners') IS NULL THEN
+
+    v_expected_role_permission_count := 233;
+
+  ELSIF to_regclass('public.role_scope_policies') IS NOT NULL
+        AND to_regclass('public.organization_brand_owners') IS NOT NULL THEN
+
+    v_expected_role_permission_count := 257;
+
+  ELSE
+    RAISE EXCEPTION
+      'Sprint 13 precondition failed: Migration A constitutional foundation is partially present';
+  END IF;
+
   SELECT count(*)
   INTO v_count
   FROM public.role_permissions;
 
-  IF v_count <> 233 THEN
+  IF v_count <> v_expected_role_permission_count THEN
     RAISE EXCEPTION
-      'Sprint 13 precondition failed: expected canonical role-permission count 233, found %',
+      'Sprint 13 precondition failed: expected canonical role-permission count %, found %',
+      v_expected_role_permission_count,
       v_count;
   END IF;
 
@@ -1154,6 +1182,7 @@ TO authenticated;
 DO $s13_postconditions$
 DECLARE
   v_count integer;
+  v_expected_role_permission_count integer;
 BEGIN
   IF to_regclass('public.booking_selection_completions') IS NULL
      OR to_regclass('public.booking_selected_images') IS NULL THEN
@@ -1202,13 +1231,33 @@ BEGIN
       'Sprint 13 postcondition failed: selection.confirm role boundary invalid';
   END IF;
 
+  -- Preserve the same chronology contract used by the precondition.
+  --
+  -- Pre-Migration A clean replay finishes Sprint 13 at 236.
+  -- Post-Migration A catch-up finishes Sprint 13 at 260.
+  IF to_regclass('public.role_scope_policies') IS NULL
+     AND to_regclass('public.organization_brand_owners') IS NULL THEN
+
+    v_expected_role_permission_count := 236;
+
+  ELSIF to_regclass('public.role_scope_policies') IS NOT NULL
+        AND to_regclass('public.organization_brand_owners') IS NOT NULL THEN
+
+    v_expected_role_permission_count := 260;
+
+  ELSE
+    RAISE EXCEPTION
+      'Sprint 13 postcondition failed: Migration A constitutional foundation is partially present';
+  END IF;
+
   SELECT count(*)
   INTO v_count
   FROM public.role_permissions;
 
-  IF v_count <> 236 THEN
+  IF v_count <> v_expected_role_permission_count THEN
     RAISE EXCEPTION
-      'Sprint 13 postcondition failed: expected canonical role-permission count 236, found %',
+      'Sprint 13 postcondition failed: expected canonical role-permission count %, found %',
+      v_expected_role_permission_count,
       v_count;
   END IF;
 END

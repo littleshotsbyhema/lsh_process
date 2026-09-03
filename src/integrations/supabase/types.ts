@@ -674,6 +674,106 @@ export type Database = {
           },
         ];
       };
+      booking_selected_images: {
+        Row: {
+          booking_id: string;
+          created_at: string;
+          id: string;
+          image_key: string;
+          ordinal: number | null;
+          selection_completion_id: string;
+        };
+        Insert: {
+          booking_id: string;
+          created_at?: string;
+          id?: string;
+          image_key: string;
+          ordinal?: number | null;
+          selection_completion_id: string;
+        };
+        Update: {
+          booking_id?: string;
+          created_at?: string;
+          id?: string;
+          image_key?: string;
+          ordinal?: number | null;
+          selection_completion_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_selected_images_booking_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_selected_images_completion_booking_fkey";
+            columns: ["selection_completion_id", "booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_selection_completions";
+            referencedColumns: ["id", "booking_id"];
+          },
+        ];
+      };
+      booking_selection_completions: {
+        Row: {
+          booking_id: string;
+          completed_at: string;
+          created_at: string;
+          created_by: string;
+          external_reference: string | null;
+          id: string;
+          organization_id: string;
+          recorded_by: string;
+          source_type: string;
+        };
+        Insert: {
+          booking_id: string;
+          completed_at: string;
+          created_at?: string;
+          created_by: string;
+          external_reference?: string | null;
+          id?: string;
+          organization_id: string;
+          recorded_by: string;
+          source_type: string;
+        };
+        Update: {
+          booking_id?: string;
+          completed_at?: string;
+          created_at?: string;
+          created_by?: string;
+          external_reference?: string | null;
+          id?: string;
+          organization_id?: string;
+          recorded_by?: string;
+          source_type?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_selection_completions_booking_fkey";
+            columns: ["organization_id", "booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["organization_id", "id"];
+          },
+          {
+            foreignKeyName: "booking_selection_completions_created_by_fkey";
+            columns: ["created_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "booking_selection_completions_recorded_by_fkey";
+            columns: ["recorded_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
       booking_shoot_completions: {
         Row: {
           booking_id: string;
@@ -4286,6 +4386,49 @@ export type Database = {
           },
         ];
       };
+      organization_brand_owners: {
+        Row: {
+          established_at: string;
+          established_by: string;
+          organization_id: string;
+          organization_member_id: string;
+        };
+        Insert: {
+          established_at?: string;
+          established_by: string;
+          organization_id: string;
+          organization_member_id: string;
+        };
+        Update: {
+          established_at?: string;
+          established_by?: string;
+          organization_id?: string;
+          organization_member_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "organization_brand_owners_established_by_fkey";
+            columns: ["established_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "organization_brand_owners_member_fkey";
+            columns: ["organization_member_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "organization_brand_owners_organization_fkey";
+            columns: ["organization_id"];
+            isOneToOne: true;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       organization_invitation_roles: {
         Row: {
           assigned_at: string;
@@ -4920,6 +5063,35 @@ export type Database = {
           },
         ];
       };
+      role_scope_policies: {
+        Row: {
+          branch_scoped_allowed: boolean;
+          created_at: string;
+          organization_wide_allowed: boolean;
+          role_id: string;
+        };
+        Insert: {
+          branch_scoped_allowed: boolean;
+          created_at?: string;
+          organization_wide_allowed: boolean;
+          role_id: string;
+        };
+        Update: {
+          branch_scoped_allowed?: boolean;
+          created_at?: string;
+          organization_wide_allowed?: boolean;
+          role_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "role_scope_policies_role_fkey";
+            columns: ["role_id"];
+            isOneToOne: true;
+            referencedRelation: "roles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       roles: {
         Row: {
           created_at: string;
@@ -4983,6 +5155,19 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      accessible_branch_catalogue: {
+        Args: { p_organization_id: string };
+        Returns: {
+          branch_code: string;
+          branch_id: string;
+          branch_name: string;
+          branch_timezone: string;
+          city: string;
+          country_code: string;
+          phone: string;
+          state_region: string;
+        }[];
       };
       add_family_contact_channel: {
         Args: {
@@ -5842,6 +6027,10 @@ export type Database = {
         };
         Returns: boolean;
       };
+      has_permission_in_any_live_scope: {
+        Args: { p_organization_id: string; p_permission_key: string };
+        Returns: boolean;
+      };
       lead_sla_snapshot: {
         Args: { p_lead_id: string };
         Returns: {
@@ -6009,6 +6198,28 @@ export type Database = {
         };
         Returns: undefined;
       };
+      mark_booking_editing_pending: {
+        Args: { p_booking_id: string };
+        Returns: {
+          booking_reference: string;
+          branch_id: string | null;
+          created_at: string;
+          created_by: string;
+          family_id: string | null;
+          id: string;
+          lead_id: string | null;
+          organization_id: string;
+          source_quotation_id: string;
+          updated_at: string;
+          updated_by: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "bookings";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       mark_booking_selection_pending: {
         Args: { p_booking_id: string };
         Returns: {
@@ -6134,6 +6345,23 @@ export type Database = {
           phone: string;
         }[];
       };
+      organization_shell_identity: {
+        Args: { p_organization_id: string };
+        Returns: {
+          brand_logo_url: string;
+          brand_prefix: string;
+          brand_primary_color: string;
+          currency_code: string;
+          date_format: string;
+          display_name: string;
+          legal_name: string;
+          locale: string;
+          organization_id: string;
+          philosophy_statement: string;
+          slug: string;
+          timezone: string;
+        }[];
+      };
       preview_organization_invitation: {
         Args: { p_token: string };
         Returns: {
@@ -6234,6 +6462,31 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "booking_safety_readiness";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      record_booking_selection_completion: {
+        Args: {
+          p_booking_id: string;
+          p_external_reference?: string;
+          p_selected_image_keys: string[];
+          p_source_type: string;
+        };
+        Returns: {
+          booking_id: string;
+          completed_at: string;
+          created_at: string;
+          created_by: string;
+          external_reference: string | null;
+          id: string;
+          organization_id: string;
+          recorded_by: string;
+          source_type: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "booking_selection_completions";
           isOneToOne: true;
           isSetofReturn: false;
         };

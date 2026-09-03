@@ -14,12 +14,14 @@ import {
   getBookingConfirmationWorkspace,
   listBookingTeamAssignmentCandidates,
   listBookingWorkspace,
+  markBookingEditingPending,
   markBookingSelectionPending,
   markBookingShootCompleted,
   markBookingShootScheduled,
   proposeBookingShootSchedule,
   recordBookingPayment,
   recordBookingSafetyReadiness,
+  recordBookingSelectionCompletion,
   recordBookingShootCompletion,
   signoffBookingSafetyReadiness,
   startPreShootPreparation,
@@ -31,6 +33,8 @@ import {
   type BookingSafetySignoffAuthority,
   type BookingSafetySignoffRow,
   type BookingSafetyState,
+  type BookingSelectedImageRow,
+  type BookingSelectionCompletionRow,
   type BookingShootCompletionRow,
   type BookingStageTransitionRow,
   type BookingTeamAssignmentCandidateRow,
@@ -939,13 +943,11 @@ function SelectionPendingSurface({
   bookingId,
   completion,
   canAdvance,
-  isSelectionPending,
   onSuccess,
 }: {
   bookingId: string;
   completion: BookingShootCompletionRow | null;
   canAdvance: boolean;
-  isSelectionPending: boolean;
   onSuccess: () => Promise<void>;
 }) {
   const markSelectionPendingFn = useServerFn(markBookingSelectionPending);
@@ -979,7 +981,7 @@ function SelectionPendingSurface({
         </div>
 
         <span className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] uppercase tracking-wider text-primary">
-          {isSelectionPending ? "Selection pending" : "Ready for handoff"}
+          Ready for handoff
         </span>
       </div>
 
@@ -1037,11 +1039,257 @@ function SelectionPendingSurface({
           </button>
         </div>
       ) : null}
+    </div>
+  );
+}
 
-      {isSelectionPending ? (
+function EditingPendingSurface({
+  bookingId,
+  selectionCompletion,
+  selectedImages,
+  canConfirmSelection,
+  canAdvance,
+  isEditingPending,
+  onSuccess,
+}: {
+  bookingId: string;
+  selectionCompletion: BookingSelectionCompletionRow | null;
+  selectedImages: BookingSelectedImageRow[];
+  canConfirmSelection: boolean;
+  canAdvance: boolean;
+  isEditingPending: boolean;
+  onSuccess: () => Promise<void>;
+}) {
+  const recordSelectionCompletionFn = useServerFn(recordBookingSelectionCompletion);
+  const markEditingPendingFn = useServerFn(markBookingEditingPending);
+
+  const [selectedImageKeys, setSelectedImageKeys] = useState("");
+  const [sourceType, setSourceType] = useState("manual");
+  const [externalReference, setExternalReference] = useState("");
+
+  const normalizedImageKeys = selectedImageKeys
+    .split(/\r?\n/)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  const recordSelectionMutation = useMutation({
+    mutationFn: () =>
+      recordSelectionCompletionFn({
+        data: {
+          bookingId,
+          selectedImageKeys: normalizedImageKeys,
+          sourceType: sourceType.trim(),
+          externalReference: externalReference.trim() || undefined,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Finalized client selection recorded.");
+      await onSuccess();
+    },
+    onError: (error: unknown) =>
+      toast.error(
+        error instanceof Error ? error.message : "Could not record the finalized client selection.",
+      ),
+  });
+
+  const advanceMutation = useMutation({
+    mutationFn: () =>
+      markEditingPendingFn({
+        data: {
+          bookingId,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Booking moved to Editing Pending.");
+      await onSuccess();
+    },
+    onError: (error: unknown) =>
+      toast.error(
+        error instanceof Error ? error.message : "Could not move the booking to Editing Pending.",
+      ),
+  });
+
+  return (
+    <div className="mt-7 border-t border-border pt-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Finalized client selection
+          </div>
+
+          <h3 className="mt-1 font-serif text-xl text-primary">Editing Pending</h3>
+        </div>
+
+        <span className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] uppercase tracking-wider text-primary">
+          {isEditingPending
+            ? "Editing pending"
+            : selectionCompletion
+              ? "Selection complete"
+              : "Awaiting final selection"}
+        </span>
+      </div>
+
+      {selectionCompletion ? (
+        <div className="mt-5 rounded-lg border border-border bg-card p-5">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Selection completed
+              </div>
+              <div className="mt-1 text-sm font-medium text-primary">
+                {formatDateTime(selectionCompletion.completed_at)}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Selected images
+              </div>
+              <div className="mt-1 font-serif text-xl text-primary">{selectedImages.length}</div>
+            </div>
+
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Source type
+              </div>
+              <div className="mt-1 text-sm font-medium text-primary">
+                {selectionCompletion.source_type}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                External reference
+              </div>
+              <div className="mt-1 break-all text-xs font-medium text-primary">
+                {selectionCompletion.external_reference ?? "—"}
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-4 text-xs leading-5 text-muted-foreground">
+            This is immutable canonical finalized-selection evidence. The selected-image manifest is
+            locked by the operating system and cannot be rewritten from the booking workspace.
+          </p>
+        </div>
+      ) : (
+        <Card className="mt-5 p-5">
+          <p className="text-sm font-medium text-primary">
+            No canonical finalized-selection evidence is recorded.
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Gallery activity, favourites, browser state or an external provider signal does not by
+            itself establish that client selection is complete.
+          </p>
+        </Card>
+      )}
+
+      {canConfirmSelection && !selectionCompletion ? (
+        <div className="mt-5 rounded-lg border border-border bg-card p-5">
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Canonical selection confirmation
+          </div>
+
+          <h4 className="mt-1 font-serif text-lg text-primary">Finalize selected image set</h4>
+
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            Enter the opaque operational image keys that make up the final client selection, one key
+            per line. At least one unique image key is required.
+          </p>
+
+          <label className="mt-4 block text-xs text-muted-foreground">
+            Final selected image keys
+            <textarea
+              value={selectedImageKeys}
+              onChange={(event) => setSelectedImageKeys(event.target.value)}
+              rows={6}
+              placeholder={"image-key-001\nimage-key-002"}
+              className={`${fieldClass} mt-2 font-mono`}
+            />
+          </label>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <label className="block text-xs text-muted-foreground">
+              Source type
+              <input
+                type="text"
+                value={sourceType}
+                onChange={(event) => setSourceType(event.target.value)}
+                className={`${fieldClass} mt-2`}
+              />
+            </label>
+
+            <label className="block text-xs text-muted-foreground">
+              External reference
+              <input
+                type="text"
+                value={externalReference}
+                onChange={(event) => setExternalReference(event.target.value)}
+                placeholder="Optional non-secret provenance"
+                className={`${fieldClass} mt-2`}
+              />
+            </label>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => recordSelectionMutation.mutate()}
+            disabled={
+              normalizedImageKeys.length === 0 ||
+              sourceType.trim().length === 0 ||
+              recordSelectionMutation.isPending
+            }
+            className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+          >
+            {recordSelectionMutation.isPending
+              ? "Finalizing selection..."
+              : "Finalize client selection"}
+          </button>
+
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            Finalization records immutable selection evidence only. It does not start editing and
+            does not advance the booking journey.
+          </p>
+        </div>
+      ) : null}
+
+      {selectionCompletion && selectedImages.length === 0 ? (
+        <p className="mt-4 text-xs leading-5 text-destructive">
+          Canonical selection evidence exists without a valid selected-image manifest. Journey
+          advancement is intentionally not exposed.
+        </p>
+      ) : null}
+
+      {canAdvance && selectionCompletion && selectedImages.length > 0 ? (
+        <div className="mt-5 rounded-lg border border-border bg-card p-5">
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Controlled journey advancement
+          </div>
+
+          <h4 className="mt-1 font-serif text-lg text-primary">Move to Editing Pending</h4>
+
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            Finalized-selection evidence and a non-empty canonical selected-image manifest are
+            present. This operation attempts only the exact Stage 12 to Stage 13 transition. It does
+            not start editing.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => advanceMutation.mutate()}
+            disabled={advanceMutation.isPending}
+            className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+          >
+            {advanceMutation.isPending ? "Moving to Editing Pending..." : "Move to Editing Pending"}
+          </button>
+        </div>
+      ) : null}
+
+      {isEditingPending ? (
         <p className="mt-4 text-xs leading-5 text-muted-foreground">
-          This booking is waiting in the Selection Pending stage. Sprint 12 exposes this state as
-          read-only and provides no Stage 13 action.
+          The finalized client selection has been accepted into the editing queue. Editing has not
+          started, and this Sprint exposes no Stage 14 action.
         </p>
       ) : null}
     </div>
@@ -2019,6 +2267,25 @@ function BookingsPage() {
                 (completion) => completion.booking_id === booking.id,
               ) ?? null;
 
+            const selectionCompletion =
+              data.bookingSelectionCompletions.find(
+                (completion) => completion.booking_id === booking.id,
+              ) ?? null;
+
+            const selectedImages = selectionCompletion
+              ? data.bookingSelectedImages
+                  .filter(
+                    (image) =>
+                      image.booking_id === booking.id &&
+                      image.selection_completion_id === selectionCompletion.id,
+                  )
+                  .sort(
+                    (left, right) =>
+                      (left.ordinal ?? Number.MAX_SAFE_INTEGER) -
+                      (right.ordinal ?? Number.MAX_SAFE_INTEGER),
+                  )
+              : [];
+
             const capabilities = data.bookingCapabilities[booking.id];
 
             const currentOrder = currentStage?.stage_order ?? 0;
@@ -2061,12 +2328,28 @@ function BookingsPage() {
             const isSelectionPendingStage =
               currentStage?.stage_key === "selection_pending" && currentOrder === 12;
 
+            const isEditingPendingStage =
+              currentStage?.stage_key === "editing_pending" && currentOrder === 13;
+
             const canAdvanceSelectionPending =
               isShootCompletedStage &&
               shootCompletion !== null &&
               capabilities.canAdvanceBookingStage;
 
-            const showSelectionPending = isShootCompletedStage || isSelectionPendingStage;
+            const canConfirmSelection =
+              isSelectionPendingStage &&
+              selectionCompletion === null &&
+              capabilities.canConfirmSelection;
+
+            const canAdvanceEditingPending =
+              isSelectionPendingStage &&
+              selectionCompletion !== null &&
+              selectedImages.length > 0 &&
+              capabilities.canAdvanceBookingStage;
+
+            const showSelectionPending = isShootCompletedStage;
+
+            const showEditingPending = isSelectionPendingStage || isEditingPendingStage;
 
             const showShootCompletion = currentOrder >= 10 || shootCompletion !== null;
 
@@ -2180,7 +2463,7 @@ function BookingsPage() {
 
                     <p className="max-w-xl text-xs leading-5 text-muted-foreground">
                       Journey state remains database-authoritative. This branch exposes only
-                      dedicated controlled operations through Stage 12 and never a general
+                      dedicated controlled operations through Stage 13 and never a general
                       stage-transition control.
                     </p>
                   </div>
@@ -2298,7 +2581,18 @@ function BookingsPage() {
                     bookingId={booking.id}
                     completion={shootCompletion}
                     canAdvance={canAdvanceSelectionPending}
-                    isSelectionPending={isSelectionPendingStage}
+                    onSuccess={refreshBookingWorkspace}
+                  />
+                ) : null}
+
+                {showEditingPending ? (
+                  <EditingPendingSurface
+                    bookingId={booking.id}
+                    selectionCompletion={selectionCompletion}
+                    selectedImages={selectedImages}
+                    canConfirmSelection={canConfirmSelection}
+                    canAdvance={canAdvanceEditingPending}
+                    isEditingPending={isEditingPendingStage}
                     onSuccess={refreshBookingWorkspace}
                   />
                 ) : null}
@@ -2316,10 +2610,11 @@ function BookingsPage() {
 
                 <Card className="mt-6 p-5">
                   <p className="text-xs leading-5 text-muted-foreground">
-                    Sprint 12 extends the controlled booking journey through the exact Stage 11 →
-                    Stage 12 Selection Pending handoff. Selection decisions, proofing, editing,
-                    gallery publication, delivery, heirloom production, media custody and Stage 13
-                    progression remain outside this slice.
+                    Sprint 13 extends the controlled booking journey through finalized client
+                    selection and the exact Stage 12 → Stage 13 Editing Pending handoff. Editing
+                    execution, editor assignment, creative QC, gallery publication, delivery,
+                    heirloom production, media custody and Stage 14 progression remain outside this
+                    slice.
                   </p>
                 </Card>
               </Card>

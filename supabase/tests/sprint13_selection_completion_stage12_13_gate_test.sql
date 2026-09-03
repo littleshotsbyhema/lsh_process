@@ -46,8 +46,8 @@ SELECT is(
 -- 4
 SELECT is(
   (SELECT count(*)::bigint FROM public.role_permissions),
-  236::bigint,
-  'canonical role-permission compatibility count is 236'
+  260::bigint,
+  'canonical role-permission compatibility count is 260'
 );
 
 -- 5
@@ -226,9 +226,9 @@ SELECT
 FROM (
   VALUES
     ('8e000000-0000-0000-0000-000000000101'::uuid,'founder'::text,NULL::uuid),
-    ('8e000000-0000-0000-0000-000000000102'::uuid,'studio_manager'::text,NULL::uuid),
-    ('8e000000-0000-0000-0000-000000000103'::uuid,'client_coordinator'::text,NULL::uuid),
-    ('8e000000-0000-0000-0000-000000000104'::uuid,'photographer'::text,NULL::uuid),
+    ('8e000000-0000-0000-0000-000000000102'::uuid,'studio_manager'::text,'8e000000-0000-0000-0000-000000000701'::uuid),
+    ('8e000000-0000-0000-0000-000000000103'::uuid,'client_coordinator'::text,'8e000000-0000-0000-0000-000000000701'::uuid),
+    ('8e000000-0000-0000-0000-000000000104'::uuid,'photographer'::text,'8e000000-0000-0000-0000-000000000701'::uuid),
     ('8e000000-0000-0000-0000-000000000105'::uuid,'founder'::text,NULL::uuid),
     ('8e000000-0000-0000-0000-000000000106'::uuid,'client_coordinator'::text,'8e000000-0000-0000-0000-000000000701'::uuid)
 ) AS fixture(member_id, role_key, branch_id)
@@ -433,16 +433,16 @@ CREATE TEMP TABLE s13_ids (
 
 INSERT INTO s13_ids
 VALUES (
-  pg_temp.s13_create_booking(NULL),
-  pg_temp.s13_create_booking(NULL),
-  pg_temp.s13_create_booking(NULL),
-  pg_temp.s13_create_booking(NULL),
-  pg_temp.s13_create_booking(NULL),
+  pg_temp.s13_create_booking('8e000000-0000-0000-0000-000000000701'),
+  pg_temp.s13_create_booking('8e000000-0000-0000-0000-000000000701'),
+  pg_temp.s13_create_booking('8e000000-0000-0000-0000-000000000701'),
+  pg_temp.s13_create_booking('8e000000-0000-0000-0000-000000000701'),
+  pg_temp.s13_create_booking('8e000000-0000-0000-0000-000000000701'),
   pg_temp.s13_create_booking('8e000000-0000-0000-0000-000000000701'),
   pg_temp.s13_create_booking('8e000000-0000-0000-0000-000000000702'),
-  pg_temp.s13_create_booking(NULL),
-  pg_temp.s13_create_booking(NULL),
-  pg_temp.s13_create_booking(NULL)
+  pg_temp.s13_create_booking('8e000000-0000-0000-0000-000000000701'),
+  pg_temp.s13_create_booking('8e000000-0000-0000-0000-000000000701'),
+  pg_temp.s13_create_booking('8e000000-0000-0000-0000-000000000701')
 );
 
 SELECT pg_temp.s13_prepare_stage12((SELECT happy_booking_id FROM s13_ids));

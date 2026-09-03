@@ -55,6 +55,7 @@ export type BookingCapabilities = {
   canWriteSafety: boolean;
   canSignoffSafety: boolean;
   canCompleteShoot: boolean;
+  canConfirmSelection: boolean;
 };
 
 export type BookingWorkspaceData = {
@@ -71,6 +72,8 @@ export type BookingWorkspaceData = {
   bookingSafetyReadiness: BookingSafetyReadinessRow[];
   bookingSafetySignoffs: BookingSafetySignoffRow[];
   bookingShootCompletions: BookingShootCompletionRow[];
+  bookingSelectionCompletions: BookingSelectionCompletionRow[];
+  bookingSelectedImages: BookingSelectedImageRow[];
   bookingTeamAssignmentHistory: BookingTeamAssignmentHistoryRow[];
   bookingServiceCategories: Record<string, string | null>;
   bookingSafetySignoffAuthorities: Record<string, BookingSafetySignoffAuthority | null>;
@@ -87,6 +90,12 @@ export type BookingShootScheduleRow =
 
 export type BookingShootCompletionRow =
   Database["public"]["Tables"]["booking_shoot_completions"]["Row"];
+
+export type BookingSelectionCompletionRow =
+  Database["public"]["Tables"]["booking_selection_completions"]["Row"];
+
+export type BookingSelectedImageRow =
+  Database["public"]["Tables"]["booking_selected_images"]["Row"];
 
 export type BookingTeamAssignmentRow =
   Database["public"]["Tables"]["booking_team_assignments"]["Row"];
@@ -155,6 +164,7 @@ function bookingCapabilitiesFromPermissions(permissions: Set<string>): BookingCa
     canWriteSafety: permissions.has("safety.write"),
     canSignoffSafety: permissions.has("safety.signoff"),
     canCompleteShoot: permissions.has("shoot.complete"),
+    canConfirmSelection: permissions.has("selection.confirm"),
   };
 }
 
@@ -213,6 +223,17 @@ const markBookingShootCompletedSchema = z.object({
 });
 
 const markBookingSelectionPendingSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
+const recordBookingSelectionCompletionSchema = z.object({
+  bookingId: z.string().uuid(),
+  selectedImageKeys: z.array(z.string().trim().min(1)).min(1),
+  sourceType: z.string().trim().min(1),
+  externalReference: z.string().trim().min(1).optional(),
+});
+
+const markBookingEditingPendingSchema = z.object({
   bookingId: z.string().uuid(),
 });
 
@@ -282,6 +303,8 @@ export const listBookingWorkspace = createServerFn({
         bookingSafetyReadiness: [],
         bookingSafetySignoffs: [],
         bookingShootCompletions: [],
+        bookingSelectionCompletions: [],
+        bookingSelectedImages: [],
         bookingTeamAssignmentHistory: [],
         bookingServiceCategories: {},
         bookingSafetySignoffAuthorities: {},
@@ -545,6 +568,30 @@ export const listBookingWorkspace = createServerFn({
 
     throwIfError(bookingShootCompletionsResult.error);
 
+    const bookingSelectionCompletionsResult = await context.supabase
+      .from("booking_selection_completions")
+      .select("*")
+      .eq("organization_id", ORGANIZATION_ID)
+      .in("booking_id", bookingIds)
+      .order("completed_at", {
+        ascending: true,
+      });
+
+    throwIfError(bookingSelectionCompletionsResult.error);
+
+    const bookingSelectedImagesResult = await context.supabase
+      .from("booking_selected_images")
+      .select("*")
+      .in("booking_id", bookingIds)
+      .order("ordinal", {
+        ascending: true,
+      })
+      .order("created_at", {
+        ascending: true,
+      });
+
+    throwIfError(bookingSelectedImagesResult.error);
+
     const bookingTeamAssignmentHistory: BookingTeamAssignmentHistoryRow[] = [];
 
     const teamReadableBookingIds = bookings
@@ -580,6 +627,8 @@ export const listBookingWorkspace = createServerFn({
       bookingSafetyReadiness,
       bookingSafetySignoffs,
       bookingShootCompletions: bookingShootCompletionsResult.data ?? [],
+      bookingSelectionCompletions: bookingSelectionCompletionsResult.data ?? [],
+      bookingSelectedImages: bookingSelectedImagesResult.data ?? [],
       bookingTeamAssignmentHistory,
       bookingServiceCategories,
       bookingSafetySignoffAuthorities,
@@ -947,6 +996,47 @@ export const markBookingSelectionPending = createServerFn({
 
     if (!result.data) {
       throw new Error("Selection pending advancement returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const recordBookingSelectionCompletion = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(recordBookingSelectionCompletionSchema)
+  .handler(async ({ context, data }): Promise<BookingSelectionCompletionRow> => {
+    const result = await context.supabase.rpc("record_booking_selection_completion", {
+      p_booking_id: data.bookingId,
+      p_selected_image_keys: data.selectedImageKeys,
+      p_source_type: data.sourceType,
+      p_external_reference: data.externalReference,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Selection completion recording returned no row.");
+    }
+
+    return result.data;
+  });
+
+export const markBookingEditingPending = createServerFn({
+  method: "POST",
+})
+  .middleware([requireSupabaseAuth])
+  .validator(markBookingEditingPendingSchema)
+  .handler(async ({ context, data }): Promise<BookingRow> => {
+    const result = await context.supabase.rpc("mark_booking_editing_pending", {
+      p_booking_id: data.bookingId,
+    });
+
+    throwIfError(result.error);
+
+    if (!result.data) {
+      throw new Error("Editing pending advancement returned no row.");
     }
 
     return result.data;
