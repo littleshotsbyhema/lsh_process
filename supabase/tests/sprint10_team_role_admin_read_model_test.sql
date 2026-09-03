@@ -110,6 +110,14 @@ VALUES
   'slice7d-deleted',
   'active',
   now()
+),
+(
+  '7d400000-0000-0000-0000-000000000004',
+  '7d100000-0000-0000-0000-000000000001',
+  'Slice 7D Second Active Branch',
+  'slice7d-active-2',
+  'active',
+  NULL
 );
 
 
@@ -234,7 +242,7 @@ FROM (
       '7d100000-0000-0000-0000-000000000001'::uuid,
       '7d200000-0000-0000-0000-000000000002'::uuid,
       'studio_manager'::text,
-      NULL::uuid,
+      '7d400000-0000-0000-0000-000000000001'::uuid,
       '2026-08-17 00:00:02+00'::timestamptz,
       '7d200000-0000-0000-0000-000000000001'::uuid,
       NULL::timestamptz,
@@ -246,7 +254,7 @@ FROM (
       '7d100000-0000-0000-0000-000000000001'::uuid,
       '7d200000-0000-0000-0000-000000000003'::uuid,
       'client_coordinator'::text,
-      NULL::uuid,
+      '7d400000-0000-0000-0000-000000000001'::uuid,
       '2026-08-17 00:00:03+00'::timestamptz,
       '7d200000-0000-0000-0000-000000000001'::uuid,
       NULL::timestamptz,
@@ -257,8 +265,8 @@ FROM (
       '7d300000-0000-0000-0000-000000000004'::uuid,
       '7d100000-0000-0000-0000-000000000001'::uuid,
       '7d200000-0000-0000-0000-000000000004'::uuid,
-      'editor'::text,
-      NULL::uuid,
+      'sales_head'::text,
+      '7d400000-0000-0000-0000-000000000001'::uuid,
       '2026-08-17 00:00:04+00'::timestamptz,
       '7d200000-0000-0000-0000-000000000001'::uuid,
       NULL::timestamptz,
@@ -269,8 +277,8 @@ FROM (
       '7d300000-0000-0000-0000-000000000005'::uuid,
       '7d100000-0000-0000-0000-000000000001'::uuid,
       '7d200000-0000-0000-0000-000000000004'::uuid,
-      'editor'::text,
-      '7d400000-0000-0000-0000-000000000001'::uuid,
+      'sales_head'::text,
+      '7d400000-0000-0000-0000-000000000004'::uuid,
       '2026-08-17 00:00:05+00'::timestamptz,
       '7d200000-0000-0000-0000-000000000001'::uuid,
       NULL::timestamptz,
@@ -282,7 +290,7 @@ FROM (
       '7d100000-0000-0000-0000-000000000001'::uuid,
       '7d200000-0000-0000-0000-000000000004'::uuid,
       'assistant'::text,
-      NULL::uuid,
+      '7d400000-0000-0000-0000-000000000001'::uuid,
       '2026-08-17 00:00:06+00'::timestamptz,
       '7d200000-0000-0000-0000-000000000001'::uuid,
       '2026-08-17 00:10:06+00'::timestamptz,
@@ -329,6 +337,27 @@ JOIN public.roles role_row
   ON role_row.key = fixture.role_key;
 
 
+-- Migration A reconciliation:
+-- each active fixture organization has one canonical Brand Owner whose
+-- membership also holds the live organization-wide Founder grant.
+INSERT INTO public.organization_brand_owners (
+  organization_id,
+  organization_member_id,
+  established_by
+)
+VALUES
+(
+  '7d100000-0000-0000-0000-000000000001',
+  '7d200000-0000-0000-0000-000000000001',
+  '7d200000-0000-0000-0000-000000000001'
+),
+(
+  '7d100000-0000-0000-0000-000000000002',
+  '7d200000-0000-0000-0000-000000000008',
+  '7d200000-0000-0000-0000-000000000008'
+);
+
+
 -- Force existing deferred Founder coverage checks now, then restore
 -- deferred behavior for the remainder of the transaction.
 SET CONSTRAINTS ALL IMMEDIATE;
@@ -372,8 +401,8 @@ SELECT is(
       '7d100000-0000-0000-0000-000000000001'
     )
   ),
-  2::bigint,
-  'Founder can read organization-wide plus active assignment scopes'
+  3::bigint,
+  'Founder can read organization-wide plus both active assignment scopes'
 );
 
 
@@ -485,12 +514,15 @@ SELECT ok(
         '7d300000-0000-0000-0000-000000000004'::uuid
       AND directory.member_id =
         '7d200000-0000-0000-0000-000000000004'::uuid
-      AND directory.role_key = 'editor'
-      AND directory.role_label = 'Editor / Retoucher'
-      AND directory.branch_id IS NULL
-      AND directory.branch_name IS NULL
-      AND directory.branch_code IS NULL
-      AND directory.organization_wide = true
+      AND directory.role_key = 'sales_head'
+      AND directory.role_label = 'Brand Sales Head'
+      AND directory.branch_id =
+        '7d400000-0000-0000-0000-000000000001'::uuid
+      AND directory.branch_name =
+        'Slice 7D Active Branch'
+      AND directory.branch_code =
+        'slice7d-active'
+      AND directory.organization_wide = false
       AND directory.granted_at =
         '2026-08-17 00:00:04+00'::timestamptz
       AND directory.granted_by_member_id =
@@ -502,7 +534,7 @@ SELECT ok(
     WHERE directory.grant_id =
       '7d300000-0000-0000-0000-000000000004'::uuid
   ),
-  'organization-wide grant projection is exact'
+  'first branch-scoped Brand Sales Head grant projection is exact'
 );
 
 -- 8
@@ -513,14 +545,14 @@ SELECT ok(
         '7d300000-0000-0000-0000-000000000005'::uuid
       AND directory.member_id =
         '7d200000-0000-0000-0000-000000000004'::uuid
-      AND directory.role_key = 'editor'
-      AND directory.role_label = 'Editor / Retoucher'
+      AND directory.role_key = 'sales_head'
+      AND directory.role_label = 'Brand Sales Head'
       AND directory.branch_id =
-        '7d400000-0000-0000-0000-000000000001'::uuid
+        '7d400000-0000-0000-0000-000000000004'::uuid
       AND directory.branch_name =
-        'Slice 7D Active Branch'
+        'Slice 7D Second Active Branch'
       AND directory.branch_code =
-        'slice7d-active'
+        'slice7d-active-2'
       AND directory.organization_wide = false
       AND directory.granted_at =
         '2026-08-17 00:00:05+00'::timestamptz
@@ -533,7 +565,7 @@ SELECT ok(
     WHERE directory.grant_id =
       '7d300000-0000-0000-0000-000000000005'::uuid
   ),
-  'branch-scoped grant projection is exact'
+  'second branch-scoped Brand Sales Head grant projection is exact'
 );
 
 -- 9
@@ -544,10 +576,10 @@ SELECT is(
       '7d100000-0000-0000-0000-000000000001',
       '7d200000-0000-0000-0000-000000000004'
     ) directory
-    WHERE directory.role_key = 'editor'
+    WHERE directory.role_key = 'sales_head'
   ),
   2::bigint,
-  'organization-wide and branch-scoped grants for the same role remain independent rows'
+  'multi-branch Brand Sales Head grants remain independent rows'
 );
 
 -- 10

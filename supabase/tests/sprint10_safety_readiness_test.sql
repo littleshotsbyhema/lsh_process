@@ -939,6 +939,20 @@ SELECT
 FROM public.roles role
 WHERE role.key = 'founder';
 
+-- Migration A reconciliation:
+-- active organization requires exactly one canonical Brand Owner
+-- backed by the organization-wide Founder grant.
+INSERT INTO public.organization_brand_owners (
+  organization_id,
+  organization_member_id,
+  established_by
+)
+VALUES (
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
+  '90000000-0000-0000-0000-000000000011',
+  '90000000-0000-0000-0000-000000000011'
+);
+
 UPDATE public.organizations
 SET status =
       'active'::public.organization_status
@@ -2619,6 +2633,19 @@ SELECT
 FROM public.roles role
 WHERE role.key = 'founder';
 
+-- Migration A reconciliation:
+-- foreign fixture organization is independently constitutional.
+INSERT INTO public.organization_brand_owners (
+  organization_id,
+  organization_member_id,
+  established_by
+)
+VALUES (
+  '90000000-0000-0000-0000-000000000301',
+  '90000000-0000-0000-0000-000000000014',
+  '90000000-0000-0000-0000-000000000014'
+);
+
 UPDATE public.organizations
 SET status =
       'active'::public.organization_status
@@ -2916,7 +2943,7 @@ SELECT
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   fixture.member_id,
   role.id,
-  NULL::uuid
+  '90000000-0000-0000-0000-000000000201'::uuid
 FROM (
   VALUES
     (
@@ -2959,7 +2986,7 @@ VALUES
 (
   '90000000-0000-0000-0000-000000000027',
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
-  NULL,
+  '90000000-0000-0000-0000-000000000201',
   'LSH-N2B3R4',
   'Sprint 10 Safety No Readiness Family',
   'Safety No Readiness Family',
@@ -2981,7 +3008,7 @@ VALUES
 (
   '90000000-0000-0000-0000-000000000029',
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
-  NULL,
+  '90000000-0000-0000-0000-000000000201',
   'LSH-T2V3W4',
   'Sprint 10 Safety Photographer Family',
   'Safety Photographer Family',
@@ -2993,7 +3020,7 @@ VALUES
 CREATE TEMP TABLE s10s_booking_no_readiness AS
 SELECT pg_temp.s10s_make_booking(
   '90000000-0000-0000-0000-000000000027',
-  NULL,
+  '90000000-0000-0000-0000-000000000201'::uuid,
   'newborn_gold'
 ) AS id;
 
@@ -3007,7 +3034,7 @@ SELECT pg_temp.s10s_make_booking(
 CREATE TEMP TABLE s10s_booking_photographer AS
 SELECT pg_temp.s10s_make_booking(
   '90000000-0000-0000-0000-000000000029',
-  NULL,
+  '90000000-0000-0000-0000-000000000201'::uuid,
   'newborn_gold'
 ) AS id;
 
@@ -3266,12 +3293,32 @@ SELECT ok(
 
 -- ---------------------------------------------------------------------
 -- Studio Manager priority while also Photographer + current Lead.
+--
+-- Migration A reconciliation:
+-- Studio Manager is branch-only, so use the Branch A booking that
+-- already proved the missing-readiness gate above. Establish complete
+-- readiness now and let Founder sign first so the original
+-- multi-authorized-signer contract remains intact.
 -- ---------------------------------------------------------------------
+
+CREATE TEMP TABLE s10s_manager_readiness AS
+SELECT *
+FROM public.record_booking_safety_readiness(
+  (SELECT id FROM s10s_booking_no_readiness),
+  'ready',
+  'ready'
+);
+
+CREATE TEMP TABLE s10s_manager_founder_signoff AS
+SELECT *
+FROM public.signoff_booking_safety_readiness(
+  (SELECT id FROM s10s_booking_no_readiness)
+);
 
 CREATE TEMP TABLE s10s_manager_lead_assignment AS
 SELECT *
 FROM public.assign_booking_team_member(
-  (SELECT id FROM s10s_booking_newborn),
+  (SELECT id FROM s10s_booking_no_readiness),
   'lead_photographer',
   '90000000-0000-0000-0000-000000000015',
   true,
@@ -3293,7 +3340,7 @@ SELECT set_config(
 -- 147
 SELECT is(
   public.get_booking_safety_signoff_authority(
-    (SELECT id FROM s10s_booking_newborn)
+    (SELECT id FROM s10s_booking_no_readiness)
   ),
   'studio_manager'::text,
   'sign-off authority read model resolves Studio Manager before Photographer Lead authority'
@@ -3305,7 +3352,7 @@ SELECT lives_ok(
   CREATE TEMP TABLE s10s_manager_signoff AS
   SELECT *
   FROM public.signoff_booking_safety_readiness(
-    (SELECT id FROM s10s_booking_newborn)
+    (SELECT id FROM s10s_booking_no_readiness)
   )
   $$,
   'Studio Manager may formally sign complete Newborn readiness'
@@ -3321,7 +3368,7 @@ SELECT ok(
         'studio_manager'
       AND signoff.lead_assignment_id IS NULL
       AND signoff.readiness_id =
-        (SELECT id FROM s10s_readiness_v2)
+        (SELECT id FROM s10s_manager_readiness)
     FROM public.booking_safety_signoffs signoff
     WHERE signoff.id =
           (SELECT id FROM s10s_manager_signoff)
@@ -3335,7 +3382,7 @@ SELECT is(
     SELECT count(*)::bigint
     FROM public.booking_safety_signoffs signoff
     WHERE signoff.readiness_id =
-          (SELECT id FROM s10s_readiness_v2)
+          (SELECT id FROM s10s_manager_readiness)
   ),
   2::bigint,
   'different authorized administrative signers may sign the same readiness revision'
@@ -3360,7 +3407,7 @@ SELECT set_config(
 -- 148
 SELECT ok(
   public.get_booking_safety_signoff_authority(
-    (SELECT id FROM s10s_booking_newborn)
+    (SELECT id FROM s10s_booking_no_readiness)
   ) IS NULL,
   'ordinary Photographer with safety.signoff but without current Lead assignment receives no sign-off authority'
 );
@@ -3372,7 +3419,7 @@ DECLARE
 BEGIN
   BEGIN
     PERFORM public.signoff_booking_safety_readiness(
-      (SELECT id FROM s10s_booking_newborn)
+      (SELECT id FROM s10s_booking_no_readiness)
     );
   EXCEPTION WHEN OTHERS THEN
     GET STACKED DIAGNOSTICS
@@ -3411,7 +3458,7 @@ SELECT ok(
     SELECT 1
     FROM public.booking_safety_signoffs signoff
     WHERE signoff.booking_id =
-          (SELECT id FROM s10s_booking_newborn)
+          (SELECT id FROM s10s_booking_no_readiness)
       AND signoff.signed_by =
           '90000000-0000-0000-0000-000000000016'
   )
@@ -3420,7 +3467,7 @@ SELECT ok(
     SELECT count(*)::bigint
     FROM public.booking_safety_signoffs signoff
     WHERE signoff.readiness_id =
-          (SELECT id FROM s10s_readiness_v2)
+          (SELECT id FROM s10s_manager_readiness)
   ) = 2,
   'non-Lead Photographer denial creates no sign-off evidence'
 );
@@ -3756,7 +3803,7 @@ SELECT
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   '90000000-0000-0000-0000-000000000020'::uuid,
   role.id,
-  NULL::uuid
+  '90000000-0000-0000-0000-000000000201'::uuid
 FROM public.roles role
 WHERE role.key = 'assistant';
 
@@ -4287,7 +4334,7 @@ SELECT
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   '90000000-0000-0000-0000-000000000018'::uuid,
   role.id,
-  NULL::uuid
+  '90000000-0000-0000-0000-000000000201'::uuid
 FROM public.roles role
 WHERE role.key = 'photographer';
 
@@ -4305,7 +4352,7 @@ INSERT INTO public.families (
 VALUES (
   '90000000-0000-0000-0000-000000000030',
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
-  NULL,
+  '90000000-0000-0000-0000-000000000201',
   'LSH-V2W3X4',
   'Sprint 10 Safety Revoked Lead Family',
   'Safety Revoked Lead Family',
@@ -4317,7 +4364,7 @@ VALUES (
 CREATE TEMP TABLE s10s_booking_revoked_photographer AS
 SELECT pg_temp.s10s_make_booking(
   '90000000-0000-0000-0000-000000000030',
-  NULL,
+  '90000000-0000-0000-0000-000000000201'::uuid,
   'newborn_gold'
 ) AS id;
 
@@ -4465,7 +4512,7 @@ SELECT
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   '90000000-0000-0000-0000-000000000019'::uuid,
   role.id,
-  NULL::uuid
+  '90000000-0000-0000-0000-000000000201'::uuid
 FROM public.roles role
 WHERE role.key = 'photographer';
 
@@ -4494,13 +4541,14 @@ SET
   revoked_by =
     '90000000-0000-0000-0000-000000000011',
   revocation_reason =
-    'Replace orgwide role with wrong-branch role'
+    'Replace Branch A role with wrong-branch role'
 FROM public.roles role
 WHERE grant_row.role_id =
       role.id
   AND grant_row.organization_member_id =
       '90000000-0000-0000-0000-000000000019'
-  AND grant_row.branch_id IS NULL
+  AND grant_row.branch_id =
+      '90000000-0000-0000-0000-000000000201'::uuid
   AND grant_row.revoked_at IS NULL
   AND role.key = 'photographer';
 
@@ -4971,7 +5019,7 @@ SELECT
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   '90000000-0000-0000-0000-000000000032'::uuid,
   role.id,
-  NULL::uuid
+  '90000000-0000-0000-0000-000000000201'::uuid
 FROM public.roles role
 WHERE role.key = 'sales';
 
@@ -5003,8 +5051,8 @@ SELECT is(
       )::uuid
     )
   ),
-  2::bigint,
-  'Sales booking.read role can read the ordinary booking records'
+  1::bigint,
+  'Branch A Sales booking.read role can read only the in-scope ordinary booking record'
 );
 
 -- 139
@@ -5146,7 +5194,7 @@ SELECT ok(
         's10s.rls.branch_booking_id'
       )::uuid
     )
-  ) = 3,
+  ) = 2,
   'organization-wide Founder can read authorized safety evidence across branchless and branch bookings'
 );
 
