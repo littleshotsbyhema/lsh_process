@@ -73,14 +73,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Little Shots by Hema — Memory Keeper OS" },
+      {
+        name: "description",
+        content: "Internal operating system for Little Shots by Hema.",
+      },
+      { name: "author", content: "Little Shots by Hema" },
+      { property: "og:title", content: "Little Shots by Hema — Memory Keeper OS" },
+      {
+        property: "og:description",
+        content: "Internal operating system for Little Shots by Hema.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
