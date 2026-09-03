@@ -2243,7 +2243,7 @@ RESET ROLE;
 
 
 -- =====================================================================
--- Part 12 — Codex review remediation invariants
+-- Part 12 — Role-scope remediation invariants
 -- =====================================================================
 
 -- 73

@@ -127,6 +127,8 @@ function AuthPage() {
       return;
     }
 
+    const inviteData = invite.data;
+
     inviteSessionCheckStarted.current = true;
     let cancelled = false;
 
@@ -136,7 +138,7 @@ function AuthPage() {
       }
 
       const authenticatedEmail = data.user.email?.trim().toLowerCase();
-      const invitedEmail = invite.data.email.trim().toLowerCase();
+      const invitedEmail = inviteData.email.trim().toLowerCase();
 
       if (!authenticatedEmail) {
         return;
