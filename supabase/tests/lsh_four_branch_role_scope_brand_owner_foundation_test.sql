@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(72);
+SELECT plan(76);
 
 -- =====================================================================
 -- LSH FOUR-BRANCH ROLE AND SALES HIERARCHY
@@ -2239,6 +2239,69 @@ SELECT is(
 
 
 RESET ROLE;
+
+
+
+-- =====================================================================
+-- Part 12 — Codex review remediation invariants
+-- =====================================================================
+
+-- 73
+SELECT ok(
+  pg_get_functiondef(
+    'public.lsh_member_role_scope_guard()'::regprocedure
+  ) ILIKE '%organization_members%'
+  AND
+  pg_get_functiondef(
+    'public.lsh_member_role_scope_guard()'::regprocedure
+  ) ILIKE '%FOR UPDATE%',
+  'live role-scope guard serializes same-member mutations before Sales Head XOR evaluation'
+);
+
+
+-- 74
+SELECT ok(
+  pg_get_functiondef(
+    'public.lsh_organization_invitation_roles_guard()'::regprocedure
+  ) ILIKE '%organization_invitations%'
+  AND
+  pg_get_functiondef(
+    'public.lsh_organization_invitation_roles_guard()'::regprocedure
+  ) ILIKE '%FOR UPDATE%',
+  'invitation role-scope guard serializes same-invitation mutations before Sales Head XOR evaluation'
+);
+
+
+-- 75
+SELECT is(
+  (
+    SELECT count(*)::bigint
+    FROM public.organizations o
+    WHERE o.status = 'active'::public.organization_status
+      AND o.deleted_at IS NULL
+      AND (
+        SELECT count(*)::bigint
+        FROM public.organization_brand_owners owner
+        WHERE owner.organization_id = o.id
+      ) <> 1
+  ),
+  0::bigint,
+  'every active non-deleted organization has exactly one canonical Brand Owner'
+);
+
+
+-- 76
+SELECT ok(
+  pg_get_functiondef(
+    'public.create_organization_invitation(uuid,text,text,text[],integer)'::regprocedure
+  ) ILIKE '%i.expires_at > now()%'
+  AND
+  pg_get_functiondef(
+    'public.create_organization_invitation(uuid,text,text,text[],integer)'::regprocedure
+  ) ILIKE '%i.expires_at <= now()%',
+
+  'invitation reissue distinguishes live pending invitations from expired stale credentials'
+);
 
 
 SELECT * FROM finish();

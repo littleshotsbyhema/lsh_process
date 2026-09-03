@@ -452,6 +452,21 @@ BEGIN
     RETURN NEW;
   END IF;
 
+  -- Serialize live role-scope mutations for the same organization
+  -- member. This closes the cross-transaction race where concurrent
+  -- organization-wide and branch-scoped sales_head grants could both
+  -- observe no conflicting committed row.
+  --
+  -- The organization member row is the stable lock identity shared by
+  -- all role grants for that member. The row lock is transaction-scoped.
+  PERFORM 1
+  FROM public.organization_members member_lock
+  WHERE member_lock.id =
+        NEW.organization_member_id
+    AND member_lock.organization_id =
+        NEW.organization_id
+  FOR UPDATE;
+
   SELECT
     r.key,
     policy.organization_wide_allowed,
@@ -593,11 +608,15 @@ BEGIN
       USING ERRCODE = '42501';
   END IF;
 
+  -- Lock the parent invitation so concurrent role-scope inserts for
+  -- the same invitation serialize before evaluating the Sales Head
+  -- organization-wide XOR branch-scoped invariant.
   SELECT i.status
   INTO v_invitation_status
   FROM public.organization_invitations i
   WHERE i.id = NEW.invitation_id
-    AND i.organization_id = NEW.organization_id;
+    AND i.organization_id = NEW.organization_id
+  FOR UPDATE;
 
   IF v_invitation_status IS NULL
      OR v_invitation_status <>
@@ -816,81 +835,117 @@ ON FUNCTION public.lsh_brand_owner_identity_immutable_guard()
 FROM PUBLIC, anon, authenticated;
 
 
--- Backfill an already-active organization from its single active,
--- organization-wide Founder. Fresh/local migration replay remains
--- suspended with no member and is completed by Founder bootstrap later.
+-- Backfill every non-deleted organization from its single active,
+-- organization-wide Founder candidate.
+--
+-- Active organizations must be constitutionally complete when Migration A
+-- finishes. If an active organization has zero or multiple eligible Founder
+-- candidates, ownership cannot be guessed safely, so migration aborts.
+--
+-- Suspended organizations with exactly one eligible Founder are also
+-- backfilled. Suspended organizations without exactly one candidate remain
+-- eligible for their controlled bootstrap/activation path later.
 DO $brand_owner_backfill$
 DECLARE
-  v_org_status public.organization_status;
+  v_org record;
   v_candidate_count integer;
   v_owner_member_id uuid;
 BEGIN
-  SELECT o.status
-  INTO v_org_status
-  FROM public.organizations o
-  WHERE o.id =
-    '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
-    AND o.deleted_at IS NULL;
+  FOR v_org IN
+    SELECT
+      o.id,
+      o.status
+    FROM public.organizations o
+    WHERE o.deleted_at IS NULL
+    ORDER BY o.id
+  LOOP
 
-  IF NOT FOUND THEN
-    RAISE EXCEPTION
-      'Brand Owner backfill failed: canonical organization unavailable';
-  END IF;
-
-  SELECT count(*)
-  INTO v_candidate_count
-  FROM public.member_role_grants g
-  JOIN public.organization_members m
-    ON m.id = g.organization_member_id
-   AND m.organization_id = g.organization_id
-  JOIN public.roles r
-    ON r.id = g.role_id
-  WHERE g.organization_id =
-        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
-    AND g.revoked_at IS NULL
-    AND g.branch_id IS NULL
-    AND r.key = 'founder'
-    AND m.status = 'active'::public.member_status
-    AND m.exited_at IS NULL;
-
-  IF v_org_status = 'active'::public.organization_status
-     AND v_candidate_count <> 1 THEN
-    RAISE EXCEPTION
-      'Brand Owner backfill failed: active canonical organization requires exactly one active organization-wide Founder candidate, found %',
-      v_candidate_count;
-  END IF;
-
-  IF v_candidate_count = 1 THEN
-    SELECT m.id
-    INTO v_owner_member_id
+    SELECT count(*)
+    INTO v_candidate_count
     FROM public.member_role_grants g
+
     JOIN public.organization_members m
       ON m.id = g.organization_member_id
      AND m.organization_id = g.organization_id
+
     JOIN public.roles r
       ON r.id = g.role_id
-    WHERE g.organization_id =
-          '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+
+    WHERE g.organization_id = v_org.id
       AND g.revoked_at IS NULL
       AND g.branch_id IS NULL
       AND r.key = 'founder'
       AND m.status = 'active'::public.member_status
       AND m.exited_at IS NULL;
 
-    INSERT INTO public.organization_brand_owners (
-      organization_id,
-      organization_member_id,
-      established_by
-    )
-    VALUES (
-      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
-      v_owner_member_id,
-      v_owner_member_id
-    );
+
+    IF v_org.status = 'active'::public.organization_status
+       AND v_candidate_count <> 1 THEN
+      RAISE EXCEPTION
+        'Brand Owner backfill failed: active organization % requires exactly one active organization-wide Founder candidate, found %',
+        v_org.id,
+        v_candidate_count;
+    END IF;
+
+
+    IF v_candidate_count = 1 THEN
+
+      SELECT m.id
+      INTO v_owner_member_id
+      FROM public.member_role_grants g
+
+      JOIN public.organization_members m
+        ON m.id = g.organization_member_id
+       AND m.organization_id = g.organization_id
+
+      JOIN public.roles r
+        ON r.id = g.role_id
+
+      WHERE g.organization_id = v_org.id
+        AND g.revoked_at IS NULL
+        AND g.branch_id IS NULL
+        AND r.key = 'founder'
+        AND m.status = 'active'::public.member_status
+        AND m.exited_at IS NULL;
+
+
+      INSERT INTO public.organization_brand_owners (
+        organization_id,
+        organization_member_id,
+        established_by
+      )
+      VALUES (
+        v_org.id,
+        v_owner_member_id,
+        v_owner_member_id
+      );
+
+    END IF;
+
+  END LOOP;
+
+
+  -- Migration-time constitutional assertion:
+  -- every active, non-deleted organization must now have exactly one
+  -- canonical Brand Owner row.
+  IF EXISTS (
+    SELECT 1
+    FROM public.organizations o
+
+    LEFT JOIN public.organization_brand_owners owner
+      ON owner.organization_id = o.id
+
+    WHERE o.status = 'active'::public.organization_status
+      AND o.deleted_at IS NULL
+
+    GROUP BY o.id
+    HAVING count(owner.organization_id) <> 1
+  ) THEN
+    RAISE EXCEPTION
+      'Brand Owner backfill failed: one or more active organizations lack exactly one canonical Brand Owner';
   END IF;
 END
 $brand_owner_backfill$;
-
 
 -- =====================================================================
 -- 8. Protect Brand Owner membership
@@ -2346,6 +2401,10 @@ BEGIN
          AND i.status =
              'pending'::public.organization_invitation_status
 
+         -- Expired pending invitations are stale credentials, not live
+         -- ownership claims. A branch-scoped inviter may replace them.
+         AND i.expires_at > now()
+
          AND i.invited_by <>
              v_actor
      ) THEN
@@ -2385,6 +2444,10 @@ BEGIN
 
         OR i.invited_by =
            v_actor
+
+        -- Any expired pending invitation is stale and may be revoked as
+        -- part of safe reissue, regardless of the original inviter.
+        OR i.expires_at <= now()
       )
 
     RETURNING i.id
