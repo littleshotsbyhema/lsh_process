@@ -428,6 +428,121 @@ COMMENT ON TABLE public.role_scope_policies IS
 
 
 -- =====================================================================
+-- 5A. Reconcile live legacy pending invitations
+--
+-- Before Migration A, create_organization_invitation(...) stored every
+-- pre-authorized role as organization-wide (branch_id = NULL).
+--
+-- Migration A makes operational roles branch-scoped. There is no
+-- trustworthy legacy branch intent to infer, so Migration A must not
+-- fabricate branch authorization.
+--
+-- Any still-live pending invitation containing at least one role scope
+-- that is invalid under the new canonical policy is revoked as a whole.
+-- Historical invitation-role rows are preserved for auditability.
+--
+-- Expired pending credentials are intentionally left untouched here:
+-- acceptance already rejects them, and the canonical reissue flow may
+-- supersede them as stale credentials.
+-- =====================================================================
+
+UPDATE public.organization_invitations i
+SET
+  status =
+    'revoked'::public.organization_invitation_status,
+
+  revoked_at =
+    now(),
+
+  revoked_by =
+    i.invited_by,
+
+  revocation_reason =
+    'Migration A revoked this live legacy invitation because its pre-authorized role scope is incompatible with the canonical branch-scoped access model; issue a new invitation with canonical scope.'
+
+WHERE i.status =
+      'pending'::public.organization_invitation_status
+
+  AND i.expires_at > now()
+
+  AND EXISTS (
+    SELECT 1
+
+    FROM public.organization_invitation_roles ir
+
+    JOIN public.role_scope_policies policy
+      ON policy.role_id =
+         ir.role_id
+
+    WHERE ir.organization_id =
+          i.organization_id
+
+      AND ir.invitation_id =
+          i.id
+
+      AND (
+        (
+          ir.branch_id IS NULL
+          AND NOT policy.organization_wide_allowed
+        )
+
+        OR
+
+        (
+          ir.branch_id IS NOT NULL
+          AND NOT policy.branch_scoped_allowed
+        )
+      )
+  );
+
+
+-- Migration-time constitutional assertion:
+-- no live pending invitation may remain with a role scope that the new
+-- canonical role-scope policy would reject at membership acceptance.
+DO $legacy_invitation_scope_reconciliation$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+
+    FROM public.organization_invitations i
+
+    JOIN public.organization_invitation_roles ir
+      ON ir.invitation_id =
+         i.id
+     AND ir.organization_id =
+         i.organization_id
+
+    JOIN public.role_scope_policies policy
+      ON policy.role_id =
+         ir.role_id
+
+    WHERE i.status =
+          'pending'::public.organization_invitation_status
+
+      AND i.expires_at > now()
+
+      AND (
+        (
+          ir.branch_id IS NULL
+          AND NOT policy.organization_wide_allowed
+        )
+
+        OR
+
+        (
+          ir.branch_id IS NOT NULL
+          AND NOT policy.branch_scoped_allowed
+        )
+      )
+  ) THEN
+    RAISE EXCEPTION
+      'Migration A legacy invitation reconciliation failed: one or more live pending invitations retain constitutionally invalid role scope';
+  END IF;
+END
+$legacy_invitation_scope_reconciliation$;
+
+
+-- =====================================================================
 -- 6. Central live role-scope guard
 --
 -- Legacy invalid live grants are not rewritten by Migration A.

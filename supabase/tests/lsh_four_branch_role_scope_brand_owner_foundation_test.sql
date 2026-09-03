@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(76);
+SELECT plan(77);
 
 -- =====================================================================
 -- LSH FOUR-BRANCH ROLE AND SALES HIERARCHY
@@ -2301,6 +2301,44 @@ SELECT ok(
   ) ILIKE '%i.expires_at <= now()%',
 
   'invitation reissue distinguishes live pending invitations from expired stale credentials'
+);
+
+
+-- 77
+SELECT is(
+  (
+    SELECT count(DISTINCT i.id)::bigint
+
+    FROM public.organization_invitations i
+
+    JOIN public.organization_invitation_roles ir
+      ON ir.invitation_id = i.id
+     AND ir.organization_id = i.organization_id
+
+    JOIN public.role_scope_policies policy
+      ON policy.role_id = ir.role_id
+
+    WHERE i.status =
+          'pending'::public.organization_invitation_status
+
+      AND i.expires_at > now()
+
+      AND (
+        (
+          ir.branch_id IS NULL
+          AND NOT policy.organization_wide_allowed
+        )
+
+        OR
+
+        (
+          ir.branch_id IS NOT NULL
+          AND NOT policy.branch_scoped_allowed
+        )
+      )
+  ),
+  0::bigint,
+  'no live pending invitation retains role scope invalid under the canonical role-scope constitution'
 );
 
 
