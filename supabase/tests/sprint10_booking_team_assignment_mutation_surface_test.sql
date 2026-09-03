@@ -281,19 +281,55 @@ SELECT
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   fixture.member_id,
   role_row.id,
-  NULL
+  fixture.branch_id
 FROM (
   VALUES
-    ('8b100000-0000-0000-0000-000000000001'::uuid, 'founder'::text),
-    ('8b100000-0000-0000-0000-000000000002'::uuid, 'photographer'),
-    ('8b100000-0000-0000-0000-000000000003'::uuid, 'assistant'),
-    ('8b100000-0000-0000-0000-000000000004'::uuid, 'stylist'),
-    ('8b100000-0000-0000-0000-000000000005'::uuid, 'videographer'),
-    ('8b100000-0000-0000-0000-000000000006'::uuid, 'photographer'),
-    ('8b100000-0000-0000-0000-000000000006'::uuid, 'videographer'),
-    ('8b100000-0000-0000-0000-000000000007'::uuid, 'photographer'),
-    ('8b100000-0000-0000-0000-000000000008'::uuid, 'photographer')
-) AS fixture(member_id, role_key)
+    (
+      '8b100000-0000-0000-0000-000000000001'::uuid,
+      'founder'::text,
+      NULL::uuid
+    ),
+    (
+      '8b100000-0000-0000-0000-000000000002'::uuid,
+      'photographer',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    ),
+    (
+      '8b100000-0000-0000-0000-000000000003'::uuid,
+      'assistant',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    ),
+    (
+      '8b100000-0000-0000-0000-000000000004'::uuid,
+      'stylist',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    ),
+    (
+      '8b100000-0000-0000-0000-000000000005'::uuid,
+      'videographer',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    ),
+    (
+      '8b100000-0000-0000-0000-000000000006'::uuid,
+      'photographer',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    ),
+    (
+      '8b100000-0000-0000-0000-000000000006'::uuid,
+      'videographer',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    ),
+    (
+      '8b100000-0000-0000-0000-000000000007'::uuid,
+      'photographer',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    ),
+    (
+      '8b100000-0000-0000-0000-000000000008'::uuid,
+      'photographer',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    )
+) AS fixture(member_id, role_key, branch_id)
 JOIN public.roles role_row
   ON role_row.key =
      fixture.role_key;
@@ -592,35 +628,35 @@ VALUES
   'stage8',
   pg_temp.s10m_create_booking(
     '8b400000-0000-0000-0000-000000000001',
-    NULL
+    'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
   )
 ),
 (
   'stage9',
   pg_temp.s10m_create_booking(
     '8b400000-0000-0000-0000-000000000002',
-    NULL
+    'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
   )
 ),
 (
   'stage10',
   pg_temp.s10m_create_booking(
     '8b400000-0000-0000-0000-000000000003',
-    NULL
+    'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
   )
 ),
 (
   'pre_stage8',
   pg_temp.s10m_create_booking(
     '8b400000-0000-0000-0000-000000000004',
-    NULL
+    'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
   )
 ),
 (
   'post_stage10',
   pg_temp.s10m_create_booking(
     '8b400000-0000-0000-0000-000000000005',
-    NULL
+    'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
   )
 ),
 (
@@ -641,21 +677,21 @@ VALUES
   'current_lead_photo',
   pg_temp.s10m_create_booking(
     '8b400000-0000-0000-0000-000000000008',
-    NULL
+    'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
   )
 ),
 (
   'current_lead_video',
   pg_temp.s10m_create_booking(
     '8b400000-0000-0000-0000-000000000009',
-    NULL
+    'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
   )
 ),
 (
   'ended_lead',
   pg_temp.s10m_create_booking(
     '8b400000-0000-0000-0000-000000000010',
-    NULL
+    'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
   )
 );
 
@@ -1696,7 +1732,7 @@ SELECT
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
   '8b100000-0000-0000-0000-000000000012',
   role_row.id,
-  NULL
+  'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
 FROM public.roles role_row
 WHERE role_row.key =
       'client_coordinator';
@@ -1728,12 +1764,12 @@ SELECT ok(
   public.has_permission(
     '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
     'booking.team.assign',
-    NULL
+    'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
   )
   AND NOT public.has_permission(
     '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
     'team.read',
-    NULL
+    'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
   )
   AND EXISTS (
     SELECT 1

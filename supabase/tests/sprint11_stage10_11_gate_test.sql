@@ -49,8 +49,8 @@ SELECT is(
 -- C
 SELECT is(
   (SELECT count(*)::bigint FROM public.role_permissions),
-  233::bigint,
-  'C: current canonical repository-wide role-permission mapping is 233'
+  257::bigint,
+  'C: current canonical repository-wide role-permission mapping is 257'
 );
 
 -- D
@@ -241,17 +241,17 @@ FROM (
     (
       '8c000000-0000-0000-0000-000000000102'::uuid,
       'studio_manager'::text,
-      NULL::uuid
+      '8c000000-0000-0000-0000-000000000701'::uuid
     ),
     (
       '8c000000-0000-0000-0000-000000000103'::uuid,
       'photographer'::text,
-      NULL::uuid
+      '8c000000-0000-0000-0000-000000000701'::uuid
     ),
     (
       '8c000000-0000-0000-0000-000000000104'::uuid,
       'client_coordinator'::text,
-      NULL::uuid
+      '8c000000-0000-0000-0000-000000000701'::uuid
     ),
     (
       '8c000000-0000-0000-0000-000000000105'::uuid,
@@ -578,21 +578,21 @@ CREATE TEMP TABLE s11s2_ids (
 
 INSERT INTO s11s2_ids
 VALUES (
-  pg_temp.s11s2_create_booking(NULL),
-  pg_temp.s11s2_create_booking(NULL),
-  pg_temp.s11s2_create_booking(NULL),
-  pg_temp.s11s2_create_booking(NULL),
-  pg_temp.s11s2_create_booking(NULL),
-  pg_temp.s11s2_create_booking(NULL),
-  pg_temp.s11s2_create_booking(NULL),
-  pg_temp.s11s2_create_booking(NULL),
-  pg_temp.s11s2_create_booking(NULL),
+  pg_temp.s11s2_create_booking('8c000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s2_create_booking('8c000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s2_create_booking('8c000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s2_create_booking('8c000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s2_create_booking('8c000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s2_create_booking('8c000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s2_create_booking('8c000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s2_create_booking('8c000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s2_create_booking('8c000000-0000-0000-0000-000000000701'::uuid),
   pg_temp.s11s2_create_booking(
     '8c000000-0000-0000-0000-000000000702'
   ),
-  pg_temp.s11s2_create_booking(NULL),
-  pg_temp.s11s2_create_booking(NULL),
-  pg_temp.s11s2_create_booking(NULL)
+  pg_temp.s11s2_create_booking('8c000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s2_create_booking('8c000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s2_create_booking('8c000000-0000-0000-0000-000000000701'::uuid)
 );
 
 -- Reserve all schedules that are expected to have authoritative evidence.

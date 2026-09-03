@@ -587,7 +587,7 @@ VALUES
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
   '89000000-0000-0000-0000-000000000015',
   'active',
-  'S10 Orgwide Branch Photographer'
+  'S10 Multi-Branch Photographer'
 ),
 (
   '89000000-0000-0000-0000-000000000116',
@@ -622,17 +622,17 @@ SELECT
 FROM (
   VALUES
     ('89000000-0000-0000-0000-000000000101'::uuid, 'founder'::text, NULL::uuid),
-    ('89000000-0000-0000-0000-000000000102'::uuid, 'studio_manager', NULL::uuid),
-    ('89000000-0000-0000-0000-000000000103'::uuid, 'client_coordinator', NULL::uuid),
-    ('89000000-0000-0000-0000-000000000104'::uuid, 'photographer', NULL::uuid),
-    ('89000000-0000-0000-0000-000000000105'::uuid, 'photographer', NULL::uuid),
-    ('89000000-0000-0000-0000-000000000106'::uuid, 'assistant', NULL::uuid),
-    ('89000000-0000-0000-0000-000000000107'::uuid, 'assistant', NULL::uuid),
-    ('89000000-0000-0000-0000-000000000108'::uuid, 'stylist', NULL::uuid),
-    ('89000000-0000-0000-0000-000000000109'::uuid, 'assistant', NULL::uuid),
-    ('89000000-0000-0000-0000-000000000110'::uuid, 'stylist', NULL::uuid),
-    ('89000000-0000-0000-0000-000000000111'::uuid, 'photographer', NULL::uuid),
-    ('89000000-0000-0000-0000-000000000112'::uuid, 'photographer', NULL::uuid)
+    ('89000000-0000-0000-0000-000000000102'::uuid, 'studio_manager', 'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid),
+    ('89000000-0000-0000-0000-000000000103'::uuid, 'client_coordinator', 'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid),
+    ('89000000-0000-0000-0000-000000000104'::uuid, 'photographer', 'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid),
+    ('89000000-0000-0000-0000-000000000105'::uuid, 'photographer', 'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid),
+    ('89000000-0000-0000-0000-000000000106'::uuid, 'assistant', 'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid),
+    ('89000000-0000-0000-0000-000000000107'::uuid, 'assistant', 'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid),
+    ('89000000-0000-0000-0000-000000000108'::uuid, 'stylist', 'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid),
+    ('89000000-0000-0000-0000-000000000109'::uuid, 'assistant', 'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid),
+    ('89000000-0000-0000-0000-000000000110'::uuid, 'stylist', 'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid),
+    ('89000000-0000-0000-0000-000000000111'::uuid, 'photographer', 'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid),
+    ('89000000-0000-0000-0000-000000000112'::uuid, 'photographer', 'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid)
 ) AS fixture(member_id, role_key, branch_id)
 JOIN public.roles role
   ON role.key =
@@ -729,7 +729,12 @@ FROM (
     (
       '89000000-0000-0000-0000-000000000115'::uuid,
       'photographer',
-      NULL::uuid
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    ),
+    (
+      '89000000-0000-0000-0000-000000000115'::uuid,
+      'photographer',
+      '89000000-0000-0000-0000-000000000201'::uuid
     ),
     (
       '89000000-0000-0000-0000-000000000116'::uuid,
@@ -756,7 +761,7 @@ VALUES
 (
   '89000000-0000-0000-0000-000000000401',
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
-  NULL,
+  'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid,
   'QT-45678A',
   'S10 Team Base Family',
   'Team Base Family',
@@ -1303,12 +1308,12 @@ SELECT throws_ok(
     'lead_photographer',
     '89000000-0000-0000-0000-000000000113',
     true,
-    'Branch-only member on branchless booking'
+    'Branch-A member on Coimbatore booking'
   )
   $$,
   '22023',
   'assign_booking_team_member: target member lacks qualifying operational role for booking scope',
-  'branchless booking requires an organization-wide qualifying role'
+  'Branch-A-only Photographer cannot satisfy Coimbatore booking eligibility'
 );
 
 -- 47
@@ -1902,7 +1907,7 @@ WHERE state.booking_id =
 -- 65
 SELECT lives_ok(
   $$
-  CREATE TEMP TABLE s10t_branch_orgwide_lead AS
+  CREATE TEMP TABLE s10t_branch_multibranch_lead AS
   SELECT *
   FROM public.assign_booking_team_member(
     (SELECT id FROM s10t_booking_branch),
@@ -1912,7 +1917,7 @@ SELECT lives_ok(
     NULL
   )
   $$,
-  'organization-wide Photographer qualifies for a branch-scoped booking'
+  'multi-branch Photographer qualifies within its Branch-A scope'
 );
 
 -- 66
@@ -1976,7 +1981,7 @@ SELECT ok(
     WHERE assignment.booking_id =
           (SELECT id FROM s10t_booking_branch)
   ) > 0,
-  'branch-scoped Coordinator sees branch staffing but not NULL-branch staffing'
+  'branch-scoped Coordinator sees Branch-A staffing but not Coimbatore staffing'
 );
 
 RESET ROLE;

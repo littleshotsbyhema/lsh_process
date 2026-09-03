@@ -139,27 +139,32 @@ VALUES
 INSERT INTO public.member_role_grants (
   organization_id,
   organization_member_id,
-  role_id
+  role_id,
+  branch_id
 )
 SELECT
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   fixture.member_id,
-  role.id
+  role.id,
+  fixture.branch_id
 FROM (
   VALUES
     (
       '8a000000-0000-0000-0000-000000000101'::uuid,
-      'founder'::text
+      'founder'::text,
+      NULL::uuid
     ),
     (
       '8a000000-0000-0000-0000-000000000102'::uuid,
-      'photographer'::text
+      'photographer'::text,
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
     ),
     (
       '8a000000-0000-0000-0000-000000000103'::uuid,
-      'stylist'::text
+      'stylist'::text,
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
     )
-) AS fixture(member_id, role_key)
+) AS fixture(member_id, role_key, branch_id)
 JOIN public.roles role
   ON role.key =
      fixture.role_key;
@@ -185,6 +190,7 @@ SELECT set_config(
 INSERT INTO public.families (
   id,
   organization_id,
+  branch_id,
   family_code,
   display_name,
   sort_name,
@@ -195,6 +201,7 @@ INSERT INTO public.families (
 VALUES (
   '8a000000-0000-0000-0000-000000000201',
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
+  'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid,
   'LSH-23456A',
   'S10 Slice 6 Maternity Family',
   'Slice 6 Maternity Family',
@@ -1807,7 +1814,7 @@ SELECT
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   '8a000000-0000-0000-0000-000000000104'::uuid,
   role.id,
-  NULL::uuid
+  'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
 FROM public.roles role
 WHERE role.key =
       'videographer';
@@ -2013,7 +2020,7 @@ SELECT
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   fixture.member_id,
   role.id,
-  NULL::uuid
+  'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
 FROM (
   VALUES
     (
@@ -3371,7 +3378,7 @@ SELECT throws_ok(
   $$,
   '42501',
   'mark_booking_shoot_scheduled: booking.stage.advance permission required',
-  'branch-scoped Coordinator cannot advance a NULL-branch booking'
+  'Branch-301 Coordinator cannot advance a Coimbatore booking outside its granted scope'
 );
 
 SELECT set_config(

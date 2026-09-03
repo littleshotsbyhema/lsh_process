@@ -281,22 +281,22 @@ FROM (
     (
       '8d000000-0000-0000-0000-000000000102'::uuid,
       'studio_manager'::text,
-      NULL::uuid
+      '8d000000-0000-0000-0000-000000000701'::uuid
     ),
     (
       '8d000000-0000-0000-0000-000000000103'::uuid,
       'client_coordinator'::text,
-      NULL::uuid
+      '8d000000-0000-0000-0000-000000000701'::uuid
     ),
     (
       '8d000000-0000-0000-0000-000000000104'::uuid,
       'photographer'::text,
-      NULL::uuid
+      '8d000000-0000-0000-0000-000000000701'::uuid
     ),
     (
       '8d000000-0000-0000-0000-000000000105'::uuid,
       'editor'::text,
-      NULL::uuid
+      '8d000000-0000-0000-0000-000000000701'::uuid
     ),
     (
       '8d000000-0000-0000-0000-000000000106'::uuid,
@@ -594,22 +594,22 @@ CREATE TEMP TABLE s11s4_ids (
 
 INSERT INTO s11s4_ids
 VALUES (
-  pg_temp.s11s4_create_booking(NULL),
-  pg_temp.s11s4_create_booking(NULL),
-  pg_temp.s11s4_create_booking(NULL),
-  pg_temp.s11s4_create_booking(NULL),
-  pg_temp.s11s4_create_booking(NULL),
-  pg_temp.s11s4_create_booking(NULL),
-  pg_temp.s11s4_create_booking(NULL),
-  pg_temp.s11s4_create_booking(NULL),
-  pg_temp.s11s4_create_booking(NULL),
+  pg_temp.s11s4_create_booking('8d000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s4_create_booking('8d000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s4_create_booking('8d000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s4_create_booking('8d000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s4_create_booking('8d000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s4_create_booking('8d000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s4_create_booking('8d000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s4_create_booking('8d000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s4_create_booking('8d000000-0000-0000-0000-000000000701'::uuid),
   pg_temp.s11s4_create_booking(
     '8d000000-0000-0000-0000-000000000702'
   ),
-  pg_temp.s11s4_create_booking(NULL),
-  pg_temp.s11s4_create_booking(NULL),
-  pg_temp.s11s4_create_booking(NULL),
-  pg_temp.s11s4_create_booking(NULL)
+  pg_temp.s11s4_create_booking('8d000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s4_create_booking('8d000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s4_create_booking('8d000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11s4_create_booking('8d000000-0000-0000-0000-000000000701'::uuid)
 );
 
 SELECT pg_temp.s11s4_prepare_stage11(
