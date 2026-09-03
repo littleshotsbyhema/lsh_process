@@ -46,12 +46,17 @@ VALUES
 INSERT INTO public.member_role_grants (
   organization_id,
   organization_member_id,
-  role_id
+  role_id,
+  branch_id
 )
 SELECT
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   fixture.member_id,
-  r.id
+  r.id,
+  CASE
+    WHEN fixture.role_key = 'founder' THEN NULL::uuid
+    ELSE 'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+  END
 FROM (
   VALUES
     (
@@ -86,6 +91,7 @@ SELECT set_config(
 INSERT INTO public.families (
   id,
   organization_id,
+  branch_id,
   family_code,
   display_name,
   sort_name,
@@ -96,6 +102,7 @@ INSERT INTO public.families (
 VALUES (
   '84000000-0000-0000-0000-000000000020',
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
+  'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid,
   'QT-456789',
   'Sprint 9 Confirmation Family',
   'Confirmation Family',

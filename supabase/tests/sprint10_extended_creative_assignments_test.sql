@@ -281,15 +281,15 @@ SELECT is(
 -- 19
 SELECT is(
   (SELECT count(*)::bigint FROM public.roles),
-  12::bigint,
-  'Slice 6A canonical role count is 12'
+  13::bigint,
+  'Slice 6A canonical role count is 13'
 );
 
 -- 20
 SELECT is(
   (SELECT count(*)::bigint FROM public.role_permissions),
-  233::bigint,
-  'current canonical role-permission mapping count is 233'
+  257::bigint,
+  'current canonical role-permission mapping count is 257'
 );
 
 -- =====================================================================
@@ -677,30 +677,35 @@ SELECT
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   fixture.member_id,
   role.id,
-  NULL::uuid
+  fixture.branch_id
 FROM (
   VALUES
     (
       '8a000000-0000-0000-0000-000000000101'::uuid,
-      'founder'::text
+      'founder'::text,
+      NULL::uuid
     ),
     (
       '8a000000-0000-0000-0000-000000000102'::uuid,
-      'videographer'
+      'videographer',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
     ),
     (
       '8a000000-0000-0000-0000-000000000103'::uuid,
-      'videographer'
+      'videographer',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
     ),
     (
       '8a000000-0000-0000-0000-000000000104'::uuid,
-      'photographer'
+      'photographer',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
     ),
     (
       '8a000000-0000-0000-0000-000000000105'::uuid,
-      'photographer'
+      'photographer',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
     )
-) AS fixture(member_id, role_key)
+) AS fixture(member_id, role_key, branch_id)
 JOIN public.roles role
   ON role.key =
      fixture.role_key;
@@ -737,7 +742,7 @@ INSERT INTO public.families (
 VALUES (
   '8a000000-0000-0000-0000-000000000401',
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
-  NULL,
+  'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid,
   'QZ-6789AB',
   'S10 Slice 6A Runtime Family',
   'Slice 6A Runtime Family',
@@ -1976,7 +1981,7 @@ SELECT ok(
     WHERE assignment.booking_id =
           (SELECT id FROM s10_6a_booking)
   ) = 0,
-  'branch-scoped Client Coordinator sees branch-A staffing but not branch-B or branchless staffing'
+  'branch-scoped Client Coordinator sees branch-A staffing but not branch-B or other-branch staffing'
 );
 
 RESET ROLE;

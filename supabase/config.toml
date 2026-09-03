@@ -6,3 +6,10 @@ additional_redirect_urls = [
   "http://localhost:8080",
   "http://localhost:8080/**"
 ]
+
+[auth.email]
+enable_confirmations = true
+
+[auth.email.template.confirmation]
+subject = "Your Little Moments OS confirmation code"
+content_path = "./supabase/templates/confirmation.html"

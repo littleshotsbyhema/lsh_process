@@ -553,6 +553,7 @@ SELECT set_config(
 INSERT INTO public.families (
   id,
   organization_id,
+  branch_id,
   family_code,
   display_name,
   sort_name,
@@ -563,6 +564,7 @@ INSERT INTO public.families (
 VALUES (
   '87000000-0000-0000-0000-000000000020',
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
+  'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid,
   'QT-345678',
   'Sprint 10 Preparation Family A',
   'Preparation Family A',
@@ -991,12 +993,14 @@ VALUES
 INSERT INTO public.member_role_grants (
   organization_id,
   organization_member_id,
-  role_id
+  role_id,
+  branch_id
 )
 SELECT
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   fixture.member_id,
-  r.id
+  r.id,
+  'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
 FROM (
   VALUES
     (
@@ -1071,6 +1075,7 @@ SELECT set_config(
 INSERT INTO public.families (
   id,
   organization_id,
+  branch_id,
   family_code,
   display_name,
   sort_name,
@@ -1081,6 +1086,7 @@ INSERT INTO public.families (
 VALUES (
   '87000000-0000-0000-0000-000000000021',
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
+  'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid,
   'QT-345679',
   'Sprint 10 Preparation Family B',
   'Preparation Family B',
@@ -1433,6 +1439,7 @@ SELECT set_config(
 INSERT INTO public.families (
   id,
   organization_id,
+  branch_id,
   family_code,
   display_name,
   sort_name,
@@ -1443,6 +1450,7 @@ INSERT INTO public.families (
 VALUES (
   '87000000-0000-0000-0000-000000000022',
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
+  'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid,
   'QT-34567A',
   'Sprint 10 Preparation Family C',
   'Preparation Family C',

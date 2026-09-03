@@ -132,53 +132,96 @@ VALUES
   now()
 );
 
+
+-- Migration A reconciliation:
+-- operational roles are branch-scoped. C1 uses one deterministic
+-- Organization A branch for the legacy Team-access behavior matrix.
+INSERT INTO public.branches (
+  id,
+  organization_id,
+  name,
+  code,
+  status
+)
+VALUES (
+  '9b400000-0000-0000-0000-000000000001',
+  '9b100000-0000-0000-0000-000000000001',
+  'Branch A',
+  'branch-a',
+  'active'::public.branch_status
+);
+
+
 INSERT INTO public.member_role_grants (
   organization_id,
   organization_member_id,
   role_id,
-  branch_id,
-  granted_by
+  branch_id
 )
 SELECT
   fixture.organization_id,
-  fixture.member_id,
+  fixture.organization_member_id,
   role_row.id,
-  NULL,
-  fixture.granted_by
+  fixture.branch_id
+
 FROM (
   VALUES
     (
       '9b100000-0000-0000-0000-000000000001'::uuid,
       '9b200000-0000-0000-0000-000000000001'::uuid,
       'founder'::text,
-      '9b200000-0000-0000-0000-000000000001'::uuid
+      NULL::uuid
     ),
     (
       '9b100000-0000-0000-0000-000000000001'::uuid,
       '9b200000-0000-0000-0000-000000000002'::uuid,
       'studio_manager'::text,
-      '9b200000-0000-0000-0000-000000000001'::uuid
+      '9b400000-0000-0000-0000-000000000001'::uuid
     ),
     (
       '9b100000-0000-0000-0000-000000000001'::uuid,
       '9b200000-0000-0000-0000-000000000003'::uuid,
       'client_coordinator'::text,
-      '9b200000-0000-0000-0000-000000000001'::uuid
+      '9b400000-0000-0000-0000-000000000001'::uuid
     ),
     (
       '9b100000-0000-0000-0000-000000000002'::uuid,
       '9b200000-0000-0000-0000-000000000008'::uuid,
       'founder'::text,
-      '9b200000-0000-0000-0000-000000000008'::uuid
+      NULL::uuid
     )
 ) AS fixture(
   organization_id,
-  member_id,
+  organization_member_id,
   role_key,
-  granted_by
+  branch_id
 )
+
 JOIN public.roles role_row
-  ON role_row.key = fixture.role_key;
+  ON role_row.key =
+     fixture.role_key;
+
+
+-- Migration A reconciliation:
+-- every active organization must have exactly one canonical Brand Owner
+-- backed by an active organization-wide Founder grant.
+INSERT INTO public.organization_brand_owners (
+  organization_id,
+  organization_member_id,
+  established_by
+)
+VALUES
+(
+  '9b100000-0000-0000-0000-000000000001',
+  '9b200000-0000-0000-0000-000000000001',
+  '9b200000-0000-0000-0000-000000000001'
+),
+(
+  '9b100000-0000-0000-0000-000000000002',
+  '9b200000-0000-0000-0000-000000000008',
+  '9b200000-0000-0000-0000-000000000008'
+);
+
 
 -- Prove the isolated fixtures satisfy existing deferred Founder coverage
 -- before behavioral testing begins.
@@ -396,19 +439,35 @@ SELECT set_config(
   true
 );
 
+
+-- 12
+SELECT throws_ok(
+  $$
+    SELECT *
+    FROM public.create_organization_invitation(
+      '9b100000-0000-0000-0000-000000000001',
+      'slice7b-branch-role-denied@example.com',
+      'Branch Role Denied',
+      ARRAY['photographer']::text[],
+      336
+    )
+  $$,
+  '42501',
+  'invitation role scope rejected: role photographer does not permit organization-wide access',
+  'Founder cannot pre-authorize a branch-only role through the unscoped invitation API'
+);
+
+
 CREATE TEMP TABLE s10ca_founder_invite AS
 SELECT *
 FROM public.create_organization_invitation(
   '9b100000-0000-0000-0000-000000000001',
   'slice7b-invitee@example.com',
   'Slice 7B Invitee',
-  ARRAY[
-    'photographer',
-    'assistant',
-    'assistant'
-  ]::text[],
+  ARRAY[]::text[],
   336
 );
+
 
 SELECT set_config(
   'test.slice7b.founder_token',
@@ -419,25 +478,20 @@ SELECT set_config(
   true
 );
 
--- 12
-SELECT is(
-  (SELECT count(*)::bigint FROM s10ca_founder_invite),
-  1::bigint,
-  'Founder can create a role-bearing invitation'
-);
 
 -- 13
-SELECT is(
+SELECT ok(
   (
-    SELECT role_keys
+    SELECT
+      count(*) = 1
+      AND bool_and(
+        cardinality(role_keys) = 0
+      )
     FROM s10ca_founder_invite
   ),
-  ARRAY[
-    'assistant',
-    'photographer'
-  ]::text[],
-  'invitation role keys are canonicalized and de-duplicated'
+  'Founder can create the canonical role-less invitation used for acceptance'
 );
+
 
 -- 14
 SELECT is(
@@ -456,6 +510,7 @@ SELECT is(
   'Founder invitation appears in the canonical pending invitation directory'
 );
 
+
 -- 15
 SELECT is(
   (
@@ -470,6 +525,7 @@ SELECT is(
   'valid pending invitation token can be previewed'
 );
 
+
 -- 16
 SELECT ok(
   (
@@ -481,18 +537,17 @@ SELECT ok(
       AND preview.full_name =
         'Slice 7B Invitee'
       AND preview.role_keys =
-        ARRAY[
-          'photographer',
-          'assistant'
-        ]::text[]
+        ARRAY[]::text[]
+
     FROM public.preview_organization_invitation(
       current_setting(
         'test.slice7b.founder_token'
       )
     ) preview
   ),
-  'token preview exposes only the intended invitation projection'
+  'token preview exposes the intended role-less invitation projection'
 );
+
 
 -- 17
 SELECT is(
@@ -710,28 +765,30 @@ SELECT ok(
 SELECT is(
   (
     SELECT count(*)::bigint
+
     FROM public.member_role_grants grant_row
-    JOIN public.roles role_row
-      ON role_row.id = grant_row.role_id
+
     WHERE grant_row.organization_id =
           '9b100000-0000-0000-0000-000000000001'
+
       AND grant_row.organization_member_id = (
         SELECT member_row.id
+
         FROM public.organization_members member_row
+
         WHERE member_row.organization_id =
               '9b100000-0000-0000-0000-000000000001'
+
           AND member_row.user_id =
               '9b000000-0000-0000-0000-000000000004'
       )
+
       AND grant_row.revoked_at IS NULL
-      AND role_row.key IN (
-        'assistant',
-        'photographer'
-      )
   ),
-  2::bigint,
-  'acceptance materializes the two pre-authorized canonical role grants'
+  0::bigint,
+  'role-less invitation acceptance creates membership without operational authority'
 );
+
 
 -- 27
 SELECT ok(
@@ -789,6 +846,79 @@ SELECT set_config(
   true
 );
 
+
+-- Establish the accepted member's operational roles explicitly on
+-- Branch A. Invitation acceptance itself intentionally granted none.
+SELECT public.grant_organization_member_role(
+  '9b100000-0000-0000-0000-000000000001',
+  (
+    SELECT member_row.id
+    FROM public.organization_members member_row
+    WHERE member_row.organization_id =
+          '9b100000-0000-0000-0000-000000000001'
+      AND member_row.user_id =
+          '9b000000-0000-0000-0000-000000000004'
+  ),
+  'photographer',
+  '9b400000-0000-0000-0000-000000000001'
+);
+
+SELECT public.grant_organization_member_role(
+  '9b100000-0000-0000-0000-000000000001',
+  (
+    SELECT member_row.id
+    FROM public.organization_members member_row
+    WHERE member_row.organization_id =
+          '9b100000-0000-0000-0000-000000000001'
+      AND member_row.user_id =
+          '9b000000-0000-0000-0000-000000000004'
+  ),
+  'assistant',
+  '9b400000-0000-0000-0000-000000000001'
+);
+
+
+-- 29
+SELECT is(
+  (
+    SELECT count(*)::bigint
+
+    FROM public.member_role_grants grant_row
+
+    JOIN public.roles role_row
+      ON role_row.id =
+         grant_row.role_id
+
+    WHERE grant_row.organization_id =
+          '9b100000-0000-0000-0000-000000000001'
+
+      AND grant_row.organization_member_id = (
+        SELECT member_row.id
+
+        FROM public.organization_members member_row
+
+        WHERE member_row.organization_id =
+              '9b100000-0000-0000-0000-000000000001'
+
+          AND member_row.user_id =
+              '9b000000-0000-0000-0000-000000000004'
+      )
+
+      AND grant_row.branch_id =
+          '9b400000-0000-0000-0000-000000000001'
+
+      AND grant_row.revoked_at IS NULL
+
+      AND role_row.key IN (
+        'assistant',
+        'photographer'
+      )
+  ),
+  2::bigint,
+  'Founder explicitly establishes the accepted member operational roles on Branch A'
+);
+
+
 CREATE TEMP TABLE s10ca_editor_grant_1 AS
 SELECT
   public.grant_organization_member_role(
@@ -802,17 +932,9 @@ SELECT
             '9b000000-0000-0000-0000-000000000004'
     ),
     'editor',
-    NULL
+    '9b400000-0000-0000-0000-000000000001'
   ) AS grant_id;
 
--- 29
-SELECT ok(
-  (
-    SELECT grant_id IS NOT NULL
-    FROM s10ca_editor_grant_1
-  ),
-  'Founder can grant an organization-wide canonical role'
-);
 
 CREATE TEMP TABLE s10ca_editor_grant_2 AS
 SELECT
@@ -827,21 +949,24 @@ SELECT
             '9b000000-0000-0000-0000-000000000004'
     ),
     'editor',
-    NULL
+    '9b400000-0000-0000-0000-000000000001'
   ) AS grant_id;
 
+
 -- 30
-SELECT is(
+SELECT ok(
   (
-    SELECT grant_id
-    FROM s10ca_editor_grant_2
+    SELECT
+      first_grant.grant_id IS NOT NULL
+      AND second_grant.grant_id =
+          first_grant.grant_id
+
+    FROM s10ca_editor_grant_1 first_grant
+    CROSS JOIN s10ca_editor_grant_2 second_grant
   ),
-  (
-    SELECT grant_id
-    FROM s10ca_editor_grant_1
-  ),
-  'granting the same live role twice is idempotent'
+  'Founder can grant Branch A Editor and repeating the same live grant is idempotent'
 );
+
 
 -- 31
 SELECT is(
@@ -856,30 +981,40 @@ SELECT is(
             '9b000000-0000-0000-0000-000000000004'
     ),
     'editor',
-    NULL,
+    '9b400000-0000-0000-0000-000000000001',
     'Slice 7B behavioral revocation'
   ),
   true,
-  'Founder can revoke a live canonical role grant'
+  'Founder can revoke a live Branch A canonical role grant'
 );
+
 
 -- 32
 SELECT ok(
   EXISTS (
     SELECT 1
+
     FROM public.member_role_grants grant_row
+
     WHERE grant_row.id = (
       SELECT grant_id
       FROM s10ca_editor_grant_1
     )
+
+      AND grant_row.branch_id =
+          '9b400000-0000-0000-0000-000000000001'
+
       AND grant_row.revoked_at IS NOT NULL
+
       AND grant_row.revoked_by =
           '9b200000-0000-0000-0000-000000000001'
+
       AND grant_row.revocation_reason =
           'Slice 7B behavioral revocation'
   ),
-  'role revocation preserves the historical grant row'
+  'Branch A role revocation preserves the historical grant row'
 );
+
 
 -- 33
 SELECT is(
@@ -894,12 +1029,13 @@ SELECT is(
             '9b000000-0000-0000-0000-000000000004'
     ),
     'editor',
-    NULL,
+    '9b400000-0000-0000-0000-000000000001',
     'Repeated revocation'
   ),
   false,
-  'revoking a role with no live grant is idempotent'
+  'revoking a Branch A role with no live grant is idempotent'
 );
+
 
 CREATE TEMP TABLE s10ca_editor_grant_3 AS
 SELECT
@@ -914,8 +1050,9 @@ SELECT
             '9b000000-0000-0000-0000-000000000004'
     ),
     'editor',
-    NULL
+    '9b400000-0000-0000-0000-000000000001'
   ) AS grant_id;
+
 
 -- 34
 SELECT isnt(
@@ -927,33 +1064,48 @@ SELECT isnt(
     SELECT grant_id
     FROM s10ca_editor_grant_1
   ),
-  'granting a previously revoked role creates new historical evidence'
+  'regranting previously revoked Branch A Editor creates new historical evidence'
 );
+
 
 -- 35
 SELECT ok(
   (
     SELECT
       count(*) = 2
+
       AND count(*) FILTER (
         WHERE grant_row.revoked_at IS NULL
       ) = 1
+
     FROM public.member_role_grants grant_row
+
     JOIN public.roles role_row
-      ON role_row.id = grant_row.role_id
+      ON role_row.id =
+         grant_row.role_id
+
     WHERE grant_row.organization_id =
           '9b100000-0000-0000-0000-000000000001'
+
       AND grant_row.organization_member_id = (
         SELECT member_row.id
+
         FROM public.organization_members member_row
+
         WHERE member_row.organization_id =
               '9b100000-0000-0000-0000-000000000001'
+
           AND member_row.user_id =
               '9b000000-0000-0000-0000-000000000004'
       )
-      AND role_row.key = 'editor'
+
+      AND role_row.key =
+          'editor'
+
+      AND grant_row.branch_id =
+          '9b400000-0000-0000-0000-000000000001'
   ),
-  'role history contains one revoked grant and one current live grant'
+  'Branch A Editor history contains one revoked grant and one current live grant'
 );
 
 

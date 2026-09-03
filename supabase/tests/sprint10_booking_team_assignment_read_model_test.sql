@@ -254,21 +254,53 @@ INSERT INTO public.member_role_grants (
   branch_id
 )
 SELECT
-  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
   fixture.member_id,
   role_row.id,
-  NULL
+  fixture.branch_id
 FROM (
   VALUES
-    ('7b000000-0000-0000-0000-000000000001'::uuid, 'founder'::text),
-    ('7b000000-0000-0000-0000-000000000002'::uuid, 'videographer'),
-    ('7b000000-0000-0000-0000-000000000004'::uuid, 'videographer'),
-    ('7b000000-0000-0000-0000-000000000006'::uuid, 'photographer'),
-    ('7b000000-0000-0000-0000-000000000007'::uuid, 'photographer'),
-    ('7b000000-0000-0000-0000-000000000008'::uuid, 'assistant'),
-    ('7b000000-0000-0000-0000-000000000009'::uuid, 'stylist'),
-    ('7b000000-0000-0000-0000-000000000010'::uuid, 'videographer')
-) AS fixture(member_id, role_key)
+    (
+      '7b000000-0000-0000-0000-000000000001'::uuid,
+      'founder'::text,
+      NULL::uuid
+    ),
+    (
+      '7b000000-0000-0000-0000-000000000002'::uuid,
+      'videographer',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    ),
+    (
+      '7b000000-0000-0000-0000-000000000004'::uuid,
+      'videographer',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    ),
+    (
+      '7b000000-0000-0000-0000-000000000006'::uuid,
+      'photographer',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    ),
+    (
+      '7b000000-0000-0000-0000-000000000007'::uuid,
+      'photographer',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    ),
+    (
+      '7b000000-0000-0000-0000-000000000008'::uuid,
+      'assistant',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    ),
+    (
+      '7b000000-0000-0000-0000-000000000009'::uuid,
+      'stylist',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    ),
+    (
+      '7b000000-0000-0000-0000-000000000010'::uuid,
+      'videographer',
+      'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
+    )
+) AS fixture(member_id, role_key, branch_id)
 JOIN public.roles role_row
   ON role_row.key =
      fixture.role_key;
@@ -338,6 +370,29 @@ FROM public.roles role_row
 WHERE role_row.key =
       'videographer';
 
+-- S7L Photographer cross-branch role scopes.
+-- Member ...007 is staffing evidence on the base, Branch A and Branch B
+-- bookings, so its operational role must cover all three booking scopes.
+INSERT INTO public.member_role_grants (
+  organization_id,
+  organization_member_id,
+  role_id,
+  branch_id
+)
+SELECT
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  '7b000000-0000-0000-0000-000000000007'::uuid,
+  role_row.id,
+  fixture.branch_id
+FROM (
+  VALUES
+    ('7c000000-0000-0000-0000-000000000001'::uuid),
+    ('7c000000-0000-0000-0000-000000000002'::uuid)
+) AS fixture(branch_id)
+JOIN public.roles role_row
+  ON role_row.key = 'photographer';
+
+
 UPDATE public.organization_members
 SET
   status =
@@ -364,7 +419,7 @@ VALUES
 (
   '7d000000-0000-0000-0000-000000000001',
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
-  NULL,
+  'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid,
   'QT-45723A',
   'S7L Base Family',
   'S7L Base Family',
@@ -933,12 +988,12 @@ SELECT ok(
   public.has_permission(
     '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
     'booking.read',
-    NULL
+    'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
   )
   AND NOT public.has_permission(
     '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc',
     'team.read',
-    NULL
+    'bcf1cb6a-6e85-4f59-a10a-28a1aeb1c5b1'::uuid
   ),
   'Videographer fixture has booking.read without team.read'
 );

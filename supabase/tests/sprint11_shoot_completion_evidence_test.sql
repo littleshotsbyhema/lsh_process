@@ -427,22 +427,22 @@ FROM (
     (
       '8b000000-0000-0000-0000-000000000102'::uuid,
       'photographer'::text,
-      NULL::uuid
+      '8b000000-0000-0000-0000-000000000701'::uuid
     ),
     (
       '8b000000-0000-0000-0000-000000000103'::uuid,
       'stylist'::text,
-      NULL::uuid
+      '8b000000-0000-0000-0000-000000000701'::uuid
     ),
     (
       '8b000000-0000-0000-0000-000000000104'::uuid,
       'client_coordinator'::text,
-      NULL::uuid
+      '8b000000-0000-0000-0000-000000000701'::uuid
     ),
     (
       '8b000000-0000-0000-0000-000000000105'::uuid,
       'photographer'::text,
-      NULL::uuid
+      '8b000000-0000-0000-0000-000000000701'::uuid
     ),
     (
       '8b000000-0000-0000-0000-000000000106'::uuid,
@@ -739,9 +739,9 @@ INSERT INTO s11_ids (
   completed_at
 )
 VALUES (
-  pg_temp.s11_create_booking(NULL),
-  pg_temp.s11_create_booking(NULL),
-  pg_temp.s11_create_booking(NULL),
+  pg_temp.s11_create_booking('8b000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11_create_booking('8b000000-0000-0000-0000-000000000701'::uuid),
+  pg_temp.s11_create_booking('8b000000-0000-0000-0000-000000000701'::uuid),
   pg_temp.s11_create_booking(
     '8b000000-0000-0000-0000-000000000702'
   ),
