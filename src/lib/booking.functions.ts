@@ -579,36 +579,41 @@ export const listBookingWorkspace = createServerFn({
 
     throwIfError(bookingSelectionCompletionsResult.error);
 
+    const bookingSelectionCompletions = bookingSelectionCompletionsResult.data ?? [];
+    const selectionCompletionIds = bookingSelectionCompletions.map((completion) => completion.id);
+
     const bookingSelectedImages: BookingSelectedImageRow[] = [];
     const selectedImagesPageSize = 1000;
 
-    for (let from = 0; ; from += selectedImagesPageSize) {
-      const selectedImagesPageResult = await context.supabase
-        .from("booking_selected_images")
-        .select("*")
-        .in("booking_id", bookingIds)
-        .order("booking_id", {
-          ascending: true,
-        })
-        .order("ordinal", {
-          ascending: true,
-          nullsFirst: true,
-        })
-        .order("created_at", {
-          ascending: true,
-        })
-        .order("id", {
-          ascending: true,
-        })
-        .range(from, from + selectedImagesPageSize - 1);
+    if (selectionCompletionIds.length > 0) {
+      for (let from = 0; ; from += selectedImagesPageSize) {
+        const selectedImagesPageResult = await context.supabase
+          .from("booking_selected_images")
+          .select("*")
+          .in("selection_completion_id", selectionCompletionIds)
+          .order("booking_id", {
+            ascending: true,
+          })
+          .order("ordinal", {
+            ascending: true,
+            nullsFirst: true,
+          })
+          .order("created_at", {
+            ascending: true,
+          })
+          .order("id", {
+            ascending: true,
+          })
+          .range(from, from + selectedImagesPageSize - 1);
 
-      throwIfError(selectedImagesPageResult.error);
+        throwIfError(selectedImagesPageResult.error);
 
-      const selectedImagesPage = selectedImagesPageResult.data ?? [];
-      bookingSelectedImages.push(...selectedImagesPage);
+        const selectedImagesPage = selectedImagesPageResult.data ?? [];
+        bookingSelectedImages.push(...selectedImagesPage);
 
-      if (selectedImagesPage.length < selectedImagesPageSize) {
-        break;
+        if (selectedImagesPage.length < selectedImagesPageSize) {
+          break;
+        }
       }
     }
 
@@ -647,7 +652,7 @@ export const listBookingWorkspace = createServerFn({
       bookingSafetyReadiness,
       bookingSafetySignoffs,
       bookingShootCompletions: bookingShootCompletionsResult.data ?? [],
-      bookingSelectionCompletions: bookingSelectionCompletionsResult.data ?? [],
+      bookingSelectionCompletions,
       bookingSelectedImages,
       bookingTeamAssignmentHistory,
       bookingServiceCategories,
