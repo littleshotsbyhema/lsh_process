@@ -211,7 +211,20 @@ CREATE TABLE public.booking_selection_completions (
   CONSTRAINT booking_selection_completions_external_reference_chk
     CHECK (
       external_reference IS NULL
-      OR btrim(external_reference) <> ''
+      OR (
+        external_reference = btrim(external_reference)
+        AND external_reference <> ''
+        AND char_length(external_reference) <= 255
+        AND external_reference !~ '[[:cntrl:]]'
+        AND external_reference !~ '://'
+        AND external_reference !~* '^(https?|ftp):'
+        AND external_reference !~* 'www\.'
+        AND external_reference !~ '[?#]'
+        AND external_reference !~* '^(bearer|basic)[[:space:]]+'
+        AND external_reference !~* '^(sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.)'
+        AND external_reference !~* '^(token|secret|password|passwd|api[_-]?key|access[_-]?token|signature|sig)[[:space:]_:/=-]'
+        AND external_reference !~* '(^|[^[:alnum:]_])(token|access[_-]?token|secret|password|passwd|api[_-]?key|signature|sig|x-amz-[a-z0-9_-]+)[[:space:]]*[:=]'
+      )
     ),
 
   CONSTRAINT booking_selection_completions_booking_fkey
@@ -708,6 +721,30 @@ BEGIN
 
   v_external_reference :=
     NULLIF(btrim(p_external_reference), '');
+
+  IF v_external_reference IS NOT NULL
+     AND char_length(v_external_reference) > 255 THEN
+    RAISE EXCEPTION
+      'record_booking_selection_completion: external_reference exceeds maximum length of 255'
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF v_external_reference IS NOT NULL
+     AND (
+       v_external_reference ~ '[[:cntrl:]]'
+       OR v_external_reference ~ '://'
+       OR v_external_reference ~* '^(https?|ftp):'
+       OR v_external_reference ~* 'www\.'
+       OR v_external_reference ~ '[?#]'
+       OR v_external_reference ~* '^(bearer|basic)[[:space:]]+'
+       OR v_external_reference ~* '^(sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.)'
+       OR v_external_reference ~* '^(token|secret|password|passwd|api[_-]?key|access[_-]?token|signature|sig)[[:space:]_:/=-]'
+       OR v_external_reference ~* '(^|[^[:alnum:]_])(token|access[_-]?token|secret|password|passwd|api[_-]?key|signature|sig|x-amz-[a-z0-9_-]+)[[:space:]]*[:=]'
+     ) THEN
+    RAISE EXCEPTION
+      'record_booking_selection_completion: external_reference must be a non-secret opaque operational reference'
+      USING ERRCODE = '22023';
+  END IF;
 
   SELECT count(*)
   INTO v_state_count

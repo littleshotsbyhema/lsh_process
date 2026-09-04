@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(45);
+SELECT plan(55);
 
 -- =====================================================================
 -- Sprint 13 — Editing Pending
@@ -901,6 +901,164 @@ SELECT throws_ok(
 );
 SELECT pg_temp.s13_set_actor(
   '8e000000-0000-0000-0000-000000000001'
+);
+
+-- 46
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT no_selection_booking_id FROM s13_ids),
+       ARRAY['ER-001'],
+       'manual',
+       'https://gallery.example/client?token=signed-value'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: external_reference must be a non-secret opaque operational reference',
+  'selection completion rejects URL-shaped external references'
+);
+
+-- 47
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT no_selection_booking_id FROM s13_ids),
+       ARRAY['ER-001'],
+       'manual',
+       'PX-123?token=secret-value'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: external_reference must be a non-secret opaque operational reference',
+  'selection completion rejects query-shaped external references'
+);
+
+-- 48
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT no_selection_booking_id FROM s13_ids),
+       ARRAY['ER-001'],
+       'manual',
+       'Bearer ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: external_reference must be a non-secret opaque operational reference',
+  'selection completion rejects credential-shaped external references'
+);
+
+-- 49
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT no_selection_booking_id FROM s13_ids),
+       ARRAY['ER-001'],
+       'manual',
+       E'PX-123\nsecret'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: external_reference must be a non-secret opaque operational reference',
+  'selection completion rejects control-character external references'
+);
+
+-- 50
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT no_selection_booking_id FROM s13_ids),
+       ARRAY['ER-001'],
+       'manual',
+       repeat('R',256)
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: external_reference exceeds maximum length of 255',
+  'selection completion rejects oversized external references'
+);
+
+-- 51
+SELECT ok(
+  NOT EXISTS (
+    SELECT 1
+    FROM public.booking_selection_completions completion
+    WHERE completion.booking_id =
+          (SELECT no_selection_booking_id FROM s13_ids)
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.booking_selected_images selected
+    WHERE selected.booking_id =
+          (SELECT no_selection_booking_id FROM s13_ids)
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.audit_events audit
+    WHERE audit.action_key = 'booking.selection_completed'
+      AND audit.entity_id =
+          (SELECT no_selection_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT stage.stage_order = 12
+      AND stage.stage_key = 'selection_pending'
+    FROM public.booking_journey_states state
+    JOIN public.booking_journey_stages stage
+      ON stage.organization_id = state.organization_id
+     AND stage.id = state.current_stage_id
+    WHERE state.booking_id =
+          (SELECT no_selection_booking_id FROM s13_ids)
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.booking_stage_transitions transition_row
+    WHERE transition_row.booking_id =
+          (SELECT no_selection_booking_id FROM s13_ids)
+      AND transition_row.transition_key = 'editing_pending'
+  ),
+  'invalid external references create no evidence, audit, or journey mutation'
+);
+
+-- 52
+SELECT lives_ok(
+  $$
+  CREATE TEMP TABLE s13_null_external_completion AS
+  SELECT *
+  FROM public.record_booking_selection_completion(
+    (SELECT no_selection_booking_id FROM s13_ids),
+    ARRAY['NULL-ER-001'],
+    'manual',
+    '   '
+  )
+  $$,
+  'empty external reference remains allowed'
+);
+
+-- 53
+SELECT ok(
+  (
+    SELECT completion.external_reference IS NULL
+    FROM public.booking_selection_completions completion
+    WHERE completion.id =
+          (SELECT id FROM s13_null_external_completion)
+  ),
+  'empty external reference normalizes to NULL'
+);
+
+-- 54
+SELECT lives_ok(
+  $$
+  CREATE TEMP TABLE s13_valid_external_completion AS
+  SELECT *
+  FROM public.record_booking_selection_completion(
+    (SELECT photographer_booking_id FROM s13_ids),
+    ARRAY['VALID-ER-001'],
+    'manual',
+    ' EXT-REF-123 '
+  )
+  $$,
+  'bounded provider-neutral opaque external reference succeeds'
+);
+
+-- 55
+SELECT ok(
+  (
+    SELECT completion.external_reference = 'EXT-REF-123'
+    FROM public.booking_selection_completions completion
+    WHERE completion.id =
+          (SELECT id FROM s13_valid_external_completion)
+  ),
+  'valid external reference is trimmed and stored canonically'
 );
 
 -- Additional branch-read containment is validated by the table policies and
