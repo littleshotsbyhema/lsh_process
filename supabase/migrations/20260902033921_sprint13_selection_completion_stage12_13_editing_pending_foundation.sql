@@ -824,8 +824,7 @@ BEGIN
       'booking_id', v_booking.id,
       'selection_completion_id', v_result.id,
       'selected_image_count', cardinality(v_normalized_keys),
-      'completed_at', v_completed_at,
-      'source_type', v_source_type
+      'completed_at', v_completed_at
     ),
     'application',
     NULL

@@ -561,8 +561,15 @@ SELECT ok(
     WHERE audit.action_key = 'booking.selection_completed'
       AND audit.entity_id = (SELECT happy_booking_id FROM s13_ids)
       AND concat_ws(' ',audit.old_values::text,audit.new_values::text,audit.metadata::text) ILIKE '%IMG-00%'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.audit_events audit
+    WHERE audit.action_key = 'booking.selection_completed'
+      AND audit.entity_id = (SELECT happy_booking_id FROM s13_ids)
+      AND audit.metadata ? 'source_type'
   ),
-  'selection-completed audit is single and excludes image identifiers'
+  'selection-completed audit is single and excludes image identifiers and source type'
 );
 
 -- 23
