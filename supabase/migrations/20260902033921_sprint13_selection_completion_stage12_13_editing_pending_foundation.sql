@@ -283,7 +283,16 @@ CREATE TABLE public.booking_selected_images (
   created_at timestamptz NOT NULL DEFAULT now(),
 
   CONSTRAINT booking_selected_images_image_key_chk
-    CHECK (btrim(image_key) <> ''),
+    CHECK (
+      image_key = btrim(image_key)
+      AND image_key <> ''
+      AND char_length(image_key) <= 255
+      AND image_key !~ '[[:cntrl:]]'
+      AND image_key !~* '^(https?://|www\.)'
+      AND image_key !~ '[?&=]'
+      AND image_key !~* '^(bearer[[:space:]]+|sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.)'
+      AND image_key !~* '^(token|secret|password|passwd|api[_-]?key|access[_-]?token)[[:space:]_:/-]'
+    ),
 
   CONSTRAINT booking_selected_images_ordinal_chk
     CHECK (
@@ -580,53 +589,6 @@ BEGIN
       USING ERRCODE = '42501';
   END IF;
 
-  IF p_selected_image_keys IS NULL
-     OR cardinality(p_selected_image_keys) < 1 THEN
-    RAISE EXCEPTION
-      'record_booking_selection_completion: at least one selected image key is required'
-      USING ERRCODE = '22023';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM unnest(p_selected_image_keys) AS image_key(value)
-    WHERE value IS NULL
-       OR btrim(value) = ''
-  ) THEN
-    RAISE EXCEPTION
-      'record_booking_selection_completion: selected image keys must be non-empty'
-      USING ERRCODE = '22023';
-  END IF;
-
-  SELECT array_agg(normalized_key ORDER BY normalized_key)
-  INTO v_normalized_keys
-  FROM (
-    SELECT btrim(value) AS normalized_key
-    FROM unnest(p_selected_image_keys) AS image_key(value)
-  ) normalized;
-
-  SELECT count(DISTINCT btrim(value))
-  INTO v_manifest_count
-  FROM unnest(p_selected_image_keys) AS image_key(value);
-
-  IF v_manifest_count <> cardinality(p_selected_image_keys) THEN
-    RAISE EXCEPTION
-      'record_booking_selection_completion: duplicate selected image keys are not allowed'
-      USING ERRCODE = '22023';
-  END IF;
-
-  v_source_type := btrim(p_source_type);
-
-  IF v_source_type IS NULL
-     OR v_source_type = '' THEN
-    RAISE EXCEPTION
-      'record_booking_selection_completion: source_type is required'
-      USING ERRCODE = '22023';
-  END IF;
-
-  v_external_reference :=
-    NULLIF(btrim(p_external_reference), '');
-
   SELECT booking.*
   INTO v_booking
   FROM public.bookings booking
@@ -669,6 +631,83 @@ BEGIN
       'record_booking_selection_completion: booking branch scope required'
       USING ERRCODE = '42501';
   END IF;
+
+  IF p_selected_image_keys IS NULL
+     OR cardinality(p_selected_image_keys) < 1 THEN
+    RAISE EXCEPTION
+      'record_booking_selection_completion: at least one selected image key is required'
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF cardinality(p_selected_image_keys) > 500 THEN
+    RAISE EXCEPTION
+      'record_booking_selection_completion: selected image manifest exceeds maximum of 500'
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM unnest(p_selected_image_keys) AS image_key(value)
+    WHERE value IS NULL
+       OR btrim(value) = ''
+  ) THEN
+    RAISE EXCEPTION
+      'record_booking_selection_completion: selected image keys must be non-empty'
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM unnest(p_selected_image_keys) AS image_key(value)
+    WHERE char_length(btrim(value)) > 255
+  ) THEN
+    RAISE EXCEPTION
+      'record_booking_selection_completion: selected image key exceeds maximum length of 255'
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM unnest(p_selected_image_keys) AS image_key(value)
+    WHERE btrim(value) ~ '[[:cntrl:]]'
+       OR btrim(value) ~* '^(https?://|www\.)'
+       OR btrim(value) ~ '[?&=]'
+       OR btrim(value) ~* '^(bearer[[:space:]]+|sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.)'
+       OR btrim(value) ~* '^(token|secret|password|passwd|api[_-]?key|access[_-]?token)[[:space:]_:/-]'
+  ) THEN
+    RAISE EXCEPTION
+      'record_booking_selection_completion: selected image keys must be opaque operational identifiers'
+      USING ERRCODE = '22023';
+  END IF;
+
+  SELECT array_agg(normalized_key ORDER BY normalized_key)
+  INTO v_normalized_keys
+  FROM (
+    SELECT btrim(value) AS normalized_key
+    FROM unnest(p_selected_image_keys) AS image_key(value)
+  ) normalized;
+
+  SELECT count(DISTINCT btrim(value))
+  INTO v_manifest_count
+  FROM unnest(p_selected_image_keys) AS image_key(value);
+
+  IF v_manifest_count <> cardinality(p_selected_image_keys) THEN
+    RAISE EXCEPTION
+      'record_booking_selection_completion: duplicate selected image keys are not allowed'
+      USING ERRCODE = '22023';
+  END IF;
+
+  v_source_type := btrim(p_source_type);
+
+  IF v_source_type IS NULL
+     OR v_source_type = '' THEN
+    RAISE EXCEPTION
+      'record_booking_selection_completion: source_type is required'
+      USING ERRCODE = '22023';
+  END IF;
+
+  v_external_reference :=
+    NULLIF(btrim(p_external_reference), '');
 
   SELECT count(*)
   INTO v_state_count

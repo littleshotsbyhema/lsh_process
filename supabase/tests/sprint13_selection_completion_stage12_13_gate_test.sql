@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(39);
+SELECT plan(45);
 
 -- =====================================================================
 -- Sprint 13 — Editing Pending
@@ -783,6 +783,124 @@ SELECT throws_ok(
   $$ SELECT public.mark_booking_editing_pending((SELECT stage14_booking_id FROM s13_ids)) $$,
   '22023','mark_booking_editing_pending: booking must be exactly Selection Pending or Editing Pending replay',
   'Sprint 13 advancement rejects Stage 14 or later callers'
+);
+
+-- 40
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT no_selection_booking_id FROM s13_ids),
+       ARRAY['https://gallery.example/image/1?token=signed-value'],
+       'manual',
+       NULL
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: selected image keys must be opaque operational identifiers',
+  'selection completion rejects URL-shaped image keys'
+);
+
+-- 41
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT no_selection_booking_id FROM s13_ids),
+       ARRAY['sk-ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'],
+       'manual',
+       NULL
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: selected image keys must be opaque operational identifiers',
+  'selection completion rejects credential-shaped image keys'
+);
+
+-- 42
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT no_selection_booking_id FROM s13_ids),
+       ARRAY[repeat('A',256)],
+       'manual',
+       NULL
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: selected image key exceeds maximum length of 255',
+  'selection completion rejects oversized image keys'
+);
+
+-- 43
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT no_selection_booking_id FROM s13_ids),
+       ARRAY(
+         SELECT 'IMG-' || lpad(value::text,3,'0')
+         FROM generate_series(1,501) AS value
+       ),
+       'manual',
+       NULL
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: selected image manifest exceeds maximum of 500',
+  'selection completion rejects oversized manifests before normalization'
+);
+
+-- 44
+SELECT ok(
+  NOT EXISTS (
+    SELECT 1
+    FROM public.booking_selection_completions completion
+    WHERE completion.booking_id =
+          (SELECT no_selection_booking_id FROM s13_ids)
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.booking_selected_images selected
+    WHERE selected.booking_id =
+          (SELECT no_selection_booking_id FROM s13_ids)
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.audit_events audit
+    WHERE audit.action_key = 'booking.selection_completed'
+      AND audit.entity_id =
+          (SELECT no_selection_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT stage.stage_order = 12
+      AND stage.stage_key = 'selection_pending'
+    FROM public.booking_journey_states state
+    JOIN public.booking_journey_stages stage
+      ON stage.organization_id = state.organization_id
+     AND stage.id = state.current_stage_id
+    WHERE state.booking_id =
+          (SELECT no_selection_booking_id FROM s13_ids)
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.booking_stage_transitions transition_row
+    WHERE transition_row.booking_id =
+          (SELECT no_selection_booking_id FROM s13_ids)
+      AND transition_row.transition_key = 'editing_pending'
+  ),
+  'invalid finalized-selection input creates no evidence, audit, or journey mutation'
+);
+
+-- 45
+SELECT pg_temp.s13_set_actor(
+  '8e000000-0000-0000-0000-000000000004'
+);
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY(
+         SELECT 'IMG-' || lpad(value::text,3,'0')
+         FROM generate_series(1,501) AS value
+       ),
+       'manual',
+       NULL
+     ) $$,
+  '42501',
+  'record_booking_selection_completion: selection.confirm permission required',
+  'authorization precedes caller-controlled manifest cardinality processing'
+);
+SELECT pg_temp.s13_set_actor(
+  '8e000000-0000-0000-0000-000000000001'
 );
 
 -- Additional branch-read containment is validated by the table policies and
