@@ -579,18 +579,38 @@ export const listBookingWorkspace = createServerFn({
 
     throwIfError(bookingSelectionCompletionsResult.error);
 
-    const bookingSelectedImagesResult = await context.supabase
-      .from("booking_selected_images")
-      .select("*")
-      .in("booking_id", bookingIds)
-      .order("ordinal", {
-        ascending: true,
-      })
-      .order("created_at", {
-        ascending: true,
-      });
+    const bookingSelectedImages: BookingSelectedImageRow[] = [];
+    const selectedImagesPageSize = 1000;
 
-    throwIfError(bookingSelectedImagesResult.error);
+    for (let from = 0; ; from += selectedImagesPageSize) {
+      const selectedImagesPageResult = await context.supabase
+        .from("booking_selected_images")
+        .select("*")
+        .in("booking_id", bookingIds)
+        .order("booking_id", {
+          ascending: true,
+        })
+        .order("ordinal", {
+          ascending: true,
+          nullsFirst: true,
+        })
+        .order("created_at", {
+          ascending: true,
+        })
+        .order("id", {
+          ascending: true,
+        })
+        .range(from, from + selectedImagesPageSize - 1);
+
+      throwIfError(selectedImagesPageResult.error);
+
+      const selectedImagesPage = selectedImagesPageResult.data ?? [];
+      bookingSelectedImages.push(...selectedImagesPage);
+
+      if (selectedImagesPage.length < selectedImagesPageSize) {
+        break;
+      }
+    }
 
     const bookingTeamAssignmentHistory: BookingTeamAssignmentHistoryRow[] = [];
 
@@ -628,7 +648,7 @@ export const listBookingWorkspace = createServerFn({
       bookingSafetySignoffs,
       bookingShootCompletions: bookingShootCompletionsResult.data ?? [],
       bookingSelectionCompletions: bookingSelectionCompletionsResult.data ?? [],
-      bookingSelectedImages: bookingSelectedImagesResult.data ?? [],
+      bookingSelectedImages,
       bookingTeamAssignmentHistory,
       bookingServiceCategories,
       bookingSafetySignoffAuthorities,

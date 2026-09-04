@@ -206,7 +206,12 @@ CREATE TABLE public.booking_selection_completions (
   created_by uuid NOT NULL,
 
   CONSTRAINT booking_selection_completions_source_type_chk
-    CHECK (btrim(source_type) <> ''),
+    CHECK (
+      source_type = btrim(source_type)
+      AND source_type <> ''
+      AND char_length(source_type) <= 64
+      AND source_type !~ '[[:cntrl:]]'
+    ),
 
   CONSTRAINT booking_selection_completions_external_reference_chk
     CHECK (
@@ -718,6 +723,18 @@ BEGIN
      OR v_source_type = '' THEN
     RAISE EXCEPTION
       'record_booking_selection_completion: source_type is required'
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF char_length(v_source_type) > 64 THEN
+    RAISE EXCEPTION
+      'record_booking_selection_completion: source_type exceeds maximum length of 64'
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF v_source_type ~ '[[:cntrl:]]' THEN
+    RAISE EXCEPTION
+      'record_booking_selection_completion: source_type contains control characters'
       USING ERRCODE = '22023';
   END IF;
 

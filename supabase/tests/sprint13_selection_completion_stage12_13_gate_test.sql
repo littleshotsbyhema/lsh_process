@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(61);
+SELECT plan(65);
 
 -- =====================================================================
 -- Sprint 13 — Editing Pending
@@ -1184,6 +1184,106 @@ SELECT ok(
     )
   ) > 0,
   'selected-image constraint and authoritative RPC mirror Amendment 6 credential protection'
+);
+
+-- 62
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY['VALID-ER-001'],
+       repeat('S',65),
+       'EXT-REF-123'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: source_type exceeds maximum length of 64',
+  'selection completion rejects oversized source_type'
+);
+
+-- 63
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY['VALID-ER-001'],
+       E'manual\nimport',
+       'EXT-REF-123'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: source_type contains control characters',
+  'selection completion rejects control-character source_type'
+);
+
+-- 64
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM pg_constraint constraint_row
+    WHERE constraint_row.conrelid =
+          'public.booking_selection_completions'::regclass
+      AND constraint_row.conname =
+          'booking_selection_completions_source_type_chk'
+      AND position(
+        'char_length(source_type) <= 64'
+        IN pg_get_constraintdef(constraint_row.oid)
+      ) > 0
+      AND position(
+        '[[:cntrl:]]'
+        IN pg_get_constraintdef(constraint_row.oid)
+      ) > 0
+  )
+  AND position(
+    'source_type exceeds maximum length of 64'
+    IN pg_get_functiondef(
+      'public.record_booking_selection_completion(uuid,text[],text,text)'::regprocedure
+    )
+  ) > 0
+  AND position(
+    'source_type contains control characters'
+    IN pg_get_functiondef(
+      'public.record_booking_selection_completion(uuid,text[],text,text)'::regprocedure
+    )
+  ) > 0,
+  'source_type table constraint and authoritative RPC mirror Amendment 7 structural bounds'
+);
+
+-- 65
+SELECT ok(
+  (
+    SELECT count(*) = 1
+    FROM public.booking_selection_completions completion
+    WHERE completion.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.booking_selected_images selected
+    WHERE selected.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.audit_events audit
+    WHERE audit.action_key = 'booking.selection_completed'
+      AND audit.entity_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT stage.stage_order = 12
+      AND stage.stage_key = 'selection_pending'
+    FROM public.booking_journey_states state
+    JOIN public.booking_journey_stages stage
+      ON stage.organization_id = state.organization_id
+     AND stage.id = state.current_stage_id
+    WHERE state.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.booking_stage_transitions transition_row
+    WHERE transition_row.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+      AND transition_row.transition_key = 'editing_pending'
+  ),
+  'invalid source_type attempts create no evidence, audit, or journey mutation'
 );
 
 -- Additional branch-read containment is validated by the table policies and
