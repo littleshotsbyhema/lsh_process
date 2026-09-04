@@ -304,10 +304,15 @@ CREATE TABLE public.booking_selected_images (
     CHECK (
       image_key = btrim(image_key)
       AND image_key <> ''
+      AND btrim(
+        image_key,
+        U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
+      ) <> ''
       AND char_length(image_key) <= 255
       AND image_key !~ '[[:cntrl:]]'
       AND image_key !~ '://'
       AND image_key !~* '^(https?://|www\.)'
+      AND image_key !~* '^data:'
       AND image_key !~ '[?&=]'
       AND image_key !~* '^((bearer|basic)[[:space:]]+|sk-[A-Za-z0-9_-]{16,}|sk_(live|test)_|gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.)'
       AND image_key !~* '^(token|secret|password|passwd|api[_-]?key|access[_-]?token)[[:space:]_:/-]'
@@ -669,6 +674,10 @@ BEGIN
     FROM unnest(p_selected_image_keys) AS image_key(value)
     WHERE value IS NULL
        OR btrim(value) = ''
+       OR btrim(
+            value,
+            U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
+          ) = ''
   ) THEN
     RAISE EXCEPTION
       'record_booking_selection_completion: selected image keys must be non-empty'
@@ -691,6 +700,7 @@ BEGIN
     WHERE btrim(value) ~ '[[:cntrl:]]'
        OR btrim(value) ~ '://'
        OR btrim(value) ~* '^(https?://|www\.)'
+       OR btrim(value) ~* '^data:'
        OR btrim(value) ~ '[?&=]'
        OR btrim(value) ~* '^((bearer|basic)[[:space:]]+|sk-[A-Za-z0-9_-]{16,}|sk_(live|test)_|gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.)'
        OR btrim(value) ~* '^(token|secret|password|passwd|api[_-]?key|access[_-]?token)[[:space:]_:/-]'

@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(75);
+SELECT plan(82);
 
 -- =====================================================================
 -- Sprint 13 — Editing Pending
@@ -1502,6 +1502,141 @@ SELECT ok(
       AND transition_row.transition_key = 'editing_pending'
   ),
   'invalid Basic selected-image credential attempts create no evidence, audit, or journey mutation'
+);
+
+-- 76
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY['data:image/png;base64,iVBORw0KGgo'],
+       'manual',
+       'EXT-REF-123'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: selected image keys must be opaque operational identifiers',
+  'selection completion rejects lowercase data URI selected-image keys'
+);
+
+-- 77
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY['DATA:text/plain;base64,SGVsbG8'],
+       'manual',
+       'EXT-REF-123'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: selected image keys must be opaque operational identifiers',
+  'selection completion rejects data URI selected-image keys case-insensitively'
+);
+
+-- 78
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY[U&'\00A0'],
+       'manual',
+       'EXT-REF-123'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: selected image keys must be non-empty',
+  'selection completion rejects NBSP-only selected-image keys'
+);
+
+-- 79
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY[U&'\00A0\3000'],
+       'manual',
+       'EXT-REF-123'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: selected image keys must be non-empty',
+  'selection completion rejects mixed Unicode-whitespace-only selected-image keys'
+);
+
+-- 80
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM pg_constraint constraint_row
+    WHERE constraint_row.conrelid =
+          'public.booking_selected_images'::regclass
+      AND constraint_row.conname =
+          'booking_selected_images_image_key_chk'
+      AND position(
+        'data:'
+        IN pg_get_constraintdef(constraint_row.oid)
+      ) > 0
+  )
+  AND position(
+    'data:'
+    IN pg_get_functiondef(
+      'public.record_booking_selection_completion(uuid,text[],text,text)'::regprocedure
+    )
+  ) > 0,
+  'selected-image constraint and authoritative RPC mirror Amendment 11 data URI protection'
+);
+
+-- 81
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM pg_constraint constraint_row
+    WHERE constraint_row.conrelid =
+          'public.booking_selected_images'::regclass
+      AND constraint_row.conname =
+          'booking_selected_images_image_key_chk'
+      AND pg_get_constraintdef(constraint_row.oid) ~
+          'btrim\([[:space:]]*image_key[[:space:]]*,'
+  )
+  AND pg_get_functiondef(
+    'public.record_booking_selection_completion(uuid,text[],text,text)'::regprocedure
+  ) ~
+      'btrim\([[:space:]]*value[[:space:]]*,',
+  'selected-image constraint and authoritative RPC mirror Amendment 11 explicit Unicode-whitespace protection'
+);
+
+-- 82
+SELECT ok(
+  (
+    SELECT count(*) = 1
+    FROM public.booking_selection_completions completion
+    WHERE completion.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.booking_selected_images selected
+    WHERE selected.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.audit_events audit
+    WHERE audit.action_key = 'booking.selection_completed'
+      AND audit.entity_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT stage.stage_order = 12
+      AND stage.stage_key = 'selection_pending'
+    FROM public.booking_journey_states state
+    JOIN public.booking_journey_stages stage
+      ON stage.organization_id = state.organization_id
+     AND stage.id = state.current_stage_id
+    WHERE state.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.booking_stage_transitions transition_row
+    WHERE transition_row.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+      AND transition_row.transition_key = 'editing_pending'
+  ),
+  'Amendment 11 invalid selected-image attempts create no evidence, audit, or journey mutation'
 );
 
 -- Additional branch-read containment is validated by the table policies and
