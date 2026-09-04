@@ -209,6 +209,10 @@ CREATE TABLE public.booking_selection_completions (
     CHECK (
       source_type = btrim(source_type)
       AND source_type <> ''
+      AND btrim(
+        source_type,
+        U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
+      ) <> ''
       AND char_length(source_type) <= 64
       AND source_type !~ '[[:cntrl:]]'
     ),
@@ -219,6 +223,10 @@ CREATE TABLE public.booking_selection_completions (
       OR (
         external_reference = btrim(external_reference)
         AND external_reference <> ''
+        AND btrim(
+          external_reference,
+          U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
+        ) <> ''
         AND char_length(external_reference) <= 255
         AND external_reference !~ '[[:cntrl:]]'
         AND external_reference !~ '://'
@@ -730,7 +738,11 @@ BEGIN
   v_source_type := btrim(p_source_type);
 
   IF v_source_type IS NULL
-     OR v_source_type = '' THEN
+     OR v_source_type = ''
+     OR btrim(
+          v_source_type,
+          U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
+        ) = '' THEN
     RAISE EXCEPTION
       'record_booking_selection_completion: source_type is required'
       USING ERRCODE = '22023';
@@ -750,6 +762,14 @@ BEGIN
 
   v_external_reference :=
     NULLIF(btrim(p_external_reference), '');
+
+  IF v_external_reference IS NOT NULL
+     AND btrim(
+           v_external_reference,
+           U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
+         ) = '' THEN
+    v_external_reference := NULL;
+  END IF;
 
   IF v_external_reference IS NOT NULL
      AND char_length(v_external_reference) > 255 THEN

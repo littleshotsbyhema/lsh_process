@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(82);
+SELECT plan(88);
 
 -- =====================================================================
 -- Sprint 13 — Editing Pending
@@ -1637,6 +1637,205 @@ SELECT ok(
       AND transition_row.transition_key = 'editing_pending'
   ),
   'Amendment 11 invalid selected-image attempts create no evidence, audit, or journey mutation'
+);
+
+
+-- =====================================================================
+-- Amendment 12 — Sprint 13 closure: Unicode provenance hardening
+-- =====================================================================
+
+SELECT pg_temp.s13_set_actor(
+  '8e000000-0000-0000-0000-000000000001'
+);
+
+-- 83
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY['A12-SRC-001'],
+       U&'\00A0',
+       'EXT-REF-123'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: source_type is required',
+  'selection completion rejects NBSP-only source_type'
+);
+
+-- 84
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY['A12-SRC-002'],
+       U&'\00A0\3000',
+       'EXT-REF-123'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: source_type is required',
+  'selection completion rejects mixed Unicode-whitespace-only source_type'
+);
+
+CREATE TEMP TABLE s13_a12_ids AS
+SELECT pg_temp.s13_create_booking(
+  '8e000000-0000-0000-0000-000000000701'::uuid
+) AS external_booking_id;
+
+SELECT pg_temp.s13_prepare_stage12(
+  (SELECT external_booking_id FROM s13_a12_ids)
+);
+
+-- 85
+SELECT lives_ok(
+  $$
+  CREATE TEMP TABLE s13_a12_external_null AS
+  SELECT *
+  FROM public.record_booking_selection_completion(
+    (SELECT external_booking_id FROM s13_a12_ids),
+    ARRAY['A12-EXT-001'],
+    'manual',
+    U&'\00A0'
+  )
+  $$,
+  'NBSP-only external_reference normalizes to NULL'
+);
+
+-- 86
+SELECT lives_ok(
+  $$
+  CREATE TEMP TABLE s13_a12_external_null_replay AS
+  SELECT *
+  FROM public.record_booking_selection_completion(
+    (SELECT external_booking_id FROM s13_a12_ids),
+    ARRAY['A12-EXT-001'],
+    'manual',
+    U&'\00A0\3000'
+  )
+  $$,
+  'mixed Unicode-whitespace-only external_reference normalizes to NULL on exact replay'
+);
+
+-- 87
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM pg_constraint constraint_row
+    WHERE constraint_row.conrelid =
+          'public.booking_selection_completions'::regclass
+      AND constraint_row.conname =
+          'booking_selection_completions_source_type_chk'
+      AND pg_get_constraintdef(constraint_row.oid) ~
+          'btrim\([[:space:]]*source_type[[:space:]]*,'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM pg_constraint constraint_row
+    WHERE constraint_row.conrelid =
+          'public.booking_selection_completions'::regclass
+      AND constraint_row.conname =
+          'booking_selection_completions_external_reference_chk'
+      AND pg_get_constraintdef(constraint_row.oid) ~
+          'btrim\([[:space:]]*external_reference[[:space:]]*,'
+  )
+  AND pg_get_functiondef(
+    'public.record_booking_selection_completion(uuid,text[],text,text)'::regprocedure
+  ) ~
+      'btrim\([[:space:]]*v_source_type[[:space:]]*,'
+  AND pg_get_functiondef(
+    'public.record_booking_selection_completion(uuid,text[],text,text)'::regprocedure
+  ) ~
+      'btrim\([[:space:]]*v_external_reference[[:space:]]*,',
+  'source_type and external_reference table/RPC boundaries mirror Amendment 12 Unicode-whitespace protection'
+);
+
+-- 88
+SELECT ok(
+  (
+    SELECT id
+    FROM s13_a12_external_null
+  ) = (
+    SELECT id
+    FROM s13_a12_external_null_replay
+  )
+  AND (
+    SELECT external_reference IS NULL
+    FROM s13_a12_external_null
+  )
+  AND (
+    SELECT external_reference IS NULL
+    FROM s13_a12_external_null_replay
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.booking_selection_completions completion
+    WHERE completion.booking_id =
+          (SELECT external_booking_id FROM s13_a12_ids)
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.booking_selected_images selected
+    WHERE selected.booking_id =
+          (SELECT external_booking_id FROM s13_a12_ids)
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.audit_events audit
+    WHERE audit.action_key = 'booking.selection_completed'
+      AND audit.entity_id =
+          (SELECT external_booking_id FROM s13_a12_ids)
+  )
+  AND (
+    SELECT stage.stage_order = 12
+      AND stage.stage_key = 'selection_pending'
+    FROM public.booking_journey_states state
+    JOIN public.booking_journey_stages stage
+      ON stage.organization_id = state.organization_id
+     AND stage.id = state.current_stage_id
+    WHERE state.booking_id =
+          (SELECT external_booking_id FROM s13_a12_ids)
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.booking_stage_transitions transition_row
+    WHERE transition_row.booking_id =
+          (SELECT external_booking_id FROM s13_a12_ids)
+      AND transition_row.transition_key = 'editing_pending'
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.booking_selection_completions completion
+    WHERE completion.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.booking_selected_images selected
+    WHERE selected.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.audit_events audit
+    WHERE audit.action_key = 'booking.selection_completed'
+      AND audit.entity_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT stage.stage_order = 12
+      AND stage.stage_key = 'selection_pending'
+    FROM public.booking_journey_states state
+    JOIN public.booking_journey_stages stage
+      ON stage.organization_id = state.organization_id
+     AND stage.id = state.current_stage_id
+    WHERE state.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.booking_stage_transitions transition_row
+    WHERE transition_row.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+      AND transition_row.transition_key = 'editing_pending'
+  ),
+  'Amendment 12 normalization/rejection is replay-safe and invalid source_type attempts remain mutation-free'
 );
 
 -- Additional branch-read containment is validated by the table policies and
