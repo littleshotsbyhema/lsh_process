@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(55);
+SELECT plan(58);
 
 -- =====================================================================
 -- Sprint 13 — Editing Pending
@@ -1059,6 +1059,57 @@ SELECT ok(
           (SELECT id FROM s13_valid_external_completion)
   ),
   'valid external reference is trimmed and stored canonically'
+);
+
+-- 56
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY['s3://bucket/family.jpg'],
+       'manual',
+       'EXT-REF-123'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: selected image keys must be opaque operational identifiers',
+  'selection completion rejects non-HTTP URI-shaped image keys'
+);
+
+-- 57
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY['VALID-ER-001'],
+       'manual',
+       'github_pat_11AA22BB33CC44DD55EE66FF77GG88HH99'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: external_reference must be a non-secret opaque operational reference',
+  'selection completion rejects fine-grained GitHub token external references'
+);
+
+-- 58
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM pg_constraint constraint_row
+    WHERE constraint_row.conrelid =
+          'public.booking_selected_images'::regclass
+      AND constraint_row.conname =
+          'booking_selected_images_image_key_chk'
+      AND pg_get_constraintdef(constraint_row.oid)
+          LIKE '%image_key !~ ''://''::text%'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM pg_constraint constraint_row
+    WHERE constraint_row.conrelid =
+          'public.booking_selection_completions'::regclass
+      AND constraint_row.conname =
+          'booking_selection_completions_external_reference_chk'
+      AND pg_get_constraintdef(constraint_row.oid)
+          LIKE '%github_pat_%'
+  ),
+  'immutable evidence constraints mirror Amendment 5 URI and credential protections'
 );
 
 -- Additional branch-read containment is validated by the table policies and
