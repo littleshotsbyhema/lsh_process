@@ -309,7 +309,7 @@ CREATE TABLE public.booking_selected_images (
       AND image_key !~ '://'
       AND image_key !~* '^(https?://|www\.)'
       AND image_key !~ '[?&=]'
-      AND image_key !~* '^(bearer[[:space:]]+|sk-[A-Za-z0-9_-]{16,}|sk_(live|test)_|gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.)'
+      AND image_key !~* '^((bearer|basic)[[:space:]]+|sk-[A-Za-z0-9_-]{16,}|sk_(live|test)_|gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.)'
       AND image_key !~* '^(token|secret|password|passwd|api[_-]?key|access[_-]?token)[[:space:]_:/-]'
     ),
 
@@ -692,7 +692,7 @@ BEGIN
        OR btrim(value) ~ '://'
        OR btrim(value) ~* '^(https?://|www\.)'
        OR btrim(value) ~ '[?&=]'
-       OR btrim(value) ~* '^(bearer[[:space:]]+|sk-[A-Za-z0-9_-]{16,}|sk_(live|test)_|gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.)'
+       OR btrim(value) ~* '^((bearer|basic)[[:space:]]+|sk-[A-Za-z0-9_-]{16,}|sk_(live|test)_|gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.)'
        OR btrim(value) ~* '^(token|secret|password|passwd|api[_-]?key|access[_-]?token)[[:space:]_:/-]'
   ) THEN
     RAISE EXCEPTION
