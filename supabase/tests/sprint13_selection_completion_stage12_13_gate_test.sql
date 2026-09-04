@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(88);
+SELECT plan(98);
 
 -- =====================================================================
 -- Sprint 13 — Editing Pending
@@ -1836,6 +1836,269 @@ SELECT ok(
       AND transition_row.transition_key = 'editing_pending'
   ),
   'Amendment 12 normalization/rejection is replay-safe and invalid source_type attempts remain mutation-free'
+);
+
+
+-- =====================================================================
+-- Amendment 13 — Unicode edge-whitespace canonical boundary closure
+-- =====================================================================
+
+SELECT pg_temp.s13_set_actor(
+  '8e000000-0000-0000-0000-000000000001'
+);
+
+-- 89
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY[U&'\00A0github_pat_A13TOKEN'],
+       'manual',
+       NULL
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: selected image keys contain Unicode edge whitespace',
+  'selected-image key rejects NBSP-prefixed credential-shaped evidence'
+);
+
+-- 90
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY[U&'A13-EDGE-IMAGE\3000'],
+       'manual',
+       NULL
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: selected image keys contain Unicode edge whitespace',
+  'selected-image key rejects trailing Unicode edge whitespace'
+);
+
+-- 91
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY['A13-EXT-EDGE-001'],
+       'manual',
+       U&'\00A0github_pat_A13TOKEN'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: external_reference contains Unicode edge whitespace',
+  'external_reference rejects NBSP-prefixed credential-shaped evidence'
+);
+
+-- 92
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY['A13-EXT-EDGE-002'],
+       'manual',
+       U&'EXT-A13-EDGE\3000'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: external_reference contains Unicode edge whitespace',
+  'external_reference rejects trailing Unicode edge whitespace'
+);
+
+-- 93
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY['A13-SRC-EDGE-001'],
+       U&'\00A0manual',
+       NULL
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: source_type contains Unicode edge whitespace',
+  'source_type rejects leading residual Unicode edge whitespace'
+);
+
+-- 94
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY['A13-SRC-EDGE-002'],
+       U&'manual\3000',
+       NULL
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: source_type contains Unicode edge whitespace',
+  'source_type rejects trailing residual Unicode edge whitespace'
+);
+
+CREATE TEMP TABLE s13_a13_ids AS
+SELECT pg_temp.s13_create_booking(
+  '8e000000-0000-0000-0000-000000000701'::uuid
+) AS canonical_booking_id;
+
+SELECT pg_temp.s13_prepare_stage12(
+  (SELECT canonical_booking_id FROM s13_a13_ids)
+);
+
+-- 95
+SELECT lives_ok(
+  $$
+  CREATE TEMP TABLE s13_a13_canonical_first AS
+  SELECT *
+  FROM public.record_booking_selection_completion(
+    (SELECT canonical_booking_id FROM s13_a13_ids),
+    ARRAY['  A13-VALID-001  '],
+    '  manual  ',
+    '  EXT-A13-001  '
+  )
+  $$,
+  'ordinary ASCII edge spaces continue to canonicalize successfully'
+);
+
+-- 96
+SELECT lives_ok(
+  $$
+  CREATE TEMP TABLE s13_a13_canonical_replay AS
+  SELECT *
+  FROM public.record_booking_selection_completion(
+    (SELECT canonical_booking_id FROM s13_a13_ids),
+    ARRAY['A13-VALID-001'],
+    'manual',
+    'EXT-A13-001'
+  )
+  $$,
+  'canonical exact replay remains successful after Unicode edge hardening'
+);
+
+-- 97
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM pg_constraint constraint_row
+    WHERE constraint_row.conrelid =
+          'public.booking_selected_images'::regclass
+      AND constraint_row.conname =
+          'booking_selected_images_image_key_chk'
+      AND pg_get_constraintdef(constraint_row.oid) ~
+          'image_key[[:space:]]*=[[:space:]]*btrim\([[:space:]]*image_key[[:space:]]*,'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM pg_constraint constraint_row
+    WHERE constraint_row.conrelid =
+          'public.booking_selection_completions'::regclass
+      AND constraint_row.conname =
+          'booking_selection_completions_source_type_chk'
+      AND pg_get_constraintdef(constraint_row.oid) ~
+          'source_type[[:space:]]*=[[:space:]]*btrim\([[:space:]]*source_type[[:space:]]*,'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM pg_constraint constraint_row
+    WHERE constraint_row.conrelid =
+          'public.booking_selection_completions'::regclass
+      AND constraint_row.conname =
+          'booking_selection_completions_external_reference_chk'
+      AND pg_get_constraintdef(constraint_row.oid) ~
+          'external_reference[[:space:]]*=[[:space:]]*btrim\([[:space:]]*external_reference[[:space:]]*,'
+  )
+  AND pg_get_functiondef(
+    'public.record_booking_selection_completion(uuid,text[],text,text)'::regprocedure
+  ) ~
+      'btrim\(value\)[[:space:]]*<>[[:space:]]*btrim\([[:space:]]*btrim\(value\)[[:space:]]*,'
+  AND pg_get_functiondef(
+    'public.record_booking_selection_completion(uuid,text[],text,text)'::regprocedure
+  ) ~
+      'v_source_type[[:space:]]*<>[[:space:]]*btrim\([[:space:]]*v_source_type[[:space:]]*,'
+  AND pg_get_functiondef(
+    'public.record_booking_selection_completion(uuid,text[],text,text)'::regprocedure
+  ) ~
+      'v_external_reference[[:space:]]*<>[[:space:]]*btrim\([[:space:]]*v_external_reference[[:space:]]*,',
+  'all three immutable textual evidence boundaries mirror Amendment 13 Unicode edge protection'
+);
+
+-- 98
+SELECT ok(
+  (
+    SELECT id
+    FROM s13_a13_canonical_first
+  ) = (
+    SELECT id
+    FROM s13_a13_canonical_replay
+  )
+  AND (
+    SELECT source_type = 'manual'
+      AND external_reference = 'EXT-A13-001'
+    FROM s13_a13_canonical_first
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.booking_selected_images selected
+    WHERE selected.booking_id =
+          (SELECT canonical_booking_id FROM s13_a13_ids)
+      AND selected.image_key = 'A13-VALID-001'
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.booking_selection_completions completion
+    WHERE completion.booking_id =
+          (SELECT canonical_booking_id FROM s13_a13_ids)
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.audit_events audit
+    WHERE audit.action_key = 'booking.selection_completed'
+      AND audit.entity_id =
+          (SELECT canonical_booking_id FROM s13_a13_ids)
+  )
+  AND (
+    SELECT stage.stage_order = 12
+      AND stage.stage_key = 'selection_pending'
+    FROM public.booking_journey_states state
+    JOIN public.booking_journey_stages stage
+      ON stage.organization_id = state.organization_id
+     AND stage.id = state.current_stage_id
+    WHERE state.booking_id =
+          (SELECT canonical_booking_id FROM s13_a13_ids)
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.booking_stage_transitions transition_row
+    WHERE transition_row.booking_id =
+          (SELECT canonical_booking_id FROM s13_a13_ids)
+      AND transition_row.transition_key = 'editing_pending'
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.booking_selection_completions completion
+    WHERE completion.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.booking_selected_images selected
+    WHERE selected.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.audit_events audit
+    WHERE audit.action_key = 'booking.selection_completed'
+      AND audit.entity_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT stage.stage_order = 12
+      AND stage.stage_key = 'selection_pending'
+    FROM public.booking_journey_states state
+    JOIN public.booking_journey_stages stage
+      ON stage.organization_id = state.organization_id
+     AND stage.id = state.current_stage_id
+    WHERE state.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.booking_stage_transitions transition_row
+    WHERE transition_row.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+      AND transition_row.transition_key = 'editing_pending'
+  ),
+  'Amendment 13 preserves canonical ASCII trimming/replay and invalid Unicode-edge attempts remain mutation-free'
 );
 
 -- Additional branch-read containment is validated by the table policies and

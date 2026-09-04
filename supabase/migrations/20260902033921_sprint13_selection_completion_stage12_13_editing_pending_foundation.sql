@@ -213,6 +213,10 @@ CREATE TABLE public.booking_selection_completions (
         source_type,
         U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
       ) <> ''
+      AND source_type = btrim(
+        source_type,
+        U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
+      )
       AND char_length(source_type) <= 64
       AND source_type !~ '[[:cntrl:]]'
     ),
@@ -227,6 +231,10 @@ CREATE TABLE public.booking_selection_completions (
           external_reference,
           U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
         ) <> ''
+        AND external_reference = btrim(
+          external_reference,
+          U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
+        )
         AND char_length(external_reference) <= 255
         AND external_reference !~ '[[:cntrl:]]'
         AND external_reference !~ '://'
@@ -316,6 +324,10 @@ CREATE TABLE public.booking_selected_images (
         image_key,
         U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
       ) <> ''
+      AND image_key = btrim(
+        image_key,
+        U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
+      )
       AND char_length(image_key) <= 255
       AND image_key !~ '[[:cntrl:]]'
       AND image_key !~ '://'
@@ -695,6 +707,20 @@ BEGIN
   IF EXISTS (
     SELECT 1
     FROM unnest(p_selected_image_keys) AS image_key(value)
+    WHERE btrim(value) <>
+          btrim(
+            btrim(value),
+            U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
+          )
+  ) THEN
+    RAISE EXCEPTION
+      'record_booking_selection_completion: selected image keys contain Unicode edge whitespace'
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM unnest(p_selected_image_keys) AS image_key(value)
     WHERE char_length(btrim(value)) > 255
   ) THEN
     RAISE EXCEPTION
@@ -748,6 +774,16 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
+  IF v_source_type <>
+     btrim(
+       v_source_type,
+       U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
+     ) THEN
+    RAISE EXCEPTION
+      'record_booking_selection_completion: source_type contains Unicode edge whitespace'
+      USING ERRCODE = '22023';
+  END IF;
+
   IF char_length(v_source_type) > 64 THEN
     RAISE EXCEPTION
       'record_booking_selection_completion: source_type exceeds maximum length of 64'
@@ -769,6 +805,17 @@ BEGIN
            U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
          ) = '' THEN
     v_external_reference := NULL;
+  END IF;
+
+  IF v_external_reference IS NOT NULL
+     AND v_external_reference <>
+         btrim(
+           v_external_reference,
+           U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'
+         ) THEN
+    RAISE EXCEPTION
+      'record_booking_selection_completion: external_reference contains Unicode edge whitespace'
+      USING ERRCODE = '22023';
   END IF;
 
   IF v_external_reference IS NOT NULL
