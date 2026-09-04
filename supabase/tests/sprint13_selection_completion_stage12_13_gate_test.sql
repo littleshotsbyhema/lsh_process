@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(58);
+SELECT plan(61);
 
 -- =====================================================================
 -- Sprint 13 — Editing Pending
@@ -1110,6 +1110,80 @@ SELECT ok(
           LIKE '%github_pat_%'
   ),
   'immutable evidence constraints mirror Amendment 5 URI and credential protections'
+);
+
+-- 59
+SELECT throws_ok(
+  $$ SELECT public.record_booking_selection_completion(
+       (SELECT photographer_booking_id FROM s13_ids),
+       ARRAY['github_pat_11AA22BB33CC44DD55EE66FF77GG88HH99'],
+       'manual',
+       'EXT-REF-123'
+     ) $$,
+  '22023',
+  'record_booking_selection_completion: selected image keys must be opaque operational identifiers',
+  'selection completion rejects fine-grained GitHub token image keys'
+);
+
+-- 60
+SELECT ok(
+  (
+    SELECT count(*) = 1
+    FROM public.booking_selection_completions completion
+    WHERE completion.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.booking_selected_images selected
+    WHERE selected.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT count(*) = 1
+    FROM public.audit_events audit
+    WHERE audit.action_key = 'booking.selection_completed'
+      AND audit.entity_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND (
+    SELECT stage.stage_order = 12
+      AND stage.stage_key = 'selection_pending'
+    FROM public.booking_journey_states state
+    JOIN public.booking_journey_stages stage
+      ON stage.organization_id = state.organization_id
+     AND stage.id = state.current_stage_id
+    WHERE state.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.booking_stage_transitions transition_row
+    WHERE transition_row.booking_id =
+          (SELECT photographer_booking_id FROM s13_ids)
+      AND transition_row.transition_key = 'editing_pending'
+  ),
+  'invalid fine-grained GitHub token image key creates no evidence, audit, or journey mutation'
+);
+
+-- 61
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM pg_constraint constraint_row
+    WHERE constraint_row.conrelid =
+          'public.booking_selected_images'::regclass
+      AND constraint_row.conname =
+          'booking_selected_images_image_key_chk'
+      AND pg_get_constraintdef(constraint_row.oid)
+          LIKE '%github_pat_%'
+  )
+  AND position(
+    'github_pat_' IN pg_get_functiondef(
+      'public.record_booking_selection_completion(uuid,text[],text,text)'::regprocedure
+    )
+  ) > 0,
+  'selected-image constraint and authoritative RPC mirror Amendment 6 credential protection'
 );
 
 -- Additional branch-read containment is validated by the table policies and
