@@ -449,7 +449,7 @@ function ClientsPage() {
   });
 
   const branchAccessQuery = useQuery({
-    queryKey: ["accessible-branches", ORGANIZATION_ID],
+    queryKey: ["accessible-branches", ORGANIZATION_ID, "family.create"],
     queryFn: loadAccessibleBranches,
     retry: false,
   });

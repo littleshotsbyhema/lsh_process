@@ -292,7 +292,7 @@ function LeadsPage() {
   });
 
   const branchAccessQuery = useQuery({
-    queryKey: ["accessible-branches", ORGANIZATION_ID],
+    queryKey: ["accessible-branches", ORGANIZATION_ID, "lead.write"],
     queryFn: loadAccessibleBranches,
     retry: false,
   });
