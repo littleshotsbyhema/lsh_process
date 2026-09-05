@@ -230,11 +230,11 @@ export const permissions: Record<Action, { label: string; roles: AppRole[] }> = 
   },
   "clients.write": {
     label: "Edit family records",
-    roles: ["client_coordinator", "sales_head", "sales"],
+    roles: ["studio_manager", "client_coordinator", "sales"],
   },
   "bookings.write": {
     label: "Create and edit bookings",
-    roles: ["client_coordinator", "sales_head", "sales"],
+    roles: ["client_coordinator", "sales"],
   },
   "bookings.finance": {
     label: "Change money fields (price, advance, payment)",
