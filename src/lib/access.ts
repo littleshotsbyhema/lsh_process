@@ -221,7 +221,7 @@ export const permissions: Record<Action, { label: string; roles: AppRole[] }> = 
   },
   "bookings.finance": {
     label: "Change money fields (price, advance, payment)",
-    roles: ["accounts", "sales_head", "sales"],
+    roles: ["accounts", "sales"],
   },
   "pipeline.advance": { label: "Advance a family's journey stage", roles: ["client_coordinator"] },
   "memory.write": {
