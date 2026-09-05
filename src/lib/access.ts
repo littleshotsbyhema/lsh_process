@@ -226,7 +226,7 @@ export type Action =
 export const permissions: Record<Action, { label: string; roles: AppRole[] }> = {
   "leads.write": {
     label: "Add and update inquiries",
-    roles: ["client_coordinator", "sales_head", "sales"],
+    roles: ["studio_manager", "client_coordinator", "sales_head", "sales"],
   },
   "clients.write": {
     label: "Edit family records",

@@ -104,6 +104,10 @@ function TeamPage() {
     queryFn: () => fetchRoleAdministration(),
   });
 
+  const inviteRoleOptions = (roleAdministration.data?.roles ?? [])
+    .filter((role) => appRoles.includes(role.key as AppRole))
+    .map((role) => ({ ...role, key: role.key as AppRole }));
+
   const invites = useQuery({
     queryKey: ["invites"],
     enabled: canInvite,
@@ -248,7 +252,11 @@ function TeamPage() {
                   inviteMutation.mutate({
                     email: inviteEmail.trim(),
                     fullName: inviteName.trim() || undefined,
-                    roles: canAssignRoles ? inviteRoles : [],
+                    roles: canAssignRoles
+                      ? inviteRoles.filter((role) =>
+                          inviteRoleOptions.some((option) => option.key === role),
+                        )
+                      : [],
                   });
                 }}
               >
@@ -286,18 +294,18 @@ function TeamPage() {
                       Preassigned roles (optional)
                     </span>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {appRoles.map((role) => {
-                        const selected = inviteRoles.includes(role);
+                      {inviteRoleOptions.map((role) => {
+                        const selected = inviteRoles.includes(role.key);
 
                         return (
                           <button
                             type="button"
-                            key={role}
+                            key={role.key}
                             onClick={() =>
                               setInviteRoles((current) =>
                                 selected
-                                  ? current.filter((candidate) => candidate !== role)
-                                  : [...current, role],
+                                  ? current.filter((candidate) => candidate !== role.key)
+                                  : [...current, role.key],
                               )
                             }
                             className={`rounded-full border px-2.5 py-1 text-[11px] transition ${
@@ -306,7 +314,7 @@ function TeamPage() {
                                 : "border-border text-muted-foreground hover:bg-accent/50"
                             }`}
                           >
-                            {roleLabels[role]}
+                            {role.label}
                           </button>
                         );
                       })}
