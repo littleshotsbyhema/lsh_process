@@ -52,9 +52,26 @@ export const nav: NavItem[] = [
     to: "/clients",
     label: "Clients",
     icon: Users,
-    roles: ["studio_manager", "client_coordinator", "sales_head", "sales", "accounts"],
+    roles: ["studio_manager", "client_coordinator", "sales", "accounts"],
   },
-  { to: "/memory", label: "Memory Profiles", icon: BookHeart, roles: null },
+  {
+    to: "/memory",
+    label: "Memory Profiles",
+    icon: BookHeart,
+    roles: [
+      "studio_manager",
+      "client_coordinator",
+      "sales",
+      "photographer",
+      "assistant",
+      "stylist",
+      "videographer",
+      "editor",
+      "album_coordinator",
+      "marketing",
+      "accounts",
+    ],
+  },
   { to: "/bookings", label: "Bookings", icon: CalendarHeart, roles: null },
   { to: "/pipeline", label: "Pipeline", icon: GitBranch, roles: null },
   {
@@ -226,7 +243,7 @@ export const permissions: Record<Action, { label: string; roles: AppRole[] }> = 
   "pipeline.advance": { label: "Advance a family's journey stage", roles: ["client_coordinator"] },
   "memory.write": {
     label: "Write memory profiles",
-    roles: ["client_coordinator", "sales_head", "sales", "photographer"],
+    roles: ["client_coordinator", "sales", "photographer"],
   },
   "safety.write": {
     label: "Complete safety & comfort checklists",
