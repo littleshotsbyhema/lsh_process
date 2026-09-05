@@ -31,6 +31,71 @@ const ORGANIZATION_ID = "590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc";
 
 const FAMILY_QUERY_KEY = ["families", ORGANIZATION_ID] as const;
 
+type AccessibleBranchOption = {
+  branch_id: string;
+  branch_name: string;
+  branch_code: string;
+};
+
+type BranchAccessResult = {
+  mode: "legacy" | "catalogue";
+  branches: AccessibleBranchOption[];
+};
+
+function isMissingAccessibleBranchCatalogueRpc(
+  error: { code?: string; message?: string } | null,
+): boolean {
+  if (!error) return false;
+
+  return (
+    error.code === "PGRST202" ||
+    (error.message?.includes("Could not find the function") === true &&
+      error.message.includes("accessible_branch_catalogue"))
+  );
+}
+
+async function loadAccessibleBranches(): Promise<BranchAccessResult> {
+  const { data, error } = await supabase.rpc("accessible_branch_catalogue", {
+    p_organization_id: ORGANIZATION_ID,
+  });
+
+  if (error) {
+    if (isMissingAccessibleBranchCatalogueRpc(error)) {
+      return { mode: "legacy", branches: [] };
+    }
+
+    throw new Error(error.message);
+  }
+
+  const branches = (data ?? []) as AccessibleBranchOption[];
+
+  const authorizedBranches = await Promise.all(
+    branches.map(async (branch) => {
+      const { data: allowed, error: permissionError } = await supabase.rpc(
+        "has_permission",
+        {
+          p_organization_id: ORGANIZATION_ID,
+          p_permission_key: "family.create",
+          p_branch_id: branch.branch_id,
+        },
+      );
+
+      if (permissionError) {
+        throw new Error(permissionError.message);
+      }
+
+      return allowed ? branch : null;
+    }),
+  );
+
+  return {
+    mode: "catalogue",
+    branches: authorizedBranches.filter(
+      (branch): branch is AccessibleBranchOption => branch !== null,
+    ),
+  };
+}
+
 type FamilyStatus = "active" | "inactive" | "archived" | "merged";
 
 type ContactChannelType = "phone" | "email" | "whatsapp" | "other";
@@ -366,6 +431,7 @@ function ClientsPage() {
 
   const [displayName, setDisplayName] = useState("");
   const [sortName, setSortName] = useState("");
+  const [createBranchId, setCreateBranchId] = useState("");
 
   const [createMessage, setCreateMessage] = useState<string | null>(null);
 
@@ -382,6 +448,12 @@ function ClientsPage() {
     retry: 1,
   });
 
+  const branchAccessQuery = useQuery({
+    queryKey: ["accessible-branches", ORGANIZATION_ID, "family.create"],
+    queryFn: loadAccessibleBranches,
+    retry: false,
+  });
+
   const refreshFamilies = async () => {
     await queryClient.invalidateQueries({
       queryKey: FAMILY_QUERY_KEY,
@@ -389,12 +461,20 @@ function ClientsPage() {
   };
 
   const createFamilyMutation = useMutation({
-    mutationFn: async ({ displayName, sortName }: { displayName: string; sortName: string }) => {
+    mutationFn: async ({
+      displayName,
+      sortName,
+      branchId,
+    }: {
+      displayName: string;
+      sortName: string;
+      branchId: string | null;
+    }) => {
       const { data, error } = await db.rpc("create_family", {
         p_organization_id: ORGANIZATION_ID,
         p_display_name: displayName,
         p_sort_name: sortName,
-        p_branch_id: null,
+        p_branch_id: branchId,
         p_assigned_owner_member_id: null,
       });
 
@@ -416,6 +496,7 @@ function ClientsPage() {
 
       setDisplayName("");
       setSortName("");
+      setCreateBranchId("");
 
       await refreshFamilies();
     },
@@ -496,6 +577,38 @@ function ClientsPage() {
   const submitCreateFamily = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (branchAccessQuery.isPending) {
+      setCreateMessage(null);
+      setLifecycleError("Branch access is still loading. Try again in a moment.");
+      return;
+    }
+
+    if (branchAccessQuery.isError) {
+      setCreateMessage(null);
+      setLifecycleError(
+        branchAccessQuery.error instanceof Error
+          ? branchAccessQuery.error.message
+          : "Unable to resolve your authorized branches.",
+      );
+      return;
+    }
+
+    if (branchAccessQuery.data?.mode === "catalogue") {
+      if (branchAccessQuery.data.branches.length === 0) {
+        setCreateMessage(null);
+        setLifecycleError(
+          "No active branch is available in your current studio access.",
+        );
+        return;
+      }
+
+      if (!createBranchId) {
+        setCreateMessage(null);
+        setLifecycleError("Choose the branch that owns this family record.");
+        return;
+      }
+    }
+
     const cleanDisplayName = displayName.trim();
     const cleanSortName = sortName.trim();
 
@@ -509,6 +622,10 @@ function ClientsPage() {
       await createFamilyMutation.mutateAsync({
         displayName: cleanDisplayName,
         sortName: cleanSortName,
+        branchId:
+          branchAccessQuery.data?.mode === "catalogue"
+            ? createBranchId || null
+            : null,
       });
     } catch {
       // Mutation state renders the error.
@@ -587,6 +704,36 @@ function ClientsPage() {
           <h2 className="mt-1 font-serif text-2xl text-primary">Begin a family record</h2>
 
           <form onSubmit={submitCreateFamily} className="mt-6 space-y-4">
+            {branchAccessQuery.data?.mode === "catalogue" && (
+              <label className="block text-sm text-primary">
+                <span className="mb-1.5 block text-xs text-muted-foreground">
+                  Branch *
+                </span>
+                <select
+                  required
+                  value={createBranchId}
+                  onChange={(event) =>
+                    setCreateBranchId(event.target.value)
+                  }
+                  disabled={branchAccessQuery.data.branches.length === 0}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2.5 outline-none focus:border-primary disabled:opacity-60"
+                >
+                  <option value="">Select an authorized branch</option>
+                  {branchAccessQuery.data.branches.map((branch) => (
+                    <option
+                      key={branch.branch_id}
+                      value={branch.branch_id}
+                    >
+                      {branch.branch_name}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-[11px] text-muted-foreground">
+                  Only branches available to your current studio membership are shown.
+                </span>
+              </label>
+            )}
+
             <InputField
               label="Family display name"
               value={displayName}

@@ -36,7 +36,12 @@ export type NavItem = {
 
 export const nav: NavItem[] = [
   { to: "/", label: "Dashboard", icon: Home, roles: null },
-  { to: "/leads", label: "Leads", icon: Heart, roles: ["client_coordinator", "sales"] },
+  {
+    to: "/leads",
+    label: "Leads",
+    icon: Heart,
+    roles: ["studio_manager", "client_coordinator", "sales_head", "sales"],
+  },
   {
     to: "/guide-reviews",
     label: "Memory Guide Reviews",
@@ -47,28 +52,45 @@ export const nav: NavItem[] = [
     to: "/clients",
     label: "Clients",
     icon: Users,
-    roles: ["client_coordinator", "sales", "accounts"],
+    roles: ["studio_manager", "client_coordinator", "sales", "accounts"],
   },
-  { to: "/memory", label: "Memory Profiles", icon: BookHeart, roles: null },
+  {
+    to: "/memory",
+    label: "Memory Profiles",
+    icon: BookHeart,
+    roles: [
+      "studio_manager",
+      "client_coordinator",
+      "sales",
+      "photographer",
+      "assistant",
+      "stylist",
+      "videographer",
+      "editor",
+      "album_coordinator",
+      "marketing",
+      "accounts",
+    ],
+  },
   { to: "/bookings", label: "Bookings", icon: CalendarHeart, roles: null },
   { to: "/pipeline", label: "Pipeline", icon: GitBranch, roles: null },
   {
     to: "/packages",
     label: "Packages",
     icon: Sparkles,
-    roles: ["client_coordinator", "sales", "accounts"],
+    roles: ["studio_manager", "client_coordinator", "sales_head", "sales", "accounts"],
   },
   {
     to: "/quote",
     label: "Quote Builder",
     icon: FileText,
-    roles: ["client_coordinator", "sales", "accounts"],
+    roles: ["studio_manager", "client_coordinator", "sales_head", "sales", "accounts"],
   },
   {
     to: "/whatsapp",
     label: "WhatsApp Follow-Ups",
     icon: MessageSquareHeart,
-    roles: ["client_coordinator", "sales"],
+    roles: ["studio_manager", "client_coordinator", "sales_head", "sales"],
   },
   {
     to: "/prep",
@@ -202,9 +224,18 @@ export type Action =
 
 /** Founder always passes. Everyone else needs one of the listed roles. */
 export const permissions: Record<Action, { label: string; roles: AppRole[] }> = {
-  "leads.write": { label: "Add and update inquiries", roles: ["client_coordinator", "sales"] },
-  "clients.write": { label: "Edit family records", roles: ["client_coordinator", "sales"] },
-  "bookings.write": { label: "Create and edit bookings", roles: ["client_coordinator", "sales"] },
+  "leads.write": {
+    label: "Add and update inquiries",
+    roles: ["studio_manager", "client_coordinator", "sales_head", "sales"],
+  },
+  "clients.write": {
+    label: "Edit family records",
+    roles: ["studio_manager", "client_coordinator", "sales"],
+  },
+  "bookings.write": {
+    label: "Create and edit bookings",
+    roles: ["client_coordinator", "sales"],
+  },
   "bookings.finance": {
     label: "Change money fields (price, advance, payment)",
     roles: ["accounts", "sales"],
@@ -212,7 +243,7 @@ export const permissions: Record<Action, { label: string; roles: AppRole[] }> = 
   "pipeline.advance": { label: "Advance a family's journey stage", roles: ["client_coordinator"] },
   "memory.write": {
     label: "Write memory profiles",
-    roles: ["client_coordinator", "sales", "photographer"],
+    roles: ["studio_manager", "client_coordinator", "sales", "photographer"],
   },
   "safety.write": {
     label: "Complete safety & comfort checklists",
@@ -235,6 +266,7 @@ export const permissions: Record<Action, { label: string; roles: AppRole[] }> = 
     label: "Create and close team tasks",
     roles: [
       "client_coordinator",
+      "sales_head",
       "sales",
       "photographer",
       "assistant",
@@ -251,7 +283,10 @@ export const permissions: Record<Action, { label: string; roles: AppRole[] }> = 
     roles: ["client_coordinator", "marketing"],
   },
   "governance.write": { label: "Score philosophy alignment", roles: ["client_coordinator"] },
-  "links.share": { label: "Create family share links", roles: ["client_coordinator", "sales"] },
+  "links.share": {
+    label: "Create family share links",
+    roles: ["client_coordinator", "sales_head", "sales"],
+  },
 };
 
 export function can(action: Action, roles: AppRole[]) {

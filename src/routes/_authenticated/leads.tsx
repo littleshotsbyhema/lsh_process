@@ -20,6 +20,8 @@ import {
   PageHeader,
   StatusPill,
 } from "@/components/AppShell";
+import { supabase } from "@/integrations/supabase/client";
+import { ORGANIZATION_ID } from "@/lib/session";
 import {
   convertLeadToFamily,
   createLead,
@@ -93,6 +95,71 @@ const privacyLabels: Record<
   portfolio_release: "Portfolio release",
   decide_later: "Decide later",
 };
+
+type AccessibleBranchOption = {
+  branch_id: string;
+  branch_name: string;
+  branch_code: string;
+};
+
+type BranchAccessResult = {
+  mode: "legacy" | "catalogue";
+  branches: AccessibleBranchOption[];
+};
+
+function isMissingAccessibleBranchCatalogueRpc(
+  error: { code?: string; message?: string } | null,
+): boolean {
+  if (!error) return false;
+
+  return (
+    error.code === "PGRST202" ||
+    (error.message?.includes("Could not find the function") === true &&
+      error.message.includes("accessible_branch_catalogue"))
+  );
+}
+
+async function loadAccessibleBranches(): Promise<BranchAccessResult> {
+  const { data, error } = await supabase.rpc("accessible_branch_catalogue", {
+    p_organization_id: ORGANIZATION_ID,
+  });
+
+  if (error) {
+    if (isMissingAccessibleBranchCatalogueRpc(error)) {
+      return { mode: "legacy", branches: [] };
+    }
+
+    throw new Error(error.message);
+  }
+
+  const branches = (data ?? []) as AccessibleBranchOption[];
+
+  const authorizedBranches = await Promise.all(
+    branches.map(async (branch) => {
+      const { data: allowed, error: permissionError } = await supabase.rpc(
+        "has_permission",
+        {
+          p_organization_id: ORGANIZATION_ID,
+          p_permission_key: "lead.write",
+          p_branch_id: branch.branch_id,
+        },
+      );
+
+      if (permissionError) {
+        throw new Error(permissionError.message);
+      }
+
+      return allowed ? branch : null;
+    }),
+  );
+
+  return {
+    mode: "catalogue",
+    branches: authorizedBranches.filter(
+      (branch): branch is AccessibleBranchOption => branch !== null,
+    ),
+  };
+}
 
 const emptyLeadForm = {
   parentName: "",
@@ -214,12 +281,20 @@ function LeadsPage() {
     useState(false);
   const [newLead, setNewLead] =
     useState(emptyLeadForm);
+  const [newLeadBranchId, setNewLeadBranchId] =
+    useState("");
   const [actionError, setActionError] =
     useState<string | null>(null);
 
   const leadsQuery = useQuery({
     queryKey: ["leads"],
     queryFn: () => listLeads(),
+  });
+
+  const branchAccessQuery = useQuery({
+    queryKey: ["accessible-branches", ORGANIZATION_ID, "lead.write"],
+    queryFn: loadAccessibleBranches,
+    retry: false,
   });
 
   const createMutation = useMutation({
@@ -250,12 +325,16 @@ function LeadsPage() {
                 newLead.followUpAt,
               ).toISOString()
             : null,
-          branchId: null,
+          branchId:
+            branchAccessQuery.data?.mode === "catalogue"
+              ? newLeadBranchId || null
+              : null,
           assignedOwnerMemberId: null,
         },
       }),
     onSuccess: async () => {
       setNewLead(emptyLeadForm);
+      setNewLeadBranchId("");
       setShowCreateForm(false);
 
       await queryClient.invalidateQueries({
@@ -313,6 +392,34 @@ function LeadsPage() {
     event: FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
+
+    if (branchAccessQuery.isPending) {
+      setActionError("Branch access is still loading. Try again in a moment.");
+      return;
+    }
+
+    if (branchAccessQuery.isError) {
+      setActionError(
+        branchAccessQuery.error instanceof Error
+          ? branchAccessQuery.error.message
+          : "Unable to resolve your authorized branches.",
+      );
+      return;
+    }
+
+    if (branchAccessQuery.data?.mode === "catalogue") {
+      if (branchAccessQuery.data.branches.length === 0) {
+        setActionError(
+          "No active branch is available in your current studio access.",
+        );
+        return;
+      }
+
+      if (!newLeadBranchId) {
+        setActionError("Choose the branch that owns this inquiry.");
+        return;
+      }
+    }
 
     if (
       !newLead.phone.trim() &&
@@ -447,6 +554,36 @@ function LeadsPage() {
             onSubmit={submitNewLead}
             className="grid gap-4 md:grid-cols-2"
           >
+            {branchAccessQuery.data?.mode === "catalogue" && (
+              <label className="text-sm text-primary">
+                <span className="mb-1.5 block text-xs text-muted-foreground">
+                  Branch *
+                </span>
+                <select
+                  required
+                  value={newLeadBranchId}
+                  onChange={(event) =>
+                    setNewLeadBranchId(event.target.value)
+                  }
+                  disabled={branchAccessQuery.data.branches.length === 0}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2.5 outline-none focus:border-primary disabled:opacity-60"
+                >
+                  <option value="">Select an authorized branch</option>
+                  {branchAccessQuery.data.branches.map((branch) => (
+                    <option
+                      key={branch.branch_id}
+                      value={branch.branch_id}
+                    >
+                      {branch.branch_name}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-[11px] text-muted-foreground">
+                  Only branches available to your current studio membership are shown.
+                </span>
+              </label>
+            )}
+
             <label className="text-sm text-primary">
               <span className="mb-1.5 block text-xs text-muted-foreground">
                 Parent / contact name *
