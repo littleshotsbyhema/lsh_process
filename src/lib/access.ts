@@ -243,7 +243,7 @@ export const permissions: Record<Action, { label: string; roles: AppRole[] }> = 
   "pipeline.advance": { label: "Advance a family's journey stage", roles: ["client_coordinator"] },
   "memory.write": {
     label: "Write memory profiles",
-    roles: ["client_coordinator", "sales", "photographer"],
+    roles: ["studio_manager", "client_coordinator", "sales", "photographer"],
   },
   "safety.write": {
     label: "Complete safety & comfort checklists",
