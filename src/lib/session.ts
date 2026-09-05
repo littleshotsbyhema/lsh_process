@@ -6,6 +6,7 @@ export const appRoles = [
   "founder",
   "studio_manager",
   "client_coordinator",
+  "sales_head",
   "sales",
   "photographer",
   "assistant",
@@ -20,10 +21,11 @@ export const appRoles = [
 export type AppRole = (typeof appRoles)[number];
 
 export const roleLabels: Record<AppRole, string> = {
-  founder: "Founder / Studio Head",
+  founder: "Founder / Brand Owner / Studio Head",
   studio_manager: "Studio Manager",
   client_coordinator: "Client Coordinator",
-  sales: "Sales",
+  sales_head: "Brand Sales Head",
+  sales: "Sales Team Member",
   photographer: "Photographer",
   assistant: "Assistant",
   stylist: "Stylist",
