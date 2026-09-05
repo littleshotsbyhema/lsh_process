@@ -46,7 +46,7 @@ export const nav: NavItem[] = [
     to: "/guide-reviews",
     label: "Memory Guide Reviews",
     icon: BrainCircuit,
-    roles: ["studio_manager", "client_coordinator", "sales_head", "sales"],
+    roles: ["client_coordinator", "sales"],
   },
   {
     to: "/clients",

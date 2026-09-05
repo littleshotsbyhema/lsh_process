@@ -69,6 +69,21 @@ const roleMutationSchema = z.object({
   branchId: z.string().uuid().nullable(),
 });
 
+function isMissingLiveScopePermissionRpc(
+  error: {
+    code?: string;
+    message: string;
+  } | null,
+): boolean {
+  if (!error) return false;
+
+  return (
+    error.code === "PGRST202" ||
+    (error.message.includes("Could not find the function") &&
+      error.message.includes("has_permission_in_any_live_scope"))
+  );
+}
+
 export const getTeamCapabilities = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<TeamCapabilities> => {
@@ -96,14 +111,40 @@ export const getTeamCapabilities = createServerFn({ method: "GET" })
       ],
     );
 
-    for (const result of [readResult, inviteResult, assignResult, suspendResult]) {
+    if (memberResult.error) {
+      throw new Error(memberResult.error.message);
+    }
+
+    const liveScopeResults = [readResult, inviteResult, assignResult, suspendResult];
+
+    const liveScopePermissionRpcUnavailable = liveScopeResults.every((result) =>
+      isMissingLiveScopePermissionRpc(result.error),
+    );
+
+    if (liveScopePermissionRpcUnavailable) {
+      const permissionResult = await context.supabase.rpc("effective_permissions", {
+        p_organization_id: ORGANIZATION_ID,
+      });
+
+      if (permissionResult.error) {
+        throw new Error(permissionResult.error.message);
+      }
+
+      const permissions = new Set(permissionResult.data ?? []);
+
+      return {
+        canRead: permissions.has("team.read"),
+        canInvite: permissions.has("team.invite"),
+        canAssignRoles: permissions.has("team.role.assign"),
+        canSuspend: permissions.has("team.suspend"),
+        actorMemberId: memberResult.data ?? null,
+      };
+    }
+
+    for (const result of liveScopeResults) {
       if (result.error) {
         throw new Error(result.error.message);
       }
-    }
-
-    if (memberResult.error) {
-      throw new Error(memberResult.error.message);
     }
 
     return {
