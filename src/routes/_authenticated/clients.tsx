@@ -67,9 +67,32 @@ async function loadAccessibleBranches(): Promise<BranchAccessResult> {
     throw new Error(error.message);
   }
 
+  const branches = (data ?? []) as AccessibleBranchOption[];
+
+  const authorizedBranches = await Promise.all(
+    branches.map(async (branch) => {
+      const { data: allowed, error: permissionError } = await supabase.rpc(
+        "has_permission",
+        {
+          p_organization_id: ORGANIZATION_ID,
+          p_permission_key: "family.create",
+          p_branch_id: branch.branch_id,
+        },
+      );
+
+      if (permissionError) {
+        throw new Error(permissionError.message);
+      }
+
+      return allowed ? branch : null;
+    }),
+  );
+
   return {
     mode: "catalogue",
-    branches: (data ?? []) as AccessibleBranchOption[],
+    branches: authorizedBranches.filter(
+      (branch): branch is AccessibleBranchOption => branch !== null,
+    ),
   };
 }
 
