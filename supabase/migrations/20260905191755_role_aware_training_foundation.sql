@@ -995,6 +995,13 @@ GRANT ALL ON TABLE
   public.training_step_events
 TO service_role;
 
+-- training_step_events is append-only evidence. Row-level UPDATE/DELETE
+-- mutations are already rejected by trigger; TRUNCATE does not fire
+-- row-level triggers, so service_role must never receive that privilege.
+REVOKE TRUNCATE
+ON TABLE public.training_step_events
+FROM service_role;
+
 
 -- =====================================================================
 -- 13. Training oversight permission

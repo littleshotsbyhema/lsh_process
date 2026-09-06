@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(74);
+SELECT plan(76);
 
 -- =====================================================================
 -- Little Moments OS
@@ -2503,6 +2503,34 @@ SELECT ok(
       )::uuid
   ),
   'failed incompatible publication leaves the successor version inactive'
+);
+
+RESET ROLE;
+
+
+-- =====================================================================
+-- Part 13 — Immutable evidence cannot be truncated
+-- =====================================================================
+
+-- 75
+SELECT ok(
+  NOT has_table_privilege(
+    'service_role',
+    'public.training_step_events',
+    'TRUNCATE'
+  ),
+  'service_role has no TRUNCATE privilege on immutable training evidence'
+);
+
+SET LOCAL ROLE service_role;
+
+-- 76
+SELECT ok(
+  pg_temp.t1_denied(
+    'TRUNCATE TABLE public.training_step_events',
+    'permission denied'
+  ),
+  'service_role cannot execute TRUNCATE against immutable training evidence'
 );
 
 RESET ROLE;
