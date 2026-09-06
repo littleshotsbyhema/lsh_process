@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(63);
+SELECT plan(70);
 
 -- =====================================================================
 -- Little Moments OS
@@ -1587,6 +1587,41 @@ SELECT is(
   'new module versions remain available as the safe catalogue evolution path'
 );
 
+-- Give v2 the same valid completion contract before later activation.
+INSERT INTO public.training_module_steps (
+  organization_id,
+  training_module_id,
+  step_key,
+  step_order,
+  step_type,
+  required,
+  completion_event_type,
+  completion_result
+)
+SELECT
+  v2.organization_id,
+  v2.id,
+  v1s.step_key,
+  v1s.step_order,
+  v1s.step_type,
+  v1s.required,
+  v1s.completion_event_type,
+  v1s.completion_result
+FROM public.training_modules v1
+JOIN public.training_module_steps v1s
+  ON v1s.training_module_id =
+     v1.id
+JOIN public.training_modules v2
+  ON v2.organization_id =
+     v1.organization_id
+ AND v2.module_key =
+     v1.module_key
+ AND v2.version = 2
+WHERE v1.organization_id =
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+  AND v1.module_key = 'common-orientation'
+  AND v1.version = 1;
+
 RESET ROLE;
 
 
@@ -1820,6 +1855,345 @@ SELECT ok(
     'cannot be deactivated while member training is incomplete'
   ),
   'an active version cannot be retired while an existing profile is incomplete'
+);
+
+RESET ROLE;
+
+
+-- =====================================================================
+-- Part 10 — Required-step integrity and live-role applicability
+-- =====================================================================
+
+-- Create a deliberately invalid required role-specific version with
+-- no required steps. This simulates malformed catalogue tooling.
+SELECT set_config(
+  'request.jwt.claim.role',
+  'service_role',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"role":"service_role"}',
+  true
+);
+
+SET LOCAL ROLE service_role;
+
+INSERT INTO public.training_modules (
+  organization_id,
+  role_id,
+  module_key,
+  version,
+  title,
+  required,
+  active,
+  minimum_score
+)
+SELECT
+  g.organization_id,
+  g.role_id,
+  'p2-zero-step-required',
+  1,
+  'P2 zero-step required module',
+  true,
+  true,
+  100
+FROM public.member_role_grants g
+JOIN public.roles r
+  ON r.id =
+     g.role_id
+WHERE g.organization_id =
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+  AND g.organization_member_id =
+    'b1000000-0000-4000-8000-000000000013'::uuid
+  AND r.key = 'photographer'
+  AND g.revoked_at IS NULL
+LIMIT 1;
+
+RESET ROLE;
+
+
+-- Second Photographer is still eligible at this point.
+SELECT set_config(
+  'request.jwt.claim.sub',
+  'b1000000-0000-4000-8000-000000000003',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'authenticated',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"sub":"b1000000-0000-4000-8000-000000000003","role":"authenticated"}',
+  true
+);
+
+SET LOCAL ROLE authenticated;
+
+-- 64
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      SELECT public.start_my_training_module(
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+        'p2-zero-step-required',
+        1
+      )
+    $sql$,
+    'at least one required step'
+  ),
+  'required module with zero required steps cannot be started'
+);
+
+RESET ROLE;
+
+-- 65
+SELECT is(
+  (
+    SELECT count(*)::bigint
+    FROM public.member_training_profiles mtp
+    JOIN public.training_modules tm
+      ON tm.id =
+         mtp.training_module_id
+    WHERE mtp.organization_member_id =
+      'b1000000-0000-4000-8000-000000000013'::uuid
+      AND tm.module_key =
+        'p2-zero-step-required'
+      AND tm.version = 1
+  ),
+  0::bigint,
+  'rejected zero-step start creates no member training state'
+);
+
+
+-- Synthetic pre-existing/admin-created state proves completion itself
+-- remains fail-closed even if invalid state somehow already exists.
+INSERT INTO public.member_training_profiles (
+  id,
+  organization_id,
+  organization_member_id,
+  training_module_id,
+  status,
+  required_at,
+  started_at
+)
+SELECT
+  'b2000000-0000-4000-8000-000000000001'::uuid,
+  tm.organization_id,
+  'b1000000-0000-4000-8000-000000000013'::uuid,
+  tm.id,
+  'in_progress'::public.training_profile_status,
+  now(),
+  now()
+FROM public.training_modules tm
+WHERE tm.organization_id =
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+  AND tm.module_key =
+    'p2-zero-step-required'
+  AND tm.version = 1;
+
+
+SELECT set_config(
+  'request.jwt.claim.sub',
+  'b1000000-0000-4000-8000-000000000003',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'authenticated',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"sub":"b1000000-0000-4000-8000-000000000003","role":"authenticated"}',
+  true
+);
+
+SET LOCAL ROLE authenticated;
+
+-- 66
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      SELECT public.complete_my_training_module(
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+        'p2-zero-step-required',
+        1
+      )
+    $sql$,
+    'at least one required step'
+  ),
+  'required module with zero required steps cannot be completed'
+);
+
+RESET ROLE;
+
+-- 67
+SELECT ok(
+  (
+    SELECT
+      mtp.status =
+        'in_progress'::public.training_profile_status
+      AND mtp.completed_at IS NULL
+    FROM public.member_training_profiles mtp
+    WHERE mtp.id =
+      'b2000000-0000-4000-8000-000000000001'::uuid
+  )
+  AND
+  (
+    SELECT count(*) = 0
+    FROM public.training_step_events tse
+    WHERE tse.member_training_profile_id =
+      'b2000000-0000-4000-8000-000000000001'::uuid
+      AND tse.event_type =
+        'module_completed'::public.training_step_event_type
+  ),
+  'zero-step completion denial leaves profile and evidence unchanged'
+);
+
+
+-- Revoke the member's only live Photographer role while preserving
+-- the incomplete training profile as immutable history.
+UPDATE public.member_role_grants g
+SET revoked_at = now()
+FROM public.roles r
+WHERE r.id =
+      g.role_id
+  AND g.organization_id =
+    '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+  AND g.organization_member_id =
+    'b1000000-0000-4000-8000-000000000013'::uuid
+  AND r.key = 'photographer'
+  AND g.revoked_at IS NULL;
+
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'service_role',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"role":"service_role"}',
+  true
+);
+
+SET LOCAL ROLE service_role;
+
+-- This must now succeed: preserved history from an ineligible member
+-- cannot permanently prevent catalogue supersession.
+UPDATE public.training_modules
+SET active = false
+WHERE organization_id =
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+  AND module_key =
+    'p2-zero-step-required'
+  AND version = 1;
+
+RESET ROLE;
+
+-- 68
+SELECT ok(
+  (
+    SELECT tm.active = false
+    FROM public.training_modules tm
+    WHERE tm.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND tm.module_key =
+        'p2-zero-step-required'
+      AND tm.version = 1
+  )
+  AND
+  (
+    SELECT
+      mtp.status =
+        'in_progress'::public.training_profile_status
+      AND mtp.completed_at IS NULL
+    FROM public.member_training_profiles mtp
+    WHERE mtp.id =
+      'b2000000-0000-4000-8000-000000000001'::uuid
+  ),
+  'revoked-role incomplete history is preserved but no longer blocks version retirement'
+);
+
+
+-- Roleless member context must expose no applicable module rows.
+SELECT set_config(
+  'request.jwt.claim.sub',
+  'b1000000-0000-4000-8000-000000000003',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'authenticated',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"sub":"b1000000-0000-4000-8000-000000000003","role":"authenticated"}',
+  true
+);
+
+SET LOCAL ROLE authenticated;
+
+-- 69
+SELECT is(
+  (
+    SELECT count(*)::bigint
+    FROM public.my_training_context(
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+    )
+  ),
+  0::bigint,
+  'member with no live role scope receives no training context rows'
+);
+
+RESET ROLE;
+
+
+-- Founder oversight must agree with member applicability.
+SELECT set_config(
+  'request.jwt.claim.sub',
+  'b1000000-0000-4000-8000-000000000001',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'authenticated',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"sub":"b1000000-0000-4000-8000-000000000001","role":"authenticated"}',
+  true
+);
+
+SET LOCAL ROLE authenticated;
+
+-- 70
+SELECT is(
+  (
+    SELECT count(*)::bigint
+    FROM public.training_directory(
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+    )
+    WHERE organization_member_id =
+      'b1000000-0000-4000-8000-000000000013'::uuid
+  ),
+  0::bigint,
+  'Founder directory excludes active members with no live role scope'
 );
 
 RESET ROLE;

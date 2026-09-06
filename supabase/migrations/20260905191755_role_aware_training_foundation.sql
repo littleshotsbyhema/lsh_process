@@ -802,10 +802,43 @@ BEGIN
         IF EXISTS (
           SELECT 1
           FROM public.member_training_profiles mtp
+          JOIN public.organization_members m
+            ON m.id =
+               mtp.organization_member_id
+           AND m.organization_id =
+               mtp.organization_id
+           AND m.status =
+               'active'::public.member_status
           WHERE mtp.training_module_id =
                 OLD.id
             AND mtp.status <>
                 'complete'::public.training_profile_status
+            AND EXISTS (
+              SELECT 1
+              FROM public.member_role_grants g
+              LEFT JOIN public.branches b
+                ON b.id =
+                   g.branch_id
+               AND b.organization_id =
+                   g.organization_id
+               AND b.status =
+                   'active'::public.branch_status
+               AND b.deleted_at IS NULL
+              WHERE g.organization_id =
+                    OLD.organization_id
+                AND g.organization_member_id =
+                    mtp.organization_member_id
+                AND g.revoked_at IS NULL
+                AND (
+                  OLD.role_id IS NULL
+                  OR g.role_id =
+                     OLD.role_id
+                )
+                AND (
+                  g.branch_id IS NULL
+                  OR b.id IS NOT NULL
+                )
+            )
         ) THEN
           RAISE EXCEPTION
             'Training module version cannot be deactivated while member training is incomplete';
@@ -1331,6 +1364,7 @@ DECLARE
   v_member_id uuid;
   v_module_id uuid;
   v_required boolean;
+  v_required_step_count integer;
   v_profile_id uuid;
 BEGIN
   v_member_id :=
@@ -1402,6 +1436,22 @@ BEGIN
   IF v_module_id IS NULL THEN
     RAISE EXCEPTION
       'Training module is not available for this member';
+  END IF;
+
+  IF v_required THEN
+    SELECT
+      count(*)
+    INTO
+      v_required_step_count
+    FROM public.training_module_steps tms
+    WHERE tms.training_module_id =
+          v_module_id
+      AND tms.required = true;
+
+    IF v_required_step_count = 0 THEN
+      RAISE EXCEPTION
+        'Required training module must define at least one required step before it can be started or completed';
+    END IF;
   END IF;
 
   INSERT INTO public.member_training_profiles (
@@ -1695,7 +1745,9 @@ AS $function$
 DECLARE
   v_member_id uuid;
   v_module_id uuid;
+  v_required boolean;
   v_profile_id uuid;
+  v_required_step_count integer;
   v_missing_count integer;
   v_completion_transitioned boolean := false;
 BEGIN
@@ -1710,9 +1762,11 @@ BEGIN
   END IF;
 
   SELECT
-    tm.id
+    tm.id,
+    tm.required
   INTO
-    v_module_id
+    v_module_id,
+    v_required
   FROM public.training_modules tm
   WHERE tm.organization_id =
         p_organization_id
@@ -1783,6 +1837,22 @@ BEGIN
   IF v_profile_id IS NULL THEN
     RAISE EXCEPTION
       'Training module must be started before completion';
+  END IF;
+
+  IF v_required THEN
+    SELECT
+      count(*)
+    INTO
+      v_required_step_count
+    FROM public.training_module_steps tms
+    WHERE tms.training_module_id =
+          v_module_id
+      AND tms.required = true;
+
+    IF v_required_step_count = 0 THEN
+      RAISE EXCEPTION
+        'Required training module must define at least one required step before it can be started or completed';
+    END IF;
   END IF;
 
   SELECT
@@ -2032,6 +2102,27 @@ BEGIN
     ON tm.organization_id =
        m.organization_id
    AND tm.active = true
+   AND EXISTS (
+     SELECT 1
+     FROM public.member_role_grants live_g
+     LEFT JOIN public.branches live_b
+       ON live_b.id =
+          live_g.branch_id
+      AND live_b.organization_id =
+          live_g.organization_id
+      AND live_b.status =
+          'active'::public.branch_status
+      AND live_b.deleted_at IS NULL
+     WHERE live_g.organization_id =
+           m.organization_id
+       AND live_g.organization_member_id =
+           m.id
+       AND live_g.revoked_at IS NULL
+       AND (
+         live_g.branch_id IS NULL
+         OR live_b.id IS NOT NULL
+       )
+   )
    AND (
      tm.role_id IS NULL
      OR EXISTS (
