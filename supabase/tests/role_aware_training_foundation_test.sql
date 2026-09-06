@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(50);
+SELECT plan(56);
 
 -- =====================================================================
 -- Little Moments OS
@@ -1424,6 +1424,170 @@ SELECT is(
   0::bigint,
   'T1 completion cannot create Founder sign-off or Work Ready state'
 );
+
+
+-- =====================================================================
+-- Part 8 — Versioned catalogue immutability
+-- =====================================================================
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'service_role',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"role":"service_role"}',
+  true
+);
+
+SET LOCAL ROLE service_role;
+
+-- 51
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.training_modules
+      SET title = title
+      WHERE organization_id =
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+        AND module_key = 'common-orientation'
+        AND version = 1
+    $sql$,
+    'immutable once member training state exists'
+  ),
+  'service role cannot mutate a module version after member training state exists'
+);
+
+-- 52
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      DELETE FROM public.training_modules
+      WHERE organization_id =
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+        AND module_key = 'common-orientation'
+        AND version = 1
+    $sql$,
+    'immutable once member training state exists'
+  ),
+  'service role cannot delete a module version after member training state exists'
+);
+
+-- 53
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      INSERT INTO public.training_module_steps (
+        organization_id,
+        training_module_id,
+        step_key,
+        step_order,
+        step_type,
+        required,
+        completion_event_type,
+        completion_result
+      )
+      SELECT
+        tm.organization_id,
+        tm.id,
+        'late-added-step',
+        99,
+        'orientation'::public.training_step_type,
+        true,
+        'step_completed'::public.training_step_event_type,
+        'pass'::public.training_step_event_result
+      FROM public.training_modules tm
+      WHERE tm.organization_id =
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+        AND tm.module_key = 'common-orientation'
+        AND tm.version = 1
+    $sql$,
+    'immutable once member training state exists'
+  ),
+  'service role cannot add a step to a module version after member training state exists'
+);
+
+-- 54
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.training_module_steps tms
+      SET required = NOT tms.required
+      FROM public.training_modules tm
+      WHERE tm.id = tms.training_module_id
+        AND tm.organization_id =
+          '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+        AND tm.module_key = 'common-orientation'
+        AND tm.version = 1
+        AND tms.step_key = 'welcome'
+    $sql$,
+    'immutable once member training state exists'
+  ),
+  'service role cannot edit a step contract after member training state exists'
+);
+
+-- 55
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      DELETE FROM public.training_module_steps tms
+      USING public.training_modules tm
+      WHERE tm.id = tms.training_module_id
+        AND tm.organization_id =
+          '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+        AND tm.module_key = 'common-orientation'
+        AND tm.version = 1
+        AND tms.step_key = 'welcome'
+    $sql$,
+    'immutable once member training state exists'
+  ),
+  'service role cannot delete a step contract after member training state exists'
+);
+
+-- New versions remain the supported evolution path.
+INSERT INTO public.training_modules (
+  organization_id,
+  role_id,
+  module_key,
+  version,
+  title,
+  required,
+  active,
+  minimum_score
+)
+SELECT
+  tm.organization_id,
+  tm.role_id,
+  tm.module_key,
+  2,
+  'Little Moments OS - Common Orientation v2 test',
+  tm.required,
+  false,
+  tm.minimum_score
+FROM public.training_modules tm
+WHERE tm.organization_id =
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+  AND tm.module_key = 'common-orientation'
+  AND tm.version = 1;
+
+-- 56
+SELECT is(
+  (
+    SELECT count(*)::bigint
+    FROM public.training_modules tm
+    WHERE tm.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND tm.module_key = 'common-orientation'
+      AND tm.version = 2
+      AND tm.active = false
+  ),
+  1::bigint,
+  'new module versions remain available as the safe catalogue evolution path'
+);
+
+RESET ROLE;
 
 
 SELECT * FROM finish();

@@ -11,7 +11,7 @@ export type TrainingGateDecision =
         | "context-error"
         | "gate-off"
         | "no-required-training"
-        | "work-ready";
+        | "training-complete";
     }
   | {
       action: "soft-reminder";
@@ -59,7 +59,9 @@ export function getRequiredTrainingModules(
 export function getIncompleteRequiredTrainingModules(
   rows: readonly TrainingContextRow[],
 ): TrainingContextRow[] {
-  return getRequiredTrainingModules(rows).filter((row) => row.workReadyAt === null);
+  return getRequiredTrainingModules(rows).filter(
+    (row) => row.trainingStatus !== "complete" || row.completedAt === null,
+  );
 }
 
 export function resolveTrainingGate({
@@ -121,7 +123,7 @@ export function resolveTrainingGate({
   if (incompleteModules.length === 0) {
     return {
       action: "allow",
-      reason: "work-ready",
+      reason: "training-complete",
     };
   }
 

@@ -736,6 +736,77 @@ EXECUTE FUNCTION public.lsh_reject_training_step_event_mutation();
 
 
 -- =====================================================================
+-- 11A. Freeze versioned training catalogue after member state exists
+-- =====================================================================
+
+CREATE FUNCTION public.lsh_guard_training_catalogue_version_mutation()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $function$
+DECLARE
+  v_old_module_id uuid;
+  v_new_module_id uuid;
+BEGIN
+  IF TG_TABLE_NAME = 'training_modules' THEN
+    v_old_module_id := OLD.id;
+
+    IF TG_OP = 'UPDATE' THEN
+      v_new_module_id := NEW.id;
+    END IF;
+  ELSE
+    IF TG_OP <> 'INSERT' THEN
+      v_old_module_id := OLD.training_module_id;
+    END IF;
+
+    IF TG_OP <> 'DELETE' THEN
+      v_new_module_id := NEW.training_module_id;
+    END IF;
+  END IF;
+
+  IF v_old_module_id IS NOT NULL
+     AND EXISTS (
+       SELECT 1
+       FROM public.member_training_profiles mtp
+       WHERE mtp.training_module_id = v_old_module_id
+     ) THEN
+    RAISE EXCEPTION
+      'Training module version is immutable once member training state exists; create a new version';
+  END IF;
+
+  IF v_new_module_id IS NOT NULL
+     AND v_new_module_id IS DISTINCT FROM v_old_module_id
+     AND EXISTS (
+       SELECT 1
+       FROM public.member_training_profiles mtp
+       WHERE mtp.training_module_id = v_new_module_id
+     ) THEN
+    RAISE EXCEPTION
+      'Training module version is immutable once member training state exists; create a new version';
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+
+CREATE TRIGGER training_modules_version_immutable_after_state
+BEFORE UPDATE OR DELETE
+ON public.training_modules
+FOR EACH ROW
+EXECUTE FUNCTION public.lsh_guard_training_catalogue_version_mutation();
+
+CREATE TRIGGER training_module_steps_version_immutable_after_state
+BEFORE INSERT OR UPDATE OR DELETE
+ON public.training_module_steps
+FOR EACH ROW
+EXECUTE FUNCTION public.lsh_guard_training_catalogue_version_mutation();
+
+
+-- =====================================================================
 -- 12. RLS: database/server remains the authority
 -- =====================================================================
 
