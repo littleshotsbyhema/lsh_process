@@ -779,6 +779,16 @@ BEGIN
     RETURN NEW;
   END IF;
 
+  -- The rollout-settings row is tenant-owned state. Moving the primary
+  -- key to another organization would simultaneously remove the source
+  -- organization's effective gate and create one for the destination
+  -- without traversing either configuration transition.
+  IF OLD.organization_id IS DISTINCT FROM
+     NEW.organization_id THEN
+    RAISE EXCEPTION
+      'Training settings organization_id is immutable';
+  END IF;
+
   IF OLD.gate_mode IS NOT DISTINCT FROM NEW.gate_mode THEN
     RETURN NEW;
   END IF;
@@ -1094,6 +1104,18 @@ BEGIN
     IF TG_OP <> 'DELETE' THEN
       v_new_module_id := NEW.training_module_id;
     END IF;
+
+    -- Serialize step mutation against first profile creation before
+    -- evaluating catalogue immutability. start_my_training_module holds
+    -- FOR SHARE on the parent module through profile creation, so this
+    -- conflicting lock waits and then the member-state checks below
+    -- re-read the post-start state.
+    PERFORM 1
+    FROM public.training_modules tm
+    WHERE tm.id = v_old_module_id
+       OR tm.id = v_new_module_id
+    ORDER BY tm.id
+    FOR UPDATE OF tm;
   END IF;
 
   IF v_old_module_id IS NOT NULL
@@ -1483,14 +1505,16 @@ BEGIN
 
   -- Serialize every affected module row in deterministic UUID order.
   --
-  -- Module publication/retirement uses UPDATE row locks. Step mutation
-  -- uses FOR SHARE here. Ownership moves lock both OLD and NEW owners
-  -- in one stable order so catalogue mutation cannot cross publication.
+  -- Module publication/retirement uses UPDATE row locks, while module
+  -- start holds FOR SHARE through first profile creation. Step mutation
+  -- therefore takes FOR UPDATE here so it conflicts with both lifecycle
+  -- paths. Ownership moves lock OLD and NEW owners in deterministic UUID
+  -- order to preserve the same serialization boundary without deadlock.
   PERFORM 1
   FROM public.training_modules tm
   WHERE tm.id = ANY(v_module_ids)
   ORDER BY tm.id
-  FOR SHARE OF tm;
+  FOR UPDATE OF tm;
 
   FOREACH v_module_id IN ARRAY v_module_ids
   LOOP

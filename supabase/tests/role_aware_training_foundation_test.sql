@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(104);
+SELECT plan(107);
 
 -- =====================================================================
 -- Little Moments OS
@@ -2957,14 +2957,14 @@ SELECT ok(
 -- 92
 SELECT ok(
   position(
-    'for share of tm'
+    'for update of tm'
     IN lower(
       pg_get_functiondef(
         'public.lsh_guard_common_orientation_client_contract()'::regprocedure
       )
     )
   ) > 0,
-  'client-contract guard locks the module row across step mutation and publication'
+  'step mutation takes a conflicting module lock against first start and publication'
 );
 
 -- 93
@@ -3302,6 +3302,93 @@ SELECT ok(
 );
 
 RESET ROLE;
+
+
+-- =====================================================================
+-- Part 17 — Rollout tenant-key immutability
+-- =====================================================================
+--
+-- A rollout row cannot move between organizations. Such a move would be
+-- equivalent to deleting the source gate and inserting the destination
+-- gate while preserving gate_mode, bypassing transition authorization.
+-- =====================================================================
+
+INSERT INTO public.organizations (
+  id,
+  display_name,
+  slug
+)
+VALUES (
+  'c1000000-0000-4000-8000-000000000099'::uuid,
+  'T1 Tenant Move Destination',
+  't1-tenant-move-destination'
+);
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'service_role',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"role":"service_role"}',
+  true
+);
+
+SET LOCAL ROLE service_role;
+
+-- 105
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.organization_training_settings
+      SET
+        organization_id =
+          'c1000000-0000-4000-8000-000000000099'::uuid,
+        updated_by = NULL
+      WHERE organization_id =
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+    $sql$,
+    'Training settings organization_id is immutable'
+  ),
+  'service-role tooling cannot move a rollout settings row between organizations'
+);
+
+RESET ROLE;
+
+-- 106
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM public.organization_training_settings ots
+    WHERE ots.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ots.gate_mode =
+        'off'::public.training_gate_mode
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.organization_training_settings ots
+    WHERE ots.organization_id =
+      'c1000000-0000-4000-8000-000000000099'::uuid
+  ),
+  'rejected tenant-key move preserves the source rollout row and creates no destination row'
+);
+
+
+-- 107
+SELECT ok(
+  position(
+    'for update of tm'
+    IN lower(
+      pg_get_functiondef(
+        'public.lsh_guard_training_catalogue_version_mutation()'::regprocedure
+      )
+    )
+  ) > 0,
+  'catalogue immutability guard takes the conflicting module lock before step-state validation'
+);
 
 
 SELECT * FROM finish();
