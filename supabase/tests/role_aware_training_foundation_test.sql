@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(107);
+SELECT plan(121);
 
 -- =====================================================================
 -- Little Moments OS
@@ -392,6 +392,25 @@ FROM public.lsh_bootstrap_canonical_founder(
 );
 
 RESET ROLE;
+
+-- Existing catalogue regression fixtures below represent controlled
+-- Founder-attributed catalogue tooling inside this rollback-only test
+-- transaction. The production boundary validates this member and their
+-- org.settings.write authority on every module mutation.
+SELECT set_config(
+  'lsh.training_catalogue_actor_member_id',
+  (
+    SELECT m.id::text
+    FROM public.organization_members m
+    WHERE m.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND m.user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND m.status =
+        'active'::public.member_status
+  ),
+  true
+);
 
 -- 15
 SELECT ok(
@@ -3389,6 +3408,414 @@ SELECT ok(
   ) > 0,
   'catalogue immutability guard takes the conflicting module lock before step-state validation'
 );
+
+
+-- =====================================================================
+-- Part 18 — Training catalogue lifecycle is attributable and auditable
+-- =====================================================================
+--
+-- Runtime catalogue lifecycle changes require a transaction-local actor
+-- with org.settings.write. Persisted updated_by is output only.
+-- TRUNCATE cannot bypass catalogue triggers.
+-- =====================================================================
+
+-- 108
+SELECT is(
+  (
+    SELECT count(*)::bigint
+    FROM pg_catalog.pg_trigger t
+    WHERE t.tgrelid =
+          'public.training_modules'::regclass
+      AND t.tgname =
+          'training_modules_z_catalogue_audit'
+      AND NOT t.tgisinternal
+  ),
+  1::bigint,
+  'training catalogue audit trigger exists exactly once'
+);
+
+-- 109
+SELECT ok(
+  (
+    SELECT p.prosecdef
+    FROM pg_catalog.pg_proc p
+    JOIN pg_catalog.pg_namespace n
+      ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname =
+        'lsh_audit_training_catalogue_module_change'
+  ),
+  'training catalogue audit trigger function is SECURITY DEFINER'
+);
+
+-- 110
+SELECT ok(
+  NOT has_table_privilege(
+    'service_role',
+    'public.training_modules',
+    'TRUNCATE'
+  ),
+  'service_role has no TRUNCATE privilege on training modules'
+);
+
+-- 111
+SELECT ok(
+  NOT has_table_privilege(
+    'service_role',
+    'public.training_module_steps',
+    'TRUNCATE'
+  ),
+  'service_role has no TRUNCATE privilege on training module steps'
+);
+
+SELECT set_config(
+  'lsh.training_catalogue_actor_member_id',
+  '',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'service_role',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"role":"service_role"}',
+  true
+);
+
+SET LOCAL ROLE service_role;
+
+-- 112
+SELECT ok(
+  pg_temp.t1_denied(
+    'TRUNCATE TABLE public.training_modules CASCADE',
+    'permission denied'
+  ),
+  'service_role cannot truncate the training module catalogue'
+);
+
+-- 113
+SELECT ok(
+  pg_temp.t1_denied(
+    'TRUNCATE TABLE public.training_module_steps',
+    'permission denied'
+  ),
+  'service_role cannot truncate the training step catalogue'
+);
+
+-- 114
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      INSERT INTO public.training_modules (
+        id,
+        organization_id,
+        role_id,
+        module_key,
+        version,
+        title,
+        required,
+        active,
+        minimum_score
+      )
+      VALUES (
+        'c2000000-0000-4000-8000-000000000001'::uuid,
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+        NULL,
+        'catalogue-audit-probe',
+        1,
+        'Catalogue audit probe',
+        false,
+        false,
+        100
+      )
+    $sql$,
+    'Fresh transaction-local training catalogue actor context is required'
+  ),
+  'service-role catalogue creation requires fresh transaction-local actor context'
+);
+
+SELECT set_config(
+  'lsh.training_catalogue_actor_member_id',
+  (
+    SELECT m.id::text
+    FROM public.organization_members m
+    WHERE m.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND m.user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND m.status =
+        'active'::public.member_status
+  ),
+  true
+);
+
+INSERT INTO public.training_modules (
+  id,
+  organization_id,
+  role_id,
+  module_key,
+  version,
+  title,
+  required,
+  active,
+  minimum_score
+)
+VALUES (
+  'c2000000-0000-4000-8000-000000000001'::uuid,
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  NULL,
+  'catalogue-audit-probe',
+  1,
+  'Catalogue audit probe',
+  false,
+  false,
+  100
+);
+
+-- 115
+SELECT ok(
+  (
+    SELECT
+      tm.updated_by = (
+        SELECT m.id
+        FROM public.organization_members m
+        WHERE m.organization_id =
+          tm.organization_id
+          AND m.user_id =
+            'b1000000-0000-4000-8000-000000000001'::uuid
+      )
+    FROM public.training_modules tm
+    WHERE tm.id =
+      'c2000000-0000-4000-8000-000000000001'::uuid
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM public.audit_events ae
+    WHERE ae.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.actor_user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND ae.action_key =
+        'training.catalogue.module.created'
+      AND ae.entity_type =
+        'training_module'
+      AND ae.entity_id =
+        'c2000000-0000-4000-8000-000000000001'::uuid
+      AND ae.old_values IS NULL
+      AND ae.new_values ->> 'active' = 'false'
+      AND ae.source =
+        'training-catalogue-trigger'
+  ),
+  'Founder-attributed draft creation overwrites updated_by and appends immutable audit evidence'
+);
+
+-- Persisted updated_by cannot authorize a later mutation.
+SELECT set_config(
+  'lsh.training_catalogue_actor_member_id',
+  '',
+  true
+);
+
+-- 116
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.training_modules
+      SET title =
+        'Catalogue audit probe stale actor attempt'
+      WHERE id =
+        'c2000000-0000-4000-8000-000000000001'::uuid
+    $sql$,
+    'Fresh transaction-local training catalogue actor context is required'
+  ),
+  'catalogue mutation cannot reuse persisted updated_by as actor authority'
+);
+
+-- The active non-settings member created by the earlier gate-audit
+-- adversarial fixture must not acquire catalogue authority.
+SELECT set_config(
+  'lsh.training_catalogue_actor_member_id',
+  (
+    SELECT m.id::text
+    FROM public.organization_members m
+    WHERE m.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND m.id =
+        'b1000000-0000-4000-8000-000000000012'::uuid
+      AND m.status =
+        'active'::public.member_status
+  ),
+  true
+);
+
+-- 117
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.training_modules
+      SET title =
+        'Catalogue audit probe unauthorized actor'
+      WHERE id =
+        'c2000000-0000-4000-8000-000000000001'::uuid
+    $sql$,
+    'Training catalogue changes require org.settings.write'
+  ),
+  'active member without organization-settings authority cannot mutate the training catalogue'
+);
+
+SELECT set_config(
+  'lsh.training_catalogue_actor_member_id',
+  (
+    SELECT m.id::text
+    FROM public.organization_members m
+    WHERE m.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND m.user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND m.status =
+        'active'::public.member_status
+  ),
+  true
+);
+
+UPDATE public.training_modules
+SET title =
+  'Catalogue audit probe updated'
+WHERE id =
+  'c2000000-0000-4000-8000-000000000001'::uuid;
+
+-- 118
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM public.audit_events ae
+    WHERE ae.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.actor_user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND ae.action_key =
+        'training.catalogue.module.updated'
+      AND ae.entity_id =
+        'c2000000-0000-4000-8000-000000000001'::uuid
+      AND ae.old_values ->> 'title' =
+        'Catalogue audit probe'
+      AND ae.new_values ->> 'title' =
+        'Catalogue audit probe updated'
+      AND ae.source =
+        'training-catalogue-trigger'
+  ),
+  'ordinary catalogue edits append exact Founder-attributed audit evidence'
+);
+
+UPDATE public.training_modules
+SET active = true
+WHERE id =
+  'c2000000-0000-4000-8000-000000000001'::uuid;
+
+-- 119
+SELECT ok(
+  (
+    SELECT tm.active
+    FROM public.training_modules tm
+    WHERE tm.id =
+      'c2000000-0000-4000-8000-000000000001'::uuid
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM public.audit_events ae
+    WHERE ae.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.actor_user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND ae.action_key =
+        'training.catalogue.module.published'
+      AND ae.entity_id =
+        'c2000000-0000-4000-8000-000000000001'::uuid
+      AND ae.old_values ->> 'active' = 'false'
+      AND ae.new_values ->> 'active' = 'true'
+      AND ae.source =
+        'training-catalogue-trigger'
+  ),
+  'catalogue publication is Founder-attributed and immutably audited'
+);
+
+UPDATE public.training_modules
+SET active = false
+WHERE id =
+  'c2000000-0000-4000-8000-000000000001'::uuid;
+
+-- 120
+SELECT ok(
+  (
+    SELECT NOT tm.active
+    FROM public.training_modules tm
+    WHERE tm.id =
+      'c2000000-0000-4000-8000-000000000001'::uuid
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM public.audit_events ae
+    WHERE ae.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.actor_user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND ae.action_key =
+        'training.catalogue.module.retired'
+      AND ae.entity_id =
+        'c2000000-0000-4000-8000-000000000001'::uuid
+      AND ae.old_values ->> 'active' = 'true'
+      AND ae.new_values ->> 'active' = 'false'
+      AND ae.source =
+        'training-catalogue-trigger'
+  ),
+  'catalogue retirement is Founder-attributed and immutably audited'
+);
+
+-- 121
+SELECT ok(
+  (
+    SELECT count(*) = 4
+    FROM public.audit_events ae
+    WHERE ae.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.entity_type =
+        'training_module'
+      AND ae.entity_id =
+        'c2000000-0000-4000-8000-000000000001'::uuid
+      AND ae.actor_user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND ae.source =
+        'training-catalogue-trigger'
+  )
+  AND
+  (
+    SELECT count(*) = 4
+    FROM (
+      VALUES
+        ('training.catalogue.module.created'),
+        ('training.catalogue.module.updated'),
+        ('training.catalogue.module.published'),
+        ('training.catalogue.module.retired')
+    ) expected(action_key)
+    WHERE EXISTS (
+      SELECT 1
+      FROM public.audit_events ae
+      WHERE ae.organization_id =
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+        AND ae.entity_id =
+          'c2000000-0000-4000-8000-000000000001'::uuid
+        AND ae.action_key =
+          expected.action_key
+    )
+  ),
+  'catalogue lifecycle preserves one exact immutable audit event for create edit publish and retire'
+);
+
+RESET ROLE;
 
 
 SELECT * FROM finish();

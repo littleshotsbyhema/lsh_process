@@ -1616,6 +1616,295 @@ EXECUTE FUNCTION
 
 
 -- =====================================================================
+-- 15B. Attributable and immutable training-catalogue lifecycle
+-- =====================================================================
+--
+-- Runtime module creation, publication, retirement, edits, and deletion
+-- can alter the training contract and, for required modules, who is
+-- blocked by the rollout gate.
+--
+-- Privileged catalogue tooling therefore supplies a transaction-local
+-- actor member ID. The trigger validates that member as active in the
+-- module organization with org.settings.write, overwrites updated_by,
+-- and records the mutation in canonical immutable audit_events.
+--
+-- The actor context is transaction-local rather than persisted row
+-- input. One controlled catalogue transaction may perform multiple
+-- related mutations for the same validated actor; a later transaction
+-- must explicitly establish its own context.
+-- =====================================================================
+
+CREATE FUNCTION public.lsh_audit_training_catalogue_module_change()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+DECLARE
+  v_organization_id uuid;
+  v_entity_id uuid;
+
+  v_actor_context text;
+  v_actor_member_id uuid;
+  v_actor_user_id uuid;
+
+  v_executor_role text;
+  v_action_key text;
+
+  v_old_values jsonb;
+  v_new_values jsonb;
+BEGIN
+  -- A module row is tenant-owned catalogue state. Moving it between
+  -- organizations would rewrite catalogue ownership rather than perform
+  -- an attributable lifecycle transition inside one organization.
+  IF TG_OP = 'UPDATE'
+     AND OLD.organization_id IS DISTINCT FROM
+         NEW.organization_id THEN
+    RAISE EXCEPTION
+      'Training module organization_id is immutable';
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    v_organization_id := OLD.organization_id;
+    v_entity_id := OLD.id;
+  ELSE
+    v_organization_id := NEW.organization_id;
+    v_entity_id := NEW.id;
+  END IF;
+
+  v_actor_context :=
+    NULLIF(
+      current_setting(
+        'lsh.training_catalogue_actor_member_id',
+        true
+      ),
+      ''
+    );
+
+  IF v_actor_context IS NULL THEN
+    RAISE EXCEPTION
+      'Fresh transaction-local training catalogue actor context is required for privileged catalogue changes';
+  END IF;
+
+  BEGIN
+    v_actor_member_id := v_actor_context::uuid;
+  EXCEPTION
+    WHEN invalid_text_representation THEN
+      RAISE EXCEPTION
+        'Training catalogue actor context must be a valid organization member UUID';
+  END;
+
+  SELECT m.user_id
+  INTO v_actor_user_id
+  FROM public.organization_members m
+  WHERE m.id =
+        v_actor_member_id
+    AND m.organization_id =
+        v_organization_id
+    AND m.status =
+        'active'::public.member_status;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION
+      'Training catalogue actor context must identify an active organization member';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.organization_members m
+    JOIN public.member_role_grants g
+      ON g.organization_id =
+         m.organization_id
+     AND g.organization_member_id =
+         m.id
+     AND g.revoked_at IS NULL
+    JOIN public.role_permissions rp
+      ON rp.role_id =
+         g.role_id
+    JOIN public.permissions p
+      ON p.id =
+         rp.permission_id
+     AND p.key =
+         'org.settings.write'
+    LEFT JOIN public.branches b
+      ON b.id =
+         g.branch_id
+     AND b.organization_id =
+         g.organization_id
+     AND b.status =
+         'active'::public.branch_status
+     AND b.deleted_at IS NULL
+    WHERE m.id =
+          v_actor_member_id
+      AND m.organization_id =
+          v_organization_id
+      AND m.status =
+          'active'::public.member_status
+      AND (
+        g.branch_id IS NULL
+        OR b.id IS NOT NULL
+      )
+  ) THEN
+    RAISE EXCEPTION
+      'Training catalogue changes require org.settings.write';
+  END IF;
+
+  IF TG_OP <> 'DELETE' THEN
+    -- updated_by is output attribution only. Callers cannot persist or
+    -- reuse a prior row actor as authorization for this mutation.
+    NEW.updated_by := v_actor_member_id;
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.active THEN
+      v_action_key :=
+        'training.catalogue.module.published';
+    ELSE
+      v_action_key :=
+        'training.catalogue.module.created';
+    END IF;
+
+  ELSIF TG_OP = 'DELETE' THEN
+    v_action_key :=
+      'training.catalogue.module.deleted';
+
+  ELSIF OLD.active = false
+        AND NEW.active = true THEN
+    v_action_key :=
+      'training.catalogue.module.published';
+
+  ELSIF OLD.active = true
+        AND NEW.active = false THEN
+    v_action_key :=
+      'training.catalogue.module.retired';
+
+  ELSE
+    v_action_key :=
+      'training.catalogue.module.updated';
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    v_old_values := NULL;
+  ELSE
+    v_old_values :=
+      jsonb_build_object(
+        'role_id',
+        OLD.role_id,
+        'module_key',
+        OLD.module_key,
+        'version',
+        OLD.version,
+        'title',
+        OLD.title,
+        'required',
+        OLD.required,
+        'active',
+        OLD.active,
+        'minimum_score',
+        OLD.minimum_score
+      );
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    v_new_values := NULL;
+  ELSE
+    v_new_values :=
+      jsonb_build_object(
+        'role_id',
+        NEW.role_id,
+        'module_key',
+        NEW.module_key,
+        'version',
+        NEW.version,
+        'title',
+        NEW.title,
+        'required',
+        NEW.required,
+        'active',
+        NEW.active,
+        'minimum_score',
+        NEW.minimum_score
+      );
+  END IF;
+
+  v_executor_role :=
+    NULLIF(
+      current_setting(
+        'request.jwt.claim.role',
+        true
+      ),
+      ''
+    );
+
+  INSERT INTO public.audit_events (
+    organization_id,
+    actor_member_id,
+    actor_user_id,
+    action_key,
+    entity_type,
+    entity_id,
+    is_sensitive,
+    old_values,
+    new_values,
+    metadata,
+    source
+  )
+  VALUES (
+    v_organization_id,
+    v_actor_member_id,
+    v_actor_user_id,
+    v_action_key,
+    'training_module',
+    v_entity_id,
+    false,
+    v_old_values,
+    v_new_values,
+    jsonb_build_object(
+      'operation',
+      lower(TG_OP),
+      'executor_role',
+      COALESCE(
+        v_executor_role,
+        current_user
+      ),
+      'attribution',
+      'transaction_local_actor_context'
+    ),
+    'training-catalogue-trigger'
+  );
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+
+
+-- Same-timing PostgreSQL triggers execute by trigger name. The z-prefix
+-- intentionally keeps frozen-version validation ahead of the audit
+-- boundary, so invalid frozen mutations retain their existing denial
+-- semantics. Any later failure still rolls back the audit row atomically.
+CREATE TRIGGER training_modules_z_catalogue_audit
+BEFORE INSERT OR UPDATE OR DELETE
+ON public.training_modules
+FOR EACH ROW
+EXECUTE FUNCTION
+  public.lsh_audit_training_catalogue_module_change();
+
+
+-- TRUNCATE does not fire row-level catalogue guards or audit triggers.
+-- Removing either catalogue table wholesale would bypass publication,
+-- immutability, and audit boundaries.
+REVOKE TRUNCATE
+ON TABLE
+  public.training_modules,
+  public.training_module_steps
+FROM service_role;
+
+
+-- =====================================================================
 -- 16. Authenticated member training read context
 -- =====================================================================
 
