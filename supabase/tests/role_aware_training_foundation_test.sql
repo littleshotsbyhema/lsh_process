@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(91);
+SELECT plan(99);
 
 -- =====================================================================
 -- Little Moments OS
@@ -2930,7 +2930,211 @@ SELECT ok(
   'client-contract guard locks the module row across step mutation and publication'
 );
 
+-- 92
+SELECT ok(
+  NOT has_table_privilege(
+    'service_role',
+    'public.member_training_profiles',
+    'INSERT'
+  ),
+  'service_role cannot directly insert training profile lifecycle state'
+);
+
+-- 93
+SELECT ok(
+  NOT has_table_privilege(
+    'service_role',
+    'public.member_training_profiles',
+    'UPDATE'
+  ),
+  'service_role cannot directly update training profile lifecycle state'
+);
+
+-- 94
+SELECT ok(
+  NOT has_table_privilege(
+    'service_role',
+    'public.member_training_profiles',
+    'DELETE'
+  ),
+  'service_role cannot directly delete training profile lifecycle state'
+);
+
+-- 95
+SELECT ok(
+  NOT has_table_privilege(
+    'service_role',
+    'public.member_training_profiles',
+    'TRUNCATE'
+  ),
+  'service_role cannot truncate training profile lifecycle state'
+);
+
+-- 96
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.member_training_profiles
+      SET
+        status =
+          'complete'::public.training_profile_status,
+        completed_at =
+          COALESCE(completed_at, now())
+    $sql$,
+    'permission denied'
+  ),
+  'service_role cannot directly mark training profiles complete'
+);
+
 RESET ROLE;
+
+
+-- =====================================================================
+-- Ownership-move regression:
+-- prove the client-contract guard validates the active SOURCE module,
+-- not only the inactive destination module.
+--
+-- Earlier publication tests intentionally retire v2 and leave the
+-- incompatible v3 inactive, so create an isolated supported v4 source
+-- explicitly for this ownership-move test.
+-- =====================================================================
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'service_role',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"role":"service_role"}',
+  true
+);
+
+SET LOCAL ROLE service_role;
+
+INSERT INTO public.training_modules (
+  id,
+  organization_id,
+  role_id,
+  module_key,
+  version,
+  title,
+  required,
+  active,
+  minimum_score
+)
+VALUES (
+  'b2000000-0000-4000-8000-000000000098'::uuid,
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  NULL,
+  'common-orientation',
+  4,
+  'Common Orientation v4 ownership-move source',
+  true,
+  false,
+  100
+);
+
+INSERT INTO public.training_module_steps (
+  organization_id,
+  training_module_id,
+  step_key,
+  step_order,
+  step_type,
+  required,
+  completion_event_type,
+  completion_result
+)
+SELECT
+  tms.organization_id,
+  'b2000000-0000-4000-8000-000000000098'::uuid,
+  tms.step_key,
+  tms.step_order,
+  tms.step_type,
+  tms.required,
+  tms.completion_event_type,
+  tms.completion_result
+FROM public.training_module_steps tms
+JOIN public.training_modules tm
+  ON tm.id =
+     tms.training_module_id
+WHERE tm.organization_id =
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+  AND tm.module_key =
+    'common-orientation'
+  AND tm.version = 2
+ORDER BY tms.step_order;
+
+UPDATE public.training_modules
+SET active = true
+WHERE id =
+  'b2000000-0000-4000-8000-000000000098'::uuid;
+
+INSERT INTO public.training_modules (
+  id,
+  organization_id,
+  role_id,
+  module_key,
+  version,
+  title,
+  required,
+  active,
+  minimum_score
+)
+VALUES (
+  'b2000000-0000-4000-8000-000000000099'::uuid,
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  NULL,
+  'p2-step-move-target',
+  1,
+  'P2 step move inactive target',
+  false,
+  false,
+  100
+);
+
+-- 97
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.training_module_steps
+      SET training_module_id =
+        'b2000000-0000-4000-8000-000000000099'::uuid
+      WHERE training_module_id =
+        'b2000000-0000-4000-8000-000000000098'::uuid
+        AND step_key = 'help'
+    $sql$,
+    'Active common-orientation contract is not supported by the T1 client'
+  ),
+  'moving a step out of an active common-orientation validates and rejects the broken source contract'
+);
+
+RESET ROLE;
+
+-- 98
+SELECT is(
+  (
+    SELECT count(*)::bigint
+    FROM public.training_module_steps
+    WHERE training_module_id =
+      'b2000000-0000-4000-8000-000000000098'::uuid
+  ),
+  7::bigint,
+  'rejected ownership move leaves the active source seven-step contract intact'
+);
+
+-- 99
+SELECT is(
+  (
+    SELECT count(*)::bigint
+    FROM public.training_module_steps
+    WHERE training_module_id =
+      'b2000000-0000-4000-8000-000000000099'::uuid
+  ),
+  0::bigint,
+  'rejected ownership move leaves the inactive destination module unchanged'
+);
 
 
 SELECT * FROM finish();

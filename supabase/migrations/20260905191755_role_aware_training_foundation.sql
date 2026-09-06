@@ -1206,6 +1206,18 @@ REVOKE DELETE, TRUNCATE
 ON TABLE public.organization_training_settings
 FROM service_role;
 
+-- member_training_profiles is server-authoritative lifecycle state.
+-- Direct privileged DML could otherwise create or mark profiles complete
+-- without traversing required-step verification, immutable completion
+-- evidence, or the training.module.completed audit boundary.
+--
+-- The controlled SECURITY DEFINER training RPCs remain the lifecycle
+-- mutation surface; service_role retains read access for operational
+-- inspection but no direct profile-state mutation authority.
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE
+ON TABLE public.member_training_profiles
+FROM service_role;
+
 
 -- =====================================================================
 -- 13. Training oversight permission
@@ -1368,10 +1380,13 @@ SET search_path = ''
 AS $function$
 DECLARE
   v_module_id uuid;
+  v_module_ids uuid[];
+
   v_active boolean;
   v_module_key text;
   v_role_id uuid;
   v_required boolean;
+
   v_actual_contract jsonb;
 
   v_supported_contract CONSTANT jsonb :=
@@ -1385,104 +1400,127 @@ DECLARE
       ["help",7,"help",true,"step_completed","pass"]
     ]'::jsonb;
 BEGIN
-  -- Serialize catalogue step mutations with module publication.
-  -- UPDATE of training_modules already takes a conflicting row lock;
-  -- step-trigger executions take FOR SHARE on the same module row.
-  -- Whichever transaction arrives second therefore re-validates only
-  -- after the first transaction commits or rolls back.
+  -- Build the complete set of module rows whose effective contracts
+  -- may have changed.
+  --
+  -- For a training_module_steps ownership move, BOTH the source and
+  -- destination modules must be validated. Validating NEW only would
+  -- permit an active source module to silently lose a required step.
   IF TG_TABLE_NAME = 'training_modules' THEN
     IF TG_OP = 'DELETE' THEN
-      v_module_id := OLD.id;
+      v_module_ids := ARRAY[OLD.id];
     ELSE
-      v_module_id := NEW.id;
+      v_module_ids := ARRAY[NEW.id];
     END IF;
+
   ELSE
-    IF TG_OP = 'DELETE' THEN
-      v_module_id := OLD.training_module_id;
+    IF TG_OP = 'INSERT' THEN
+      v_module_ids :=
+        ARRAY[NEW.training_module_id];
+
+    ELSIF TG_OP = 'DELETE' THEN
+      v_module_ids :=
+        ARRAY[OLD.training_module_id];
+
+    ELSIF OLD.training_module_id
+          IS DISTINCT FROM
+          NEW.training_module_id THEN
+      v_module_ids :=
+        ARRAY[
+          OLD.training_module_id,
+          NEW.training_module_id
+        ];
+
     ELSE
-      v_module_id := NEW.training_module_id;
+      v_module_ids :=
+        ARRAY[NEW.training_module_id];
     END IF;
   END IF;
 
-  SELECT
-    tm.active,
-    tm.module_key,
-    tm.role_id,
-    tm.required
-  INTO
-    v_active,
-    v_module_key,
-    v_role_id,
-    v_required
+  -- Serialize every affected module row in deterministic UUID order.
+  --
+  -- Module publication/retirement uses UPDATE row locks. Step mutation
+  -- uses FOR SHARE here. Ownership moves lock both OLD and NEW owners
+  -- in one stable order so catalogue mutation cannot cross publication.
+  PERFORM 1
   FROM public.training_modules tm
-  WHERE tm.id =
-        v_module_id
+  WHERE tm.id = ANY(v_module_ids)
+  ORDER BY tm.id
   FOR SHARE OF tm;
 
-  IF NOT FOUND
-     OR NOT v_active THEN
-    IF TG_OP = 'DELETE' THEN
-      RETURN OLD;
+  FOREACH v_module_id IN ARRAY v_module_ids
+  LOOP
+    SELECT
+      tm.active,
+      tm.module_key,
+      tm.role_id,
+      tm.required
+    INTO
+      v_active,
+      v_module_key,
+      v_role_id,
+      v_required
+    FROM public.training_modules tm
+    WHERE tm.id =
+          v_module_id;
+
+    -- Parent deletion/cascade paths may make the old module disappear
+    -- before an AFTER trigger can re-read it.
+    IF NOT FOUND
+       OR NOT v_active THEN
+      CONTINUE;
     END IF;
 
-    RETURN NEW;
-  END IF;
-
-  -- T1 currently renders only the global common-orientation module.
-  -- Other module identities may be authored while inactive, and may
-  -- remain active only when optional. A required unsupported module
-  -- must never enter the training gate because the T1 client cannot
-  -- start or complete it.
-  IF v_required
-     AND (
-       v_module_key <> 'common-orientation'
-       OR v_role_id IS NOT NULL
-     ) THEN
-    RAISE EXCEPTION
-      'Active required training module is not supported by the T1 client'
-      USING HINT =
-        'Keep unsupported required modules inactive until the client can render them.';
-  END IF;
-
-  -- Optional unsupported modules do not participate in the required
-  -- gate and remain available for future role-training slices.
-  IF v_module_key <> 'common-orientation'
-     OR v_role_id IS NOT NULL THEN
-    IF TG_OP = 'DELETE' THEN
-      RETURN OLD;
+    -- T1 currently renders only the global common-orientation module.
+    -- Other module identities may be authored while inactive, and may
+    -- remain active only when optional.
+    IF v_required
+       AND (
+         v_module_key <> 'common-orientation'
+         OR v_role_id IS NOT NULL
+       ) THEN
+      RAISE EXCEPTION
+        'Active required training module is not supported by the T1 client'
+        USING HINT =
+          'Keep unsupported required modules inactive until the client can render them.';
     END IF;
 
-    RETURN NEW;
-  END IF;
+    -- Optional unsupported modules do not participate in the required
+    -- gate and remain available for later role-training slices.
+    IF v_module_key <> 'common-orientation'
+       OR v_role_id IS NOT NULL THEN
+      CONTINUE;
+    END IF;
 
-  SELECT COALESCE(
-    jsonb_agg(
-      jsonb_build_array(
-        tms.step_key,
-        tms.step_order,
-        tms.step_type::text,
-        tms.required,
-        tms.completion_event_type::text,
-        tms.completion_result::text
-      )
-      ORDER BY
-        tms.step_order,
-        tms.step_key
-    ),
-    '[]'::jsonb
-  )
-  INTO v_actual_contract
-  FROM public.training_module_steps tms
-  WHERE tms.training_module_id =
-        v_module_id;
+    SELECT COALESCE(
+      jsonb_agg(
+        jsonb_build_array(
+          tms.step_key,
+          tms.step_order,
+          tms.step_type::text,
+          tms.required,
+          tms.completion_event_type::text,
+          tms.completion_result::text
+        )
+        ORDER BY
+          tms.step_order,
+          tms.step_key
+      ),
+      '[]'::jsonb
+    )
+    INTO v_actual_contract
+    FROM public.training_module_steps tms
+    WHERE tms.training_module_id =
+          v_module_id;
 
-  IF v_actual_contract IS DISTINCT FROM
-     v_supported_contract THEN
-    RAISE EXCEPTION
-      'Active common-orientation contract is not supported by the T1 client'
-      USING HINT =
-        'Create the version inactive and publish it only with the supported seven-step T1 contract.';
-  END IF;
+    IF v_actual_contract IS DISTINCT FROM
+       v_supported_contract THEN
+      RAISE EXCEPTION
+        'Active common-orientation contract is not supported by the T1 client'
+        USING HINT =
+          'Create the version inactive and publish it only with the supported seven-step T1 contract.';
+    END IF;
+  END LOOP;
 
   IF TG_OP = 'DELETE' THEN
     RETURN OLD;
