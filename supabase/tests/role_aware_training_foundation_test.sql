@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(70);
+SELECT plan(72);
 
 -- =====================================================================
 -- Little Moments OS
@@ -2194,6 +2194,101 @@ SELECT is(
   ),
   0::bigint,
   'Founder directory excludes active members with no live role scope'
+);
+
+RESET ROLE;
+
+
+-- =====================================================================
+-- Part 11 — Training progress cursor monotonicity
+-- =====================================================================
+--
+-- Founder has a live organization-wide role and the active v2 common
+-- orientation is available. A later completed step is recorded first,
+-- then a stale earlier completion is submitted as if from another tab.
+-- Both evidence events remain valid, but the profile cursor must never
+-- move backward.
+-- =====================================================================
+
+SELECT set_config(
+  'request.jwt.claim.sub',
+  'b1000000-0000-4000-8000-000000000001',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'authenticated',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"sub":"b1000000-0000-4000-8000-000000000001","role":"authenticated"}',
+  true
+);
+
+SET LOCAL ROLE authenticated;
+
+SELECT public.start_my_training_module(
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  'common-orientation',
+  2
+);
+
+SELECT public.record_my_training_step(
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  'common-orientation',
+  2,
+  'privacy',
+  'step_completed'::public.training_step_event_type,
+  'pass'::public.training_step_event_result,
+  '{"source":"pgtap-monotonic-cursor-later-tab"}'::jsonb
+);
+
+-- 71
+SELECT is(
+  (
+    SELECT current_step_key
+    FROM public.my_training_context(
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+    )
+    WHERE module_key = 'common-orientation'
+      AND module_version = 2
+  ),
+  'privacy',
+  'later valid completion advances the training progress cursor'
+);
+
+SELECT set_config(
+  't1.stale_cursor_event_id',
+  public.record_my_training_step(
+    '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+    'common-orientation',
+    2,
+    'welcome',
+    'step_completed'::public.training_step_event_type,
+    'pass'::public.training_step_event_result,
+    '{"source":"pgtap-monotonic-cursor-stale-tab"}'::jsonb
+  )::text,
+  true
+);
+
+-- 72
+SELECT ok(
+  (
+    SELECT current_step_key = 'privacy'
+    FROM public.my_training_context(
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+    )
+    WHERE module_key = 'common-orientation'
+      AND module_version = 2
+  )
+  AND
+  current_setting(
+    't1.stale_cursor_event_id'
+  )::uuid IS NOT NULL,
+  'stale earlier completion remains recorded evidence but cannot regress the progress cursor'
 );
 
 RESET ROLE;

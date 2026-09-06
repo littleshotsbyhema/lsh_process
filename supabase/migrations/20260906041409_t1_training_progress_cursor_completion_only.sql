@@ -186,33 +186,50 @@ BEGIN
   RETURNING id
   INTO v_event_id;
 
-  UPDATE public.member_training_profiles
+  UPDATE public.member_training_profiles mtp
   SET
     current_step_key =
       CASE
         WHEN EXISTS (
           SELECT 1
           FROM public.training_module_steps tms_completion
-          WHERE tms_completion.training_module_id = v_module_id
-            AND tms_completion.step_key = p_step_key
-            AND tms_completion.completion_event_type = p_event_type
+          WHERE tms_completion.training_module_id =
+                v_module_id
+            AND tms_completion.step_key =
+                p_step_key
+            AND tms_completion.completion_event_type =
+                p_event_type
             AND tms_completion.completion_result
                 IS NOT DISTINCT FROM p_result
         )
-        THEN p_step_key
-        ELSE current_step_key
+        THEN (
+          SELECT tms_cursor.step_key
+          FROM public.training_module_steps tms_cursor
+          WHERE tms_cursor.training_module_id =
+                v_module_id
+            AND (
+              tms_cursor.step_key =
+                p_step_key
+              OR tms_cursor.step_key =
+                mtp.current_step_key
+            )
+          ORDER BY
+            tms_cursor.step_order DESC
+          LIMIT 1
+        )
+        ELSE mtp.current_step_key
       END,
 
     status =
       CASE
-        WHEN status =
+        WHEN mtp.status =
              'complete'::public.training_profile_status
-          THEN status
+          THEN mtp.status
         ELSE
           'in_progress'::public.training_profile_status
       END
 
-  WHERE id =
+  WHERE mtp.id =
         v_profile_id;
 
   RETURN v_event_id;

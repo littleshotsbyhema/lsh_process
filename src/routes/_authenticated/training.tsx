@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check, ChevronRight, CircleHelp, ShieldCheck } from "lucide-react";
 
 import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
 import {
   completeTrainingModule,
+  getFounderTrainingDirectory,
   recordTrainingStep,
   startTrainingModule,
+  type TrainingDirectoryRow,
 } from "@/lib/training.functions";
 import { commonOrientationSteps } from "@/lib/training/common-tour";
 import { GuidedInterfaceTour } from "@/components/training/GuidedInterfaceTour";
@@ -39,6 +42,17 @@ function TrainingPage() {
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [tourOpen, setTourOpen] = useState(false);
+
+  const isFounder = useMemo(() => rows.some((row) => row.roleKeys.includes("founder")), [rows]);
+
+  const founderDirectoryQuery = useQuery({
+    queryKey: ["founder-training-directory"],
+    queryFn: () => getFounderTrainingDirectory(),
+    enabled: !loading && !error && isFounder,
+    retry: 1,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  });
 
   const module = useMemo(
     () => rows.find((row) => row.moduleKey === "common-orientation") ?? null,
@@ -80,6 +94,14 @@ function TrainingPage() {
     ? 100
     : Math.round((currentStepIndex / commonOrientationSteps.length) * 100);
 
+  async function refreshTrainingViews() {
+    await refresh();
+
+    if (isFounder) {
+      await founderDirectoryQuery.refetch();
+    }
+  }
+
   async function startOrientation() {
     if (!module || busy) return;
 
@@ -94,7 +116,7 @@ function TrainingPage() {
         },
       });
 
-      await refresh();
+      await refreshTrainingViews();
     } catch (nextError) {
       setActionError(getErrorMessage(nextError));
     } finally {
@@ -133,7 +155,7 @@ function TrainingPage() {
         });
       }
 
-      await refresh();
+      await refreshTrainingViews();
     } catch (nextError) {
       setActionError(getErrorMessage(nextError));
     } finally {
@@ -163,7 +185,7 @@ function TrainingPage() {
         },
       });
 
-      await refresh();
+      await refreshTrainingViews();
 
       return true;
     } catch (nextError) {
@@ -188,7 +210,7 @@ function TrainingPage() {
         },
       });
 
-      await refresh();
+      await refreshTrainingViews();
     } catch (nextError) {
       setActionError(getErrorMessage(nextError));
     } finally {
@@ -476,6 +498,16 @@ function TrainingPage() {
           <RoleScopeCard module={module} />
         </div>
       )}
+      {!loading && !error && isFounder && (
+        <FounderTrainingDirectory
+          rows={founderDirectoryQuery.data ?? []}
+          loading={founderDirectoryQuery.isPending}
+          errorMessage={
+            founderDirectoryQuery.isError ? getErrorMessage(founderDirectoryQuery.error) : null
+          }
+        />
+      )}
+
       {module && currentStep?.key === "navigation" && tourOpen && (
         <GuidedInterfaceTour
           moduleKey={module.moduleKey}
@@ -486,6 +518,121 @@ function TrainingPage() {
         />
       )}
     </AppShell>
+  );
+}
+
+function FounderTrainingDirectory({
+  rows,
+  loading,
+  errorMessage,
+}: {
+  rows: TrainingDirectoryRow[];
+  loading: boolean;
+  errorMessage: string | null;
+}) {
+  return (
+    <Card className="mt-6 p-6 sm:p-8">
+      <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+        Founder oversight
+      </div>
+
+      <h2 className="mt-2 font-serif text-2xl text-primary">Team training directory</h2>
+
+      <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+        Read-only training progress across currently eligible team members. Training completion does
+        not grant role authority, branch authority, Founder sign-off, or Work Ready status.
+      </p>
+
+      {loading && (
+        <div className="mt-5 rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+          Loading team training progress…
+        </div>
+      )}
+
+      {!loading && errorMessage && (
+        <div
+          role="alert"
+          className="mt-5 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+        >
+          Founder training oversight is temporarily unavailable: {errorMessage}
+        </div>
+      )}
+
+      {!loading && !errorMessage && rows.length === 0 && (
+        <div className="mt-5 rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+          No currently applicable team training rows are available.
+        </div>
+      )}
+
+      {!loading && !errorMessage && rows.length > 0 && (
+        <div className="mt-6 space-y-3">
+          {rows.map((row) => {
+            const roleText = row.roleKeys.length > 0 ? row.roleKeys.join(" · ") : "No live role";
+
+            const branchText = row.organizationWide
+              ? "Organization-wide"
+              : row.branchNames.length > 0
+                ? row.branchNames.join(" · ")
+                : "No live branch scope";
+
+            const statusTone =
+              row.trainingStatus === "complete"
+                ? "good"
+                : row.trainingStatus === "in_progress"
+                  ? "warn"
+                  : "neutral";
+
+            const statusText = row.trainingStatus.replace(/_/g, " ");
+
+            return (
+              <div
+                key={`${row.memberId}:${row.moduleKey}:${row.moduleVersion}`}
+                className="rounded-xl border border-border p-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium text-primary">
+                      {row.displayName ?? row.email ?? "Team member"}
+                    </div>
+
+                    {row.email && (
+                      <div className="mt-1 text-xs text-muted-foreground">{row.email}</div>
+                    )}
+                  </div>
+
+                  <StatusPill tone={statusTone}>{statusText}</StatusPill>
+                </div>
+
+                <div className="mt-4 grid gap-3 text-xs text-muted-foreground sm:grid-cols-3">
+                  <div>
+                    <div className="uppercase tracking-[0.16em]">Role</div>
+                    <div className="mt-1 text-sm text-primary">{roleText}</div>
+                  </div>
+
+                  <div>
+                    <div className="uppercase tracking-[0.16em]">Scope</div>
+                    <div className="mt-1 text-sm text-primary">{branchText}</div>
+                  </div>
+
+                  <div>
+                    <div className="uppercase tracking-[0.16em]">Module</div>
+                    <div className="mt-1 text-sm text-primary">
+                      {row.moduleTitle} · v{row.moduleVersion}
+                    </div>
+                  </div>
+                </div>
+
+                {row.completedAt && (
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    Completion evidence recorded.
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
   );
 }
 
