@@ -731,6 +731,200 @@ EXECUTE FUNCTION public.lsh_set_updated_at();
 
 
 -- =====================================================================
+-- 10A. Audited training-gate configuration changes
+-- =====================================================================
+--
+-- gate_mode can materially redirect incomplete members away from
+-- operational routes. Every real transition therefore requires an
+-- attributable active member with org.settings.write and appends an
+-- immutable canonical audit event.
+--
+-- Authenticated execution derives the actor from auth.uid(). Privileged
+-- service tooling must explicitly provide updated_by; the trigger then
+-- verifies that member is active and holds org.settings.write.
+-- =====================================================================
+
+CREATE FUNCTION public.lsh_audit_training_gate_mode_change()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+DECLARE
+  v_actor_member_id uuid;
+  v_actor_user_id uuid;
+  v_executor_role text;
+  v_attribution text;
+BEGIN
+  IF OLD.gate_mode IS NOT DISTINCT FROM NEW.gate_mode THEN
+    RETURN NEW;
+  END IF;
+
+  v_executor_role :=
+    NULLIF(
+      current_setting(
+        'request.jwt.claim.role',
+        true
+      ),
+      ''
+    );
+
+  IF v_executor_role = 'authenticated' THEN
+    v_actor_user_id := auth.uid();
+
+    IF v_actor_user_id IS NULL THEN
+      RAISE EXCEPTION
+        'Authenticated training gate change requires a user identity';
+    END IF;
+
+    v_actor_member_id :=
+      public.current_organization_member(
+        NEW.organization_id
+      );
+
+    IF v_actor_member_id IS NULL THEN
+      RAISE EXCEPTION
+        'Training gate change requires active organization membership';
+    END IF;
+
+    IF NEW.updated_by IS NOT NULL
+       AND NEW.updated_by <> v_actor_member_id THEN
+      RAISE EXCEPTION
+        'updated_by must match the authenticated organization member';
+    END IF;
+
+    NEW.updated_by := v_actor_member_id;
+    v_attribution := 'authenticated_member';
+
+  ELSE
+    v_actor_member_id := NEW.updated_by;
+
+    IF v_actor_member_id IS NULL THEN
+      RAISE EXCEPTION
+        'updated_by is required when changing training gate mode';
+    END IF;
+
+    SELECT m.user_id
+    INTO v_actor_user_id
+    FROM public.organization_members m
+    WHERE m.id =
+          v_actor_member_id
+      AND m.organization_id =
+          NEW.organization_id
+      AND m.status =
+          'active'::public.member_status;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION
+        'updated_by must identify an active organization member';
+    END IF;
+
+    v_attribution := 'explicit_updated_by';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.organization_members m
+    JOIN public.member_role_grants g
+      ON g.organization_id =
+         m.organization_id
+     AND g.organization_member_id =
+         m.id
+     AND g.revoked_at IS NULL
+    JOIN public.role_permissions rp
+      ON rp.role_id =
+         g.role_id
+    JOIN public.permissions p
+      ON p.id =
+         rp.permission_id
+     AND p.key =
+         'org.settings.write'
+    LEFT JOIN public.branches b
+      ON b.id =
+         g.branch_id
+     AND b.organization_id =
+         g.organization_id
+     AND b.status =
+         'active'::public.branch_status
+     AND b.deleted_at IS NULL
+    WHERE m.id =
+          v_actor_member_id
+      AND m.organization_id =
+          NEW.organization_id
+      AND m.status =
+          'active'::public.member_status
+      AND (
+        g.branch_id IS NULL
+        OR b.id IS NOT NULL
+      )
+  ) THEN
+    RAISE EXCEPTION
+      'Training gate mode changes require org.settings.write';
+  END IF;
+
+  INSERT INTO public.audit_events (
+    organization_id,
+    actor_member_id,
+    actor_user_id,
+    action_key,
+    entity_type,
+    entity_id,
+    is_sensitive,
+    old_values,
+    new_values,
+    metadata,
+    source
+  )
+  VALUES (
+    NEW.organization_id,
+    v_actor_member_id,
+    v_actor_user_id,
+    'training.gate_mode.changed',
+    'organization_training_settings',
+    NEW.organization_id,
+    false,
+    jsonb_build_object(
+      'gate_mode',
+      OLD.gate_mode::text
+    ),
+    jsonb_build_object(
+      'gate_mode',
+      NEW.gate_mode::text
+    ),
+    jsonb_build_object(
+      'executor_role',
+      COALESCE(
+        v_executor_role,
+        current_user
+      ),
+      'attribution',
+      v_attribution
+    ),
+    'training-gate-trigger'
+  );
+
+  RETURN NEW;
+END;
+$function$;
+
+
+CREATE TRIGGER organization_training_settings_gate_mode_audit
+BEFORE UPDATE OF gate_mode
+ON public.organization_training_settings
+FOR EACH ROW
+EXECUTE FUNCTION
+  public.lsh_audit_training_gate_mode_change();
+
+
+-- audit_events already rejects row-level UPDATE/DELETE. TRUNCATE does
+-- not fire those row triggers, so service_role must not retain that
+-- bypass if training-gate history is to remain immutable.
+REVOKE TRUNCATE
+ON TABLE public.audit_events
+FROM service_role;
+
+
+-- =====================================================================
 -- 11. Immutable training-event guard
 -- =====================================================================
 
@@ -2398,6 +2592,10 @@ TO authenticated;
 
 REVOKE ALL
 ON FUNCTION public.lsh_reject_training_step_event_mutation()
+FROM PUBLIC, anon, authenticated, service_role;
+
+REVOKE ALL
+ON FUNCTION public.lsh_audit_training_gate_mode_change()
 FROM PUBLIC, anon, authenticated, service_role;
 
 

@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(78);
+SELECT plan(85);
 
 -- =====================================================================
 -- Little Moments OS
@@ -2659,6 +2659,207 @@ SELECT ok(
       )::uuid
   ),
   'failed unsupported required-module publication leaves the module inactive'
+);
+
+RESET ROLE;
+
+
+-- =====================================================================
+-- Part 15 — Training-gate configuration is attributable and immutable
+-- =====================================================================
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'service_role',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"role":"service_role"}',
+  true
+);
+
+SET LOCAL ROLE service_role;
+
+-- 79
+SELECT is(
+  (
+    SELECT count(*)::bigint
+    FROM pg_catalog.pg_trigger t
+    WHERE t.tgrelid =
+      to_regclass(
+        'public.organization_training_settings'
+      )
+      AND t.tgname =
+        'organization_training_settings_gate_mode_audit'
+      AND NOT t.tgisinternal
+  ),
+  1::bigint,
+  'training gate audit trigger exists exactly once'
+);
+
+-- 80
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.organization_training_settings
+      SET
+        gate_mode =
+          'soft'::public.training_gate_mode,
+        updated_by = NULL
+      WHERE organization_id =
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+    $sql$,
+    'updated_by is required'
+  ),
+  'service-role gate change without an attributable actor is rejected'
+);
+
+-- 81
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.organization_training_settings
+      SET
+        gate_mode =
+          'soft'::public.training_gate_mode,
+        updated_by =
+          'b1000000-0000-4000-8000-000000000012'::uuid
+      WHERE organization_id =
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+    $sql$,
+    'org.settings.write'
+  ),
+  'an active member without organization-settings authority cannot be attributed to a gate change'
+);
+
+UPDATE public.organization_training_settings
+SET
+  gate_mode =
+    'soft'::public.training_gate_mode,
+  updated_by = (
+    SELECT m.id
+    FROM public.organization_members m
+    WHERE m.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND m.user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+  )
+WHERE organization_id =
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid;
+
+-- 82
+SELECT ok(
+  (
+    SELECT
+      ots.gate_mode =
+        'soft'::public.training_gate_mode
+      AND ots.updated_by = (
+        SELECT m.id
+        FROM public.organization_members m
+        WHERE m.organization_id =
+          ots.organization_id
+          AND m.user_id =
+            'b1000000-0000-4000-8000-000000000001'::uuid
+      )
+    FROM public.organization_training_settings ots
+    WHERE ots.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+  )
+  AND
+  (
+    SELECT count(*) = 1
+    FROM public.audit_events ae
+    WHERE ae.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.action_key =
+        'training.gate_mode.changed'
+      AND ae.entity_type =
+        'organization_training_settings'
+      AND ae.entity_id =
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.actor_user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND ae.old_values =
+        '{"gate_mode":"off"}'::jsonb
+      AND ae.new_values =
+        '{"gate_mode":"soft"}'::jsonb
+      AND ae.source =
+        'training-gate-trigger'
+  ),
+  'Founder-attributed off-to-soft gate change appends exact immutable audit evidence'
+);
+
+UPDATE public.organization_training_settings
+SET
+  gate_mode =
+    'required'::public.training_gate_mode,
+  updated_by = (
+    SELECT m.id
+    FROM public.organization_members m
+    WHERE m.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND m.user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+  )
+WHERE organization_id =
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid;
+
+-- 83
+SELECT ok(
+  (
+    SELECT count(*) = 2
+    FROM public.audit_events ae
+    WHERE ae.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.action_key =
+        'training.gate_mode.changed'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM public.audit_events ae
+    WHERE ae.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.action_key =
+        'training.gate_mode.changed'
+      AND ae.old_values =
+        '{"gate_mode":"off"}'::jsonb
+      AND ae.new_values =
+        '{"gate_mode":"soft"}'::jsonb
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM public.audit_events ae
+    WHERE ae.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.action_key =
+        'training.gate_mode.changed'
+      AND ae.old_values =
+        '{"gate_mode":"soft"}'::jsonb
+      AND ae.new_values =
+        '{"gate_mode":"required"}'::jsonb
+  ),
+  'successive gate changes preserve both historical transitions'
+);
+
+-- 84
+SELECT ok(
+  NOT has_table_privilege(
+    'service_role',
+    'public.audit_events',
+    'TRUNCATE'
+  ),
+  'service_role has no TRUNCATE privilege over immutable gate audit history'
+);
+
+-- 85
+SELECT ok(
+  pg_temp.t1_denied(
+    'TRUNCATE TABLE public.audit_events',
+    'permission denied'
+  ),
+  'service_role cannot truncate immutable audit history'
 );
 
 RESET ROLE;
