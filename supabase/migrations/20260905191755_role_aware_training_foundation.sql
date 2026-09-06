@@ -1196,6 +1196,16 @@ REVOKE TRUNCATE
 ON TABLE public.training_step_events
 FROM service_role;
 
+-- organization_training_settings is the persistent rollout authority.
+-- Removing the row would implicitly change soft/required back to the
+-- application fallback of off without traversing the audited gate-mode
+-- UPDATE boundary. TRUNCATE has the same effect and bypasses row-level
+-- triggers entirely. Controlled tooling may INSERT/UPDATE this singleton
+-- configuration, but it must not DELETE or TRUNCATE it.
+REVOKE DELETE, TRUNCATE
+ON TABLE public.organization_training_settings
+FROM service_role;
+
 
 -- =====================================================================
 -- 13. Training oversight permission

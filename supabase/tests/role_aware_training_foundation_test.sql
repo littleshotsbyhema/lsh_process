@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(85);
+SELECT plan(89);
 
 -- =====================================================================
 -- Little Moments OS
@@ -2860,6 +2860,48 @@ SELECT ok(
     'permission denied'
   ),
   'service_role cannot truncate immutable audit history'
+);
+
+-- 86
+SELECT ok(
+  NOT has_table_privilege(
+    'service_role',
+    'public.organization_training_settings',
+    'DELETE'
+  ),
+  'service_role has no DELETE privilege on training rollout settings'
+);
+
+-- 87
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      DELETE FROM public.organization_training_settings
+      WHERE organization_id =
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+    $sql$,
+    'permission denied'
+  ),
+  'service_role cannot delete the training rollout settings row'
+);
+
+-- 88
+SELECT ok(
+  NOT has_table_privilege(
+    'service_role',
+    'public.organization_training_settings',
+    'TRUNCATE'
+  ),
+  'service_role has no TRUNCATE privilege on training rollout settings'
+);
+
+-- 89
+SELECT ok(
+  pg_temp.t1_denied(
+    'TRUNCATE TABLE public.organization_training_settings',
+    'permission denied'
+  ),
+  'service_role cannot truncate training rollout settings'
 );
 
 RESET ROLE;
