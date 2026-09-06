@@ -647,6 +647,23 @@ ON public.training_modules (
   active
 );
 
+CREATE UNIQUE INDEX training_modules_one_active_common_version_idx
+ON public.training_modules (
+  organization_id,
+  module_key
+)
+WHERE active = true
+  AND role_id IS NULL;
+
+CREATE UNIQUE INDEX training_modules_one_active_role_version_idx
+ON public.training_modules (
+  organization_id,
+  module_key,
+  role_id
+)
+WHERE active = true
+  AND role_id IS NOT NULL;
+
 CREATE INDEX training_module_steps_module_order_idx
 ON public.training_module_steps (
   training_module_id,
@@ -747,13 +764,60 @@ AS $function$
 DECLARE
   v_old_module_id uuid;
   v_new_module_id uuid;
+  v_has_member_state boolean := false;
 BEGIN
   IF TG_TABLE_NAME = 'training_modules' THEN
-    v_old_module_id := OLD.id;
+    IF TG_OP <> 'INSERT' THEN
+      v_old_module_id := OLD.id;
+    END IF;
 
-    IF TG_OP = 'UPDATE' THEN
+    IF TG_OP <> 'DELETE' THEN
       v_new_module_id := NEW.id;
     END IF;
+
+    IF v_old_module_id IS NOT NULL THEN
+      SELECT EXISTS (
+        SELECT 1
+        FROM public.member_training_profiles mtp
+        WHERE mtp.training_module_id =
+              v_old_module_id
+      )
+      INTO v_has_member_state;
+    END IF;
+
+    IF TG_OP = 'UPDATE'
+       AND v_has_member_state THEN
+      IF OLD.active = true
+         AND NEW.active = false
+         AND NEW.id = OLD.id
+         AND NEW.organization_id = OLD.organization_id
+         AND NEW.role_id IS NOT DISTINCT FROM OLD.role_id
+         AND NEW.module_key = OLD.module_key
+         AND NEW.version = OLD.version
+         AND NEW.title = OLD.title
+         AND NEW.required = OLD.required
+         AND NEW.minimum_score = OLD.minimum_score
+         AND NEW.created_at = OLD.created_at THEN
+
+        IF EXISTS (
+          SELECT 1
+          FROM public.member_training_profiles mtp
+          WHERE mtp.training_module_id =
+                OLD.id
+            AND mtp.status <>
+                'complete'::public.training_profile_status
+        ) THEN
+          RAISE EXCEPTION
+            'Training module version cannot be deactivated while member training is incomplete';
+        END IF;
+
+        RETURN NEW;
+      END IF;
+
+      RAISE EXCEPTION
+        'Training module version is immutable once member training state exists; create a new version';
+    END IF;
+
   ELSE
     IF TG_OP <> 'INSERT' THEN
       v_old_module_id := OLD.training_module_id;
@@ -768,7 +832,8 @@ BEGIN
      AND EXISTS (
        SELECT 1
        FROM public.member_training_profiles mtp
-       WHERE mtp.training_module_id = v_old_module_id
+       WHERE mtp.training_module_id =
+             v_old_module_id
      ) THEN
     RAISE EXCEPTION
       'Training module version is immutable once member training state exists; create a new version';
@@ -779,7 +844,8 @@ BEGIN
      AND EXISTS (
        SELECT 1
        FROM public.member_training_profiles mtp
-       WHERE mtp.training_module_id = v_new_module_id
+       WHERE mtp.training_module_id =
+             v_new_module_id
      ) THEN
     RAISE EXCEPTION
       'Training module version is immutable once member training state exists; create a new version';
@@ -1631,6 +1697,7 @@ DECLARE
   v_module_id uuid;
   v_profile_id uuid;
   v_missing_count integer;
+  v_completion_transitioned boolean := false;
 BEGIN
   v_member_id :=
     public.current_organization_member(
@@ -1757,70 +1824,80 @@ BEGIN
       )
 
   WHERE id =
-        v_profile_id;
+        v_profile_id
+    AND status <>
+        'complete'::public.training_profile_status
 
-  IF NOT EXISTS (
-    SELECT 1
-    FROM public.training_step_events tse
-    WHERE tse.member_training_profile_id =
-          v_profile_id
-      AND tse.step_key =
-          '__module__'
-      AND tse.event_type =
-          'module_completed'::public.training_step_event_type
-  ) THEN
-    INSERT INTO public.training_step_events (
+  RETURNING true
+  INTO v_completion_transitioned;
+
+  IF COALESCE(
+       v_completion_transitioned,
+       false
+     ) THEN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM public.training_step_events tse
+      WHERE tse.member_training_profile_id =
+            v_profile_id
+        AND tse.step_key =
+            '__module__'
+        AND tse.event_type =
+            'module_completed'::public.training_step_event_type
+    ) THEN
+      INSERT INTO public.training_step_events (
+        organization_id,
+        organization_member_id,
+        member_training_profile_id,
+        step_key,
+        event_type,
+        result,
+        metadata
+      )
+      VALUES (
+        p_organization_id,
+        v_member_id,
+        v_profile_id,
+        '__module__',
+        'module_completed'::public.training_step_event_type,
+        'pass'::public.training_step_event_result,
+        jsonb_build_object(
+          'module_key',
+          p_module_key,
+          'version',
+          p_version
+        )
+      );
+    END IF;
+
+    INSERT INTO public.audit_events (
       organization_id,
-      organization_member_id,
-      member_training_profile_id,
-      step_key,
-      event_type,
-      result,
-      metadata
+      actor_member_id,
+      actor_user_id,
+      action_key,
+      entity_type,
+      entity_id,
+      is_sensitive,
+      metadata,
+      source
     )
     VALUES (
       p_organization_id,
       v_member_id,
+      auth.uid(),
+      'training.module.completed',
+      'member_training_profile',
       v_profile_id,
-      '__module__',
-      'module_completed'::public.training_step_event_type,
-      'pass'::public.training_step_event_result,
+      false,
       jsonb_build_object(
         'module_key',
         p_module_key,
         'version',
         p_version
-      )
+      ),
+      'application'
     );
   END IF;
-
-  INSERT INTO public.audit_events (
-    organization_id,
-    actor_member_id,
-    actor_user_id,
-    action_key,
-    entity_type,
-    entity_id,
-    is_sensitive,
-    metadata,
-    source
-  )
-  VALUES (
-    p_organization_id,
-    v_member_id,
-    auth.uid(),
-    'training.module.completed',
-    'member_training_profile',
-    v_profile_id,
-    false,
-    jsonb_build_object(
-      'module_key',
-      p_module_key,
-      'version',
-      p_version
-    ),
-    'application'
-  );
 
   RETURN v_profile_id;
 END;

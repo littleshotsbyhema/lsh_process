@@ -41,8 +41,7 @@ function TrainingPage() {
   const [tourOpen, setTourOpen] = useState(false);
 
   const module = useMemo(
-    () =>
-      rows.find((row) => row.moduleKey === "common-orientation" && row.moduleVersion === 1) ?? null,
+    () => rows.find((row) => row.moduleKey === "common-orientation") ?? null,
     [rows],
   );
 
@@ -207,7 +206,9 @@ function TrainingPage() {
       />
 
       <div className="mb-6 flex flex-wrap items-center gap-2">
-        <StatusPill tone="gold">Common Orientation v1</StatusPill>
+        <StatusPill tone="gold">
+          {module ? `Common Orientation v${module.moduleVersion}` : "Common Orientation"}
+        </StatusPill>
 
         <StatusPill tone={completed ? "good" : started ? "warn" : "neutral"}>
           {completed ? "Training complete" : started ? "In progress" : "Not started"}

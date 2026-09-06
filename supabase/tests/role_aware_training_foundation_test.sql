@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(56);
+SELECT plan(63);
 
 -- =====================================================================
 -- Little Moments OS
@@ -1585,6 +1585,241 @@ SELECT is(
   ),
   1::bigint,
   'new module versions remain available as the safe catalogue evolution path'
+);
+
+RESET ROLE;
+
+
+-- =====================================================================
+-- Part 9 — Completion retry idempotency and module supersession
+-- =====================================================================
+
+-- Retry the already-completed v1 module as the original Photographer.
+SELECT set_config(
+  'request.jwt.claim.sub',
+  'b1000000-0000-4000-8000-000000000002',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'authenticated',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"sub":"b1000000-0000-4000-8000-000000000002","role":"authenticated"}',
+  true
+);
+
+SET LOCAL ROLE authenticated;
+
+-- 57
+SELECT is(
+  public.complete_my_training_module(
+    '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+    'common-orientation',
+    1
+  )::text,
+  current_setting('t1.worker_profile_id'),
+  'retrying an already-completed module returns the existing profile'
+);
+
+RESET ROLE;
+
+-- 58
+SELECT ok(
+  (
+    SELECT count(*) = 1
+    FROM public.training_step_events tse
+    WHERE tse.member_training_profile_id =
+      current_setting('t1.worker_profile_id')::uuid
+      AND tse.step_key = '__module__'
+      AND tse.event_type =
+        'module_completed'::public.training_step_event_type
+  )
+  AND
+  (
+    SELECT count(*) = 1
+    FROM public.audit_events ae
+    WHERE ae.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.actor_user_id =
+        'b1000000-0000-4000-8000-000000000002'::uuid
+      AND ae.action_key =
+        'training.module.completed'
+      AND ae.entity_type =
+        'member_training_profile'
+      AND ae.entity_id =
+        current_setting('t1.worker_profile_id')::uuid
+  ),
+  'completion retry emits neither duplicate module evidence nor duplicate completion audit'
+);
+
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'service_role',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"role":"service_role"}',
+  true
+);
+
+SET LOCAL ROLE service_role;
+
+-- 59
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.training_modules
+      SET active = true
+      WHERE organization_id =
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+        AND module_key = 'common-orientation'
+        AND version = 2
+    $sql$,
+    'duplicate key value'
+  ),
+  'a replacement version cannot become active while the prior version is still active'
+);
+
+UPDATE public.training_modules
+SET active = false
+WHERE organization_id =
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+  AND module_key = 'common-orientation'
+  AND version = 1;
+
+-- 60
+SELECT is(
+  (
+    SELECT count(*)::bigint
+    FROM public.training_modules tm
+    WHERE tm.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND tm.module_key = 'common-orientation'
+      AND tm.version = 1
+      AND tm.active = false
+  ),
+  1::bigint,
+  'a frozen version can be retired after all profiles for that version are complete'
+);
+
+UPDATE public.training_modules
+SET active = true
+WHERE organization_id =
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+  AND module_key = 'common-orientation'
+  AND version = 2;
+
+-- 61
+SELECT ok(
+  (
+    SELECT count(*) = 1
+    FROM public.training_modules tm
+    WHERE tm.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND tm.module_key = 'common-orientation'
+      AND tm.active = true
+  )
+  AND
+  (
+    SELECT version = 2
+    FROM public.training_modules tm
+    WHERE tm.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND tm.module_key = 'common-orientation'
+      AND tm.active = true
+  ),
+  'supersession leaves exactly one active common-orientation version and it is v2'
+);
+
+RESET ROLE;
+
+
+-- Second Photographer must now receive only the active replacement version.
+SELECT set_config(
+  'request.jwt.claim.sub',
+  'b1000000-0000-4000-8000-000000000003',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'authenticated',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"sub":"b1000000-0000-4000-8000-000000000003","role":"authenticated"}',
+  true
+);
+
+SET LOCAL ROLE authenticated;
+
+-- 62
+SELECT ok(
+  (
+    SELECT count(*) = 1
+    FROM public.my_training_context(
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+    )
+    WHERE module_key = 'common-orientation'
+  )
+  AND
+  (
+    SELECT module_version = 2
+    FROM public.my_training_context(
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+    )
+    WHERE module_key = 'common-orientation'
+  ),
+  'new member receives only the active replacement module version'
+);
+
+SELECT public.start_my_training_module(
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  'common-orientation',
+  2
+);
+
+RESET ROLE;
+
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'service_role',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"role":"service_role"}',
+  true
+);
+
+SET LOCAL ROLE service_role;
+
+-- 63
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.training_modules
+      SET active = false
+      WHERE organization_id =
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+        AND module_key = 'common-orientation'
+        AND version = 2
+    $sql$,
+    'cannot be deactivated while member training is incomplete'
+  ),
+  'an active version cannot be retired while an existing profile is incomplete'
 );
 
 RESET ROLE;
