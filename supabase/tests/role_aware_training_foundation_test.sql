@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(99);
+SELECT plan(100);
 
 -- =====================================================================
 -- Little Moments OS
@@ -2706,14 +2706,19 @@ SELECT ok(
       UPDATE public.organization_training_settings
       SET
         gate_mode =
-          'soft'::public.training_gate_mode,
-        updated_by = NULL
+          'soft'::public.training_gate_mode
       WHERE organization_id =
         '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
     $sql$,
-    'updated_by is required'
+    'Fresh training gate actor context is required'
   ),
-  'service-role gate change without an attributable actor is rejected'
+  'service-role gate change without fresh actor context is rejected'
+);
+
+SELECT set_config(
+  'lsh.training_gate_actor_member_id',
+  'b1000000-0000-4000-8000-000000000012',
+  true
 );
 
 -- 81
@@ -2723,29 +2728,38 @@ SELECT ok(
       UPDATE public.organization_training_settings
       SET
         gate_mode =
-          'soft'::public.training_gate_mode,
-        updated_by =
-          'b1000000-0000-4000-8000-000000000012'::uuid
+          'soft'::public.training_gate_mode
       WHERE organization_id =
         '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
     $sql$,
     'org.settings.write'
   ),
-  'an active member without organization-settings authority cannot be attributed to a gate change'
+  'a fresh active member without organization-settings authority cannot be attributed to a gate change'
 );
 
-UPDATE public.organization_training_settings
-SET
-  gate_mode =
-    'soft'::public.training_gate_mode,
-  updated_by = (
-    SELECT m.id
+SELECT set_config(
+  'lsh.training_gate_actor_member_id',
+  '',
+  true
+);
+
+SELECT set_config(
+  'lsh.training_gate_actor_member_id',
+  (
+    SELECT m.id::text
     FROM public.organization_members m
     WHERE m.organization_id =
       '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
       AND m.user_id =
         'b1000000-0000-4000-8000-000000000001'::uuid
-  )
+  ),
+  true
+);
+
+UPDATE public.organization_training_settings
+SET
+  gate_mode =
+    'soft'::public.training_gate_mode
 WHERE organization_id =
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid;
 
@@ -2787,26 +2801,49 @@ SELECT ok(
         '{"gate_mode":"soft"}'::jsonb
       AND ae.source =
         'training-gate-trigger'
+      AND ae.metadata ->> 'attribution' =
+        'service_role_actor_context'
   ),
   'Founder-attributed off-to-soft gate change appends exact immutable audit evidence'
 );
 
-UPDATE public.organization_training_settings
-SET
-  gate_mode =
-    'required'::public.training_gate_mode,
-  updated_by = (
-    SELECT m.id
+-- 83
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.organization_training_settings
+      SET
+        gate_mode =
+          'required'::public.training_gate_mode
+      WHERE organization_id =
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+    $sql$,
+    'Fresh training gate actor context is required'
+  ),
+  'service-role gate change cannot reuse persisted updated_by without fresh actor context'
+);
+
+SELECT set_config(
+  'lsh.training_gate_actor_member_id',
+  (
+    SELECT m.id::text
     FROM public.organization_members m
     WHERE m.organization_id =
       '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
       AND m.user_id =
         'b1000000-0000-4000-8000-000000000001'::uuid
-  )
+  ),
+  true
+);
+
+UPDATE public.organization_training_settings
+SET
+  gate_mode =
+    'required'::public.training_gate_mode
 WHERE organization_id =
   '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid;
 
--- 83
+-- 84
 SELECT ok(
   (
     SELECT count(*) = 2
@@ -2843,7 +2880,7 @@ SELECT ok(
   'successive gate changes preserve both historical transitions'
 );
 
--- 84
+-- 85
 SELECT ok(
   NOT has_table_privilege(
     'service_role',
@@ -2853,7 +2890,7 @@ SELECT ok(
   'service_role has no TRUNCATE privilege over immutable gate audit history'
 );
 
--- 85
+-- 86
 SELECT ok(
   pg_temp.t1_denied(
     'TRUNCATE TABLE public.audit_events',
@@ -2862,7 +2899,7 @@ SELECT ok(
   'service_role cannot truncate immutable audit history'
 );
 
--- 86
+-- 87
 SELECT ok(
   NOT has_table_privilege(
     'service_role',
@@ -2872,7 +2909,7 @@ SELECT ok(
   'service_role has no DELETE privilege on training rollout settings'
 );
 
--- 87
+-- 88
 SELECT ok(
   pg_temp.t1_denied(
     $sql$
@@ -2885,7 +2922,7 @@ SELECT ok(
   'service_role cannot delete the training rollout settings row'
 );
 
--- 88
+-- 89
 SELECT ok(
   NOT has_table_privilege(
     'service_role',
@@ -2895,7 +2932,7 @@ SELECT ok(
   'service_role has no TRUNCATE privilege on training rollout settings'
 );
 
--- 89
+-- 90
 SELECT ok(
   pg_temp.t1_denied(
     'TRUNCATE TABLE public.organization_training_settings',
@@ -2904,7 +2941,7 @@ SELECT ok(
   'service_role cannot truncate training rollout settings'
 );
 
--- 90
+-- 91
 SELECT ok(
   position(
     'for share of tm'
@@ -2917,7 +2954,7 @@ SELECT ok(
   'module start locks the selected training module against concurrent retirement'
 );
 
--- 91
+-- 92
 SELECT ok(
   position(
     'for share of tm'
@@ -2930,7 +2967,7 @@ SELECT ok(
   'client-contract guard locks the module row across step mutation and publication'
 );
 
--- 92
+-- 93
 SELECT ok(
   NOT has_table_privilege(
     'service_role',
@@ -2940,7 +2977,7 @@ SELECT ok(
   'service_role cannot directly insert training profile lifecycle state'
 );
 
--- 93
+-- 94
 SELECT ok(
   NOT has_table_privilege(
     'service_role',
@@ -2950,7 +2987,7 @@ SELECT ok(
   'service_role cannot directly update training profile lifecycle state'
 );
 
--- 94
+-- 95
 SELECT ok(
   NOT has_table_privilege(
     'service_role',
@@ -2960,7 +2997,7 @@ SELECT ok(
   'service_role cannot directly delete training profile lifecycle state'
 );
 
--- 95
+-- 96
 SELECT ok(
   NOT has_table_privilege(
     'service_role',
@@ -2970,7 +3007,7 @@ SELECT ok(
   'service_role cannot truncate training profile lifecycle state'
 );
 
--- 96
+-- 97
 SELECT ok(
   pg_temp.t1_denied(
     $sql$
@@ -3094,7 +3131,7 @@ VALUES (
   100
 );
 
--- 97
+-- 98
 SELECT ok(
   pg_temp.t1_denied(
     $sql$
@@ -3112,7 +3149,7 @@ SELECT ok(
 
 RESET ROLE;
 
--- 98
+-- 99
 SELECT is(
   (
     SELECT count(*)::bigint
@@ -3124,7 +3161,7 @@ SELECT is(
   'rejected ownership move leaves the active source seven-step contract intact'
 );
 
--- 99
+-- 100
 SELECT is(
   (
     SELECT count(*)::bigint

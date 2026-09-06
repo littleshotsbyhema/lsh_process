@@ -740,8 +740,9 @@ EXECUTE FUNCTION public.lsh_set_updated_at();
 -- immutable canonical audit event.
 --
 -- Authenticated execution derives the actor from auth.uid(). Privileged
--- service tooling must explicitly provide updated_by; the trigger then
--- verifies that member is active and holds org.settings.write.
+-- service tooling must provide a fresh transaction-local actor context
+-- for each gate transition. Persisted updated_by is output only and is
+-- never accepted as privileged input attribution.
 -- =====================================================================
 
 CREATE FUNCTION public.lsh_audit_training_gate_mode_change()
@@ -753,6 +754,7 @@ AS $function$
 DECLARE
   v_actor_member_id uuid;
   v_actor_user_id uuid;
+  v_actor_context text;
   v_executor_role text;
   v_attribution text;
 BEGIN
@@ -787,22 +789,39 @@ BEGIN
         'Training gate change requires active organization membership';
     END IF;
 
-    IF NEW.updated_by IS NOT NULL
-       AND NEW.updated_by <> v_actor_member_id THEN
-      RAISE EXCEPTION
-        'updated_by must match the authenticated organization member';
-    END IF;
-
     NEW.updated_by := v_actor_member_id;
     v_attribution := 'authenticated_member';
 
   ELSE
-    v_actor_member_id := NEW.updated_by;
+    v_actor_context :=
+      NULLIF(
+        current_setting(
+          'lsh.training_gate_actor_member_id',
+          true
+        ),
+        ''
+      );
 
-    IF v_actor_member_id IS NULL THEN
+    -- Consume successful-operation actor context so a later gate change
+    -- must provide fresh attribution instead of inheriting table state.
+    PERFORM set_config(
+      'lsh.training_gate_actor_member_id',
+      '',
+      true
+    );
+
+    IF v_actor_context IS NULL THEN
       RAISE EXCEPTION
-        'updated_by is required when changing training gate mode';
+        'Fresh training gate actor context is required for privileged gate changes';
     END IF;
+
+    BEGIN
+      v_actor_member_id := v_actor_context::uuid;
+    EXCEPTION
+      WHEN invalid_text_representation THEN
+        RAISE EXCEPTION
+          'Fresh training gate actor context must be a valid organization member UUID';
+    END;
 
     SELECT m.user_id
     INTO v_actor_user_id
@@ -816,10 +835,11 @@ BEGIN
 
     IF NOT FOUND THEN
       RAISE EXCEPTION
-        'updated_by must identify an active organization member';
+        'Training gate actor context must identify an active organization member';
     END IF;
 
-    v_attribution := 'explicit_updated_by';
+    NEW.updated_by := v_actor_member_id;
+    v_attribution := 'service_role_actor_context';
   END IF;
 
   IF NOT EXISTS (
