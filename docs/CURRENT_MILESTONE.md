@@ -2,7 +2,8 @@
 
 ## Authority
 
-This file is the mutable execution pointer for canonical Memory Keeper OS development.
+This file is the mutable execution pointer for canonical Memory Keeper OS
+development.
 
 Durable product and engineering authority lives in:
 
@@ -11,297 +12,225 @@ Durable product and engineering authority lives in:
 - `docs/DOMAIN_RULES.md`
 - `docs/IMPLEMENTATION_ROADMAP.md`
 - `docs/DEFINITION_OF_DONE.md`
+- `AGENTS.md`
 
-Sprint 13 durable governance authority includes:
+Current milestone authority:
 
-- `docs/governance/2026-09-02-sprint13-scope-freeze.md`
-- `docs/governance/2026-09-02-sprint13-technical-design-freeze.md`
-- `docs/governance/2026-09-02-sprint13-migration-filename-lock.md`
-- approved Sprint 13 Technical Design Amendments 2 through 13
+- `docs/governance/2026-09-06-t1-role-aware-training-foundation-milestone-approval.md`
 
-Initial go-live release-candidate authority:
+Historical Initial Production Go-Live Release Candidate authority:
 
 - `docs/governance/2026-09-04-initial-production-go-live-release-candidate-closeout.md`
 
 ## Canonical repository state
 
-`main` is the single canonical source-of-truth branch and the Vercel Production Git branch.
+`main` remains the single canonical source-of-truth branch and the Vercel
+Production Git branch.
 
-Canonical merged `main` SHA:
+Canonical `main` baseline at T1 milestone approval:
 
-`71630cb426590e1bbc97aa2a8bdb7fa657933c21`
+`de93945bd5d5f99152646bc8226cf1c2fee67fcd`
 
-This commit merged PR #23:
+This commit merged PR #24:
 
-`feat(sprint13): selection completion and editing-pending foundation`
+`chore(release): close Initial Production Go-Live RC`
 
-Sprint 13 final implementation head:
+The previous Stage 13 release-candidate boundary is historical and remains
+valid for its frozen evidence.
 
-`275efc6d403315de381fda0cb1783d3e90051d86`
+`architecture-rebuild` remains frozen legacy reference history.
 
-`architecture-rebuild` remains frozen legacy reference history at:
-
-`5ae04a5b971dfe0c4ae9657483d0386d649ce34f`
-
-Do not add new work to `architecture-rebuild` and do not merge it wholesale into `main`.
-
-## Current execution branch
-
-Current release-closeout branch:
-
-`chore/phase1-release-candidate-closeout`
-
-Purpose:
-
-- reconcile post-Sprint-13 governance state;
-- run the Initial Production Go-Live Release Candidate verification;
-- verify the Phase 1 operational journey through exact Stage 13;
-- identify only material P1/P2 release blockers;
-- prepare the separately gated Production database release;
-- prepare Production smoke verification and role-based go-live operating guidance.
-
-This branch must not introduce Sprint 14 functionality.
+Do not add new work to `architecture-rebuild` or merge it wholesale into
+`main`.
 
 ## Current programme milestone
 
 Current milestone:
 
-**Initial Production Go-Live Release Candidate — Stage 13 operational boundary**
+**T1 - Role-Aware Training Foundation**
 
-The release-candidate operational journey is:
+Status:
 
-`Lead -> Family -> Memory Guide -> Quotation -> Payment evidence -> Booking -> Preparation -> Team assignment -> Shoot -> Shoot completion -> Selection -> Editing Pending`
+**APPROVED / FUNCTIONAL SCOPE FROZEN / TECHNICAL BOUNDARY FROZEN**
 
-The exact final journey boundary is:
+Explicit human approval to advance to T1 was provided on 2026-09-06.
 
-`Stage 12 selection_pending -> Stage 13 editing_pending`
+## Current execution
 
-Stage 13 means:
+Milestone-governance integration branch used for this record:
 
-`Selection completed + canonical selected-image set locked + editing handoff accepted`
+`chore/t1-training-milestone-approval`
 
-Stage 13 does not mean editing has started.
+Implementation candidate branch:
 
-## Sprint 13 repository state
+`feature/t1-role-aware-training-foundation`
 
-Sprint 13 implementation is complete and merged into canonical `main`.
+Implementation candidate PR:
 
-Canonical Sprint 13 migration:
+`#25 - feat: add role-aware training foundation`
 
-`20260902033921_sprint13_selection_completion_stage12_13_editing_pending_foundation.sql`
+Reviewed candidate head at milestone approval:
 
-Canonical Sprint 13 evidence model:
+`01f79c928cf2208ab7d2c55fc51fc2ebc7908882`
 
-- `public.booking_selection_completions`
-- `public.booking_selected_images`
+PR #25 may clear its milestone-authority review finding only after this
+governance record and execution pointer are present on canonical `main`.
 
-Canonical Sprint 13 RPCs:
+## T1 functional boundary
 
-- `public.record_booking_selection_completion(uuid,text[],text,text)`
-- `public.mark_booking_editing_pending(uuid)`
+T1 establishes:
 
-Canonical selection authority:
+- role-aware training context derived from real role and branch authority;
+- organization rollout settings;
+- versioned training modules;
+- database-authoritative required steps;
+- persistent member training profiles;
+- immutable training evidence;
+- common orientation;
+- Founder-only training oversight through `training.read`;
+- off / soft / required training gates;
+- guided Help & Training application surfaces;
+- immutable in-use module versions.
 
-`selection.confirm`
+Training remains separate from authorization.
 
-Expected grants:
+Training completion grants no role, no branch authority, no Founder sign-off
+and no Work Ready state.
 
-- Founder
-- Studio Manager
-- Client Coordinator
+## Gate boundary
 
-Journey advancement continues to use:
+T1 gating uses canonical required-training completion as its reachable
+completion state.
 
-`booking.stage.advance`
+Work Ready is not a T1 gate requirement.
 
-## Sprint 13 final validation state
+Training errors remain fail-open relative to existing authentication and
+authorization so training cannot become a replacement access-control system.
 
-Final Sprint 13 release-candidate evidence before merge:
+Default organization gate mode remains:
 
-- Sprint 13 dedicated pgTAP: `98/98` PASS
-- full database suite: `23 files / 1,487 tests` PASS
-- local database reset/replay: PASS
-- Supabase DB lint: PASS
-- Supabase DB advisors: PASS
-- generated Supabase types byte-equivalent after fresh regeneration
-- canonical final role-permission count with Migration A present: `260`
-- TypeScript: PASS
-- Production build: PASS
-- `git diff --check`: PASS
-- Vercel exact-head Preview deployment: SUCCESS
-- final Codex exact-head review: COMPLETED with no new material P1/P2 finding
+`off`
 
-## Vercel Production state
+## Work Ready boundary
 
-PR #23 was merged to `main` at:
+Work Ready implementation is:
 
-`71630cb426590e1bbc97aa2a8bdb7fa657933c21`
+**NOT AUTHORIZED BY T1**
 
-The Vercel Production deployment for that exact merge commit succeeded.
+Reserved sign-off fields may exist, but T1 completion must not populate:
 
-Application code is therefore deployed from the Sprint 13 merged `main` state.
+- `signed_off_by`;
+- `signed_off_at`;
+- `work_ready_at`.
 
-This does not imply that the corresponding Production Supabase migrations have been applied.
+A later separately approved milestone must define Work Ready authority.
 
-## Production Supabase state
+## T1 repository database target
 
-Production database mutation remains separately gated.
+T1 migrations:
 
-Verified Production migration tip before the pending release:
+1. `20260905191755_role_aware_training_foundation.sql`
+2. `20260906041409_t1_training_progress_cursor_completion_only.sql`
 
-`20260901180856_sprint12_stage11_12_selection_pending_gate_foundation.sql`
+Canonical pristine local replay target after T1:
 
-Verified Production role-permission count:
+`261` role-permission mappings.
 
-`233`
+The additional mapping is the Founder-only:
 
-Verified pre-Sprint-13 Production state:
+`training.read`
 
-- `public.booking_selection_completions` absent
-- `public.booking_selected_images` absent
-- `public.record_booking_selection_completion(uuid,text[],text,text)` absent
-- `public.mark_booking_editing_pending(uuid)` absent
+The prior `260` count remains historical evidence for the approved pre-T1
+Stage 13 release-candidate baseline.
 
-Verified Production journey catalogue includes:
+## Current candidate validation
 
-- Stage 12: `selection_pending`
-- Stage 13: `editing_pending`
-- Stage 14: `editing_in_progress`
+Current reviewed T1 candidate evidence:
 
-Stage 14 pre-exists Sprint 13 and is not evidence of Sprint 13 implementing a Stage 13 -> 14 transition.
-
-## Pending Production migration chronology
-
-Exactly two repository migrations are pending after the verified Production Sprint 12 tip:
-
-1. `20260902033921_sprint13_selection_completion_stage12_13_editing_pending_foundation.sql`
-2. `20260903084543_lsh_four_branch_role_scope_brand_owner_foundation.sql`
-
-The validated clean chronology is:
-
-`233 -> Sprint 13 -> 236 -> Migration A -> 260`
-
-The Production release must preserve that canonical order.
-
-Do not manually force role-permission counts or selectively recreate migration effects.
-
-## Production authorization state
-
-Production Supabase migrations are:
-
-**HOLD — NOT YET AUTHORIZED**
-
-No `supabase db push`, linked migration execution, manual migration SQL, migration repair, Production reset, or other Production database mutation is authorized by this release-candidate milestone.
-
-Production database execution requires a separate exact human authorization.
-
-## Release Candidate verification boundary
-
-The current release-candidate closeout must verify:
-
-- pristine local database replay from canonical migrations;
-- full pgTAP regression;
-- Sprint 13 dedicated regression;
-- database lint and advisors;
-- canonical role-permission count `260` after full local replay;
-- active role and permission boundaries;
-- branch-scope containment;
-- generated Supabase type integrity;
-- TypeScript;
-- production build;
-- `git diff --check`;
-- primary Phase 1 operational journey through Stage 13;
-- permission-negative paths;
-- cross-tenant or cross-branch containment where applicable.
-
-Only genuine material P1/P2 release blockers may interrupt go-live closure.
-
-P3, cosmetic work and non-critical technical debt must be deferred rather than expanding the release boundary.
-
-## Go-live documentation requirement
-
-Before Initial Production Go-Live, prepare the final role-based operating material from the actual verified production system.
-
-Required deliverables:
-
-- Little Shots by Hema OS — Role-Based Go-Live Playbook
-- one-page Quick Playbook for every active production role
-- Founder / management Go-Live Control Playbook
-- tomorrow-morning launch sequence
-
-Per-role guidance must cover access, morning checks, exact screens, allowed and forbidden actions, evidence requirements, handoffs, escalation, notifications, end-of-day checks, recovery guidance, privacy/security, device guidance and first-day quick start.
-
-The role registry and permissions used in these documents must be derived from the final verified system, not assumptions.
-
-## Tomorrow launch sequence
-
-The controlled launch sequence is:
-
-`Founder check -> Team login verification -> Role access verification -> Live booking walkthrough -> First real transaction -> Monitor -> End-of-day review`
-
-## Stage 14 boundary
-
-Sprint 13 introduces:
-
-- no new Stage 14 implementation;
-- no Stage 13 -> Stage 14 transition;
-- no editing-execution workflow.
-
-Do not begin `editing_in_progress`, editor assignment, retouching execution, QC progression, gallery delivery or later-stage workflow under this milestone.
-
-Any such work requires separately governed scope.
-
-## Roadmap reconciliation note
-
-`docs/IMPLEMENTATION_ROADMAP.md` remains durable programme taxonomy and is not rewritten during release closeout.
-
-The Initial Production Go-Live Release Candidate records the approved operational release boundary actually implemented through Stage 13 without silently redefining the long-term roadmap.
-
-Any durable roadmap restructuring must be separately governed.
-
-## Deferred non-blocking technical debt
-
-Do not expand this release candidate to opportunistically fix:
-
-- repository-wide authenticated `SECURITY DEFINER` advisor warnings;
-- TanStack `createServerFn().inputValidator()` deprecation warnings;
-- unrelated unused dependency/import warnings;
-- dependency `"use client"` build notices;
-- existing large-chunk build notice;
-- builder architecture notices;
-- unrelated route-tree or framework technical debt;
-- Sprint 14 or later workflow.
-
-These items may be separately governed after go-live unless a release-candidate test proves one is a material P1/P2 blocker.
+- pristine local database replay: PASS;
+- T1 dedicated pgTAP: `56/56` PASS;
+- Supabase local DB lint: PASS;
+- generated Supabase type semantic reconciliation: PASS;
+- TypeScript: PASS;
+- targeted ESLint: PASS;
+- Production build: PASS;
+- `git diff --check`: PASS;
+- Vercel exact-head Preview: SUCCESS.
+
+## Production relationship
+
+T1 milestone approval does not authorize Production database mutation.
+
+The last verified Production database baseline from release-candidate
+governance remains a reference only and must be re-read before any future
+Production database action.
+
+Production Supabase mutation:
+
+**HOLD / NOT AUTHORIZED**
+
+Do not run linked `supabase db push`, manual Production migration SQL,
+migration repair, linked reset, Production reset or direct Production schema
+mutation without a separate exact human authorization.
+
+Because `main` is the Vercel Production Git branch, merging PR #25 is also a
+production-affecting application action and requires a separate explicit merge
+authorization.
+
+## Explicit non-scope
+
+Do not expand T1 into:
+
+- Work Ready sign-off;
+- role or branch assignment through training;
+- role-specific certification beyond the frozen common foundation;
+- real client data as synthetic training data;
+- Stage 13 -> Stage 14 advancement;
+- editing execution;
+- retouching or QC progression;
+- gallery delivery;
+- heirloom production;
+- unrelated framework work;
+- unrelated technical-debt cleanup.
 
 ## Current status
 
-Sprint 13 code integration: **COMPLETE**
+Initial Production Go-Live Release Candidate repository closeout:
 
-PR #23 merge: **COMPLETE**
+**COMPLETE / HISTORICAL BASELINE**
 
-Vercel Production deployment of merged application: **SUCCESS**
+T1 milestone approval:
 
-Production Supabase Sprint 13 / Migration A deployment: **HOLD / NOT AUTHORIZED**
+**APPROVED**
 
-Initial Production Go-Live Release Candidate verification: **READY TO EXECUTE**
+T1 governance integration criterion:
 
-Initial Production Go-Live: **NOT YET APPROVED**
+**THIS EXECUTION POINTER AND APPROVAL RECORD PRESENT ON CANONICAL `main`**
+
+PR #25 technical P2 findings:
+
+**RESOLVED**
+
+PR #25 milestone-authority P1 resolution condition:
+
+**RE-EVALUATE AFTER T1 GOVERNANCE AUTHORITY IS PRESENT ON CANONICAL `main`**
+
+PR #25 merge:
+
+**NOT YET AUTHORIZED**
+
+Production Supabase mutation:
+
+**HOLD / NOT AUTHORIZED**
 
 ## Current next action
 
-Run the Initial Production Go-Live Release Candidate verification from:
+After this governance authority is present on canonical `main`:
 
-`chore/phase1-release-candidate-closeout`
-
-After the release candidate passes:
-
-1. reconcile any material P1/P2 blocker if one exists;
-2. request the exact Production Supabase migration authorization;
-3. apply the two pending migrations in canonical order only after approval;
-4. verify Production database state;
-5. run Production application smoke tests;
-6. finalize role-based go-live playbooks from the verified production system;
-7. execute the controlled Initial Production Go-Live sequence.
-
-Do not begin Sprint 14 during this closeout.
+1. verify canonical `main` contains the T1 milestone authority;
+2. re-evaluate PR #25 against the frozen T1 boundary;
+3. resolve PR #25's milestone-authority P1 only if the candidate remains within
+   that boundary;
+4. re-check PR #25 exact head, CI, reviews and mergeability;
+5. obtain a separate explicit authorization before merging PR #25;
+6. keep Production Supabase execution behind its own later human gate.
