@@ -758,6 +758,27 @@ DECLARE
   v_executor_role text;
   v_attribution text;
 BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.gate_mode IS DISTINCT FROM
+       'off'::public.training_gate_mode THEN
+      RAISE EXCEPTION
+        'New training settings rows must begin with gate mode off';
+    END IF;
+
+    -- Row provisioning is not a gate transition. Do not allow a
+    -- caller-supplied actor or actor context to leak into a later
+    -- privileged gate change.
+    NEW.updated_by := NULL;
+
+    PERFORM set_config(
+      'lsh.training_gate_actor_member_id',
+      '',
+      true
+    );
+
+    RETURN NEW;
+  END IF;
+
   IF OLD.gate_mode IS NOT DISTINCT FROM NEW.gate_mode THEN
     RETURN NEW;
   END IF;
@@ -929,7 +950,7 @@ $function$;
 
 
 CREATE TRIGGER organization_training_settings_gate_mode_audit
-BEFORE UPDATE OF gate_mode
+BEFORE INSERT OR UPDATE
 ON public.organization_training_settings
 FOR EACH ROW
 EXECUTE FUNCTION
@@ -1209,10 +1230,12 @@ GRANT ALL ON TABLE
   public.training_step_events
 TO service_role;
 
--- training_step_events is append-only evidence. Row-level UPDATE/DELETE
--- mutations are already rejected by trigger; TRUNCATE does not fire
--- row-level triggers, so service_role must never receive that privilege.
-REVOKE TRUNCATE
+-- training_step_events is server-authoritative append-only evidence.
+-- Direct privileged INSERT could fabricate required completion evidence,
+-- while TRUNCATE could erase immutable history without firing row-level
+-- triggers. Evidence creation therefore remains behind the controlled
+-- SECURITY DEFINER training RPC surface.
+REVOKE INSERT, TRUNCATE
 ON TABLE public.training_step_events
 FROM service_role;
 
@@ -1220,8 +1243,9 @@ FROM service_role;
 -- Removing the row would implicitly change soft/required back to the
 -- application fallback of off without traversing the audited gate-mode
 -- UPDATE boundary. TRUNCATE has the same effect and bypasses row-level
--- triggers entirely. Controlled tooling may INSERT/UPDATE this singleton
--- configuration, but it must not DELETE or TRUNCATE it.
+-- triggers entirely. Controlled tooling may provision a missing singleton
+-- only at gate_mode=off; any later soft/required transition must traverse
+-- the fresh-actor audited UPDATE boundary. DELETE/TRUNCATE remain denied.
 REVOKE DELETE, TRUNCATE
 ON TABLE public.organization_training_settings
 FROM service_role;

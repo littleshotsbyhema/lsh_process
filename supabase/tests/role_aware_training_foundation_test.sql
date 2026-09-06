@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(100);
+SELECT plan(104);
 
 -- =====================================================================
 -- Little Moments OS
@@ -3172,6 +3172,136 @@ SELECT is(
   0::bigint,
   'rejected ownership move leaves the inactive destination module unchanged'
 );
+
+
+-- =====================================================================
+-- Part 16 — Privileged INSERT boundaries
+-- =====================================================================
+--
+-- 101-102:
+-- service_role must not forge immutable completion evidence directly.
+--
+-- 103-104:
+-- a missing rollout row is semantically gate_mode=off, so privileged
+-- provisioning may create only an off row. A non-default gate must then
+-- traverse the fresh-actor audited UPDATE boundary.
+-- =====================================================================
+
+-- 101
+SELECT ok(
+  NOT has_table_privilege(
+    'service_role',
+    'public.training_step_events',
+    'INSERT'
+  ),
+  'service_role has no direct INSERT privilege on immutable training evidence'
+);
+
+SET LOCAL ROLE service_role;
+
+-- 102
+SELECT ok(
+  pg_temp.t1_denied(
+    'INSERT INTO public.training_step_events DEFAULT VALUES',
+    'permission denied'
+  ),
+  'service_role cannot directly fabricate training completion evidence'
+);
+
+RESET ROLE;
+
+
+-- Create the semantic missing-row state under the migration owner.
+DELETE FROM public.organization_training_settings
+WHERE organization_id =
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid;
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'service_role',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"role":"service_role"}',
+  true
+);
+
+SET LOCAL ROLE service_role;
+
+-- 103
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      INSERT INTO public.organization_training_settings (
+        organization_id,
+        gate_mode
+      )
+      VALUES (
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+        'required'::public.training_gate_mode
+      )
+    $sql$,
+    'New training settings rows must begin with gate mode off'
+  ),
+  'service-role provisioning cannot create a soft or required gate directly'
+);
+
+
+-- Prove ordinary provisioning still works, but cannot retain attribution
+-- or an actor context for a later gate transition.
+SELECT set_config(
+  'lsh.training_gate_actor_member_id',
+  (
+    SELECT m.id::text
+    FROM public.organization_members m
+    WHERE m.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND m.user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+  ),
+  true
+);
+
+INSERT INTO public.organization_training_settings (
+  organization_id,
+  gate_mode,
+  updated_by
+)
+SELECT
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  'off'::public.training_gate_mode,
+  m.id
+FROM public.organization_members m
+WHERE m.organization_id =
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+  AND m.user_id =
+    'b1000000-0000-4000-8000-000000000001'::uuid;
+
+-- 104
+SELECT ok(
+  (
+    SELECT
+      ots.gate_mode =
+        'off'::public.training_gate_mode
+      AND ots.updated_by IS NULL
+    FROM public.organization_training_settings ots
+    WHERE ots.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+  )
+  AND
+  COALESCE(
+    current_setting(
+      'lsh.training_gate_actor_member_id',
+      true
+    ),
+    ''
+  ) = '',
+  'service-role provisioning creates only an unattributed off row and consumes actor context'
+);
+
+RESET ROLE;
 
 
 SELECT * FROM finish();
