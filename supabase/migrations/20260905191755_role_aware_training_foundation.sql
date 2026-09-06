@@ -1167,6 +1167,7 @@ DECLARE
   v_active boolean;
   v_module_key text;
   v_role_id uuid;
+  v_required boolean;
   v_actual_contract jsonb;
 
   v_supported_contract CONSTANT jsonb :=
@@ -1197,18 +1198,45 @@ BEGIN
   SELECT
     tm.active,
     tm.module_key,
-    tm.role_id
+    tm.role_id,
+    tm.required
   INTO
     v_active,
     v_module_key,
-    v_role_id
+    v_role_id,
+    v_required
   FROM public.training_modules tm
   WHERE tm.id =
         v_module_id;
 
   IF NOT FOUND
-     OR NOT v_active
-     OR v_module_key <> 'common-orientation'
+     OR NOT v_active THEN
+    IF TG_OP = 'DELETE' THEN
+      RETURN OLD;
+    END IF;
+
+    RETURN NEW;
+  END IF;
+
+  -- T1 currently renders only the global common-orientation module.
+  -- Other module identities may be authored while inactive, and may
+  -- remain active only when optional. A required unsupported module
+  -- must never enter the training gate because the T1 client cannot
+  -- start or complete it.
+  IF v_required
+     AND (
+       v_module_key <> 'common-orientation'
+       OR v_role_id IS NOT NULL
+     ) THEN
+    RAISE EXCEPTION
+      'Active required training module is not supported by the T1 client'
+      USING HINT =
+        'Keep unsupported required modules inactive until the client can render them.';
+  END IF;
+
+  -- Optional unsupported modules do not participate in the required
+  -- gate and remain available for future role-training slices.
+  IF v_module_key <> 'common-orientation'
      OR v_role_id IS NOT NULL THEN
     IF TG_OP = 'DELETE' THEN
       RETURN OLD;

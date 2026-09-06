@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(76);
+SELECT plan(78);
 
 -- =====================================================================
 -- Little Moments OS
@@ -1897,7 +1897,7 @@ SELECT
   1,
   'P2 zero-step required module',
   true,
-  true,
+  false,
   100
 FROM public.member_role_grants g
 JOIN public.roles r
@@ -1912,6 +1912,27 @@ WHERE g.organization_id =
 LIMIT 1;
 
 RESET ROLE;
+
+-- Tests 64-68 intentionally exercise defense-in-depth against a
+-- malformed active required module that could predate this publication
+-- guard. Bypass only the T1 client publication trigger inside this
+-- rollback-only pgTAP transaction; production catalogue tooling cannot
+-- use this path.
+ALTER TABLE public.training_modules
+  DISABLE TRIGGER
+  training_modules_common_orientation_client_contract;
+
+UPDATE public.training_modules
+SET active = true
+WHERE organization_id =
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+  AND module_key =
+    'p2-zero-step-required'
+  AND version = 1;
+
+ALTER TABLE public.training_modules
+  ENABLE TRIGGER
+  training_modules_common_orientation_client_contract;
 
 
 -- Second Photographer is still eligible at this point.
@@ -2531,6 +2552,113 @@ SELECT ok(
     'permission denied'
   ),
   'service_role cannot execute TRUNCATE against immutable training evidence'
+);
+
+RESET ROLE;
+
+
+-- =====================================================================
+-- Part 14 — Required modules must be renderable before publication
+-- =====================================================================
+-- A valid role-specific module may be assembled while inactive, but T1
+-- cannot publish it as required because the current client renders only
+-- global common orientation.
+-- =====================================================================
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'service_role',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"role":"service_role"}',
+  true
+);
+
+SET LOCAL ROLE service_role;
+
+WITH inserted AS (
+  INSERT INTO public.training_modules (
+    organization_id,
+    role_id,
+    module_key,
+    version,
+    title,
+    required,
+    active,
+    minimum_score
+  )
+  SELECT
+    '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+    r.id,
+    'photographer-foundation',
+    1,
+    'Photographer Foundation',
+    true,
+    false,
+    100
+  FROM public.roles r
+  WHERE r.key = 'photographer'
+  RETURNING id
+)
+SELECT set_config(
+  't1.unsupported_required_role_module_id',
+  id::text,
+  true
+)
+FROM inserted;
+
+INSERT INTO public.training_module_steps (
+  organization_id,
+  training_module_id,
+  step_key,
+  step_order,
+  step_type,
+  required,
+  completion_event_type,
+  completion_result
+)
+VALUES (
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  current_setting(
+    't1.unsupported_required_role_module_id'
+  )::uuid,
+  'role-foundation',
+  1,
+  'orientation'::public.training_step_type,
+  true,
+  'step_completed'::public.training_step_event_type,
+  'pass'::public.training_step_event_result
+);
+
+-- 77
+SELECT throws_ok(
+  $sql$
+    UPDATE public.training_modules
+    SET active = true
+    WHERE id =
+      current_setting(
+        't1.unsupported_required_role_module_id'
+      )::uuid
+  $sql$,
+  'P0001',
+  'Active required training module is not supported by the T1 client',
+  'a required role-specific module cannot be published before T1 can render it'
+);
+
+-- 78
+SELECT ok(
+  (
+    SELECT active = false
+    FROM public.training_modules
+    WHERE id =
+      current_setting(
+        't1.unsupported_required_role_module_id'
+      )::uuid
+  ),
+  'failed unsupported required-module publication leaves the module inactive'
 );
 
 RESET ROLE;
