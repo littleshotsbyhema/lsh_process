@@ -1137,6 +1137,134 @@ WHERE tm.module_key = 'common-orientation'
 
 
 -- =====================================================================
+-- 15A. Common-orientation client contract compatibility guard
+-- =====================================================================
+--
+-- T1 intentionally renders common orientation from a frozen client-side
+-- presentation contract. Versioned catalogue rows may be authored while
+-- inactive, but an active common-orientation version must use the exact
+-- step keys/order/completion contract that this client can render.
+--
+-- This keeps the database authoritative over publication while avoiding
+-- silent activation of a version that the current UI cannot complete.
+-- =====================================================================
+
+CREATE FUNCTION public.lsh_guard_common_orientation_client_contract()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+DECLARE
+  v_module_id uuid;
+  v_active boolean;
+  v_module_key text;
+  v_role_id uuid;
+  v_actual_contract jsonb;
+
+  v_supported_contract CONSTANT jsonb :=
+    '[
+      ["welcome",1,"orientation",true,"step_completed","pass"],
+      ["role-scope",2,"orientation",true,"step_completed","pass"],
+      ["navigation",3,"navigation",true,"step_completed","pass"],
+      ["evidence-before-status",4,"evidence",true,"step_completed","pass"],
+      ["privacy",5,"privacy",true,"step_completed","pass"],
+      ["escalation",6,"escalation",true,"step_completed","pass"],
+      ["help",7,"help",true,"step_completed","pass"]
+    ]'::jsonb;
+BEGIN
+  IF TG_TABLE_NAME = 'training_modules' THEN
+    IF TG_OP = 'DELETE' THEN
+      v_module_id := OLD.id;
+    ELSE
+      v_module_id := NEW.id;
+    END IF;
+  ELSE
+    IF TG_OP = 'DELETE' THEN
+      v_module_id := OLD.training_module_id;
+    ELSE
+      v_module_id := NEW.training_module_id;
+    END IF;
+  END IF;
+
+  SELECT
+    tm.active,
+    tm.module_key,
+    tm.role_id
+  INTO
+    v_active,
+    v_module_key,
+    v_role_id
+  FROM public.training_modules tm
+  WHERE tm.id =
+        v_module_id;
+
+  IF NOT FOUND
+     OR NOT v_active
+     OR v_module_key <> 'common-orientation'
+     OR v_role_id IS NOT NULL THEN
+    IF TG_OP = 'DELETE' THEN
+      RETURN OLD;
+    END IF;
+
+    RETURN NEW;
+  END IF;
+
+  SELECT COALESCE(
+    jsonb_agg(
+      jsonb_build_array(
+        tms.step_key,
+        tms.step_order,
+        tms.step_type::text,
+        tms.required,
+        tms.completion_event_type::text,
+        tms.completion_result::text
+      )
+      ORDER BY
+        tms.step_order,
+        tms.step_key
+    ),
+    '[]'::jsonb
+  )
+  INTO v_actual_contract
+  FROM public.training_module_steps tms
+  WHERE tms.training_module_id =
+        v_module_id;
+
+  IF v_actual_contract IS DISTINCT FROM
+     v_supported_contract THEN
+    RAISE EXCEPTION
+      'Active common-orientation contract is not supported by the T1 client'
+      USING HINT =
+        'Create the version inactive and publish it only with the supported seven-step T1 contract.';
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+
+
+CREATE TRIGGER training_modules_common_orientation_client_contract
+AFTER INSERT OR UPDATE
+ON public.training_modules
+FOR EACH ROW
+EXECUTE FUNCTION
+  public.lsh_guard_common_orientation_client_contract();
+
+
+CREATE TRIGGER training_module_steps_common_orientation_client_contract
+AFTER INSERT OR UPDATE OR DELETE
+ON public.training_module_steps
+FOR EACH ROW
+EXECUTE FUNCTION
+  public.lsh_guard_common_orientation_client_contract();
+
+
+-- =====================================================================
 -- 16. Authenticated member training read context
 -- =====================================================================
 

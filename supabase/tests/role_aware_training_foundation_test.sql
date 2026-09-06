@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(72);
+SELECT plan(74);
 
 -- =====================================================================
 -- Little Moments OS
@@ -2289,6 +2289,220 @@ SELECT ok(
     't1.stale_cursor_event_id'
   )::uuid IS NOT NULL,
   'stale earlier completion remains recorded evidence but cannot regress the progress cursor'
+);
+
+RESET ROLE;
+
+
+-- =====================================================================
+-- Part 12 — Client-renderable common-orientation publication guard
+-- =====================================================================
+--
+-- The current T1 client renders the frozen seven-step common orientation.
+-- Catalogue tooling may create successor versions while inactive, but a
+-- changed/reordered contract cannot become active until the client itself
+-- supports that contract.
+-- =====================================================================
+
+-- Complete the Founder's active v2 profile so the version may retire.
+SELECT set_config(
+  'request.jwt.claim.sub',
+  'b1000000-0000-4000-8000-000000000001',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'authenticated',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"sub":"b1000000-0000-4000-8000-000000000001","role":"authenticated"}',
+  true
+);
+
+SET LOCAL ROLE authenticated;
+
+SELECT public.record_my_training_step(
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  'common-orientation',
+  2,
+  'role-scope',
+  'step_completed'::public.training_step_event_type,
+  'pass'::public.training_step_event_result,
+  '{"source":"pgtap-client-contract-guard"}'::jsonb
+);
+
+SELECT public.record_my_training_step(
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  'common-orientation',
+  2,
+  'navigation',
+  'step_completed'::public.training_step_event_type,
+  'pass'::public.training_step_event_result,
+  '{"source":"pgtap-client-contract-guard"}'::jsonb
+);
+
+SELECT public.record_my_training_step(
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  'common-orientation',
+  2,
+  'evidence-before-status',
+  'step_completed'::public.training_step_event_type,
+  'pass'::public.training_step_event_result,
+  '{"source":"pgtap-client-contract-guard"}'::jsonb
+);
+
+SELECT public.record_my_training_step(
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  'common-orientation',
+  2,
+  'escalation',
+  'step_completed'::public.training_step_event_type,
+  'pass'::public.training_step_event_result,
+  '{"source":"pgtap-client-contract-guard"}'::jsonb
+);
+
+SELECT public.record_my_training_step(
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  'common-orientation',
+  2,
+  'help',
+  'step_completed'::public.training_step_event_type,
+  'pass'::public.training_step_event_result,
+  '{"source":"pgtap-client-contract-guard"}'::jsonb
+);
+
+SELECT public.complete_my_training_module(
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  'common-orientation',
+  2
+);
+
+RESET ROLE;
+
+
+SELECT set_config(
+  'request.jwt.claim.role',
+  'service_role',
+  true
+);
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"role":"service_role"}',
+  true
+);
+
+SET LOCAL ROLE service_role;
+
+UPDATE public.training_modules
+SET active = false
+WHERE organization_id =
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+  AND module_key = 'common-orientation'
+  AND version = 2;
+
+WITH inserted AS (
+  INSERT INTO public.training_modules (
+    organization_id,
+    role_id,
+    module_key,
+    version,
+    title,
+    required,
+    active,
+    minimum_score
+  )
+  SELECT
+    tm.organization_id,
+    tm.role_id,
+    tm.module_key,
+    3,
+    'Common Orientation v3 incompatible fixture',
+    tm.required,
+    false,
+    tm.minimum_score
+  FROM public.training_modules tm
+  WHERE tm.organization_id =
+    '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+    AND tm.module_key = 'common-orientation'
+    AND tm.version = 2
+  RETURNING id
+)
+SELECT set_config(
+  't1.incompatible_common_v3_id',
+  id::text,
+  true
+)
+FROM inserted;
+
+INSERT INTO public.training_module_steps (
+  organization_id,
+  training_module_id,
+  step_key,
+  step_order,
+  step_type,
+  required,
+  completion_event_type,
+  completion_result
+)
+SELECT
+  tms.organization_id,
+  current_setting(
+    't1.incompatible_common_v3_id'
+  )::uuid,
+  tms.step_key,
+  tms.step_order,
+  tms.step_type,
+  tms.required,
+  tms.completion_event_type,
+  tms.completion_result
+FROM public.training_module_steps tms
+JOIN public.training_modules tm
+  ON tm.id =
+     tms.training_module_id
+WHERE tm.organization_id =
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+  AND tm.module_key = 'common-orientation'
+  AND tm.version = 2;
+
+UPDATE public.training_module_steps
+SET step_order = 8
+WHERE training_module_id =
+  current_setting(
+    't1.incompatible_common_v3_id'
+  )::uuid
+  AND step_key = 'welcome';
+
+-- 73
+SELECT throws_ok(
+  $sql$
+    UPDATE public.training_modules
+    SET active = true
+    WHERE id =
+      current_setting(
+        't1.incompatible_common_v3_id'
+      )::uuid
+  $sql$,
+  'P0001',
+  'Active common-orientation contract is not supported by the T1 client',
+  'an unsupported successor common-orientation contract cannot be activated'
+);
+
+-- 74
+SELECT ok(
+  (
+    SELECT active = false
+    FROM public.training_modules
+    WHERE id =
+      current_setting(
+        't1.incompatible_common_v3_id'
+      )::uuid
+  ),
+  'failed incompatible publication leaves the successor version inactive'
 );
 
 RESET ROLE;

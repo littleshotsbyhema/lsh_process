@@ -12,6 +12,15 @@ type TargetRect = {
   height: number;
 };
 
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
+
 type GuidedInterfaceTourProps = {
   moduleKey: string;
   version: number;
@@ -83,6 +92,10 @@ export function GuidedInterfaceTour({
 
   const viewedTargets = useRef(new Set<string>());
   const brokenTargets = useRef(new Set<string>());
+
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const portalRootRef = useRef<HTMLDivElement | null>(null);
+  const onCloseRef = useRef(onClose);
 
   const tourStep = guidedInterfaceTourSteps[index];
 
@@ -240,6 +253,107 @@ export function GuidedInterfaceTour({
     };
   }, [tourStep]);
 
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const dialog = dialogRef.current;
+    const portalRoot = portalRootRef.current;
+
+    if (!dialog || !portalRoot) {
+      return;
+    }
+
+    const previousFocus =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const backgroundElements = Array.from(document.body.children).filter(
+      (element): element is HTMLElement => element instanceof HTMLElement && element !== portalRoot,
+    );
+
+    const backgroundState = backgroundElements.map((element) => ({
+      element,
+      inert: element.inert,
+      ariaHidden: element.getAttribute("aria-hidden"),
+    }));
+
+    const getFocusableElements = () =>
+      Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        (element) =>
+          !element.hasAttribute("hidden") && element.getAttribute("aria-hidden") !== "true",
+      );
+
+    const initialTarget = getFocusableElements()[0] ?? dialog;
+
+    initialTarget.focus();
+
+    for (const element of backgroundElements) {
+      element.inert = true;
+      element.setAttribute("aria-hidden", "true");
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        dispatchNavigation(false);
+        onCloseRef.current();
+        return;
+      }
+
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const focusable = getFocusableElements();
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey && (active === first || !dialog.contains(active))) {
+        event.preventDefault();
+        last.focus();
+        return;
+      }
+
+      if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown, true);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, true);
+
+      for (const { element, inert, ariaHidden } of backgroundState) {
+        element.inert = inert;
+
+        if (ariaHidden === null) {
+          element.removeAttribute("aria-hidden");
+        } else {
+          element.setAttribute("aria-hidden", ariaHidden);
+        }
+      }
+
+      if (previousFocus?.isConnected) {
+        previousFocus.focus();
+      }
+    };
+  }, []);
+
   useEffect(
     () => () => {
       dispatchNavigation(false);
@@ -287,7 +401,7 @@ export function GuidedInterfaceTour({
   }
 
   return createPortal(
-    <>
+    <div ref={portalRootRef}>
       <div className="fixed inset-0 z-[65]" aria-hidden="true" />
 
       {targetRect && (
@@ -305,8 +419,10 @@ export function GuidedInterfaceTour({
       )}
 
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        tabIndex={-1}
         aria-labelledby="guided-tour-title"
         className="fixed inset-x-0 bottom-0 z-[80] rounded-t-2xl border border-border bg-card p-5 shadow-2xl lg:inset-x-auto lg:bottom-6 lg:right-6 lg:w-[390px] lg:rounded-2xl"
       >
@@ -404,7 +520,7 @@ export function GuidedInterfaceTour({
           </button>
         </div>
       </section>
-    </>,
+    </div>,
     document.body,
   );
 }
