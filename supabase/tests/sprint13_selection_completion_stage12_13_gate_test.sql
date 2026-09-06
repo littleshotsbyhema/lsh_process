@@ -46,8 +46,8 @@ SELECT is(
 -- 4
 SELECT is(
   (SELECT count(*)::bigint FROM public.role_permissions),
-  260::bigint,
-  'canonical role-permission compatibility count is 260'
+  261::bigint,
+  'canonical role-permission compatibility count is 261'
 );
 
 -- 5

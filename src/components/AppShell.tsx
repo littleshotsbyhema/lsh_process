@@ -1,11 +1,12 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { LogOut, Menu, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CircleHelp, LogOut, Menu, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { roleLabels, useSession } from "@/lib/session";
 import { visibleNav } from "@/lib/access";
+import { TRAINING_NAVIGATION_EVENT } from "@/lib/training/interface-tour";
 
 export { visibleNav } from "@/lib/access";
 
@@ -15,6 +16,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const { roles, displayName } = useSession();
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const handleTrainingNavigation = (event: Event) => {
+      const customEvent = event as CustomEvent<{ open?: boolean }>;
+      setOpen(customEvent.detail?.open ?? true);
+    };
+
+    window.addEventListener(TRAINING_NAVIGATION_EVENT, handleTrainingNavigation);
+
+    return () => {
+      window.removeEventListener(TRAINING_NAVIGATION_EVENT, handleTrainingNavigation);
+    };
+  }, []);
   const items = visibleNav(roles);
   const roleLine = roles.length ? roles.map((r) => roleLabels[r]).join(" · ") : "Role pending";
 
@@ -26,7 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   const navList = (
-    <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+    <nav data-tour="main-navigation" className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
       {items.map(({ to, label, icon: Icon }) => {
         const active = location.pathname === to;
         return (
@@ -52,10 +66,20 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="px-5 py-4 border-t border-sidebar-border text-[11px] text-muted-foreground">
       <div className="font-medium text-sidebar-foreground">Signed in as</div>
       <div className="truncate">{displayName}</div>
-      <div className="mt-0.5 truncate">{roleLine}</div>
+      <div data-tour="signed-in-role" className="mt-0.5 truncate">
+        {roleLine}
+      </div>
+      <Link
+        to="/training"
+        onClick={() => setOpen(false)}
+        data-tour="training-help"
+        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[11px] text-sidebar-foreground hover:bg-sidebar-accent/60"
+      >
+        <CircleHelp className="h-3 w-3" /> Help & training
+      </Link>
       <button
         onClick={signOut}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[11px] text-sidebar-foreground hover:bg-sidebar-accent/60"
+        className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[11px] text-sidebar-foreground hover:bg-sidebar-accent/60"
       >
         <LogOut className="h-3 w-3" /> Sign out
       </button>
@@ -105,6 +129,14 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="font-serif text-lg text-primary">Little Moments OS</div>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              to="/training"
+              aria-label="Help and training"
+              data-tour="training-help"
+              className="rounded-lg border border-border p-2 text-primary"
+            >
+              <CircleHelp className="h-5 w-5" />
+            </Link>
             <button
               onClick={() => setOpen(true)}
               aria-label="Open menu"

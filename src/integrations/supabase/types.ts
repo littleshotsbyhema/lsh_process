@@ -3207,6 +3207,89 @@ export type Database = {
           },
         ];
       };
+      member_training_profiles: {
+        Row: {
+          completed_at: string | null;
+          created_at: string;
+          current_step_key: string | null;
+          id: string;
+          organization_id: string;
+          organization_member_id: string;
+          required_at: string | null;
+          retraining_reason: string | null;
+          signed_off_at: string | null;
+          signed_off_by: string | null;
+          started_at: string | null;
+          status: Database["public"]["Enums"]["training_profile_status"];
+          training_module_id: string;
+          updated_at: string;
+          work_ready_at: string | null;
+        };
+        Insert: {
+          completed_at?: string | null;
+          created_at?: string;
+          current_step_key?: string | null;
+          id?: string;
+          organization_id: string;
+          organization_member_id: string;
+          required_at?: string | null;
+          retraining_reason?: string | null;
+          signed_off_at?: string | null;
+          signed_off_by?: string | null;
+          started_at?: string | null;
+          status?: Database["public"]["Enums"]["training_profile_status"];
+          training_module_id: string;
+          updated_at?: string;
+          work_ready_at?: string | null;
+        };
+        Update: {
+          completed_at?: string | null;
+          created_at?: string;
+          current_step_key?: string | null;
+          id?: string;
+          organization_id?: string;
+          organization_member_id?: string;
+          required_at?: string | null;
+          retraining_reason?: string | null;
+          signed_off_at?: string | null;
+          signed_off_by?: string | null;
+          started_at?: string | null;
+          status?: Database["public"]["Enums"]["training_profile_status"];
+          training_module_id?: string;
+          updated_at?: string;
+          work_ready_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "member_training_profiles_current_step_fkey";
+            columns: ["training_module_id", "current_step_key"];
+            isOneToOne: false;
+            referencedRelation: "training_module_steps";
+            referencedColumns: ["training_module_id", "step_key"];
+          },
+          {
+            foreignKeyName: "member_training_profiles_member_fkey";
+            columns: ["organization_member_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "member_training_profiles_module_fkey";
+            columns: ["training_module_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "training_modules";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "member_training_profiles_signed_off_by_fkey";
+            columns: ["signed_off_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
       memory_guide_analytics_events: {
         Row: {
           created_at: string;
@@ -4729,6 +4812,48 @@ export type Database = {
           },
         ];
       };
+      organization_training_settings: {
+        Row: {
+          created_at: string;
+          first_job_assist_count: number;
+          gate_mode: Database["public"]["Enums"]["training_gate_mode"];
+          organization_id: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          first_job_assist_count?: number;
+          gate_mode?: Database["public"]["Enums"]["training_gate_mode"];
+          organization_id: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          first_job_assist_count?: number;
+          gate_mode?: Database["public"]["Enums"]["training_gate_mode"];
+          organization_id?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "organization_training_settings_organization_fkey";
+            columns: ["organization_id"];
+            isOneToOne: true;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "organization_training_settings_updated_by_fkey";
+            columns: ["updated_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
       organizations: {
         Row: {
           brand_prefix: string | null;
@@ -5122,6 +5247,247 @@ export type Database = {
         };
         Relationships: [];
       };
+      training_module_steps: {
+        Row: {
+          completion_event_type: Database["public"]["Enums"]["training_step_event_type"];
+          completion_result: Database["public"]["Enums"]["training_step_event_result"];
+          created_at: string;
+          id: string;
+          organization_id: string;
+          required: boolean;
+          step_key: string;
+          step_order: number;
+          step_type: Database["public"]["Enums"]["training_step_type"];
+          training_module_id: string;
+        };
+        Insert: {
+          completion_event_type?: Database["public"]["Enums"]["training_step_event_type"];
+          completion_result?: Database["public"]["Enums"]["training_step_event_result"];
+          created_at?: string;
+          id?: string;
+          organization_id: string;
+          required?: boolean;
+          step_key: string;
+          step_order: number;
+          step_type: Database["public"]["Enums"]["training_step_type"];
+          training_module_id: string;
+        };
+        Update: {
+          completion_event_type?: Database["public"]["Enums"]["training_step_event_type"];
+          completion_result?: Database["public"]["Enums"]["training_step_event_result"];
+          created_at?: string;
+          id?: string;
+          organization_id?: string;
+          required?: boolean;
+          step_key?: string;
+          step_order?: number;
+          step_type?: Database["public"]["Enums"]["training_step_type"];
+          training_module_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_module_steps_module_fkey";
+            columns: ["training_module_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "training_modules";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
+      training_modules: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          id: string;
+          minimum_score: number;
+          module_key: string;
+          organization_id: string;
+          required: boolean;
+          role_id: string | null;
+          title: string;
+          updated_at: string;
+          updated_by: string | null;
+          version: number;
+        };
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          id?: string;
+          minimum_score?: number;
+          module_key: string;
+          organization_id: string;
+          required?: boolean;
+          role_id?: string | null;
+          title: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          version: number;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          id?: string;
+          minimum_score?: number;
+          module_key?: string;
+          organization_id?: string;
+          required?: boolean;
+          role_id?: string | null;
+          title?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_modules_organization_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_modules_role_fkey";
+            columns: ["role_id"];
+            isOneToOne: false;
+            referencedRelation: "roles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_modules_updated_by_fkey";
+            columns: ["updated_by", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
+      training_scenario_instances: {
+        Row: {
+          completed_at: string | null;
+          created_at: string;
+          id: string;
+          member_training_profile_id: string;
+          organization_id: string;
+          organization_member_id: string;
+          reset_count: number;
+          scenario_key: string;
+          scenario_state: Json;
+          scenario_version: number;
+          started_at: string | null;
+          status: Database["public"]["Enums"]["training_scenario_status"];
+          updated_at: string;
+        };
+        Insert: {
+          completed_at?: string | null;
+          created_at?: string;
+          id?: string;
+          member_training_profile_id: string;
+          organization_id: string;
+          organization_member_id: string;
+          reset_count?: number;
+          scenario_key: string;
+          scenario_state?: Json;
+          scenario_version: number;
+          started_at?: string | null;
+          status?: Database["public"]["Enums"]["training_scenario_status"];
+          updated_at?: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          created_at?: string;
+          id?: string;
+          member_training_profile_id?: string;
+          organization_id?: string;
+          organization_member_id?: string;
+          reset_count?: number;
+          scenario_key?: string;
+          scenario_state?: Json;
+          scenario_version?: number;
+          started_at?: string | null;
+          status?: Database["public"]["Enums"]["training_scenario_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_scenario_instances_member_fkey";
+            columns: ["organization_member_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organization_members";
+            referencedColumns: ["id", "organization_id"];
+          },
+          {
+            foreignKeyName: "training_scenario_instances_profile_fkey";
+            columns: ["member_training_profile_id", "organization_id", "organization_member_id"];
+            isOneToOne: false;
+            referencedRelation: "member_training_profiles";
+            referencedColumns: ["id", "organization_id", "organization_member_id"];
+          },
+        ];
+      };
+      training_step_events: {
+        Row: {
+          event_type: Database["public"]["Enums"]["training_step_event_type"];
+          id: string;
+          member_training_profile_id: string;
+          metadata: Json;
+          occurred_at: string;
+          organization_id: string;
+          organization_member_id: string;
+          result: Database["public"]["Enums"]["training_step_event_result"] | null;
+          step_key: string;
+          training_scenario_instance_id: string | null;
+        };
+        Insert: {
+          event_type: Database["public"]["Enums"]["training_step_event_type"];
+          id?: string;
+          member_training_profile_id: string;
+          metadata?: Json;
+          occurred_at?: string;
+          organization_id: string;
+          organization_member_id: string;
+          result?: Database["public"]["Enums"]["training_step_event_result"] | null;
+          step_key: string;
+          training_scenario_instance_id?: string | null;
+        };
+        Update: {
+          event_type?: Database["public"]["Enums"]["training_step_event_type"];
+          id?: string;
+          member_training_profile_id?: string;
+          metadata?: Json;
+          occurred_at?: string;
+          organization_id?: string;
+          organization_member_id?: string;
+          result?: Database["public"]["Enums"]["training_step_event_result"] | null;
+          step_key?: string;
+          training_scenario_instance_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_step_events_profile_fkey";
+            columns: ["member_training_profile_id", "organization_id", "organization_member_id"];
+            isOneToOne: false;
+            referencedRelation: "member_training_profiles";
+            referencedColumns: ["id", "organization_id", "organization_member_id"];
+          },
+          {
+            foreignKeyName: "training_step_events_scenario_fkey";
+            columns: [
+              "training_scenario_instance_id",
+              "organization_id",
+              "organization_member_id",
+              "member_training_profile_id",
+            ];
+            isOneToOne: false;
+            referencedRelation: "training_scenario_instances";
+            referencedColumns: [
+              "id",
+              "organization_id",
+              "organization_member_id",
+              "member_training_profile_id",
+            ];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -5500,6 +5866,14 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      complete_my_training_module: {
+        Args: {
+          p_module_key: string;
+          p_organization_id: string;
+          p_version: number;
+        };
+        Returns: string;
       };
       confirm_booking_after_advance: {
         Args: { p_booking_id: string };
@@ -6345,6 +6719,31 @@ export type Database = {
           phone: string;
         }[];
       };
+      my_training_context: {
+        Args: { p_organization_id: string };
+        Returns: {
+          assigned_branch_codes: string[];
+          assigned_branch_ids: string[];
+          assigned_branch_names: string[];
+          assigned_role_keys: string[];
+          assigned_role_labels: string[];
+          completed_at: string;
+          current_step_key: string;
+          display_name: string;
+          gate_mode: Database["public"]["Enums"]["training_gate_mode"];
+          module_key: string;
+          module_required: boolean;
+          module_role_key: string;
+          module_title: string;
+          module_version: number;
+          organization_member_id: string;
+          organization_wide: boolean;
+          started_at: string;
+          training_module_id: string;
+          training_status: Database["public"]["Enums"]["training_profile_status"];
+          work_ready_at: string;
+        }[];
+      };
       organization_shell_identity: {
         Args: { p_organization_id: string };
         Returns: {
@@ -6551,6 +6950,18 @@ export type Database = {
       record_memory_guide_next_action: {
         Args: { p_access_token: string; p_next_action: string };
         Returns: boolean;
+      };
+      record_my_training_step: {
+        Args: {
+          p_event_type: Database["public"]["Enums"]["training_step_event_type"];
+          p_metadata?: Json;
+          p_module_key: string;
+          p_organization_id: string;
+          p_result: Database["public"]["Enums"]["training_step_event_result"];
+          p_step_key: string;
+          p_version: number;
+        };
+        Returns: string;
       };
       remove_quotation_line: {
         Args: { p_line_item_id: string };
@@ -6894,6 +7305,14 @@ export type Database = {
           session_version: number;
         }[];
       };
+      start_my_training_module: {
+        Args: {
+          p_module_key: string;
+          p_organization_id: string;
+          p_version: number;
+        };
+        Returns: string;
+      };
       start_pre_shoot_preparation: {
         Args: { p_booking_id: string };
         Returns: {
@@ -6978,6 +7397,25 @@ export type Database = {
           branch_id: string;
           branch_name: string;
           organization_wide: boolean;
+        }[];
+      };
+      training_directory: {
+        Args: { p_organization_id: string };
+        Returns: {
+          assigned_branch_names: string[];
+          assigned_role_keys: string[];
+          completed_at: string;
+          current_step_key: string;
+          display_name: string;
+          email: string;
+          module_key: string;
+          module_role_key: string;
+          module_title: string;
+          module_version: number;
+          organization_member_id: string;
+          organization_wide: boolean;
+          training_status: Database["public"]["Enums"]["training_profile_status"];
+          work_ready_at: string;
         }[];
       };
       transition_quotation: {
@@ -7379,6 +7817,38 @@ export type Database = {
       quotation_pricing_source: "catalogue" | "approved_offer" | "authorized_override";
       quotation_status:
         "draft" | "ready" | "sent" | "accepted" | "declined" | "expired" | "superseded";
+      training_gate_mode: "off" | "soft" | "required";
+      training_profile_status:
+        | "not_started"
+        | "in_progress"
+        | "practice_pending"
+        | "knowledge_check_pending"
+        | "complete"
+        | "retraining_required";
+      training_scenario_status: "not_started" | "in_progress" | "complete";
+      training_step_event_result: "pass" | "fail" | "info";
+      training_step_event_type:
+        | "step_viewed"
+        | "step_completed"
+        | "action_attempted"
+        | "action_passed"
+        | "action_failed"
+        | "hint_opened"
+        | "scenario_started"
+        | "scenario_reset"
+        | "scenario_completed"
+        | "knowledge_check_answered"
+        | "training_step_broken"
+        | "module_completed";
+      training_step_type:
+        | "orientation"
+        | "navigation"
+        | "privacy"
+        | "evidence"
+        | "escalation"
+        | "help"
+        | "practice"
+        | "knowledge_check";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -7602,6 +8072,41 @@ export const Constants = {
       quotation_line_type: ["package", "addon", "custom"],
       quotation_pricing_source: ["catalogue", "approved_offer", "authorized_override"],
       quotation_status: ["draft", "ready", "sent", "accepted", "declined", "expired", "superseded"],
+      training_gate_mode: ["off", "soft", "required"],
+      training_profile_status: [
+        "not_started",
+        "in_progress",
+        "practice_pending",
+        "knowledge_check_pending",
+        "complete",
+        "retraining_required",
+      ],
+      training_scenario_status: ["not_started", "in_progress", "complete"],
+      training_step_event_result: ["pass", "fail", "info"],
+      training_step_event_type: [
+        "step_viewed",
+        "step_completed",
+        "action_attempted",
+        "action_passed",
+        "action_failed",
+        "hint_opened",
+        "scenario_started",
+        "scenario_reset",
+        "scenario_completed",
+        "knowledge_check_answered",
+        "training_step_broken",
+        "module_completed",
+      ],
+      training_step_type: [
+        "orientation",
+        "navigation",
+        "privacy",
+        "evidence",
+        "escalation",
+        "help",
+        "practice",
+        "knowledge_check",
+      ],
     },
   },
 } as const;
