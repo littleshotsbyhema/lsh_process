@@ -1385,6 +1385,11 @@ DECLARE
       ["help",7,"help",true,"step_completed","pass"]
     ]'::jsonb;
 BEGIN
+  -- Serialize catalogue step mutations with module publication.
+  -- UPDATE of training_modules already takes a conflicting row lock;
+  -- step-trigger executions take FOR SHARE on the same module row.
+  -- Whichever transaction arrives second therefore re-validates only
+  -- after the first transaction commits or rolls back.
   IF TG_TABLE_NAME = 'training_modules' THEN
     IF TG_OP = 'DELETE' THEN
       v_module_id := OLD.id;
@@ -1411,7 +1416,8 @@ BEGIN
     v_required
   FROM public.training_modules tm
   WHERE tm.id =
-        v_module_id;
+        v_module_id
+  FOR SHARE OF tm;
 
   IF NOT FOUND
      OR NOT v_active THEN
@@ -1734,6 +1740,12 @@ DECLARE
   v_required_step_count integer;
   v_profile_id uuid;
 BEGIN
+  -- Lock the selected active module through profile creation.
+  -- Retirement updates require a conflicting row lock, so either:
+  --   1. start commits first and retirement sees the new profile, or
+  --   2. retirement commits first and this SELECT re-checks active=true.
+  -- This prevents a newly started incomplete profile from being attached
+  -- to a version that becomes hidden in the same concurrency window.
   v_member_id :=
     public.current_organization_member(
       p_organization_id
@@ -1798,7 +1810,8 @@ BEGIN
             OR b.id IS NOT NULL
           )
       )
-    );
+    )
+  FOR SHARE OF tm;
 
   IF v_module_id IS NULL THEN
     RAISE EXCEPTION

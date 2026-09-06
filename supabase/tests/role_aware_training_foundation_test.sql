@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(89);
+SELECT plan(91);
 
 -- =====================================================================
 -- Little Moments OS
@@ -2902,6 +2902,32 @@ SELECT ok(
     'permission denied'
   ),
   'service_role cannot truncate training rollout settings'
+);
+
+-- 90
+SELECT ok(
+  position(
+    'for share of tm'
+    IN lower(
+      pg_get_functiondef(
+        'public.start_my_training_module(uuid,text,integer)'::regprocedure
+      )
+    )
+  ) > 0,
+  'module start locks the selected training module against concurrent retirement'
+);
+
+-- 91
+SELECT ok(
+  position(
+    'for share of tm'
+    IN lower(
+      pg_get_functiondef(
+        'public.lsh_guard_common_orientation_client_contract()'::regprocedure
+      )
+    )
+  ) > 0,
+  'client-contract guard locks the module row across step mutation and publication'
 );
 
 RESET ROLE;
