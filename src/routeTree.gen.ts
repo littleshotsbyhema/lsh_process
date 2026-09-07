@@ -37,6 +37,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedSopsRouteImport } from './routes/_authenticated/sops'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
+import { Route as AuthenticatedTrainingRouteImport } from './routes/_authenticated/training'
 import { Route as AuthenticatedWhatsappRouteImport } from './routes/_authenticated/whatsapp'
 import { Route as FTokenRouteImport } from './routes/f/$token'
 import { Route as AuthenticatedLeadsLeadIdRouteImport } from './routes/_authenticated/leads_.$leadId'
@@ -181,6 +182,11 @@ const AuthenticatedTeamRoute = AuthenticatedTeamRouteImport.update({
   path: '/team',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTrainingRoute = AuthenticatedTrainingRouteImport.update({
+  id: '/training',
+  path: '/training',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedWhatsappRoute = AuthenticatedWhatsappRouteImport.update({
   id: '/whatsapp',
   path: '/whatsapp',
@@ -226,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/sops': typeof AuthenticatedSopsRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/team': typeof AuthenticatedTeamRoute
+  '/training': typeof AuthenticatedTrainingRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/f/$token': typeof FTokenRoute
   '/leads/$leadId': typeof AuthenticatedLeadsLeadIdRoute
@@ -257,6 +264,7 @@ export interface FileRoutesByTo {
   '/sops': typeof AuthenticatedSopsRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/team': typeof AuthenticatedTeamRoute
+  '/training': typeof AuthenticatedTrainingRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/f/$token': typeof FTokenRoute
   '/': typeof AuthenticatedIndexRoute
@@ -291,6 +299,7 @@ export interface FileRoutesById {
   '/_authenticated/sops': typeof AuthenticatedSopsRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
+  '/_authenticated/training': typeof AuthenticatedTrainingRoute
   '/_authenticated/whatsapp': typeof AuthenticatedWhatsappRoute
   '/f/$token': typeof FTokenRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -326,6 +335,7 @@ export interface FileRouteTypes {
     | '/sops'
     | '/tasks'
     | '/team'
+    | '/training'
     | '/whatsapp'
     | '/f/$token'
     | '/leads/$leadId'
@@ -357,6 +367,7 @@ export interface FileRouteTypes {
     | '/sops'
     | '/tasks'
     | '/team'
+    | '/training'
     | '/whatsapp'
     | '/f/$token'
     | '/'
@@ -390,6 +401,7 @@ export interface FileRouteTypes {
     | '/_authenticated/sops'
     | '/_authenticated/tasks'
     | '/_authenticated/team'
+    | '/_authenticated/training'
     | '/_authenticated/whatsapp'
     | '/f/$token'
     | '/_authenticated/'
@@ -602,6 +614,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTeamRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/training': {
+      id: '/_authenticated/training'
+      path: '/training'
+      fullPath: '/training'
+      preLoaderRoute: typeof AuthenticatedTrainingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/whatsapp': {
       id: '/_authenticated/whatsapp'
       path: '/whatsapp'
@@ -650,6 +669,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSopsRoute: typeof AuthenticatedSopsRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
+  AuthenticatedTrainingRoute: typeof AuthenticatedTrainingRoute
   AuthenticatedWhatsappRoute: typeof AuthenticatedWhatsappRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedLeadsLeadIdRoute: typeof AuthenticatedLeadsLeadIdRoute
@@ -679,6 +699,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSopsRoute: AuthenticatedSopsRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
+  AuthenticatedTrainingRoute: AuthenticatedTrainingRoute,
   AuthenticatedWhatsappRoute: AuthenticatedWhatsappRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedLeadsLeadIdRoute: AuthenticatedLeadsLeadIdRoute,

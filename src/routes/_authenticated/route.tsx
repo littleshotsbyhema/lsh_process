@@ -1,7 +1,19 @@
-import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
+import { useEffect } from "react";
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  redirect,
+  useNavigate,
+  useRouterState,
+} from "@tanstack/react-router";
+
 import { supabase } from "@/integrations/supabase/client";
-import { useSession } from "@/lib/session";
+import { type AppRole, useSession } from "@/lib/session";
 import { canView, isTemporarilyUnavailable, visibleNav } from "@/lib/access";
+import { TrainingProvider } from "@/lib/training/training-context";
+import { TRAINING_ROUTE } from "@/lib/training/training-gate";
+import { useTraining } from "@/lib/training/use-training";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -19,7 +31,9 @@ export const Route = createFileRoute("/_authenticated")({
     }
 
     if (data.user.user_metadata?.must_change_password === true) {
-      throw redirect({ to: "/change-password" });
+      throw redirect({
+        to: "/change-password",
+      });
     }
 
     return { user: data.user };
@@ -39,7 +53,7 @@ function Centered({ title, body }: { title: string; body: string }) {
 }
 
 function AuthenticatedLayout() {
-  const { loading, roles } = useSession();
+  const { loading, roles, user } = useSession();
   const { location } = useRouterState();
 
   const hasRole = roles.length > 0;
@@ -57,7 +71,48 @@ function AuthenticatedLayout() {
     );
   }
 
-  if (isTemporarilyUnavailable(location.pathname)) {
+  return (
+    <TrainingProvider userId={user?.id ?? null} enabled={hasRole}>
+      <AuthenticatedTrainingBoundary roles={roles} pathname={location.pathname} />
+    </TrainingProvider>
+  );
+}
+
+function AuthenticatedTrainingBoundary({
+  roles,
+  pathname,
+}: {
+  roles: AppRole[];
+  pathname: string;
+}) {
+  const navigate = useNavigate();
+  const { resolveGate } = useTraining();
+
+  const decision = resolveGate(pathname);
+
+  const redirectTo = decision.action === "redirect" ? decision.to : null;
+
+  useEffect(() => {
+    if (!redirectTo) return;
+
+    void navigate({
+      to: redirectTo,
+      replace: true,
+    });
+  }, [navigate, redirectTo]);
+
+  if (redirectTo) {
+    return (
+      <Centered
+        title="Opening your training…"
+        body="Your required training needs attention before normal studio work continues."
+      />
+    );
+  }
+
+  const isTrainingRoute = pathname === TRAINING_ROUTE || pathname.startsWith(`${TRAINING_ROUTE}/`);
+
+  if (!isTrainingRoute && isTemporarilyUnavailable(pathname)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-6">
         <div className="max-w-md text-center">
@@ -79,7 +134,7 @@ function AuthenticatedLayout() {
     );
   }
 
-  if (!canView(location.pathname, roles)) {
+  if (!isTrainingRoute && !canView(pathname, roles)) {
     const home = visibleNav(roles)[0]?.to ?? "/";
 
     return (
@@ -103,5 +158,21 @@ function AuthenticatedLayout() {
     );
   }
 
-  return <Outlet />;
+  return (
+    <>
+      {decision.action === "soft-reminder" && (
+        <div className="border-b border-border bg-accent/50 px-5 py-2.5 text-sm text-primary">
+          <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-2">
+            <span>Your Little Moments OS training is ready to continue.</span>
+
+            <Link to="/training" className="font-medium underline underline-offset-4">
+              Open training
+            </Link>
+          </div>
+        </div>
+      )}
+
+      <Outlet />
+    </>
+  );
 }
