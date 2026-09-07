@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(132);
+SELECT plan(133);
 
 -- =====================================================================
 -- Little Moments OS
@@ -4161,6 +4161,45 @@ SELECT ok(
   ),
   'step catalogue lifecycle preserves exact immutable audit events for create edit move and delete'
 );
+
+INSERT INTO public.training_module_steps (
+  id,
+  organization_id,
+  training_module_id,
+  step_key,
+  step_order,
+  step_type,
+  required,
+  completion_event_type,
+  completion_result
+)
+VALUES (
+  'c3000000-0000-4000-8000-000000000002'::uuid,
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  'c2000000-0000-4000-8000-000000000002'::uuid,
+  'catalogue-audit-id-probe',
+  3,
+  'navigation'::public.training_step_type,
+  false,
+  'step_completed'::public.training_step_event_type,
+  'pass'::public.training_step_event_result
+);
+
+-- 133
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.training_module_steps
+      SET id =
+        'c3000000-0000-4000-8000-000000000099'::uuid
+      WHERE id =
+        'c3000000-0000-4000-8000-000000000002'::uuid
+    $sql$,
+    'Training module step id is immutable'
+  ),
+  'training step primary key is immutable so catalogue audit history remains reconstructable'
+);
+
 
 RESET ROLE;
 

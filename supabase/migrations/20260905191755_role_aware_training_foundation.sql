@@ -1742,6 +1742,15 @@ BEGIN
 
   ELSIF TG_TABLE_NAME = 'training_module_steps' THEN
     -- Step rows are part of the same tenant-owned catalogue contract.
+    -- The primary key is immutable so catalogue audit history for a step
+    -- cannot be split between an old entity id and a new entity id.
+    IF TG_OP = 'UPDATE'
+       AND OLD.id IS DISTINCT FROM
+           NEW.id THEN
+      RAISE EXCEPTION
+        'Training module step id is immutable';
+    END IF;
+
     -- Moving a step across organizations would change ownership without
     -- an attributable lifecycle transition.
     IF TG_OP = 'UPDATE'
