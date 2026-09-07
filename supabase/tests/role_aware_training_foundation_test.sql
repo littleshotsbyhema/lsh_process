@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(133);
+SELECT plan(136);
 
 -- =====================================================================
 -- Little Moments OS
@@ -2732,10 +2732,8 @@ SELECT ok(
   'service-role gate change without fresh actor context is rejected'
 );
 
-SELECT set_config(
-  'lsh.training_gate_actor_member_id',
-  'b1000000-0000-4000-8000-000000000012',
-  true
+SELECT public.set_training_gate_actor_context(
+  'b1000000-0000-4000-8000-000000000012'
 );
 
 -- 81
@@ -2754,14 +2752,9 @@ SELECT ok(
   'a fresh active member without organization-settings authority cannot be attributed to a gate change'
 );
 
-SELECT set_config(
-  'lsh.training_gate_actor_member_id',
-  '',
-  true
-);
+SELECT public.clear_training_gate_actor_context();
 
-SELECT set_config(
-  'lsh.training_gate_actor_member_id',
+SELECT public.set_training_gate_actor_context(
   (
     SELECT m.id::text
     FROM public.organization_members m
@@ -2769,8 +2762,7 @@ SELECT set_config(
       '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
       AND m.user_id =
         'b1000000-0000-4000-8000-000000000001'::uuid
-  ),
-  true
+  )
 );
 
 UPDATE public.organization_training_settings
@@ -2840,8 +2832,7 @@ SELECT ok(
   'service-role gate change cannot reuse persisted updated_by without fresh actor context'
 );
 
-SELECT set_config(
-  'lsh.training_gate_actor_member_id',
+SELECT public.set_training_gate_actor_context(
   (
     SELECT m.id::text
     FROM public.organization_members m
@@ -2849,8 +2840,7 @@ SELECT set_config(
       '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
       AND m.user_id =
         'b1000000-0000-4000-8000-000000000001'::uuid
-  ),
-  true
+  )
 );
 
 UPDATE public.organization_training_settings
@@ -3268,8 +3258,7 @@ SELECT ok(
 
 -- Prove ordinary provisioning still works, but cannot retain attribution
 -- or an actor context for a later gate transition.
-SELECT set_config(
-  'lsh.training_gate_actor_member_id',
+SELECT public.set_training_gate_actor_context(
   (
     SELECT m.id::text
     FROM public.organization_members m
@@ -3277,8 +3266,7 @@ SELECT set_config(
       '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
       AND m.user_id =
         'b1000000-0000-4000-8000-000000000001'::uuid
-  ),
-  true
+  )
 );
 
 INSERT INTO public.organization_training_settings (
@@ -4198,6 +4186,150 @@ SELECT ok(
     'Training module step id is immutable'
   ),
   'training step primary key is immutable so catalogue audit history remains reconstructable'
+);
+
+
+-- 134
+SELECT ok(
+  (
+    SELECT position(
+      'lsh.training_gate_actor_xact_id'
+      IN pg_get_functiondef(
+        'public.lsh_audit_training_gate_mode_change()'::regprocedure
+      )
+    ) > 0
+  )
+  AND
+  (
+    SELECT position(
+      'txid_current()'
+      IN pg_get_functiondef(
+        'public.lsh_audit_training_gate_mode_change()'::regprocedure
+      )
+    ) > 0
+  )
+  AND
+  (
+    SELECT p.prosecdef
+    FROM pg_catalog.pg_proc p
+    JOIN pg_catalog.pg_namespace n
+      ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname =
+        'set_training_gate_actor_context'
+  ),
+  'training gate actor context is bound to the current transaction id'
+);
+
+SELECT set_config(
+  'lsh.training_gate_actor_member_id',
+  (
+    SELECT m.id::text
+    FROM public.organization_members m
+    WHERE m.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND m.user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND m.status =
+        'active'::public.member_status
+  ),
+  false
+);
+
+-- 135
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.organization_training_settings
+      SET gate_mode =
+        CASE
+          WHEN gate_mode =
+               'soft'::public.training_gate_mode
+          THEN 'required'::public.training_gate_mode
+          ELSE 'soft'::public.training_gate_mode
+        END
+      WHERE organization_id =
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+    $sql$,
+    'Fresh training gate actor context is required for privileged gate changes'
+  ),
+  'stale session-scoped gate actor context cannot authorize a later gate transition'
+);
+
+SELECT set_config(
+  'lsh.training_gate_actor_member_id',
+  '',
+  false
+);
+
+SELECT set_config(
+  'lsh.training_gate_actor_xact_id',
+  '',
+  false
+);
+
+SELECT public.set_training_catalogue_actor_context(
+  (
+    SELECT m.id::text
+    FROM public.organization_members m
+    WHERE m.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND m.user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND m.status =
+        'active'::public.member_status
+  )
+);
+
+INSERT INTO public.training_modules (
+  id,
+  organization_id,
+  role_id,
+  module_key,
+  version,
+  title,
+  required,
+  active,
+  minimum_score
+)
+VALUES (
+  'c4000000-0000-4000-8000-000000000001'::uuid,
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  NULL,
+  'catalogue-module-id-probe',
+  1,
+  'Catalogue module id probe',
+  false,
+  false,
+  100
+);
+
+SELECT public.set_training_catalogue_actor_context(
+  (
+    SELECT m.id::text
+    FROM public.organization_members m
+    WHERE m.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND m.user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND m.status =
+        'active'::public.member_status
+  )
+);
+
+-- 136
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.training_modules
+      SET id =
+        'c4000000-0000-4000-8000-000000000099'::uuid
+      WHERE id =
+        'c4000000-0000-4000-8000-000000000001'::uuid
+    $sql$,
+    'Training module id is immutable'
+  ),
+  'training module primary key is immutable so catalogue audit history remains reconstructable'
 );
 
 

@@ -745,6 +745,89 @@ EXECUTE FUNCTION public.lsh_set_updated_at();
 -- never accepted as privileged input attribution.
 -- =====================================================================
 
+
+CREATE FUNCTION public.set_training_gate_actor_context(
+  p_actor_member_id text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+BEGIN
+  IF NULLIF(p_actor_member_id, '') IS NULL THEN
+    PERFORM set_config(
+      'lsh.training_gate_actor_member_id',
+      '',
+      true
+    );
+
+    PERFORM set_config(
+      'lsh.training_gate_actor_xact_id',
+      '',
+      true
+    );
+
+    RETURN;
+  END IF;
+
+  BEGIN
+    PERFORM p_actor_member_id::uuid;
+  EXCEPTION
+    WHEN invalid_text_representation THEN
+      RAISE EXCEPTION
+        'Fresh training gate actor context must be a valid organization member UUID';
+  END;
+
+  PERFORM set_config(
+    'lsh.training_gate_actor_member_id',
+    p_actor_member_id,
+    true
+  );
+
+  PERFORM set_config(
+    'lsh.training_gate_actor_xact_id',
+    txid_current()::text,
+    true
+  );
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.set_training_gate_actor_context(text)
+FROM PUBLIC, anon, authenticated;
+
+GRANT EXECUTE
+ON FUNCTION public.set_training_gate_actor_context(text)
+TO service_role;
+
+CREATE FUNCTION public.clear_training_gate_actor_context()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+BEGIN
+  PERFORM set_config(
+    'lsh.training_gate_actor_member_id',
+    '',
+    true
+  );
+
+  PERFORM set_config(
+    'lsh.training_gate_actor_xact_id',
+    '',
+    true
+  );
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.clear_training_gate_actor_context()
+FROM PUBLIC, anon, authenticated;
+
+GRANT EXECUTE
+ON FUNCTION public.clear_training_gate_actor_context()
+TO service_role;
+
 CREATE FUNCTION public.lsh_audit_training_gate_mode_change()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -755,6 +838,7 @@ DECLARE
   v_actor_member_id uuid;
   v_actor_user_id uuid;
   v_actor_context text;
+  v_actor_xact_context text;
   v_executor_role text;
   v_attribution text;
 BEGIN
@@ -772,6 +856,12 @@ BEGIN
 
     PERFORM set_config(
       'lsh.training_gate_actor_member_id',
+      '',
+      true
+    );
+
+    PERFORM set_config(
+      'lsh.training_gate_actor_xact_id',
       '',
       true
     );
@@ -833,6 +923,15 @@ BEGIN
         ''
       );
 
+    v_actor_xact_context :=
+      NULLIF(
+        current_setting(
+          'lsh.training_gate_actor_xact_id',
+          true
+        ),
+        ''
+      );
+
     -- Consume successful-operation actor context so a later gate change
     -- must provide fresh attribution instead of inheriting table state.
     PERFORM set_config(
@@ -841,7 +940,16 @@ BEGIN
       true
     );
 
-    IF v_actor_context IS NULL THEN
+    PERFORM set_config(
+      'lsh.training_gate_actor_xact_id',
+      '',
+      true
+    );
+
+    IF v_actor_context IS NULL
+       OR v_actor_xact_context IS NULL
+       OR v_actor_xact_context IS DISTINCT FROM
+          txid_current()::text THEN
       RAISE EXCEPTION
         'Fresh training gate actor context is required for privileged gate changes';
     END IF;
@@ -1719,6 +1827,15 @@ DECLARE
   v_new_values jsonb;
 BEGIN
   IF TG_TABLE_NAME = 'training_modules' THEN
+    -- The module primary key is immutable so catalogue audit history
+    -- cannot split between an old entity id and a new entity id.
+    IF TG_OP = 'UPDATE'
+       AND OLD.id IS DISTINCT FROM
+           NEW.id THEN
+      RAISE EXCEPTION
+        'Training module id is immutable';
+    END IF;
+
     -- A module row is tenant-owned catalogue state. Moving it between
     -- organizations would rewrite catalogue ownership rather than
     -- perform an attributable lifecycle transition inside one
