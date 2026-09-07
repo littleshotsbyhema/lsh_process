@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 BEGIN;
 
-SELECT plan(121);
+SELECT plan(132);
 
 -- =====================================================================
 -- Little Moments OS
@@ -397,8 +397,7 @@ RESET ROLE;
 -- Founder-attributed catalogue tooling inside this rollback-only test
 -- transaction. The production boundary validates this member and their
 -- org.settings.write authority on every module mutation.
-SELECT set_config(
-  'lsh.training_catalogue_actor_member_id',
+SELECT public.set_training_catalogue_actor_context(
   (
     SELECT m.id::text
     FROM public.organization_members m
@@ -408,8 +407,7 @@ SELECT set_config(
         'b1000000-0000-4000-8000-000000000001'::uuid
       AND m.status =
         'active'::public.member_status
-  ),
-  true
+  )
 );
 
 -- 15
@@ -3468,11 +3466,7 @@ SELECT ok(
   'service_role has no TRUNCATE privilege on training module steps'
 );
 
-SELECT set_config(
-  'lsh.training_catalogue_actor_member_id',
-  '',
-  true
-);
+SELECT public.clear_training_catalogue_actor_context();
 
 SELECT set_config(
   'request.jwt.claim.role',
@@ -3538,8 +3532,7 @@ SELECT ok(
   'service-role catalogue creation requires fresh transaction-local actor context'
 );
 
-SELECT set_config(
-  'lsh.training_catalogue_actor_member_id',
+SELECT public.set_training_catalogue_actor_context(
   (
     SELECT m.id::text
     FROM public.organization_members m
@@ -3549,8 +3542,7 @@ SELECT set_config(
         'b1000000-0000-4000-8000-000000000001'::uuid
       AND m.status =
         'active'::public.member_status
-  ),
-  true
+  )
 );
 
 INSERT INTO public.training_modules (
@@ -3614,11 +3606,7 @@ SELECT ok(
 );
 
 -- Persisted updated_by cannot authorize a later mutation.
-SELECT set_config(
-  'lsh.training_catalogue_actor_member_id',
-  '',
-  true
-);
+SELECT public.clear_training_catalogue_actor_context();
 
 -- 116
 SELECT ok(
@@ -3637,8 +3625,7 @@ SELECT ok(
 
 -- The active non-settings member created by the earlier gate-audit
 -- adversarial fixture must not acquire catalogue authority.
-SELECT set_config(
-  'lsh.training_catalogue_actor_member_id',
+SELECT public.set_training_catalogue_actor_context(
   (
     SELECT m.id::text
     FROM public.organization_members m
@@ -3648,8 +3635,7 @@ SELECT set_config(
         'b1000000-0000-4000-8000-000000000012'::uuid
       AND m.status =
         'active'::public.member_status
-  ),
-  true
+  )
 );
 
 -- 117
@@ -3667,8 +3653,7 @@ SELECT ok(
   'active member without organization-settings authority cannot mutate the training catalogue'
 );
 
-SELECT set_config(
-  'lsh.training_catalogue_actor_member_id',
+SELECT public.set_training_catalogue_actor_context(
   (
     SELECT m.id::text
     FROM public.organization_members m
@@ -3678,8 +3663,7 @@ SELECT set_config(
         'b1000000-0000-4000-8000-000000000001'::uuid
       AND m.status =
         'active'::public.member_status
-  ),
-  true
+  )
 );
 
 UPDATE public.training_modules
@@ -3813,6 +3797,369 @@ SELECT ok(
     )
   ),
   'catalogue lifecycle preserves one exact immutable audit event for create edit publish and retire'
+);
+
+RESET ROLE;
+
+
+-- =====================================================================
+-- Part 19 — Catalogue actor context is xact-bound and steps are audited
+-- =====================================================================
+--
+-- A pooled service-role session must not be able to reuse a prior actor
+-- in a later transaction. Step catalogue mutations must carry the same
+-- attribution and immutable audit history as module lifecycle changes.
+-- =====================================================================
+
+-- 122
+SELECT ok(
+  (
+    SELECT
+      position(
+        'lsh.training_catalogue_actor_xact_id'
+        IN pg_get_functiondef(
+          'public.lsh_audit_training_catalogue_module_change()'::regprocedure
+        )
+      ) > 0
+  )
+  AND
+  (
+    SELECT
+      position(
+        'txid_current()'
+        IN pg_get_functiondef(
+          'public.lsh_audit_training_catalogue_module_change()'::regprocedure
+        )
+      ) > 0
+  ),
+  'catalogue actor context is bound to the current transaction id'
+);
+
+-- 123
+SELECT ok(
+  (
+    SELECT p.prosecdef
+    FROM pg_catalog.pg_proc p
+    JOIN pg_catalog.pg_namespace n
+      ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname =
+        'set_training_catalogue_actor_context'
+  ),
+  'catalogue actor context helper is SECURITY DEFINER'
+);
+
+-- 124
+SELECT is(
+  (
+    SELECT count(*)::bigint
+    FROM pg_catalog.pg_trigger t
+    WHERE t.tgrelid =
+          'public.training_module_steps'::regclass
+      AND t.tgname =
+          'training_module_steps_z_catalogue_audit'
+      AND NOT t.tgisinternal
+  ),
+  1::bigint,
+  'training step catalogue audit trigger exists exactly once'
+);
+
+SELECT public.clear_training_catalogue_actor_context();
+
+SET LOCAL ROLE service_role;
+
+-- 125
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      INSERT INTO public.training_module_steps (
+        id,
+        organization_id,
+        training_module_id,
+        step_key,
+        step_order,
+        step_type,
+        required,
+        completion_event_type,
+        completion_result
+      )
+      VALUES (
+        'c3000000-0000-4000-8000-000000000001'::uuid,
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+        'c2000000-0000-4000-8000-000000000001'::uuid,
+        'catalogue-audit-step',
+        1,
+        'navigation'::public.training_step_type,
+        false,
+        'step_completed'::public.training_step_event_type,
+        'pass'::public.training_step_event_result
+      )
+    $sql$,
+    'Fresh transaction-local training catalogue actor context is required'
+  ),
+  'service-role step creation requires fresh transaction-local actor context'
+);
+
+SELECT public.set_training_catalogue_actor_context(
+  (
+    SELECT m.id::text
+    FROM public.organization_members m
+    WHERE m.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND m.user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND m.status =
+        'active'::public.member_status
+  )
+);
+
+INSERT INTO public.training_module_steps (
+  id,
+  organization_id,
+  training_module_id,
+  step_key,
+  step_order,
+  step_type,
+  required,
+  completion_event_type,
+  completion_result
+)
+VALUES (
+  'c3000000-0000-4000-8000-000000000001'::uuid,
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  'c2000000-0000-4000-8000-000000000001'::uuid,
+  'catalogue-audit-step',
+  1,
+  'navigation'::public.training_step_type,
+  false,
+  'step_completed'::public.training_step_event_type,
+  'pass'::public.training_step_event_result
+);
+
+-- 126
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM public.audit_events ae
+    WHERE ae.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.actor_user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND ae.action_key =
+        'training.catalogue.step.created'
+      AND ae.entity_type =
+        'training_module_step'
+      AND ae.entity_id =
+        'c3000000-0000-4000-8000-000000000001'::uuid
+      AND ae.old_values IS NULL
+      AND ae.new_values ->> 'step_key' =
+        'catalogue-audit-step'
+      AND ae.source =
+        'training-catalogue-trigger'
+  ),
+  'Founder-attributed step creation appends immutable audit evidence'
+);
+
+SELECT public.clear_training_catalogue_actor_context();
+
+-- 127
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.training_module_steps
+      SET step_order = 2
+      WHERE id =
+        'c3000000-0000-4000-8000-000000000001'::uuid
+    $sql$,
+    'Fresh transaction-local training catalogue actor context is required'
+  ),
+  'step mutation cannot reuse prior catalogue actor context'
+);
+
+SELECT public.set_training_catalogue_actor_context(
+  (
+    SELECT m.id::text
+    FROM public.organization_members m
+    WHERE m.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND m.id =
+        'b1000000-0000-4000-8000-000000000012'::uuid
+      AND m.status =
+        'active'::public.member_status
+  )
+);
+
+-- 128
+SELECT ok(
+  pg_temp.t1_denied(
+    $sql$
+      UPDATE public.training_module_steps
+      SET step_order = 2
+      WHERE id =
+        'c3000000-0000-4000-8000-000000000001'::uuid
+    $sql$,
+    'Training catalogue changes require org.settings.write'
+  ),
+  'active member without organization-settings authority cannot mutate training steps'
+);
+
+SELECT public.set_training_catalogue_actor_context(
+  (
+    SELECT m.id::text
+    FROM public.organization_members m
+    WHERE m.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND m.user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND m.status =
+        'active'::public.member_status
+  )
+);
+
+UPDATE public.training_module_steps
+SET step_order = 2
+WHERE id =
+  'c3000000-0000-4000-8000-000000000001'::uuid;
+
+-- 129
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM public.audit_events ae
+    WHERE ae.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.actor_user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND ae.action_key =
+        'training.catalogue.step.updated'
+      AND ae.entity_id =
+        'c3000000-0000-4000-8000-000000000001'::uuid
+      AND ae.old_values ->> 'step_order' =
+        '1'
+      AND ae.new_values ->> 'step_order' =
+        '2'
+      AND ae.source =
+        'training-catalogue-trigger'
+  ),
+  'step edits append exact Founder-attributed audit evidence'
+);
+
+INSERT INTO public.training_modules (
+  id,
+  organization_id,
+  role_id,
+  module_key,
+  version,
+  title,
+  required,
+  active,
+  minimum_score
+)
+VALUES (
+  'c2000000-0000-4000-8000-000000000002'::uuid,
+  '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid,
+  NULL,
+  'catalogue-audit-probe-destination',
+  1,
+  'Catalogue audit probe destination',
+  false,
+  false,
+  100
+);
+
+UPDATE public.training_module_steps
+SET training_module_id =
+      'c2000000-0000-4000-8000-000000000002'::uuid
+WHERE id =
+  'c3000000-0000-4000-8000-000000000001'::uuid;
+
+-- 130
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM public.audit_events ae
+    WHERE ae.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.actor_user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND ae.action_key =
+        'training.catalogue.step.moved'
+      AND ae.entity_id =
+        'c3000000-0000-4000-8000-000000000001'::uuid
+      AND ae.old_values ->> 'training_module_id' =
+        'c2000000-0000-4000-8000-000000000001'
+      AND ae.new_values ->> 'training_module_id' =
+        'c2000000-0000-4000-8000-000000000002'
+      AND ae.source =
+        'training-catalogue-trigger'
+  ),
+  'step ownership moves append exact Founder-attributed audit evidence'
+);
+
+DELETE FROM public.training_module_steps
+WHERE id =
+  'c3000000-0000-4000-8000-000000000001'::uuid;
+
+-- 131
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM public.audit_events ae
+    WHERE ae.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.actor_user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND ae.action_key =
+        'training.catalogue.step.deleted'
+      AND ae.entity_id =
+        'c3000000-0000-4000-8000-000000000001'::uuid
+      AND ae.old_values ->> 'step_key' =
+        'catalogue-audit-step'
+      AND ae.new_values IS NULL
+      AND ae.source =
+        'training-catalogue-trigger'
+  ),
+  'step deletion appends exact Founder-attributed audit evidence'
+);
+
+-- 132
+SELECT ok(
+  (
+    SELECT count(*) = 4
+    FROM public.audit_events ae
+    WHERE ae.organization_id =
+      '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+      AND ae.entity_type =
+        'training_module_step'
+      AND ae.entity_id =
+        'c3000000-0000-4000-8000-000000000001'::uuid
+      AND ae.actor_user_id =
+        'b1000000-0000-4000-8000-000000000001'::uuid
+      AND ae.source =
+        'training-catalogue-trigger'
+  )
+  AND
+  (
+    SELECT count(*) = 4
+    FROM (
+      VALUES
+        ('training.catalogue.step.created'),
+        ('training.catalogue.step.updated'),
+        ('training.catalogue.step.moved'),
+        ('training.catalogue.step.deleted')
+    ) expected(action_key)
+    WHERE EXISTS (
+      SELECT 1
+      FROM public.audit_events ae
+      WHERE ae.organization_id =
+        '590a40ab-a5dc-4ebb-a4aa-8b0c68b2f4bc'::uuid
+        AND ae.entity_id =
+          'c3000000-0000-4000-8000-000000000001'::uuid
+        AND ae.action_key =
+          expected.action_key
+    )
+  ),
+  'step catalogue lifecycle preserves exact immutable audit events for create edit move and delete'
 );
 
 RESET ROLE;

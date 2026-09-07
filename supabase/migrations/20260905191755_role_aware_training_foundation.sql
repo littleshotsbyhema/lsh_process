@@ -1634,6 +1634,68 @@ EXECUTE FUNCTION
 -- must explicitly establish its own context.
 -- =====================================================================
 
+CREATE FUNCTION public.set_training_catalogue_actor_context(
+  p_actor_member_id text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+BEGIN
+  -- Validate shape before storing. Membership and permission are still
+  -- validated by the catalogue mutation trigger against the affected
+  -- organization.
+  PERFORM p_actor_member_id::uuid;
+
+  PERFORM set_config(
+    'lsh.training_catalogue_actor_member_id',
+    p_actor_member_id,
+    true
+  );
+
+  PERFORM set_config(
+    'lsh.training_catalogue_actor_xact_id',
+    txid_current()::text,
+    true
+  );
+END;
+$function$;
+
+
+CREATE FUNCTION public.clear_training_catalogue_actor_context()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+BEGIN
+  PERFORM set_config(
+    'lsh.training_catalogue_actor_member_id',
+    '',
+    true
+  );
+
+  PERFORM set_config(
+    'lsh.training_catalogue_actor_xact_id',
+    '',
+    true
+  );
+END;
+$function$;
+
+
+REVOKE ALL ON FUNCTION
+  public.set_training_catalogue_actor_context(text),
+  public.clear_training_catalogue_actor_context()
+FROM PUBLIC, anon, authenticated;
+
+GRANT EXECUTE ON FUNCTION
+  public.set_training_catalogue_actor_context(text),
+  public.clear_training_catalogue_actor_context()
+TO service_role;
+
+
 CREATE FUNCTION public.lsh_audit_training_catalogue_module_change()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -1643,8 +1705,10 @@ AS $function$
 DECLARE
   v_organization_id uuid;
   v_entity_id uuid;
+  v_entity_type text;
 
   v_actor_context text;
+  v_actor_xact_context text;
   v_actor_member_id uuid;
   v_actor_user_id uuid;
 
@@ -1654,22 +1718,53 @@ DECLARE
   v_old_values jsonb;
   v_new_values jsonb;
 BEGIN
-  -- A module row is tenant-owned catalogue state. Moving it between
-  -- organizations would rewrite catalogue ownership rather than perform
-  -- an attributable lifecycle transition inside one organization.
-  IF TG_OP = 'UPDATE'
-     AND OLD.organization_id IS DISTINCT FROM
-         NEW.organization_id THEN
-    RAISE EXCEPTION
-      'Training module organization_id is immutable';
-  END IF;
+  IF TG_TABLE_NAME = 'training_modules' THEN
+    -- A module row is tenant-owned catalogue state. Moving it between
+    -- organizations would rewrite catalogue ownership rather than
+    -- perform an attributable lifecycle transition inside one
+    -- organization.
+    IF TG_OP = 'UPDATE'
+       AND OLD.organization_id IS DISTINCT FROM
+           NEW.organization_id THEN
+      RAISE EXCEPTION
+        'Training module organization_id is immutable';
+    END IF;
 
-  IF TG_OP = 'DELETE' THEN
-    v_organization_id := OLD.organization_id;
-    v_entity_id := OLD.id;
+    IF TG_OP = 'DELETE' THEN
+      v_organization_id := OLD.organization_id;
+      v_entity_id := OLD.id;
+    ELSE
+      v_organization_id := NEW.organization_id;
+      v_entity_id := NEW.id;
+    END IF;
+
+    v_entity_type := 'training_module';
+
+  ELSIF TG_TABLE_NAME = 'training_module_steps' THEN
+    -- Step rows are part of the same tenant-owned catalogue contract.
+    -- Moving a step across organizations would change ownership without
+    -- an attributable lifecycle transition.
+    IF TG_OP = 'UPDATE'
+       AND OLD.organization_id IS DISTINCT FROM
+           NEW.organization_id THEN
+      RAISE EXCEPTION
+        'Training module step organization_id is immutable';
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+      v_organization_id := OLD.organization_id;
+      v_entity_id := OLD.id;
+    ELSE
+      v_organization_id := NEW.organization_id;
+      v_entity_id := NEW.id;
+    END IF;
+
+    v_entity_type := 'training_module_step';
+
   ELSE
-    v_organization_id := NEW.organization_id;
-    v_entity_id := NEW.id;
+    RAISE EXCEPTION
+      'Unsupported training catalogue audit table: %',
+      TG_TABLE_NAME;
   END IF;
 
   v_actor_context :=
@@ -1681,7 +1776,19 @@ BEGIN
       ''
     );
 
-  IF v_actor_context IS NULL THEN
+  v_actor_xact_context :=
+    NULLIF(
+      current_setting(
+        'lsh.training_catalogue_actor_xact_id',
+        true
+      ),
+      ''
+    );
+
+  IF v_actor_context IS NULL
+     OR v_actor_xact_context IS NULL
+     OR v_actor_xact_context IS DISTINCT FROM
+        txid_current()::text THEN
     RAISE EXCEPTION
       'Fresh transaction-local training catalogue actor context is required for privileged catalogue changes';
   END IF;
@@ -1749,82 +1856,147 @@ BEGIN
       'Training catalogue changes require org.settings.write';
   END IF;
 
-  IF TG_OP <> 'DELETE' THEN
-    -- updated_by is output attribution only. Callers cannot persist or
-    -- reuse a prior row actor as authorization for this mutation.
-    NEW.updated_by := v_actor_member_id;
-  END IF;
-
-  IF TG_OP = 'INSERT' THEN
-    IF NEW.active THEN
-      v_action_key :=
-        'training.catalogue.module.published';
-    ELSE
-      v_action_key :=
-        'training.catalogue.module.created';
+  IF TG_TABLE_NAME = 'training_modules' THEN
+    IF TG_OP <> 'DELETE' THEN
+      -- updated_by is output attribution only. Callers cannot persist or
+      -- reuse a prior row actor as authorization for this mutation.
+      NEW.updated_by := v_actor_member_id;
     END IF;
 
-  ELSIF TG_OP = 'DELETE' THEN
-    v_action_key :=
-      'training.catalogue.module.deleted';
+    IF TG_OP = 'INSERT' THEN
+      IF NEW.active THEN
+        v_action_key :=
+          'training.catalogue.module.published';
+      ELSE
+        v_action_key :=
+          'training.catalogue.module.created';
+      END IF;
 
-  ELSIF OLD.active = false
-        AND NEW.active = true THEN
-    v_action_key :=
-      'training.catalogue.module.published';
+    ELSIF TG_OP = 'DELETE' THEN
+      v_action_key :=
+        'training.catalogue.module.deleted';
 
-  ELSIF OLD.active = true
-        AND NEW.active = false THEN
-    v_action_key :=
-      'training.catalogue.module.retired';
+    ELSIF OLD.active = false
+          AND NEW.active = true THEN
+      v_action_key :=
+        'training.catalogue.module.published';
+
+    ELSIF OLD.active = true
+          AND NEW.active = false THEN
+      v_action_key :=
+        'training.catalogue.module.retired';
+
+    ELSE
+      v_action_key :=
+        'training.catalogue.module.updated';
+    END IF;
+
+    IF TG_OP = 'INSERT' THEN
+      v_old_values := NULL;
+    ELSE
+      v_old_values :=
+        jsonb_build_object(
+          'role_id',
+          OLD.role_id,
+          'module_key',
+          OLD.module_key,
+          'version',
+          OLD.version,
+          'title',
+          OLD.title,
+          'required',
+          OLD.required,
+          'active',
+          OLD.active,
+          'minimum_score',
+          OLD.minimum_score
+        );
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+      v_new_values := NULL;
+    ELSE
+      v_new_values :=
+        jsonb_build_object(
+          'role_id',
+          NEW.role_id,
+          'module_key',
+          NEW.module_key,
+          'version',
+          NEW.version,
+          'title',
+          NEW.title,
+          'required',
+          NEW.required,
+          'active',
+          NEW.active,
+          'minimum_score',
+          NEW.minimum_score
+        );
+    END IF;
 
   ELSE
-    v_action_key :=
-      'training.catalogue.module.updated';
-  END IF;
+    IF TG_OP = 'INSERT' THEN
+      v_action_key :=
+        'training.catalogue.step.created';
 
-  IF TG_OP = 'INSERT' THEN
-    v_old_values := NULL;
-  ELSE
-    v_old_values :=
-      jsonb_build_object(
-        'role_id',
-        OLD.role_id,
-        'module_key',
-        OLD.module_key,
-        'version',
-        OLD.version,
-        'title',
-        OLD.title,
-        'required',
-        OLD.required,
-        'active',
-        OLD.active,
-        'minimum_score',
-        OLD.minimum_score
-      );
-  END IF;
+    ELSIF TG_OP = 'DELETE' THEN
+      v_action_key :=
+        'training.catalogue.step.deleted';
 
-  IF TG_OP = 'DELETE' THEN
-    v_new_values := NULL;
-  ELSE
-    v_new_values :=
-      jsonb_build_object(
-        'role_id',
-        NEW.role_id,
-        'module_key',
-        NEW.module_key,
-        'version',
-        NEW.version,
-        'title',
-        NEW.title,
-        'required',
-        NEW.required,
-        'active',
-        NEW.active,
-        'minimum_score',
-        NEW.minimum_score
-      );
+    ELSIF OLD.training_module_id IS DISTINCT FROM
+          NEW.training_module_id THEN
+      v_action_key :=
+        'training.catalogue.step.moved';
+
+    ELSE
+      v_action_key :=
+        'training.catalogue.step.updated';
+    END IF;
+
+    IF TG_OP = 'INSERT' THEN
+      v_old_values := NULL;
+    ELSE
+      v_old_values :=
+        jsonb_build_object(
+          'training_module_id',
+          OLD.training_module_id,
+          'step_key',
+          OLD.step_key,
+          'step_order',
+          OLD.step_order,
+          'step_type',
+          OLD.step_type,
+          'required',
+          OLD.required,
+          'completion_event_type',
+          OLD.completion_event_type,
+          'completion_result',
+          OLD.completion_result
+        );
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+      v_new_values := NULL;
+    ELSE
+      v_new_values :=
+        jsonb_build_object(
+          'training_module_id',
+          NEW.training_module_id,
+          'step_key',
+          NEW.step_key,
+          'step_order',
+          NEW.step_order,
+          'step_type',
+          NEW.step_type,
+          'required',
+          NEW.required,
+          'completion_event_type',
+          NEW.completion_event_type,
+          'completion_result',
+          NEW.completion_result
+        );
+    END IF;
   END IF;
 
   v_executor_role :=
@@ -1854,7 +2026,7 @@ BEGIN
     v_actor_member_id,
     v_actor_user_id,
     v_action_key,
-    'training_module',
+    v_entity_type,
     v_entity_id,
     false,
     v_old_values,
@@ -1862,6 +2034,8 @@ BEGIN
     jsonb_build_object(
       'operation',
       lower(TG_OP),
+      'table_name',
+      TG_TABLE_NAME,
       'executor_role',
       COALESCE(
         v_executor_role,
@@ -1881,7 +2055,6 @@ BEGIN
 END;
 $function$;
 
-
 -- Same-timing PostgreSQL triggers execute by trigger name. The z-prefix
 -- intentionally keeps frozen-version validation ahead of the audit
 -- boundary, so invalid frozen mutations retain their existing denial
@@ -1889,6 +2062,14 @@ $function$;
 CREATE TRIGGER training_modules_z_catalogue_audit
 BEFORE INSERT OR UPDATE OR DELETE
 ON public.training_modules
+FOR EACH ROW
+EXECUTE FUNCTION
+  public.lsh_audit_training_catalogue_module_change();
+
+
+CREATE TRIGGER training_module_steps_z_catalogue_audit
+BEFORE INSERT OR UPDATE OR DELETE
+ON public.training_module_steps
 FOR EACH ROW
 EXECUTE FUNCTION
   public.lsh_audit_training_catalogue_module_change();
