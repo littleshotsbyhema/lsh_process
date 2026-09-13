@@ -7,30 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -107,6 +87,282 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_delivery_confirmations: {
+        Row: {
+          balance_override_reason: string | null
+          booking_id: string
+          collected_inr: number
+          created_at: string
+          created_by: string
+          delivered_at: string
+          gallery_id: string
+          id: string
+          organization_id: string
+          outstanding_inr: number
+          quotation_total_inr: number
+          recorded_by: string
+        }
+        Insert: {
+          balance_override_reason?: string | null
+          booking_id: string
+          collected_inr: number
+          created_at?: string
+          created_by: string
+          delivered_at: string
+          gallery_id: string
+          id?: string
+          organization_id: string
+          outstanding_inr: number
+          quotation_total_inr: number
+          recorded_by: string
+        }
+        Update: {
+          balance_override_reason?: string | null
+          booking_id?: string
+          collected_inr?: number
+          created_at?: string
+          created_by?: string
+          delivered_at?: string
+          gallery_id?: string
+          id?: string
+          organization_id?: string
+          outstanding_inr?: number
+          quotation_total_inr?: number
+          recorded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_delivery_confirmations_booking_fkey"
+            columns: ["organization_id", "booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "booking_delivery_confirmations_created_by_fkey"
+            columns: ["created_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "booking_delivery_confirmations_gallery_fkey"
+            columns: ["gallery_id", "booking_id"]
+            isOneToOne: false
+            referencedRelation: "booking_galleries"
+            referencedColumns: ["id", "booking_id"]
+          },
+          {
+            foreignKeyName: "booking_delivery_confirmations_recorded_by_fkey"
+            columns: ["recorded_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      booking_editing_assignments: {
+        Row: {
+          assigned_at: string
+          assignment_note: string | null
+          booking_id: string
+          created_at: string
+          created_by: string
+          editor_member_id: string
+          id: string
+          organization_id: string
+          recorded_by: string
+          round: number
+        }
+        Insert: {
+          assigned_at: string
+          assignment_note?: string | null
+          booking_id: string
+          created_at?: string
+          created_by: string
+          editor_member_id: string
+          id?: string
+          organization_id: string
+          recorded_by: string
+          round: number
+        }
+        Update: {
+          assigned_at?: string
+          assignment_note?: string | null
+          booking_id?: string
+          created_at?: string
+          created_by?: string
+          editor_member_id?: string
+          id?: string
+          organization_id?: string
+          recorded_by?: string
+          round?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_editing_assignments_booking_fkey"
+            columns: ["organization_id", "booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "booking_editing_assignments_created_by_fkey"
+            columns: ["created_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "booking_editing_assignments_editor_fkey"
+            columns: ["editor_member_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "booking_editing_assignments_recorded_by_fkey"
+            columns: ["recorded_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      booking_editing_completions: {
+        Row: {
+          booking_id: string
+          completed_at: string
+          completion_note: string | null
+          created_at: string
+          created_by: string
+          edited_image_count: number
+          id: string
+          organization_id: string
+          recorded_by: string
+          round: number
+        }
+        Insert: {
+          booking_id: string
+          completed_at: string
+          completion_note?: string | null
+          created_at?: string
+          created_by: string
+          edited_image_count: number
+          id?: string
+          organization_id: string
+          recorded_by: string
+          round: number
+        }
+        Update: {
+          booking_id?: string
+          completed_at?: string
+          completion_note?: string | null
+          created_at?: string
+          created_by?: string
+          edited_image_count?: number
+          id?: string
+          organization_id?: string
+          recorded_by?: string
+          round?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_editing_completions_booking_fkey"
+            columns: ["organization_id", "booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "booking_editing_completions_created_by_fkey"
+            columns: ["created_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "booking_editing_completions_recorded_by_fkey"
+            columns: ["recorded_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      booking_galleries: {
+        Row: {
+          booking_id: string
+          created_at: string
+          created_by: string
+          downloads_enabled: boolean
+          expires_at: string | null
+          gallery_note: string | null
+          gallery_url: string
+          id: string
+          organization_id: string
+          password_protected: boolean
+          provider: string
+          recorded_at: string
+          recorded_by: string
+          round: number
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          created_by: string
+          downloads_enabled: boolean
+          expires_at?: string | null
+          gallery_note?: string | null
+          gallery_url: string
+          id?: string
+          organization_id: string
+          password_protected: boolean
+          provider: string
+          recorded_at: string
+          recorded_by: string
+          round: number
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          created_by?: string
+          downloads_enabled?: boolean
+          expires_at?: string | null
+          gallery_note?: string | null
+          gallery_url?: string
+          id?: string
+          organization_id?: string
+          password_protected?: boolean
+          provider?: string
+          recorded_at?: string
+          recorded_by?: string
+          round?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_galleries_booking_fkey"
+            columns: ["organization_id", "booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "booking_galleries_created_by_fkey"
+            columns: ["created_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "booking_galleries_recorded_by_fkey"
+            columns: ["recorded_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
           },
         ]
       }
@@ -216,6 +472,67 @@ export type Database = {
           {
             foreignKeyName: "booking_journey_states_updated_by_fkey"
             columns: ["updated_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      booking_milestone_plans: {
+        Row: {
+          booking_id: string
+          created_at: string
+          created_by: string
+          due_on: string
+          id: string
+          next_session_category: string
+          offer_note: string | null
+          organization_id: string
+          planned_at: string
+          recorded_by: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          created_by: string
+          due_on: string
+          id?: string
+          next_session_category: string
+          offer_note?: string | null
+          organization_id: string
+          planned_at: string
+          recorded_by: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          created_by?: string
+          due_on?: string
+          id?: string
+          next_session_category?: string
+          offer_note?: string | null
+          organization_id?: string
+          planned_at?: string
+          recorded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_milestone_plans_booking_fkey"
+            columns: ["organization_id", "booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "booking_milestone_plans_created_by_fkey"
+            columns: ["created_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "booking_milestone_plans_recorded_by_fkey"
+            columns: ["recorded_by", "organization_id"]
             isOneToOne: false
             referencedRelation: "organization_members"
             referencedColumns: ["id", "organization_id"]
@@ -548,6 +865,394 @@ export type Database = {
           {
             foreignKeyName: "booking_preparations_started_by_fkey"
             columns: ["started_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      booking_production_items: {
+        Row: {
+          booking_id: string
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          item_ordinal: number
+          item_type: string
+          organization_id: string
+          quantity: number
+          recorded_at: string
+          recorded_by: string
+          vendor_name: string | null
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          item_ordinal: number
+          item_type: string
+          organization_id: string
+          quantity: number
+          recorded_at: string
+          recorded_by: string
+          vendor_name?: string | null
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          item_ordinal?: number
+          item_type?: string
+          organization_id?: string
+          quantity?: number
+          recorded_at?: string
+          recorded_by?: string
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_production_items_booking_fkey"
+            columns: ["organization_id", "booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "booking_production_items_created_by_fkey"
+            columns: ["created_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "booking_production_items_recorded_by_fkey"
+            columns: ["recorded_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      booking_production_milestones: {
+        Row: {
+          booking_id: string
+          collected_by_name: string | null
+          created_at: string
+          created_by: string
+          detail_note: string | null
+          expected_at: string | null
+          id: string
+          milestone_type: string
+          occurred_at: string
+          organization_id: string
+          recorded_by: string
+          vendor_name: string | null
+        }
+        Insert: {
+          booking_id: string
+          collected_by_name?: string | null
+          created_at?: string
+          created_by: string
+          detail_note?: string | null
+          expected_at?: string | null
+          id?: string
+          milestone_type: string
+          occurred_at: string
+          organization_id: string
+          recorded_by: string
+          vendor_name?: string | null
+        }
+        Update: {
+          booking_id?: string
+          collected_by_name?: string | null
+          created_at?: string
+          created_by?: string
+          detail_note?: string | null
+          expected_at?: string | null
+          id?: string
+          milestone_type?: string
+          occurred_at?: string
+          organization_id?: string
+          recorded_by?: string
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_production_milestones_booking_fkey"
+            columns: ["organization_id", "booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "booking_production_milestones_created_by_fkey"
+            columns: ["created_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "booking_production_milestones_recorded_by_fkey"
+            columns: ["recorded_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      booking_production_proof_responses: {
+        Row: {
+          booking_id: string
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          outcome: string
+          proof_id: string
+          recorded_by: string
+          responded_at: string
+          response_note: string | null
+          round: number
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          organization_id: string
+          outcome: string
+          proof_id: string
+          recorded_by: string
+          responded_at: string
+          response_note?: string | null
+          round: number
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          organization_id?: string
+          outcome?: string
+          proof_id?: string
+          recorded_by?: string
+          responded_at?: string
+          response_note?: string | null
+          round?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_production_proof_responses_booking_fkey"
+            columns: ["organization_id", "booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "booking_production_proof_responses_created_by_fkey"
+            columns: ["created_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "booking_production_proof_responses_proof_fkey"
+            columns: ["proof_id", "booking_id"]
+            isOneToOne: false
+            referencedRelation: "booking_production_proofs"
+            referencedColumns: ["id", "booking_id"]
+          },
+          {
+            foreignKeyName: "booking_production_proof_responses_recorded_by_fkey"
+            columns: ["recorded_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      booking_production_proofs: {
+        Row: {
+          booking_id: string
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          proof_note: string | null
+          proof_reference: string
+          recorded_by: string
+          round: number
+          sent_at: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          organization_id: string
+          proof_note?: string | null
+          proof_reference: string
+          recorded_by: string
+          round: number
+          sent_at: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          organization_id?: string
+          proof_note?: string | null
+          proof_reference?: string
+          recorded_by?: string
+          round?: number
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_production_proofs_booking_fkey"
+            columns: ["organization_id", "booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "booking_production_proofs_created_by_fkey"
+            columns: ["created_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "booking_production_proofs_recorded_by_fkey"
+            columns: ["recorded_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      booking_qc_reviews: {
+        Row: {
+          booking_id: string
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          outcome: string
+          recorded_by: string
+          review_note: string | null
+          reviewed_at: string
+          round: number
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          organization_id: string
+          outcome: string
+          recorded_by: string
+          review_note?: string | null
+          reviewed_at: string
+          round: number
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          organization_id?: string
+          outcome?: string
+          recorded_by?: string
+          review_note?: string | null
+          reviewed_at?: string
+          round?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_qc_reviews_booking_fkey"
+            columns: ["organization_id", "booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "booking_qc_reviews_created_by_fkey"
+            columns: ["created_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "booking_qc_reviews_recorded_by_fkey"
+            columns: ["recorded_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      booking_review_requests: {
+        Row: {
+          booking_id: string
+          channel: string
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          recorded_by: string
+          request_note: string | null
+          requested_at: string
+          round: number
+        }
+        Insert: {
+          booking_id: string
+          channel: string
+          created_at?: string
+          created_by: string
+          id?: string
+          organization_id: string
+          recorded_by: string
+          request_note?: string | null
+          requested_at: string
+          round: number
+        }
+        Update: {
+          booking_id?: string
+          channel?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          organization_id?: string
+          recorded_by?: string
+          request_note?: string | null
+          requested_at?: string
+          round?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_review_requests_booking_fkey"
+            columns: ["organization_id", "booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "booking_review_requests_created_by_fkey"
+            columns: ["created_by", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "booking_review_requests_recorded_by_fkey"
+            columns: ["recorded_by", "organization_id"]
             isOneToOne: false
             referencedRelation: "organization_members"
             referencedColumns: ["id", "organization_id"]
@@ -5756,6 +6461,31 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      assign_booking_editing: {
+        Args: {
+          p_booking_id: string
+          p_editor_member_id: string
+          p_note?: string
+        }
+        Returns: {
+          assigned_at: string
+          assignment_note: string | null
+          booking_id: string
+          created_at: string
+          created_by: string
+          editor_member_id: string
+          id: string
+          organization_id: string
+          recorded_by: string
+          round: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "booking_editing_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       assign_booking_external_creative: {
         Args: {
           p_assignment_role: string
@@ -6631,7 +7361,205 @@ export type Database = {
         }
         Returns: undefined
       }
+      mark_booking_album_frame_production: {
+        Args: { p_booking_id: string }
+        Returns: {
+          booking_reference: string
+          branch_id: string | null
+          created_at: string
+          created_by: string
+          family_id: string | null
+          id: string
+          lead_id: string | null
+          organization_id: string
+          source_quotation_id: string
+          updated_at: string
+          updated_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mark_booking_completed: {
+        Args: { p_booking_id: string }
+        Returns: {
+          booking_reference: string
+          branch_id: string | null
+          created_at: string
+          created_by: string
+          family_id: string | null
+          id: string
+          lead_id: string | null
+          organization_id: string
+          source_quotation_id: string
+          updated_at: string
+          updated_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mark_booking_delivered: {
+        Args: { p_booking_id: string }
+        Returns: {
+          booking_reference: string
+          branch_id: string | null
+          created_at: string
+          created_by: string
+          family_id: string | null
+          id: string
+          lead_id: string | null
+          organization_id: string
+          source_quotation_id: string
+          updated_at: string
+          updated_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mark_booking_editing_in_progress: {
+        Args: { p_booking_id: string }
+        Returns: {
+          booking_reference: string
+          branch_id: string | null
+          created_at: string
+          created_by: string
+          family_id: string | null
+          id: string
+          lead_id: string | null
+          organization_id: string
+          source_quotation_id: string
+          updated_at: string
+          updated_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       mark_booking_editing_pending: {
+        Args: { p_booking_id: string }
+        Returns: {
+          booking_reference: string
+          branch_id: string | null
+          created_at: string
+          created_by: string
+          family_id: string | null
+          id: string
+          lead_id: string | null
+          organization_id: string
+          source_quotation_id: string
+          updated_at: string
+          updated_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mark_booking_editing_rework: {
+        Args: { p_booking_id: string }
+        Returns: {
+          booking_reference: string
+          branch_id: string | null
+          created_at: string
+          created_by: string
+          family_id: string | null
+          id: string
+          lead_id: string | null
+          organization_id: string
+          source_quotation_id: string
+          updated_at: string
+          updated_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mark_booking_gallery_ready: {
+        Args: { p_booking_id: string }
+        Returns: {
+          booking_reference: string
+          branch_id: string | null
+          created_at: string
+          created_by: string
+          family_id: string | null
+          id: string
+          lead_id: string | null
+          organization_id: string
+          source_quotation_id: string
+          updated_at: string
+          updated_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mark_booking_milestone_follow_up: {
+        Args: { p_booking_id: string }
+        Returns: {
+          booking_reference: string
+          branch_id: string | null
+          created_at: string
+          created_by: string
+          family_id: string | null
+          id: string
+          lead_id: string | null
+          organization_id: string
+          source_quotation_id: string
+          updated_at: string
+          updated_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mark_booking_qc_pending: {
+        Args: { p_booking_id: string }
+        Returns: {
+          booking_reference: string
+          branch_id: string | null
+          created_at: string
+          created_by: string
+          family_id: string | null
+          id: string
+          lead_id: string | null
+          organization_id: string
+          source_quotation_id: string
+          updated_at: string
+          updated_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mark_booking_review_requested: {
         Args: { p_booking_id: string }
         Returns: {
           booking_reference: string
@@ -6867,6 +7795,112 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      record_booking_delivery_confirmation: {
+        Args: { p_balance_override_reason?: string; p_booking_id: string }
+        Returns: {
+          balance_override_reason: string | null
+          booking_id: string
+          collected_inr: number
+          created_at: string
+          created_by: string
+          delivered_at: string
+          gallery_id: string
+          id: string
+          organization_id: string
+          outstanding_inr: number
+          quotation_total_inr: number
+          recorded_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "booking_delivery_confirmations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      record_booking_editing_completion: {
+        Args: {
+          p_booking_id: string
+          p_edited_image_count: number
+          p_note?: string
+        }
+        Returns: {
+          booking_id: string
+          completed_at: string
+          completion_note: string | null
+          created_at: string
+          created_by: string
+          edited_image_count: number
+          id: string
+          organization_id: string
+          recorded_by: string
+          round: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "booking_editing_completions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      record_booking_gallery: {
+        Args: {
+          p_booking_id: string
+          p_downloads_enabled: boolean
+          p_expires_at?: string
+          p_gallery_url: string
+          p_note?: string
+          p_password_protected: boolean
+        }
+        Returns: {
+          booking_id: string
+          created_at: string
+          created_by: string
+          downloads_enabled: boolean
+          expires_at: string | null
+          gallery_note: string | null
+          gallery_url: string
+          id: string
+          organization_id: string
+          password_protected: boolean
+          provider: string
+          recorded_at: string
+          recorded_by: string
+          round: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "booking_galleries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      record_booking_milestone_plan: {
+        Args: {
+          p_booking_id: string
+          p_due_on: string
+          p_next_session_category: string
+          p_offer_note?: string
+        }
+        Returns: {
+          booking_id: string
+          created_at: string
+          created_by: string
+          due_on: string
+          id: string
+          next_session_category: string
+          offer_note: string | null
+          organization_id: string
+          planned_at: string
+          recorded_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "booking_milestone_plans"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       record_booking_payment: {
         Args: {
           p_amount_inr: number
@@ -6894,6 +7928,154 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "booking_payments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      record_booking_production_item: {
+        Args: {
+          p_booking_id: string
+          p_description: string
+          p_item_type: string
+          p_quantity?: number
+          p_vendor_name?: string
+        }
+        Returns: {
+          booking_id: string
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          item_ordinal: number
+          item_type: string
+          organization_id: string
+          quantity: number
+          recorded_at: string
+          recorded_by: string
+          vendor_name: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "booking_production_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      record_booking_production_milestone: {
+        Args: {
+          p_booking_id: string
+          p_collected_by_name?: string
+          p_detail_note?: string
+          p_expected_at?: string
+          p_milestone_type: string
+          p_vendor_name?: string
+        }
+        Returns: {
+          booking_id: string
+          collected_by_name: string | null
+          created_at: string
+          created_by: string
+          detail_note: string | null
+          expected_at: string | null
+          id: string
+          milestone_type: string
+          occurred_at: string
+          organization_id: string
+          recorded_by: string
+          vendor_name: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "booking_production_milestones"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      record_booking_production_proof: {
+        Args: {
+          p_booking_id: string
+          p_note?: string
+          p_proof_reference: string
+        }
+        Returns: {
+          booking_id: string
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          proof_note: string | null
+          proof_reference: string
+          recorded_by: string
+          round: number
+          sent_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "booking_production_proofs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      record_booking_proof_response: {
+        Args: { p_booking_id: string; p_note?: string; p_outcome: string }
+        Returns: {
+          booking_id: string
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          outcome: string
+          proof_id: string
+          recorded_by: string
+          responded_at: string
+          response_note: string | null
+          round: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "booking_production_proof_responses"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      record_booking_qc_review: {
+        Args: { p_booking_id: string; p_note?: string; p_outcome: string }
+        Returns: {
+          booking_id: string
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          outcome: string
+          recorded_by: string
+          review_note: string | null
+          reviewed_at: string
+          round: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "booking_qc_reviews"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      record_booking_review_request: {
+        Args: { p_booking_id: string; p_channel: string; p_note?: string }
+        Returns: {
+          booking_id: string
+          channel: string
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          recorded_by: string
+          request_note: string | null
+          requested_at: string
+          round: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "booking_review_requests"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -7979,12 +9161,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8008,11 +9190,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8033,11 +9215,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8058,11 +9240,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8075,11 +9257,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8089,9 +9271,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       booking_payment_method: ["cash", "upi", "bank_transfer", "card", "other"],
