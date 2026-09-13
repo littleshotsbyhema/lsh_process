@@ -21,12 +21,12 @@ const ORGANIZATION_WIDE_SCOPE = "__organization_wide__";
 export const Route = createFileRoute("/_authenticated/team")({
   head: () => ({
     meta: [
-      { title: "Team · Little Moments OS" },
+      { title: "Team · LittleShots by Hema OS" },
       {
         name: "description",
         content: "Canonical studio membership, access roles, and private invitations.",
       },
-      { property: "og:title", content: "Team · Little Moments OS" },
+      { property: "og:title", content: "Team · LittleShots by Hema OS" },
       {
         property: "og:description",
         content: "Every role exists to protect a memory.",
