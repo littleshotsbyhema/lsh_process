@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
 import { Card, StatusPill } from "@/components/AppShell";
+import type { BookingStageSlaStatusRow } from "@/integrations/supabase/extended";
 import {
   listDeliveryWorkspace,
   type DeliveryCapabilities,
@@ -36,6 +37,8 @@ export type BookingView = {
   stageOrder: number;
   stageLabel: string;
   capabilities: DeliveryCapabilities;
+  /** How long this booking has sat in its current stage, and whether that is too long. */
+  sla: BookingStageSlaStatusRow | null;
 };
 
 const noCapabilities: DeliveryCapabilities = {
@@ -77,10 +80,17 @@ export function useBookingsAtStages(
           stageOrder: stage.stage_order,
           stageLabel: stage.label,
           capabilities: data.capabilities[booking.id] ?? noCapabilities,
+          sla: (data.slaStatus[booking.id] ?? null) as BookingStageSlaStatusRow | null,
         } satisfies BookingView;
       })
       .filter((view): view is BookingView => view !== null && stageOrders.includes(view.stageOrder))
-      .sort((a, b) => a.stageOrder - b.stageOrder || a.reference.localeCompare(b.reference));
+      .sort(
+        (a, b) =>
+          a.stageOrder - b.stageOrder ||
+          Number(b.sla?.is_breached ?? false) - Number(a.sla?.is_breached ?? false) ||
+          (b.sla?.hours_in_stage ?? 0) - (a.sla?.hours_in_stage ?? 0) ||
+          a.reference.localeCompare(b.reference),
+      );
   }, [data, stageOrders]);
 }
 
@@ -230,6 +240,7 @@ export function BookingCard({
           <div className="mt-0.5 text-xs text-muted-foreground">{booking.reference}</div>
         </div>
         <div className="flex items-center gap-2">
+          <SlaBadge sla={booking.sla} />
           {aside}
           <StatusPill tone="gold">{booking.stageLabel}</StatusPill>
         </div>
@@ -330,4 +341,73 @@ export function useChainedAction(refresh: () => Promise<void>) {
     isBusy: (id: string) => mutation.isPending && activeId === id,
     run: (id: string, steps: Array<() => Promise<unknown>>) => mutation.mutate({ id, steps }),
   };
+}
+
+/* ───────────────────── Stage timing ───────────────────── */
+
+function formatDuration(hours: number) {
+  if (hours < 1) return "under an hour";
+  if (hours < 48) return `${Math.round(hours)}h`;
+  return `${Math.round(hours / 24)}d`;
+}
+
+/**
+ * How long this booking has sat where it is.
+ *
+ * Shown on every card. When the stage has a target and the booking has
+ * passed it the badge turns red, and the board sorts those to the top.
+ * Nothing about this ever blocks an action - it is a fact, not a gate.
+ */
+export function SlaBadge({ sla }: { sla: BookingStageSlaStatusRow | null }) {
+  if (!sla) return null;
+
+  const elapsed = formatDuration(sla.hours_in_stage);
+
+  if (sla.target_hours === null) {
+    return (
+      <span className="text-xs text-muted-foreground" title="No target set for this stage">
+        {elapsed} here
+      </span>
+    );
+  }
+
+  if (!sla.is_breached) {
+    return (
+      <span
+        className="text-xs text-muted-foreground"
+        title={`Target ${formatDuration(sla.target_hours)}`}
+      >
+        {elapsed} of {formatDuration(sla.target_hours)}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive"
+      title={`Target was ${formatDuration(sla.target_hours)}`}
+    >
+      {elapsed} — over by {formatDuration(sla.hours_in_stage - sla.target_hours)}
+    </span>
+  );
+}
+
+/** How many bookings in this list have passed their stage target. */
+export function breachCount(bookings: BookingView[]) {
+  return bookings.filter((booking) => booking.sla?.is_breached).length;
+}
+
+/** A short line naming how many jobs are running late, or nothing at all. */
+export function BreachSummary({ bookings }: { bookings: BookingView[] }) {
+  const count = breachCount(bookings);
+  if (count === 0) return null;
+
+  return (
+    <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2.5 text-sm text-destructive">
+      {count === 1
+        ? "1 booking has been waiting longer than its target."
+        : `${count} bookings have been waiting longer than their target.`}{" "}
+      They are at the top of the list.
+    </div>
+  );
 }

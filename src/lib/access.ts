@@ -1,28 +1,11 @@
 import {
   Home,
-  Heart,
-  Users,
-  CalendarHeart,
-  Sparkles,
-  ShieldCheck,
-  ClipboardCheck,
-  Image as ImageIcon,
-  Frame,
-  LineChart,
-  BookHeart,
+  Handshake,
   Camera,
-  MessageSquareHeart,
-  ListChecks,
-  GitBranch,
-  FileText,
-  Clipboard,
-  Star,
-  Megaphone,
-  Gauge,
-  UsersRound,
-  BookOpen,
+  Wand2,
+  PackageCheck,
+  HeartHandshake,
   Settings as SettingsIcon,
-  BrainCircuit,
 } from "lucide-react";
 import type { AppRole } from "@/lib/session";
 
@@ -32,122 +15,111 @@ export type NavItem = {
   icon: typeof Home;
   /** `null` = every studio role. `[]` = Founder only. */
   roles: AppRole[] | null;
+  /** One line describing what the module is for. */
+  blurb?: string;
 };
 
+/**
+ * The studio has six modules and a dashboard.
+ *
+ * Everything a person does lives inside one of them, and each one owns a
+ * contiguous run of the booking journey. The older single-purpose screens
+ * still exist and still work; they are reached from inside the module that
+ * owns them rather than from a flat list of twenty-six links.
+ */
 export const nav: NavItem[] = [
   { to: "/", label: "Dashboard", icon: Home, roles: null },
   {
-    to: "/leads",
-    label: "Leads",
-    icon: Heart,
-    roles: ["studio_manager", "client_coordinator", "sales_head", "sales"],
-  },
-  {
-    to: "/guide-reviews",
-    label: "Memory Guide Reviews",
-    icon: BrainCircuit,
-    roles: ["client_coordinator", "sales"],
-  },
-  {
-    to: "/clients",
-    label: "Clients",
-    icon: Users,
-    roles: ["studio_manager", "client_coordinator", "sales", "accounts"],
-  },
-  {
-    to: "/memory",
-    label: "Memory Profiles",
-    icon: BookHeart,
-    roles: [
-      "studio_manager",
-      "client_coordinator",
-      "sales",
-      "photographer",
-      "assistant",
-      "stylist",
-      "videographer",
-      "editor",
-      "album_coordinator",
-      "marketing",
-      "accounts",
-    ],
-  },
-  { to: "/bookings", label: "Bookings", icon: CalendarHeart, roles: null },
-  { to: "/pipeline", label: "Pipeline", icon: GitBranch, roles: null },
-  {
-    to: "/packages",
-    label: "Packages",
-    icon: Sparkles,
+    to: "/sales",
+    label: "Sales",
+    icon: Handshake,
     roles: ["studio_manager", "client_coordinator", "sales_head", "sales", "accounts"],
+    blurb: "Enquiry through to a confirmed booking",
   },
   {
-    to: "/quote",
-    label: "Quote Builder",
-    icon: FileText,
-    roles: ["studio_manager", "client_coordinator", "sales_head", "sales", "accounts"],
-  },
-  {
-    to: "/whatsapp",
-    label: "WhatsApp Follow-Ups",
-    icon: MessageSquareHeart,
-    roles: ["studio_manager", "client_coordinator", "sales_head", "sales"],
-  },
-  {
-    to: "/prep",
-    label: "Shoot Prep",
-    icon: Clipboard,
-    roles: ["client_coordinator", "photographer", "assistant", "stylist"],
-  },
-  {
-    to: "/safety",
-    label: "Safety & Comfort",
-    icon: ClipboardCheck,
-    roles: ["client_coordinator", "photographer", "assistant"],
-  },
-  {
-    to: "/privacy",
-    label: "Privacy & Consent",
-    icon: ShieldCheck,
-    roles: ["client_coordinator", "marketing"],
-  },
-  {
-    to: "/editing",
-    label: "Editing & QC",
-    icon: ImageIcon,
-    roles: ["studio_manager", "editor", "client_coordinator"],
-  },
-  {
-    to: "/pixieset",
-    label: "Gallery & Delivery",
+    to: "/production",
+    label: "Production",
     icon: Camera,
-    roles: ["studio_manager", "editor", "client_coordinator"],
+    roles: ["studio_manager", "client_coordinator", "photographer", "assistant", "stylist"],
+    blurb: "Booked through to the shoot and selection",
   },
   {
-    to: "/heirloom",
-    label: "Heirloom Production",
-    icon: Frame,
-    roles: ["studio_manager", "album_coordinator", "client_coordinator"],
+    to: "/post-production",
+    label: "Post Production",
+    icon: Wand2,
+    roles: ["studio_manager", "editor", "videographer", "client_coordinator"],
+    blurb: "Editing, video and QC through to the gallery",
   },
-  { to: "/tasks", label: "Team Tasks", icon: ListChecks, roles: null },
-  { to: "/sops", label: "SOP Center", icon: BookOpen, roles: null },
-  { to: "/marketing", label: "Marketing Approvals", icon: Megaphone, roles: ["marketing"] },
   {
-    to: "/reviews",
-    label: "Reviews & Aftercare",
-    icon: Star,
+    to: "/delivery",
+    label: "Delivery",
+    icon: PackageCheck,
+    roles: ["studio_manager", "client_coordinator", "album_coordinator"],
+    blurb: "Gallery, balance and album or frame production",
+  },
+  {
+    to: "/marketing-hub",
+    label: "Marketing",
+    icon: HeartHandshake,
     roles: ["studio_manager", "client_coordinator", "marketing"],
+    blurb: "Reviews, next-session plans and closing the file",
   },
-  { to: "/governance", label: "Governance", icon: Gauge, roles: [] },
-  { to: "/reports", label: "Reports / KPIs", icon: LineChart, roles: ["accounts"] },
-  { to: "/kpi", label: "KPI Detail", icon: LineChart, roles: ["accounts"] },
   {
-    to: "/team",
-    label: "Team",
-    icon: UsersRound,
-    roles: ["studio_manager", "client_coordinator"],
+    to: "/admin",
+    label: "Admin",
+    icon: SettingsIcon,
+    roles: ["studio_manager"],
+    blurb: "Who can do what, stage targets, team and catalogue",
   },
-  { to: "/settings", label: "Settings", icon: SettingsIcon, roles: null },
 ];
+
+/* ───────────── Module contents ───────────── */
+
+export type ModuleLink = {
+  to: string;
+  label: string;
+  description: string;
+};
+
+/**
+ * The existing single-purpose screens, filed under the module that owns
+ * them. A link whose path is temporarily unavailable is hidden.
+ */
+export const moduleLinks: Record<string, ModuleLink[]> = {
+  "/sales": [
+    { to: "/leads", label: "Leads", description: "Every enquiry and where it stands" },
+    { to: "/quote", label: "Quote Builder", description: "Build and send a quotation" },
+    { to: "/clients", label: "Families", description: "Family records and contact history" },
+    { to: "/packages", label: "Packages", description: "What the studio sells, and for how much" },
+    { to: "/whatsapp", label: "Follow-Ups", description: "WhatsApp follow-up prompts" },
+    { to: "/memory", label: "Memory Profiles", description: "What matters to each family" },
+    {
+      to: "/guide-reviews",
+      label: "Memory Guide Reviews",
+      description: "Review the guide before it is sent",
+    },
+  ],
+  "/production": [
+    { to: "/bookings", label: "Bookings", description: "Every confirmed booking" },
+    { to: "/pipeline", label: "Pipeline", description: "The whole journey at a glance" },
+    { to: "/prep", label: "Shoot Prep", description: "Prepare for the session" },
+    { to: "/safety", label: "Safety & Comfort", description: "Newborn safety checklist" },
+  ],
+  "/post-production": [],
+  "/delivery": [{ to: "/privacy", label: "Privacy & Consent", description: "Consent to publish" }],
+  "/marketing-hub": [
+    { to: "/marketing", label: "Marketing Approvals", description: "Approve images for use" },
+  ],
+  "/admin": [
+    { to: "/team", label: "Team", description: "People, roles and invitations" },
+    { to: "/settings", label: "Settings", description: "Studio profile and preferences" },
+    { to: "/tasks", label: "Team Tasks", description: "Everything assigned to someone" },
+    { to: "/sops", label: "SOP Center", description: "How the studio does things" },
+    { to: "/governance", label: "Governance", description: "Philosophy alignment scoring" },
+    { to: "/reports", label: "Reports", description: "Numbers on the studio" },
+    { to: "/kpi", label: "KPI Detail", description: "The detail behind the numbers" },
+  ],
+};
 
 function normalise(pathname: string) {
   if (pathname !== "/" && pathname.endsWith("/")) return pathname.slice(0, -1);
@@ -155,14 +127,11 @@ function normalise(pathname: string) {
 }
 
 /**
- * Rooms that still depend on the legacy seeded booking store.
+ * Screens that still depend on the legacy seeded booking store.
  *
- * Keep their source available for deliberate migration, but do not expose
- * them as operational studio systems until they are connected to canonical
- * booking and journey records.
- *
- * Editing, Gallery & Delivery, Heirloom Production and Reviews & Aftercare
- * were migrated onto the canonical Stage 13-21 journey and are live.
+ * Their source is kept for deliberate migration, but they are not exposed
+ * as operational studio systems until they read canonical booking and
+ * journey records.
  */
 export const temporarilyUnavailablePaths = new Set([
   "/prep",
@@ -178,6 +147,13 @@ export function isTemporarilyUnavailable(pathname: string) {
   return temporarilyUnavailablePaths.has(normalise(pathname));
 }
 
+/** The links inside a module that are actually usable right now. */
+export function availableModuleLinks(modulePath: string): ModuleLink[] {
+  return (moduleLinks[normalise(modulePath)] ?? []).filter(
+    (link) => !temporarilyUnavailablePaths.has(link.to),
+  );
+}
+
 export function visibleNav(roles: AppRole[]) {
   const available = nav.filter((item) => !temporarilyUnavailablePaths.has(item.to));
 
@@ -188,7 +164,45 @@ export function visibleNav(roles: AppRole[]) {
   );
 }
 
-/** Can this person open this module at all (typed URL included)? */
+/**
+ * Roles allowed into each legacy screen, kept so a typed URL is still
+ * checked even though these no longer appear in the sidebar.
+ */
+const legacyRoles: Record<string, AppRole[] | null> = {
+  "/leads": ["studio_manager", "client_coordinator", "sales_head", "sales"],
+  "/guide-reviews": ["client_coordinator", "sales"],
+  "/clients": ["studio_manager", "client_coordinator", "sales", "accounts"],
+  "/memory": [
+    "studio_manager",
+    "client_coordinator",
+    "sales",
+    "photographer",
+    "assistant",
+    "stylist",
+    "videographer",
+    "editor",
+    "album_coordinator",
+    "marketing",
+    "accounts",
+  ],
+  "/bookings": null,
+  "/pipeline": null,
+  "/packages": ["studio_manager", "client_coordinator", "sales_head", "sales", "accounts"],
+  "/quote": ["studio_manager", "client_coordinator", "sales_head", "sales", "accounts"],
+  "/whatsapp": ["studio_manager", "client_coordinator", "sales_head", "sales"],
+  "/tasks": null,
+  "/sops": null,
+  "/team": ["studio_manager", "client_coordinator"],
+  "/settings": null,
+  "/training": null,
+  // Superseded by the six modules, still reachable by URL.
+  "/editing": ["studio_manager", "editor", "client_coordinator"],
+  "/pixieset": ["studio_manager", "editor", "client_coordinator"],
+  "/heirloom": ["studio_manager", "album_coordinator", "client_coordinator"],
+  "/reviews": ["studio_manager", "client_coordinator", "marketing"],
+};
+
+/** Can this person open this screen at all (typed URL included)? */
 export function canView(pathname: string, roles: AppRole[]) {
   const path = normalise(pathname);
 
@@ -196,9 +210,18 @@ export function canView(pathname: string, roles: AppRole[]) {
   if (roles.includes("founder")) return true;
 
   const item = nav.find((n) => n.to === path);
-  if (!item) return true; // unknown path — let the router's not-found handle it
-  if (item.roles === null) return true;
-  return item.roles.some((r) => roles.includes(r));
+  if (item) {
+    if (item.roles === null) return true;
+    return item.roles.some((r) => roles.includes(r));
+  }
+
+  if (path in legacyRoles) {
+    const allowed = legacyRoles[path];
+    if (allowed === null) return true;
+    return allowed.some((r) => roles.includes(r));
+  }
+
+  return true; // unknown path — let the router's not-found handle it
 }
 
 /* ───────────── Action permissions ───────────── */
