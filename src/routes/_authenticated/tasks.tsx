@@ -19,7 +19,7 @@ import {
 export const Route = createFileRoute("/_authenticated/tasks")({
   head: () => ({
     meta: [
-      { title: "Lead Tasks · Little Moments OS" },
+      { title: "Lead Tasks · LittleShots by Hema OS" },
       {
         name: "description",
         content: "Owned lead follow-up work, due dates, escalation and completion state.",

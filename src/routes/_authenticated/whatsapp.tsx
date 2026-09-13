@@ -16,7 +16,7 @@ import {
 export const Route = createFileRoute("/_authenticated/whatsapp")({
   head: () => ({
     meta: [
-      { title: "WhatsApp & Communication · Little Moments OS" },
+      { title: "WhatsApp & Communication · LittleShots by Hema OS" },
       {
         name: "description",
         content: "Provider-safe WhatsApp outreach and communication metadata for leads.",
