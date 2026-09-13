@@ -7,14 +7,14 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/clients")({
   head: () => ({
     meta: [
-      { title: "Clients · Little Moments OS" },
+      { title: "Clients · LittleShots by Hema OS" },
       {
         name: "description",
         content: "Families, relationships, contact channels and communication preferences.",
       },
       {
         property: "og:title",
-        content: "Clients · Little Moments OS",
+        content: "Clients · LittleShots by Hema OS",
       },
       {
         property: "og:description",

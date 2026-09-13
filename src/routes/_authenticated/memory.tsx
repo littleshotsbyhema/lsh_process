@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/memory")({
   head: () => ({
     meta: [
       {
-        title: "Memory Profiles · Little Moments OS",
+        title: "Memory Profiles · LittleShots by Hema OS",
       },
       {
         name: "description",
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_authenticated/memory")({
       },
       {
         property: "og:title",
-        content: "Memory Profiles · Little Moments OS",
+        content: "Memory Profiles · LittleShots by Hema OS",
       },
       {
         property: "og:description",

@@ -59,7 +59,7 @@ import {
 export const Route = createFileRoute("/_authenticated/leads_/$leadId")({
   head: () => ({
     meta: [
-      { title: "Lead Workspace · Little Moments OS" },
+      { title: "Lead Workspace · LittleShots by Hema OS" },
       {
         name: "description",
         content:
@@ -649,7 +649,7 @@ function CommunicationsCard({ leadId, communications, activeConsultationId, term
   const [direction, setDirection] = useState<(typeof communicationDirections)[number]>("outbound");
   const [purpose, setPurpose] = useState("follow_up");
   const [status, setStatus] = useState<(typeof communicationStatuses)[number]>("manual_confirmed");
-  const [summary, setSummary] = useState("Manual interaction recorded in Little Moments OS.");
+  const [summary, setSummary] = useState("Manual interaction recorded in LittleShots by Hema OS.");
 
   const mutation = useMutation({
     mutationFn: () => recordLeadCommunication({ data: {

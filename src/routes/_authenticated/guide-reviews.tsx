@@ -15,7 +15,7 @@ import {
 export const Route = createFileRoute("/_authenticated/guide-reviews")({
   head: () => ({
     meta: [
-      { title: "Memory Guide Reviews · Little Moments OS" },
+      { title: "Memory Guide Reviews · LittleShots by Hema OS" },
       {
         name: "description",
         content: "Owned Memory Guide reviews, contact handoffs, restricted reads and CRM sync.",

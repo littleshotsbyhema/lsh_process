@@ -7,13 +7,13 @@ import { handle } from "@/lib/handle";
 export const Route = createFileRoute("/_authenticated/editing")({
   head: () => ({
     meta: [
-      { title: "Editing & Delivery · Little Moments OS" },
+      { title: "Editing & Delivery · LittleShots by Hema OS" },
       {
         name: "description",
         content:
           "Track culling, editing, retouching and delivery for every shoot, with guards before work starts.",
       },
-      { property: "og:title", content: "Editing & Delivery · Little Moments OS" },
+      { property: "og:title", content: "Editing & Delivery · LittleShots by Hema OS" },
       {
         property: "og:description",
         content:

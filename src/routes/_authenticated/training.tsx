@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/training")({
   head: () => ({
     meta: [
       {
-        title: "Help & Training · Little Moments OS",
+        title: "Help & Training · LittleShots by Hema OS",
       },
       {
         name: "description",
@@ -222,7 +222,7 @@ function TrainingPage() {
     <AppShell>
       <PageHeader
         eyebrow="Help & Training"
-        title="Learn Little Moments OS safely"
+        title="Learn LittleShots by Hema OS safely"
         subtitle="Start with the common studio orientation. Role-specific guided practice will build on this foundation without using real client records as training material."
         quote="Care in the system protects trust in the experience."
       />

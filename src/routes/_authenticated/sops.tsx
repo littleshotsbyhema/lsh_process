@@ -6,12 +6,12 @@ import { BookOpen } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/sops")({
   head: () => ({
     meta: [
-      { title: "SOP Center · Little Moments OS" },
+      { title: "SOP Center · LittleShots by Hema OS" },
       {
         name: "description",
         content: "Read-only standard operating procedures that keep studio care consistent.",
       },
-      { property: "og:title", content: "SOP Center · Little Moments OS" },
+      { property: "og:title", content: "SOP Center · LittleShots by Hema OS" },
       {
         property: "og:description",
         content: "Read-only standard operating procedures that keep studio care consistent.",

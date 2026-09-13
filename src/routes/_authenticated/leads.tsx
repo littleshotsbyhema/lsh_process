@@ -41,7 +41,7 @@ export const Route = createFileRoute(
     meta: [
       {
         title:
-          "Leads & Inquiries · Little Moments OS",
+          "Leads & Inquiries · LittleShots by Hema OS",
       },
       {
         name: "description",
@@ -51,7 +51,7 @@ export const Route = createFileRoute(
       {
         property: "og:title",
         content:
-          "Leads & Inquiries · Little Moments OS",
+          "Leads & Inquiries · LittleShots by Hema OS",
       },
       {
         property: "og:description",

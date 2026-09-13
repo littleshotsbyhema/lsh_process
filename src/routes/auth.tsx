@@ -13,13 +13,13 @@ export const Route = createFileRoute("/auth")({
   }),
   head: () => ({
     meta: [
-      { title: "Studio Sign In · Little Moments OS" },
+      { title: "Studio Sign In · LittleShots by Hema OS" },
       {
         name: "description",
         content:
-          "Sign in to Little Moments OS — the internal control room for Little Shots by Hema. Access is by studio invitation only.",
+          "Sign in to LittleShots by Hema OS — the internal control room for Little Shots by Hema. Access is by studio invitation only.",
       },
-      { property: "og:title", content: "Studio Sign In · Little Moments OS" },
+      { property: "og:title", content: "Studio Sign In · LittleShots by Hema OS" },
       {
         property: "og:description",
         content: "Private, invitation-only workspace for the Little Shots by Hema team.",
@@ -379,7 +379,7 @@ function AuthPage() {
         </div>
 
         <div>
-          <h1 className="font-serif text-5xl text-primary leading-tight">Little Moments OS</h1>
+          <h1 className="font-serif text-5xl text-primary leading-tight">LittleShots by Hema OS</h1>
           <p className="mt-6 italic text-primary/80 max-w-md leading-relaxed">
             “Because these little moments become everything.”
           </p>
@@ -606,7 +606,7 @@ function AuthPage() {
           ) : null}
 
           <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-            Little Moments OS is invitation-only. If you need access, ask a teammate with invitation
+            LittleShots by Hema OS is invitation-only. If you need access, ask a teammate with invitation
             permission to invite you from the Team page.
           </p>
         </div>

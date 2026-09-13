@@ -5,12 +5,12 @@ import { useStore, bookingAlignment } from "@/store/useStore";
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
     meta: [
-      { title: "Reports · Little Moments OS" },
+      { title: "Reports · LittleShots by Hema OS" },
       {
         name: "description",
         content: "Founder view of revenue, conversion, package split and operational health.",
       },
-      { property: "og:title", content: "Reports · Little Moments OS" },
+      { property: "og:title", content: "Reports · LittleShots by Hema OS" },
       {
         property: "og:description",
         content: "Founder view of revenue, conversion, package split and operational health.",

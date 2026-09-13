@@ -94,7 +94,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             Little Shots by Hema
           </div>
           <div className="mt-2 font-serif text-2xl text-sidebar-primary leading-tight">
-            Little Moments OS
+            LittleShots by Hema OS
           </div>
           <p className="mt-3 text-xs italic text-muted-foreground leading-relaxed">
             “Because these little moments become everything.”
@@ -109,7 +109,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
           <div className="relative flex w-72 max-w-[85vw] flex-col border-r border-border bg-sidebar">
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-sidebar-border">
-              <div className="font-serif text-lg text-sidebar-primary">Little Moments OS</div>
+              <div className="font-serif text-lg text-sidebar-primary">LittleShots by Hema OS</div>
               <button onClick={() => setOpen(false)} aria-label="Close menu">
                 <X className="h-5 w-5 text-muted-foreground" />
               </button>
@@ -126,7 +126,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
               Little Shots by Hema
             </div>
-            <div className="font-serif text-lg text-primary">Little Moments OS</div>
+            <div className="font-serif text-lg text-primary">LittleShots by Hema OS</div>
           </div>
           <div className="flex items-center gap-2">
             <Link
@@ -149,7 +149,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="px-5 sm:px-8 lg:px-12 py-8 lg:py-10 max-w-[1400px] mx-auto">{children}</div>
         <footer className="px-5 sm:px-8 lg:px-12 py-6 border-t border-border bg-sidebar/40">
           <p className="text-center text-xs italic text-muted-foreground">
-            Little Moments OS — Built to protect the memories that become everything.
+            LittleShots by Hema OS — Built to protect the memories that become everything.
           </p>
         </footer>
       </main>

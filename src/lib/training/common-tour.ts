@@ -18,7 +18,7 @@ export const commonOrientationSteps: readonly CommonOrientationStep[] = [
   {
     key: "welcome",
     eyebrow: "Welcome",
-    title: "Little Moments OS is our system of record",
+    title: "LittleShots by Hema OS is our system of record",
     body: "Important studio work belongs in the OS. A phone call or WhatsApp message may carry a conversation, but the operational truth must still be reflected in the system.",
   },
   {
@@ -31,7 +31,7 @@ export const commonOrientationSteps: readonly CommonOrientationStep[] = [
     key: "navigation",
     eyebrow: "Navigation",
     title: "Start from the rooms assigned to your role",
-    body: "Use the Little Moments OS navigation to move between the operating rooms available to you. Role-specific training will later guide the exact workflow inside each room.",
+    body: "Use the LittleShots by Hema OS navigation to move between the operating rooms available to you. Role-specific training will later guide the exact workflow inside each room.",
   },
   {
     key: "evidence-before-status",

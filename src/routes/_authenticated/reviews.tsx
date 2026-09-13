@@ -19,13 +19,13 @@ import { Star, Sparkles } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/reviews")({
   head: () => ({
     meta: [
-      { title: "Reviews & Aftercare · Little Moments OS" },
+      { title: "Reviews & Aftercare · LittleShots by Hema OS" },
       {
         name: "description",
         content:
           "Request reviews with care, log testimonials and honour repeat milestone opportunities.",
       },
-      { property: "og:title", content: "Reviews & Aftercare · Little Moments OS" },
+      { property: "og:title", content: "Reviews & Aftercare · LittleShots by Hema OS" },
       {
         property: "og:description",
         content:

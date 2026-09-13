@@ -9,13 +9,13 @@ import { useMemo, useState } from "react";
 export const Route = createFileRoute("/_authenticated/safety")({
   head: () => ({
     meta: [
-      { title: "Safety & Comfort · Little Moments OS" },
+      { title: "Safety & Comfort · LittleShots by Hema OS" },
       {
         name: "description",
         content:
           "Newborn, maternity and sitter safety and comfort checklists completed before every shoot.",
       },
-      { property: "og:title", content: "Safety & Comfort · Little Moments OS" },
+      { property: "og:title", content: "Safety & Comfort · LittleShots by Hema OS" },
       {
         property: "og:description",
         content:
