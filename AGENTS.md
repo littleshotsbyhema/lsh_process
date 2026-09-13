@@ -1,34 +1,29 @@
-# Little Shots OS — Repository Execution Constitution
+# LittleShots by Hema OS — Repository Working Agreement
 
-## Highest Product Authority
+## What this product is
 
-Little Shots OS is a philosophy-governed Memory Preservation Operating System
-for Little Shots by Hema.
+LittleShots by Hema OS is the studio operating system for Little Shots by
+Hema: a memory-preservation business, not a generic CRM.
 
-Highest brand truth:
+Brand truth:
 
 **Because these little moments become everything.**
 
 Operating principle:
 
-**Emotion is the heart. Care is the method. Trust is the standard. Memory is the outcome.**
+**Emotion is the heart. Care is the method. Trust is the standard. Memory is
+the outcome.**
 
-Every implementation decision must protect:
+Every implementation decision must protect emotion-led memory preservation,
+gentle care and safety, consent-first trust, timeless artistic quality,
+heirloom keepsake value, and clarity for the families we serve.
 
-1. emotion-led memory preservation;
-2. gentle care and safety;
-3. consent-first trust;
-4. timeless artistic quality;
-5. heirloom keepsake value;
-6. clarity and premium guidance.
+Do not implement a technically convenient solution that weakens trust,
+privacy, safety, clarity, historical integrity, or long-term architecture.
 
-Do not implement a technically convenient solution that weakens trust, privacy,
-safety, clarity, historical integrity, or long-term product architecture.
+## Read before material work
 
-## Required Context
-
-Before material implementation work, read:
-
+- `docs/README.md` — what is current and what is frozen history
 - `docs/PRODUCT_CONSTITUTION.md`
 - `docs/ARCHITECTURE.md`
 - `docs/DOMAIN_RULES.md`
@@ -36,497 +31,185 @@ Before material implementation work, read:
 - `docs/CURRENT_MILESTONE.md`
 - `docs/DEFINITION_OF_DONE.md`
 
-`docs/CURRENT_MILESTONE.md` is the mutable execution pointer.
+`docs/CURRENT_MILESTONE.md` is the mutable execution pointer. If a requested
+task conflicts with it or with durable architecture, stop the conflicting
+part and say so.
 
-If the requested task conflicts with the current milestone or durable governance,
-stop the conflicting portion and report the discrepancy.
+## Product model
 
-## Product Model
+One application, six domains: Studio OS, Family OS, Memory OS, Business OS,
+AI OS, Founder OS. Do not reduce the system to a lead tracker.
 
-Treat Little Shots OS as one application composed of six product domains:
+## Repository and production
 
-- Studio OS
-- Family OS
-- Memory OS
-- Business OS
-- AI OS
-- Founder OS
+`main` is the single source of truth and the Vercel production branch.
+Updating `main` deploys to production.
 
-Do not reduce the system to a generic CRM.
+Do normal work on a short-lived branch from current `main`
+(`feature/...`, `fix/...`, `chore/...`, `release/...`, `hotfix/...`), then
+open a pull request. Do not create a second long-lived branch competing with
+`main`.
 
-## Canonical Repository Authority
+A green build or a successful Preview deployment does not by itself authorize
+merging to `main`.
 
-`main` is the single canonical source-of-truth branch for Memory Keeper OS.
+## Architecture authority
 
-Normal implementation work must not be performed directly on `main`.
+The database and server layer enforce business truth. The browser must never
+be trusted to enforce authorization, financial truth, consent truth, or
+lifecycle transitions.
 
-All normal work begins from current `main` on a short-lived branch such as:
+Required foundations:
 
-- `feature/...`
-- `fix/...`
-- `chore/...`
-- `release/...`
-- `hotfix/...`
+- organization isolation on tenant-owned entities
+- role-based access control
+- PostgreSQL row-level security, forced
+- mutations through controlled server functions and RPCs
+- append-only or immutable audit history where appropriate
+- lifecycle state instead of destructive deletion for business history
+- server-side secrets only; no service-role credential in browser code
 
-Do not create another long-lived development branch that competes with `main`.
+These are authoritative unless the current milestone explicitly approves a
+change.
 
-## Production Relationship
+## Engineering rules
 
-The Memory Keeper OS Vercel project uses `main` as its production Git branch.
-
-Therefore updating `main` is a production-affecting action and may trigger a
-Vercel Production deployment.
-
-A successful feature build, Preview deployment, pull request, or previous
-approval does not by itself authorize advancing `main`.
-
-Advancing or merging into `main` requires an explicit human-controlled gate.
-
-## Frozen Legacy Branch
-
-`architecture-rebuild` is frozen legacy reference history.
-
-Frozen head:
-
-`5ae04a5b971dfe0c4ae9657483d0386d649ce34f`
-
-Do not:
-
-- create new development commits on `architecture-rebuild`;
-- merge `architecture-rebuild` wholesale into `main`;
-- treat its full history as automatically production-approved;
-- copy generated artifacts from it as implementation authority.
-
-Legacy functionality must be migrated selectively onto fresh branches created
-from current `main`.
-
-Each migrated domain must be reconciled against the current application,
-database contract, permissions model, and production lineage.
-
-## Current Architecture Authority
-
-The current organization isolation, authentication, RBAC/RLS, audit foundation,
-and released application architecture are authoritative unless the active
-milestone explicitly approves a change.
-
-Required foundations include:
-
-- organization isolation;
-- role-based access control;
-- PostgreSQL RLS;
-- controlled server/RPC mutations;
-- immutable or append-only audit history where appropriate;
-- lifecycle state instead of destructive deletion for historical business data;
-- server-side secrets only;
-- no service-role credential in browser code.
-
-The database and server layer enforce business truth.
-
-The browser must not be trusted to enforce authorization, financial truth,
-consent truth, or lifecycle transitions.
-
-## Engineering Rules
-
-1. Inspect existing code, migrations, tests, and authority paths before changing
-   architecture.
-2. Prefer extending established patterns over introducing parallel patterns.
-3. Database invariants belong in PostgreSQL constraints, RLS, functions/RPCs,
-   or approved server-side domain services.
+1. Inspect existing code, migrations, tests and authority paths before
+   changing architecture.
+2. Extend established patterns rather than introducing parallel ones.
+3. Database invariants belong in constraints, RLS, functions/RPCs, or
+   approved server-side domain services.
 4. UI state must never be the only enforcement of a business rule.
 5. Critical lifecycle transitions must be server-controlled.
 6. Every cross-organization query and write must remain tenant-safe.
 7. Every sensitive mutation must be permission-checked and auditable.
-8. Financial, booking, consent, privacy, safety, and audit history must remain
+8. Financial, booking, consent, privacy, safety and audit history must remain
    reconstructable.
-9. AI may propose; deterministic rules and authorized humans decide high-impact
-   actions.
+9. AI may propose; deterministic rules and authorized humans decide
+   high-impact actions.
 10. Do not invent pricing, packages, consent, availability, medical guidance,
     or business policy.
-11. Do not opportunistically migrate frameworks or introduce unrelated
-    infrastructure changes.
-12. Preserve backward compatibility unless the approved milestone explicitly
-    authorizes a breaking change.
+11. Do not opportunistically migrate frameworks or add unrelated
+    infrastructure.
+12. Preserve backward compatibility unless the approved work explicitly
+    allows a breaking change.
 
-## Generated Artifact Rules
+## Stop at these gates
 
-Generated files are outputs of validated source state, not independent authority.
+Ask for explicit confirmation before:
 
-Do not blindly copy generated files from a legacy branch.
+- merging into `main` (this deploys to production)
+- applying migrations to the remote Supabase project, or any linked
+  `supabase db push`, migration repair, or reset
+- mutating production data
+- promoting or rolling back a Vercel deployment
+- force-pushing any shared branch
 
-### Supabase types
+Everything else — reading, local edits, branch commits, pushing a feature
+branch, opening a pull request, running type/lint/build/tests — proceeds
+normally without a separate approval each time.
 
-When a validated schema change requires regenerated application types:
+Earlier approval for one gated action never carries to the next one. "Looks
+good" on an implementation is not permission to merge or to touch production.
 
-- generate `src/integrations/supabase/types.ts` from the applicable validated
-  schema;
-- inspect its semantic delta;
-- do not substitute stale legacy generated types merely because they compile.
+## Supabase trust boundaries
 
-### TanStack route tree
+Local Supabase and the remote project are separate boundaries. Permission to
+use local Supabase never implies permission to use `--linked`, deploy remote
+migrations, merge a Supabase branch, or alter production schema or data.
 
-`src/routeTree.gen.ts` must be produced through the normal TanStack tooling.
+Local fixture or E2E data must never be described as production data.
 
-If build or route generation modifies it during validation, classify that change
-deliberately before committing it.
+## Migration discipline
 
-Do not manually use a stale route tree to satisfy type checking.
+Before adding a migration:
 
-## Execution Modes and Human Gates
+1. inspect current migrations and the live schema
+2. check whether the capability already exists
+3. define forward-only compatibility
+4. verify permissions, RLS, audit, lifecycle and recovery implications
+5. add database tests under `supabase/tests/`
+6. run the relevant historical compatibility tests
 
-Every substantial task must explicitly operate as one of:
+Adapt application code to the authoritative database contract; do not weaken
+a newer contract to make older code work.
 
-- `MODE: Plan`
-- `MODE: Auto`
-- `MODE: Manual`
+`supabase/legacy-migrations/` is pre-rebuild reference only. Never apply it.
 
-The selected mode never silently expands scope.
+## Generated files
 
-### MODE: Plan
+Generated files are outputs of validated source state, not authority.
 
-Use Plan for:
+- `src/integrations/supabase/types.ts` — regenerate from the applicable schema
+  after a validated schema change; inspect the semantic delta rather than
+  accepting whatever compiles.
+- `src/routeTree.gen.ts` — produce through normal TanStack tooling; never
+  hand-edit a stale route tree to satisfy type checking.
 
-- repository discovery;
-- architecture investigation;
-- reconciliation;
-- dependency analysis;
-- migration planning;
-- technical-design exploration;
-- scope analysis before implementation approval.
+## Secrets
 
-Plan means:
+Never print or expose service-role keys, private API keys, access tokens,
+passwords, secret environment values, or signing material. Prefer commands
+that pass secrets without echoing them.
 
-- inspect;
-- reason;
-- report evidence;
-- do not edit files;
-- do not mutate databases;
-- do not stage;
-- do not commit;
-- do not push;
-- do not merge;
-- do not deploy.
+Public URLs, project refs, commit SHAs and non-secret identifiers are fine to
+show.
 
-A Plan task should normally end with:
+## Verification
 
-- conclusions;
-- evidence;
-- unresolved questions;
-- proposed next boundary;
-- files changed: none.
-
-### MODE: Auto
-
-Use Auto for tightly bounded local work such as:
-
-- read-only repository inspection;
-- explicitly authorized file edits;
-- implementation after an approved technical boundary exists;
-- formatting;
-- type checking;
-- build;
-- lint;
-- automated tests;
-- other local verification commands inside the authorized scope.
+Do not push while a required verification is failing. Classify a failure
+before reporting it: implementation regression, contaminated local fixture,
+pre-existing debt, non-fatal warning, or environmental/tooling failure.
 
-Auto authorizes only the exact files and actions stated in the task.
+A warning is not a failure. A nonzero exit is not "clean".
 
-Auto does not authorize:
+## Change control
 
-- expanding the file boundary;
-- opportunistic refactors;
-- unrelated technical-debt cleanup;
-- inventing migrations;
-- architecture changes outside the approved boundary;
-- staging;
-- committing;
-- pushing;
-- merging;
-- advancing `main`;
-- deployment;
-- promotion;
-- remote Supabase mutation;
-- production mutation;
-- exposing secrets.
-
-If a required change falls outside the authorized boundary, stop and report it.
+Do not silently change the tenant model, organization isolation,
+role/permission semantics, package or quotation semantics, the booking state
+machine, privacy/consent semantics, the audit model, financial or safety
+authority, naming conventions, or public RPC contracts.
 
-### MODE: Manual
-
-Use Manual for explicit human-controlled gates including:
-
-- git staging for a governed commit;
-- git commit;
-- git push;
-- destructive/reset commands when separately gated;
-- material local database mutation when approval is required;
-- migration creation or migration application when separately authorized;
-- remote Supabase operations;
-- Supabase branch merge;
-- updating or merging into `main`;
-- production database mutation;
-- Vercel deployment or promotion;
-- production release.
+If a required change conflicts with approved architecture: stop that part,
+describe the conflict, propose the smallest safe change, and continue with
+the non-conflicting work.
 
-A previous Plan or Auto authorization never authorizes a Manual action.
+## Historical data
 
-## One-Time Approval Discipline
+Prefer lifecycle and supersession semantics — active/inactive, `archived_at`,
+`cancelled_at`, `exited_at`, `superseded_by`, versioning — over destructive
+deletion for business history. Hard deletion is for explicitly disposable
+data only.
 
-When Manual approval is required, use the narrowest exact one-time authorization.
+## AI features
 
-Never interpret phrases such as:
+AI capabilities follow: user/context → policy/permission → deterministic
+eligibility rules → model → validated tool/action → audit.
 
-- continue;
-- go ahead;
-- looks good;
-- previous implementation approval;
-- previous Auto mode;
-- previous successful verification;
+AI must not mutate critical state without a validated server action, must not
+infer consent, must not invent prices, discounts, packages or availability,
+and must escalate uncertainty on privacy, safety, payment, booking readiness
+or legal matters.
 
-as implicit permission to:
+## Public website boundary
 
-- stage;
-- commit;
-- push;
-- merge;
-- advance `main`;
-- deploy;
-- mutate remote infrastructure;
-- mutate production.
+The Little Shots public website is operationally separate from this
+application. Do not alter it, its hosting, or its domain while working here
+unless that scope is explicitly requested.
 
-Each production-affecting boundary requires explicit approval at that gate.
+## Reporting
 
-## Governed Feature Sequence
+At meaningful checkpoints, report: branch, base commit, files changed,
+migrations added, tests run, build/type/lint status, known warnings,
+unresolved risks, and any remote or production changes made. Distinguish
+local evidence from production evidence.
 
-The normal governed sequence is:
+## Working style
 
-Discovery
--> Reconciliation when required
--> Technical Design Freeze
--> Implementation
--> Automated Verification
--> Manual/E2E Verification when applicable
--> Implementation Commit
--> Checkpoint Documentation
--> Final Baseline Verification
--> Push Feature Branch
--> Preview / Remote Verification
--> Review
--> Explicit Main Integration Approval
--> Main Integration
--> Production Verification
+Make the smallest coherent change that completes the current piece of work.
+Don't jump ahead to later roadmap domains. Don't add speculative
+abstractions. Prefer explicit names over clever ones. Preserve audit
+integrity. Keep notes concise and evidence-based. Stop at trust boundaries
+instead of quietly crossing them.
 
-Not every change requires every stage, but skipping an applicable trust gate
-requires explicit justification.
-
-Freeze, implementation, and checkpoint documentation may remain separate commits
-when milestone governance requires that structure.
-
-Do not mix unrelated cleanup into a governed implementation commit.
-
-## Git Discipline
-
-Before mutation:
-
-- confirm current branch;
-- confirm expected base SHA;
-- confirm clean or understood worktree;
-- inspect exact file boundary.
-
-Before commit:
-
-- inspect `git status`;
-- inspect staged file names;
-- inspect staged diff/stat;
-- run applicable verification;
-- ensure generated files are intentional.
-
-Before push:
-
-- verify exact local commit SHA;
-- verify intended remote branch;
-- do not push required-verification failures.
-
-Before updating `main`:
-
-- verify the candidate is based on current `main` or has been explicitly
-  reconciled;
-- verify expected ancestry;
-- verify the exact candidate SHA;
-- verify applicable checks and Preview state;
-- obtain explicit human approval.
-
-Do not force-push `main` unless a separately approved repository-recovery plan
-explicitly requires it.
-
-## Supabase Trust Boundaries
-
-Local Supabase and remote Supabase are separate trust boundaries.
-
-Permission to use local Supabase never implies permission to:
-
-- use `--linked`;
-- deploy remote migrations;
-- mutate a remote Supabase project;
-- merge a Supabase branch;
-- mutate production data;
-- alter production schema.
-
-Local E2E or fixture data must never be described as production data.
-
-Remote Supabase mutation requires explicit authorization for the exact operation.
-
-## Migration Discipline
-
-Before introducing a database migration:
-
-1. inspect current migrations;
-2. inspect current remote-production contract when relevant;
-3. determine whether the capability already exists;
-4. define forward-only compatibility requirements;
-5. verify permissions, RLS, audit, lifecycle, and rollback/recovery implications;
-6. add dedicated database tests;
-7. validate against relevant historical compatibility tests.
-
-Do not weaken a newer production database contract merely to make older
-application code work.
-
-Adapt application code to the authoritative production contract unless an
-explicit database change has been approved.
-
-## Secret Handling
-
-Never deliberately print or expose secret values including:
-
-- Supabase service-role keys;
-- private API keys;
-- access tokens;
-- passwords;
-- secret environment-variable values;
-- private signing material.
-
-Prefer commands and tooling that pass required secrets without echoing them.
-
-Public/local URLs, non-secret identifiers, commit SHAs, project references, and
-safe debugging metadata may be shown when appropriate.
-
-## Verification-Failure Classification
-
-Do not push while a required verification is failing.
-
-Classify failures using evidence as one of:
-
-- implementation regression;
-- dirty local runtime/test fixture contamination;
-- pre-existing technical debt;
-- non-fatal tooling warning;
-- environmental/tooling failure.
-
-Do not call a warning a failure merely because it appears in output.
-
-Do not call verification clean when a required command exits nonzero.
-
-Known warnings must remain distinguishable from newly introduced failures.
-
-## Change-Control Rules
-
-Do not silently change:
-
-- tenant model;
-- organization isolation;
-- role/permission semantics;
-- package semantics;
-- quotation semantics;
-- booking state machine;
-- privacy/consent semantics;
-- audit model;
-- financial authority;
-- safety authority;
-- naming conventions;
-- public API/RPC contracts.
-
-If a required change conflicts with approved architecture:
-
-1. stop the conflicting portion;
-2. document the conflict;
-3. propose the smallest safe change;
-4. continue only with non-conflicting authorized work.
-
-## Historical Data Rules
-
-Prefer lifecycle and supersession semantics such as:
-
-- active/inactive;
-- `archived_at`;
-- `cancelled_at`;
-- `exited_at`;
-- `superseded_by`;
-- versioning;
-
-over destructive deletion for business history.
-
-Hard deletion is allowed only for explicitly disposable data and when repository
-rules permit it.
-
-## AI Rules
-
-AI capabilities must follow:
-
-User/context
--> policy/permission
--> deterministic eligibility/business rules
--> model
--> validated tool/action
--> audit
-
-AI must not directly mutate critical state without a validated server action.
-
-AI must not infer consent.
-
-AI must not invent prices, discounts, packages, or availability.
-
-AI must escalate uncertainty on privacy, safety, payment, booking readiness,
-legal matters, or other high-impact decisions.
-
-## Public Website Boundary
-
-The Little Shots public website is operationally separate from Memory Keeper OS.
-
-Do not alter the public website repository, Vercel project, production domain,
-or release path while performing Memory Keeper OS work unless that scope is
-explicitly authorized.
-
-## Definition of Complete
-
-A module is complete only when all applicable requirements in
-`docs/DEFINITION_OF_DONE.md` are satisfied.
-
-A rendered UI is not sufficient evidence of completion.
-
-## Reporting Requirements
-
-At meaningful checkpoints report:
-
-- current branch;
-- base commit;
-- files changed;
-- migrations added or modified;
-- tests run;
-- build/type/lint status;
-- database validation status when applicable;
-- known warnings;
-- unresolved risks;
-- remote mutations performed, if any;
-- production mutations performed, if any;
-- next dependency or gate.
-
-Reports must distinguish local evidence from remote or production evidence.
-
-## Working Style
-
-- Make the smallest coherent change that completes the current approved milestone.
-- Do not jump ahead to later migration domains.
-- Do not add speculative abstractions without a current requirement.
-- Prefer explicit names over clever abstractions.
-- Preserve historical and audit integrity.
-- Keep implementation notes concise and evidence-based.
-- Stop at trust boundaries instead of silently crossing them.
+A rendered UI is not evidence of completion. `docs/DEFINITION_OF_DONE.md` is.
