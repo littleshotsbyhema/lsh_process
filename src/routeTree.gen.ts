@@ -14,8 +14,10 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChangePasswordRouteImport } from './routes/change-password'
 import { Route as MemoryGuideRouteImport } from './routes/memory-guide'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedBookingsRouteImport } from './routes/_authenticated/bookings'
 import { Route as AuthenticatedClientsRouteImport } from './routes/_authenticated/clients'
+import { Route as AuthenticatedDeliveryRouteImport } from './routes/_authenticated/delivery'
 import { Route as AuthenticatedEditingRouteImport } from './routes/_authenticated/editing'
 import { Route as AuthenticatedGovernanceRouteImport } from './routes/_authenticated/governance'
 import { Route as AuthenticatedGuideReviewsRouteImport } from './routes/_authenticated/guide-reviews'
@@ -23,16 +25,20 @@ import { Route as AuthenticatedHeirloomRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedKpiRouteImport } from './routes/_authenticated/kpi'
 import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/leads'
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
+import { Route as AuthenticatedMarketingHubRouteImport } from './routes/_authenticated/marketing-hub'
 import { Route as AuthenticatedMemoryRouteImport } from './routes/_authenticated/memory'
 import { Route as AuthenticatedPackagesRouteImport } from './routes/_authenticated/packages'
 import { Route as AuthenticatedPipelineRouteImport } from './routes/_authenticated/pipeline'
 import { Route as AuthenticatedPixiesetRouteImport } from './routes/_authenticated/pixieset'
+import { Route as AuthenticatedPostProductionRouteImport } from './routes/_authenticated/post-production'
 import { Route as AuthenticatedPrepRouteImport } from './routes/_authenticated/prep'
 import { Route as AuthenticatedPrivacyRouteImport } from './routes/_authenticated/privacy'
+import { Route as AuthenticatedProductionRouteImport } from './routes/_authenticated/production'
 import { Route as AuthenticatedQuoteRouteImport } from './routes/_authenticated/quote'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedReviewsRouteImport } from './routes/_authenticated/reviews'
 import { Route as AuthenticatedSafetyRouteImport } from './routes/_authenticated/safety'
+import { Route as AuthenticatedSalesRouteImport } from './routes/_authenticated/sales'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSopsRouteImport } from './routes/_authenticated/sops'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
@@ -66,6 +72,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedBookingsRoute = AuthenticatedBookingsRouteImport.update({
   id: '/bookings',
   path: '/bookings',
@@ -74,6 +85,11 @@ const AuthenticatedBookingsRoute = AuthenticatedBookingsRouteImport.update({
 const AuthenticatedClientsRoute = AuthenticatedClientsRouteImport.update({
   id: '/clients',
   path: '/clients',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDeliveryRoute = AuthenticatedDeliveryRouteImport.update({
+  id: '/delivery',
+  path: '/delivery',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedEditingRoute = AuthenticatedEditingRouteImport.update({
@@ -112,6 +128,12 @@ const AuthenticatedMarketingRoute = AuthenticatedMarketingRouteImport.update({
   path: '/marketing',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMarketingHubRoute =
+  AuthenticatedMarketingHubRouteImport.update({
+    id: '/marketing-hub',
+    path: '/marketing-hub',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedMemoryRoute = AuthenticatedMemoryRouteImport.update({
   id: '/memory',
   path: '/memory',
@@ -132,6 +154,12 @@ const AuthenticatedPixiesetRoute = AuthenticatedPixiesetRouteImport.update({
   path: '/pixieset',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPostProductionRoute =
+  AuthenticatedPostProductionRouteImport.update({
+    id: '/post-production',
+    path: '/post-production',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPrepRoute = AuthenticatedPrepRouteImport.update({
   id: '/prep',
   path: '/prep',
@@ -140,6 +168,11 @@ const AuthenticatedPrepRoute = AuthenticatedPrepRouteImport.update({
 const AuthenticatedPrivacyRoute = AuthenticatedPrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedProductionRoute = AuthenticatedProductionRouteImport.update({
+  id: '/production',
+  path: '/production',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedQuoteRoute = AuthenticatedQuoteRouteImport.update({
@@ -160,6 +193,11 @@ const AuthenticatedReviewsRoute = AuthenticatedReviewsRouteImport.update({
 const AuthenticatedSafetyRoute = AuthenticatedSafetyRouteImport.update({
   id: '/safety',
   path: '/safety',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSalesRoute = AuthenticatedSalesRouteImport.update({
+  id: '/sales',
+  path: '/sales',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
@@ -209,8 +247,10 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/change-password': typeof ChangePasswordRoute
   '/memory-guide': typeof MemoryGuideRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/bookings': typeof AuthenticatedBookingsRoute
   '/clients': typeof AuthenticatedClientsRoute
+  '/delivery': typeof AuthenticatedDeliveryRoute
   '/editing': typeof AuthenticatedEditingRoute
   '/governance': typeof AuthenticatedGovernanceRoute
   '/guide-reviews': typeof AuthenticatedGuideReviewsRoute
@@ -218,16 +258,20 @@ export interface FileRoutesByFullPath {
   '/kpi': typeof AuthenticatedKpiRoute
   '/leads': typeof AuthenticatedLeadsRoute
   '/marketing': typeof AuthenticatedMarketingRoute
+  '/marketing-hub': typeof AuthenticatedMarketingHubRoute
   '/memory': typeof AuthenticatedMemoryRoute
   '/packages': typeof AuthenticatedPackagesRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
   '/pixieset': typeof AuthenticatedPixiesetRoute
+  '/post-production': typeof AuthenticatedPostProductionRoute
   '/prep': typeof AuthenticatedPrepRoute
   '/privacy': typeof AuthenticatedPrivacyRoute
+  '/production': typeof AuthenticatedProductionRoute
   '/quote': typeof AuthenticatedQuoteRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/reviews': typeof AuthenticatedReviewsRoute
   '/safety': typeof AuthenticatedSafetyRoute
+  '/sales': typeof AuthenticatedSalesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/sops': typeof AuthenticatedSopsRoute
   '/tasks': typeof AuthenticatedTasksRoute
@@ -241,8 +285,10 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/change-password': typeof ChangePasswordRoute
   '/memory-guide': typeof MemoryGuideRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/bookings': typeof AuthenticatedBookingsRoute
   '/clients': typeof AuthenticatedClientsRoute
+  '/delivery': typeof AuthenticatedDeliveryRoute
   '/editing': typeof AuthenticatedEditingRoute
   '/governance': typeof AuthenticatedGovernanceRoute
   '/guide-reviews': typeof AuthenticatedGuideReviewsRoute
@@ -250,16 +296,20 @@ export interface FileRoutesByTo {
   '/kpi': typeof AuthenticatedKpiRoute
   '/leads': typeof AuthenticatedLeadsRoute
   '/marketing': typeof AuthenticatedMarketingRoute
+  '/marketing-hub': typeof AuthenticatedMarketingHubRoute
   '/memory': typeof AuthenticatedMemoryRoute
   '/packages': typeof AuthenticatedPackagesRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
   '/pixieset': typeof AuthenticatedPixiesetRoute
+  '/post-production': typeof AuthenticatedPostProductionRoute
   '/prep': typeof AuthenticatedPrepRoute
   '/privacy': typeof AuthenticatedPrivacyRoute
+  '/production': typeof AuthenticatedProductionRoute
   '/quote': typeof AuthenticatedQuoteRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/reviews': typeof AuthenticatedReviewsRoute
   '/safety': typeof AuthenticatedSafetyRoute
+  '/sales': typeof AuthenticatedSalesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/sops': typeof AuthenticatedSopsRoute
   '/tasks': typeof AuthenticatedTasksRoute
@@ -276,8 +326,10 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/change-password': typeof ChangePasswordRoute
   '/memory-guide': typeof MemoryGuideRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/bookings': typeof AuthenticatedBookingsRoute
   '/_authenticated/clients': typeof AuthenticatedClientsRoute
+  '/_authenticated/delivery': typeof AuthenticatedDeliveryRoute
   '/_authenticated/editing': typeof AuthenticatedEditingRoute
   '/_authenticated/governance': typeof AuthenticatedGovernanceRoute
   '/_authenticated/guide-reviews': typeof AuthenticatedGuideReviewsRoute
@@ -285,16 +337,20 @@ export interface FileRoutesById {
   '/_authenticated/kpi': typeof AuthenticatedKpiRoute
   '/_authenticated/leads': typeof AuthenticatedLeadsRoute
   '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
+  '/_authenticated/marketing-hub': typeof AuthenticatedMarketingHubRoute
   '/_authenticated/memory': typeof AuthenticatedMemoryRoute
   '/_authenticated/packages': typeof AuthenticatedPackagesRoute
   '/_authenticated/pipeline': typeof AuthenticatedPipelineRoute
   '/_authenticated/pixieset': typeof AuthenticatedPixiesetRoute
+  '/_authenticated/post-production': typeof AuthenticatedPostProductionRoute
   '/_authenticated/prep': typeof AuthenticatedPrepRoute
   '/_authenticated/privacy': typeof AuthenticatedPrivacyRoute
+  '/_authenticated/production': typeof AuthenticatedProductionRoute
   '/_authenticated/quote': typeof AuthenticatedQuoteRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/reviews': typeof AuthenticatedReviewsRoute
   '/_authenticated/safety': typeof AuthenticatedSafetyRoute
+  '/_authenticated/sales': typeof AuthenticatedSalesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/sops': typeof AuthenticatedSopsRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
@@ -312,8 +368,10 @@ export interface FileRouteTypes {
     | '/auth'
     | '/change-password'
     | '/memory-guide'
+    | '/admin'
     | '/bookings'
     | '/clients'
+    | '/delivery'
     | '/editing'
     | '/governance'
     | '/guide-reviews'
@@ -321,16 +379,20 @@ export interface FileRouteTypes {
     | '/kpi'
     | '/leads'
     | '/marketing'
+    | '/marketing-hub'
     | '/memory'
     | '/packages'
     | '/pipeline'
     | '/pixieset'
+    | '/post-production'
     | '/prep'
     | '/privacy'
+    | '/production'
     | '/quote'
     | '/reports'
     | '/reviews'
     | '/safety'
+    | '/sales'
     | '/settings'
     | '/sops'
     | '/tasks'
@@ -344,8 +406,10 @@ export interface FileRouteTypes {
     | '/auth'
     | '/change-password'
     | '/memory-guide'
+    | '/admin'
     | '/bookings'
     | '/clients'
+    | '/delivery'
     | '/editing'
     | '/governance'
     | '/guide-reviews'
@@ -353,16 +417,20 @@ export interface FileRouteTypes {
     | '/kpi'
     | '/leads'
     | '/marketing'
+    | '/marketing-hub'
     | '/memory'
     | '/packages'
     | '/pipeline'
     | '/pixieset'
+    | '/post-production'
     | '/prep'
     | '/privacy'
+    | '/production'
     | '/quote'
     | '/reports'
     | '/reviews'
     | '/safety'
+    | '/sales'
     | '/settings'
     | '/sops'
     | '/tasks'
@@ -378,8 +446,10 @@ export interface FileRouteTypes {
     | '/auth'
     | '/change-password'
     | '/memory-guide'
+    | '/_authenticated/admin'
     | '/_authenticated/bookings'
     | '/_authenticated/clients'
+    | '/_authenticated/delivery'
     | '/_authenticated/editing'
     | '/_authenticated/governance'
     | '/_authenticated/guide-reviews'
@@ -387,16 +457,20 @@ export interface FileRouteTypes {
     | '/_authenticated/kpi'
     | '/_authenticated/leads'
     | '/_authenticated/marketing'
+    | '/_authenticated/marketing-hub'
     | '/_authenticated/memory'
     | '/_authenticated/packages'
     | '/_authenticated/pipeline'
     | '/_authenticated/pixieset'
+    | '/_authenticated/post-production'
     | '/_authenticated/prep'
     | '/_authenticated/privacy'
+    | '/_authenticated/production'
     | '/_authenticated/quote'
     | '/_authenticated/reports'
     | '/_authenticated/reviews'
     | '/_authenticated/safety'
+    | '/_authenticated/sales'
     | '/_authenticated/settings'
     | '/_authenticated/sops'
     | '/_authenticated/tasks'
@@ -453,6 +527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/bookings': {
       id: '/_authenticated/bookings'
       path: '/bookings'
@@ -465,6 +546,13 @@ declare module '@tanstack/react-router' {
       path: '/clients'
       fullPath: '/clients'
       preLoaderRoute: typeof AuthenticatedClientsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/delivery': {
+      id: '/_authenticated/delivery'
+      path: '/delivery'
+      fullPath: '/delivery'
+      preLoaderRoute: typeof AuthenticatedDeliveryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/editing': {
@@ -516,6 +604,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMarketingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/marketing-hub': {
+      id: '/_authenticated/marketing-hub'
+      path: '/marketing-hub'
+      fullPath: '/marketing-hub'
+      preLoaderRoute: typeof AuthenticatedMarketingHubRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/memory': {
       id: '/_authenticated/memory'
       path: '/memory'
@@ -544,6 +639,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPixiesetRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/post-production': {
+      id: '/_authenticated/post-production'
+      path: '/post-production'
+      fullPath: '/post-production'
+      preLoaderRoute: typeof AuthenticatedPostProductionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/prep': {
       id: '/_authenticated/prep'
       path: '/prep'
@@ -556,6 +658,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof AuthenticatedPrivacyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/production': {
+      id: '/_authenticated/production'
+      path: '/production'
+      fullPath: '/production'
+      preLoaderRoute: typeof AuthenticatedProductionRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/quote': {
@@ -584,6 +693,13 @@ declare module '@tanstack/react-router' {
       path: '/safety'
       fullPath: '/safety'
       preLoaderRoute: typeof AuthenticatedSafetyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sales': {
+      id: '/_authenticated/sales'
+      path: '/sales'
+      fullPath: '/sales'
+      preLoaderRoute: typeof AuthenticatedSalesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/settings': {
@@ -646,8 +762,10 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedBookingsRoute: typeof AuthenticatedBookingsRoute
   AuthenticatedClientsRoute: typeof AuthenticatedClientsRoute
+  AuthenticatedDeliveryRoute: typeof AuthenticatedDeliveryRoute
   AuthenticatedEditingRoute: typeof AuthenticatedEditingRoute
   AuthenticatedGovernanceRoute: typeof AuthenticatedGovernanceRoute
   AuthenticatedGuideReviewsRoute: typeof AuthenticatedGuideReviewsRoute
@@ -655,16 +773,20 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedKpiRoute: typeof AuthenticatedKpiRoute
   AuthenticatedLeadsRoute: typeof AuthenticatedLeadsRoute
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
+  AuthenticatedMarketingHubRoute: typeof AuthenticatedMarketingHubRoute
   AuthenticatedMemoryRoute: typeof AuthenticatedMemoryRoute
   AuthenticatedPackagesRoute: typeof AuthenticatedPackagesRoute
   AuthenticatedPipelineRoute: typeof AuthenticatedPipelineRoute
   AuthenticatedPixiesetRoute: typeof AuthenticatedPixiesetRoute
+  AuthenticatedPostProductionRoute: typeof AuthenticatedPostProductionRoute
   AuthenticatedPrepRoute: typeof AuthenticatedPrepRoute
   AuthenticatedPrivacyRoute: typeof AuthenticatedPrivacyRoute
+  AuthenticatedProductionRoute: typeof AuthenticatedProductionRoute
   AuthenticatedQuoteRoute: typeof AuthenticatedQuoteRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedReviewsRoute: typeof AuthenticatedReviewsRoute
   AuthenticatedSafetyRoute: typeof AuthenticatedSafetyRoute
+  AuthenticatedSalesRoute: typeof AuthenticatedSalesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSopsRoute: typeof AuthenticatedSopsRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
@@ -676,8 +798,10 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedBookingsRoute: AuthenticatedBookingsRoute,
   AuthenticatedClientsRoute: AuthenticatedClientsRoute,
+  AuthenticatedDeliveryRoute: AuthenticatedDeliveryRoute,
   AuthenticatedEditingRoute: AuthenticatedEditingRoute,
   AuthenticatedGovernanceRoute: AuthenticatedGovernanceRoute,
   AuthenticatedGuideReviewsRoute: AuthenticatedGuideReviewsRoute,
@@ -685,16 +809,20 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedKpiRoute: AuthenticatedKpiRoute,
   AuthenticatedLeadsRoute: AuthenticatedLeadsRoute,
   AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
+  AuthenticatedMarketingHubRoute: AuthenticatedMarketingHubRoute,
   AuthenticatedMemoryRoute: AuthenticatedMemoryRoute,
   AuthenticatedPackagesRoute: AuthenticatedPackagesRoute,
   AuthenticatedPipelineRoute: AuthenticatedPipelineRoute,
   AuthenticatedPixiesetRoute: AuthenticatedPixiesetRoute,
+  AuthenticatedPostProductionRoute: AuthenticatedPostProductionRoute,
   AuthenticatedPrepRoute: AuthenticatedPrepRoute,
   AuthenticatedPrivacyRoute: AuthenticatedPrivacyRoute,
+  AuthenticatedProductionRoute: AuthenticatedProductionRoute,
   AuthenticatedQuoteRoute: AuthenticatedQuoteRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedReviewsRoute: AuthenticatedReviewsRoute,
   AuthenticatedSafetyRoute: AuthenticatedSafetyRoute,
+  AuthenticatedSalesRoute: AuthenticatedSalesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSopsRoute: AuthenticatedSopsRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
