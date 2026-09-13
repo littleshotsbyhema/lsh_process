@@ -5,12 +5,12 @@ import { useStore } from "@/store/useStore";
 export const Route = createFileRoute("/_authenticated/prep")({
   head: () => ({
     meta: [
-      { title: "Shoot Prep · Little Moments OS" },
+      { title: "Shoot Prep · LittleShots by Hema OS" },
       {
         name: "description",
         content: "Shoot-day preparation: props, styling, comfort plans and the team call sheet.",
       },
-      { property: "og:title", content: "Shoot Prep · Little Moments OS" },
+      { property: "og:title", content: "Shoot Prep · LittleShots by Hema OS" },
       {
         property: "og:description",
         content: "Shoot-day preparation: props, styling, comfort plans and the team call sheet.",

@@ -17,12 +17,12 @@ const qcChecklist = [
 export const Route = createFileRoute("/_authenticated/heirloom")({
   head: () => ({
     meta: [
-      { title: "Heirloom Production · Little Moments OS" },
+      { title: "Heirloom Production · LittleShots by Hema OS" },
       {
         name: "description",
         content: "Album and frame production tracking from selection approval to hand-over.",
       },
-      { property: "og:title", content: "Heirloom Production · Little Moments OS" },
+      { property: "og:title", content: "Heirloom Production · LittleShots by Hema OS" },
       {
         property: "og:description",
         content: "Album and frame production tracking from selection approval to hand-over.",

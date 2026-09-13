@@ -5,13 +5,13 @@ import { useStore, bookingFlags } from "@/store/useStore";
 export const Route = createFileRoute("/_authenticated/kpi")({
   head: () => ({
     meta: [
-      { title: "KPI Dashboard · Little Moments OS" },
+      { title: "KPI Dashboard · LittleShots by Hema OS" },
       {
         name: "description",
         content:
           "Live studio KPIs: conversion, safety compliance, editing turnaround and heirloom delivery health.",
       },
-      { property: "og:title", content: "KPI Dashboard · Little Moments OS" },
+      { property: "og:title", content: "KPI Dashboard · LittleShots by Hema OS" },
       {
         property: "og:description",
         content:

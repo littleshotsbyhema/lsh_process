@@ -9,13 +9,13 @@ import { CheckCircle2 } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/governance")({
   head: () => ({
     meta: [
-      { title: "Governance · Little Moments OS" },
+      { title: "Governance · LittleShots by Hema OS" },
       {
         name: "description",
         content:
           "Daily, weekly, monthly and quarterly governance runs plus philosophy alignment scoring.",
       },
-      { property: "og:title", content: "Governance · Little Moments OS" },
+      { property: "og:title", content: "Governance · LittleShots by Hema OS" },
       {
         property: "og:description",
         content:
