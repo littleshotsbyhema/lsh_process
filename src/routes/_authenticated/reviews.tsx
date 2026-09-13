@@ -1,20 +1,37 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
-import { useStore } from "@/store/useStore";
-import { toast } from "sonner";
+import { createFileRoute } from "@tanstack/react-router";
+import { CalendarHeart, Star } from "lucide-react";
+
+import { AppShell, PageHeader, StatusPill } from "@/components/AppShell";
 import {
-  reviewPlatforms,
-  reviewRequestStatuses,
-  issueCategories,
-  issueStatuses,
-  reviewRequestMessage,
-  type ReviewPlatform,
-  type ReviewRequestStatus,
-  type IssueCategory,
-  type IssueStatus,
-} from "@/lib/mock-data";
-import { Star, Sparkles } from "lucide-react";
+  ActionButton,
+  Blocked,
+  BoardState,
+  BookingCard,
+  ErrorNote,
+  EvidenceLine,
+  Field,
+  Select,
+  TextInput,
+  formatDate,
+  latestBy,
+  rowsFor,
+  useBookingsAtStages,
+  useChainedAction,
+  useDeliveryWorkspace,
+  type BookingView,
+} from "@/components/DeliveryBoard";
+import {
+  markCompleted,
+  markMilestoneFollowUp,
+  milestoneCategories,
+  recordMilestonePlan,
+  recordReviewRequest,
+  reviewChannels,
+  type DeliveryWorkspaceData,
+  type MilestoneCategory,
+  type ReviewChannel,
+} from "@/lib/delivery.functions";
 
 export const Route = createFileRoute("/_authenticated/reviews")({
   head: () => ({
@@ -23,282 +40,314 @@ export const Route = createFileRoute("/_authenticated/reviews")({
       {
         name: "description",
         content:
-          "Request reviews with care, log testimonials and honour repeat milestone opportunities.",
+          "Ask for a review after handover, then plan when the family should next be invited back.",
       },
       { property: "og:title", content: "Reviews & Aftercare · LittleShots by Hema OS" },
-      {
-        property: "og:description",
-        content:
-          "Request reviews with care, log testimonials and honour repeat milestone opportunities.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: ReviewsPage,
+  component: AftercarePage,
 });
 
-function ReviewsPage() {
-  const { bookings, reviews, upsertReview } = useStore();
-  const [openId, setOpenId] = useState<string | null>(null);
-  const eligible = bookings.filter((b) =>
-    ["Delivered", "Album/Frame Pending", "Completed"].includes(b.status),
-  );
+const AFTERCARE_STAGES = [19, 20, 21];
 
-  const handle = (bookingId: string, patch: Parameters<typeof upsertReview>[1]) => {
-    const r = upsertReview(bookingId, patch);
-    if (r.ok) toast.success(r.message);
-    else toast.error(r.message);
-  };
+const channelLabels: Record<ReviewChannel, string> = {
+  google: "Google",
+  instagram: "Instagram",
+  whatsapp: "WhatsApp",
+  in_person: "In person",
+  other: "Other",
+};
+
+const categoryLabels: Record<MilestoneCategory, string> = {
+  maternity: "Maternity",
+  newborn: "Newborn",
+  sitter: "Sitter",
+  birthday: "Birthday",
+  family: "Family",
+  other: "Other",
+};
+
+function AftercarePage() {
+  const { query, refresh } = useDeliveryWorkspace();
+  const action = useChainedAction(refresh);
+  const bookings = useBookingsAtStages(query.data, AFTERCARE_STAGES);
 
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Phase 7 · Reviews & Reputation"
+        eyebrow="Family relationship"
         title="Reviews & Aftercare"
-        subtitle="Every delivery is followed by a warm request — never pressure. Track reviews, testimonials, and the milestones still waiting to be honoured."
-        quote="A review is the family's thank-you. We treat it as a gift, not a goal."
+        subtitle="A booking does not close until the next milestone has a date on it. Newborn becomes sitter becomes first birthday."
+        quote="Memory is the outcome. The relationship outlives the booking."
       />
 
-      <Card className="p-5 mb-6 bg-[var(--gradient-warm)] border-0">
-        <div className="flex items-start gap-3">
-          <Sparkles className="h-4 w-4 text-gold mt-1 shrink-0" />
-          <div>
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Warm review request message
-            </div>
-            <p className="mt-2 text-sm italic text-primary/85 leading-relaxed">
-              “{reviewRequestMessage}”
-            </p>
-          </div>
-        </div>
-      </Card>
+      <ErrorNote message={action.error} />
 
-      {eligible.length === 0 ? (
-        <Card className="p-10 text-center">
-          <p className="font-serif text-xl text-primary">No deliveries waiting for a review yet.</p>
-          <p className="mt-2 text-sm italic text-primary/70">
-            Stories will be ready soon — and so will our gratitude.
-          </p>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {eligible.map((b) => {
-            const r = reviews.find((x) => x.bookingId === b.id);
-            const open = openId === b.id;
-            return (
-              <Card key={b.id} className="p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div className="font-medium text-primary">{b.client}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {b.category} · {b.id} · {b.date}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    <StatusPill
-                      tone={
-                        r?.requestStatus === "Received"
-                          ? "good"
-                          : r?.requestStatus === "Requested"
-                            ? "gold"
-                            : "warn"
-                      }
-                    >
-                      {r?.requestStatus ?? "Pending"}
-                    </StatusPill>
-                    {r?.rating && (
-                      <StatusPill tone="gold">
-                        <Star className="h-3 w-3 inline mr-0.5" />
-                        {r.rating}/5
-                      </StatusPill>
-                    )}
-                    {r?.issueRaised && (
-                      <StatusPill tone="bad">Issue: {r.issueStatus ?? "Open"}</StatusPill>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handle(b.id, { requestStatus: "Requested" })}
-                      className="text-xs px-3 py-1.5 rounded-lg border border-gold bg-card text-primary hover:bg-accent"
-                    >
-                      Send request
-                    </button>
-                    <button
-                      onClick={() => setOpenId(open ? null : b.id)}
-                      className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90"
-                    >
-                      {open ? "Close" : "Open"}
-                    </button>
-                  </div>
-                </div>
-                {open && (
-                  <div className="mt-5 grid md:grid-cols-2 gap-4 text-sm">
-                    <Field label="Request status">
-                      <select
-                        value={r?.requestStatus ?? "Pending"}
-                        onChange={(e) =>
-                          handle(b.id, { requestStatus: e.target.value as ReviewRequestStatus })
-                        }
-                        className="input"
-                      >
-                        {reviewRequestStatuses.map((s) => (
-                          <option key={s}>{s}</option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label="Platform">
-                      <select
-                        value={r?.platform ?? ""}
-                        onChange={(e) =>
-                          handle(b.id, {
-                            platform: (e.target.value || undefined) as ReviewPlatform | undefined,
-                          })
-                        }
-                        className="input"
-                      >
-                        <option value="">—</option>
-                        {reviewPlatforms.map((p) => (
-                          <option key={p}>{p}</option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label="Rating (1–5)">
-                      <input
-                        type="number"
-                        min={1}
-                        max={5}
-                        defaultValue={r?.rating ?? ""}
-                        onBlur={(e) =>
-                          handle(b.id, {
-                            rating: e.target.value ? Number(e.target.value) : undefined,
-                          })
-                        }
-                        className="input"
-                      />
-                    </Field>
-                    <Field label="Permission to use testimonial">
-                      <label className="inline-flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          defaultChecked={r?.permissionToUse ?? false}
-                          onChange={(e) => handle(b.id, { permissionToUse: e.target.checked })}
-                        />
-                        Yes — written permission on file
-                      </label>
-                    </Field>
-                    <Field label="Testimonial text" full>
-                      <textarea
-                        defaultValue={r?.testimonial ?? ""}
-                        onBlur={(e) => handle(b.id, { testimonial: e.target.value })}
-                        rows={3}
-                        className="input"
-                      />
-                    </Field>
-                    <Field label="Consent proof reference">
-                      <input
-                        defaultValue={r?.consentProof ?? ""}
-                        onBlur={(e) => handle(b.id, { consentProof: e.target.value })}
-                        className="input"
-                        placeholder="WhatsApp screenshot ref / email"
-                      />
-                    </Field>
-                    <Field label="Issue raised?">
-                      <label className="inline-flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          defaultChecked={r?.issueRaised ?? false}
-                          onChange={(e) => handle(b.id, { issueRaised: e.target.checked })}
-                        />
-                        Family raised a concern
-                      </label>
-                    </Field>
-                    {r?.issueRaised && (
-                      <>
-                        <Field label="Issue category">
-                          <select
-                            defaultValue={r?.issueCategory ?? ""}
-                            onChange={(e) =>
-                              handle(b.id, {
-                                issueCategory: (e.target.value || undefined) as
-                                  | IssueCategory
-                                  | undefined,
-                              })
-                            }
-                            className="input"
-                          >
-                            <option value="">—</option>
-                            {issueCategories.map((c) => (
-                              <option key={c}>{c}</option>
-                            ))}
-                          </select>
-                        </Field>
-                        <Field label="Issue status">
-                          <select
-                            defaultValue={r?.issueStatus ?? "Open"}
-                            onChange={(e) =>
-                              handle(b.id, { issueStatus: e.target.value as IssueStatus })
-                            }
-                            className="input"
-                          >
-                            {issueStatuses.map((s) => (
-                              <option key={s}>{s}</option>
-                            ))}
-                          </select>
-                        </Field>
-                        <Field label="Resolution notes" full>
-                          <textarea
-                            defaultValue={r?.resolutionNotes ?? ""}
-                            onBlur={(e) => handle(b.id, { resolutionNotes: e.target.value })}
-                            rows={2}
-                            className="input"
-                          />
-                        </Field>
-                      </>
-                    )}
-                    <Field label="Repeat milestone opportunity?">
-                      <label className="inline-flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          defaultChecked={r?.repeatOpportunity ?? false}
-                          onChange={(e) => handle(b.id, { repeatOpportunity: e.target.checked })}
-                        />
-                        Yes — invite back for next milestone
-                      </label>
-                    </Field>
-                    <Field label="Next milestone reminder date">
-                      <input
-                        type="date"
-                        defaultValue={r?.nextMilestoneDate ?? ""}
-                        onBlur={(e) => handle(b.id, { nextMilestoneDate: e.target.value })}
-                        className="input"
-                      />
-                    </Field>
-                  </div>
-                )}
-              </Card>
-            );
-          })}
-        </div>
-      )}
+      <BoardState
+        query={query}
+        count={bookings.length}
+        emptyTitle="No families in aftercare"
+        emptyBody="Once an album or frame is handed over, the booking arrives here to ask for a review and plan what comes next."
+      />
+
+      <div className="mt-6 space-y-4">
+        {query.data &&
+          bookings.map((booking) => (
+            <AftercareCard key={booking.id} booking={booking} data={query.data} action={action} />
+          ))}
+      </div>
     </AppShell>
   );
 }
 
-function Field({
-  label,
-  children,
-  full = false,
+type ChainedAction = ReturnType<typeof useChainedAction>;
+
+function AftercareCard({
+  booking,
+  data,
+  action,
 }: {
-  label: string;
-  children: React.ReactNode;
-  full?: boolean;
+  booking: BookingView;
+  data: DeliveryWorkspaceData;
+  action: ChainedAction;
 }) {
+  const requests = rowsFor(data.reviewRequests, booking.id);
+  const plan = rowsFor(data.milestonePlans, booking.id)[0];
+  const latestRequest = latestBy(requests, (row) => row.round);
+  const busy = action.isBusy(booking.id);
+
   return (
-    <label className={`block ${full ? "md:col-span-2" : ""}`}>
-      <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
-      <div className="mt-1.5">{children}</div>
-      <style>{`.input{width:100%;border:1px solid var(--border);border-radius:0.5rem;background:var(--card);padding:0.5rem 0.75rem;font-size:0.875rem;color:var(--foreground);}`}</style>
-    </label>
+    <BookingCard
+      booking={booking}
+      aside={
+        booking.stageOrder === 21 ? (
+          <StatusPill tone="good">Relationship active</StatusPill>
+        ) : undefined
+      }
+    >
+      <div className="grid gap-1">
+        {latestRequest && (
+          <EvidenceLine>
+            Review asked via{" "}
+            {channelLabels[latestRequest.channel as ReviewChannel] ?? latestRequest.channel}
+            {requests.length > 1 ? ` · ${requests.length} asks` : ""} ·{" "}
+            {formatDate(latestRequest.requested_at)}
+          </EvidenceLine>
+        )}
+        {plan && (
+          <EvidenceLine>
+            Next:{" "}
+            {categoryLabels[plan.next_session_category as MilestoneCategory] ??
+              plan.next_session_category}{" "}
+            session, due {formatDate(plan.due_on)}
+            {plan.offer_note ? ` — ${plan.offer_note}` : ""}
+          </EvidenceLine>
+        )}
+      </div>
+
+      {booking.stageOrder === 19 && (
+        <ReviewPanel
+          booking={booking}
+          action={action}
+          busy={busy}
+          hasRequest={requests.length > 0}
+        />
+      )}
+
+      {booking.stageOrder === 20 && (
+        <MilestonePanel booking={booking} action={action} busy={busy} hasPlan={Boolean(plan)} />
+      )}
+
+      {booking.stageOrder === 21 && !plan && (
+        <Blocked reason="This booking completed without a recorded next milestone." />
+      )}
+    </BookingCard>
+  );
+}
+
+function ReviewPanel({
+  booking,
+  action,
+  busy,
+  hasRequest,
+}: {
+  booking: BookingView;
+  action: ChainedAction;
+  busy: boolean;
+  hasRequest: boolean;
+}) {
+  const [channel, setChannel] = useState<ReviewChannel>("google");
+  const [note, setNote] = useState("");
+
+  if (!booking.capabilities.canRequestReview) {
+    return <Blocked reason="Recording a review request needs the review.request permission." />;
+  }
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field label="Where did you ask?">
+        <Select
+          id={`channel-${booking.id}`}
+          value={channel}
+          onChange={(event) => setChannel(event.target.value as ReviewChannel)}
+        >
+          {reviewChannels.map((value) => (
+            <option key={value} value={value}>
+              {channelLabels[value]}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      <Field label="Note (optional)">
+        <TextInput
+          id={`review-note-${booking.id}`}
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          maxLength={500}
+          placeholder="e.g. asked at handover"
+        />
+      </Field>
+
+      <div className="flex flex-wrap gap-2 sm:col-span-2">
+        <ActionButton
+          tone={hasRequest ? "quiet" : "primary"}
+          busy={busy}
+          onClick={() =>
+            action.run(booking.id, [
+              () =>
+                recordReviewRequest({
+                  data: { bookingId: booking.id, channel, note: note.trim() || undefined },
+                }),
+            ])
+          }
+        >
+          <Star className="h-3.5 w-3.5" />{" "}
+          {hasRequest ? "Record a follow-up ask" : "Record review request"}
+        </ActionButton>
+
+        {hasRequest &&
+          (booking.capabilities.canAdvanceStage ? (
+            <ActionButton
+              busy={busy}
+              onClick={() =>
+                action.run(booking.id, [
+                  () => markMilestoneFollowUp({ data: { bookingId: booking.id } }),
+                ])
+              }
+            >
+              Plan the next session
+            </ActionButton>
+          ) : (
+            <Blocked reason="Moving this booking on needs the booking.stage.advance permission." />
+          ))}
+      </div>
+    </div>
+  );
+}
+
+function MilestonePanel({
+  booking,
+  action,
+  busy,
+  hasPlan,
+}: {
+  booking: BookingView;
+  action: ChainedAction;
+  busy: boolean;
+  hasPlan: boolean;
+}) {
+  const [category, setCategory] = useState<MilestoneCategory>("sitter");
+  const [dueOn, setDueOn] = useState("");
+  const [offer, setOffer] = useState("");
+
+  if (!booking.capabilities.canPlanMilestone && !hasPlan) {
+    return <Blocked reason="Planning the next session needs the milestone.plan permission." />;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const valid = dueOn > today;
+
+  return (
+    <div className="space-y-3">
+      {!hasPlan && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="What comes next?">
+            <Select
+              id={`cat-${booking.id}`}
+              value={category}
+              onChange={(event) => setCategory(event.target.value as MilestoneCategory)}
+            >
+              {milestoneCategories.map((value) => (
+                <option key={value} value={value}>
+                  {categoryLabels[value]}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field label="Approach the family around">
+            <TextInput
+              id={`due-${booking.id}`}
+              type="date"
+              min={today}
+              value={dueOn}
+              onChange={(event) => setDueOn(event.target.value)}
+            />
+          </Field>
+
+          <div className="sm:col-span-2">
+            <Field label="What to offer (optional)">
+              <TextInput
+                id={`offer-${booking.id}`}
+                value={offer}
+                onChange={(event) => setOffer(event.target.value)}
+                maxLength={500}
+                placeholder="e.g. sitter session around seven months"
+              />
+            </Field>
+          </div>
+
+          <div className="sm:col-span-2">
+            <ActionButton
+              busy={busy}
+              disabled={!valid}
+              onClick={() =>
+                action.run(booking.id, [
+                  () =>
+                    recordMilestonePlan({
+                      data: {
+                        bookingId: booking.id,
+                        nextSessionCategory: category,
+                        dueOn,
+                        offerNote: offer.trim() || undefined,
+                      },
+                    }),
+                ])
+              }
+            >
+              <CalendarHeart className="h-3.5 w-3.5" /> Save the plan
+            </ActionButton>
+            <p className="mt-2 text-xs text-muted-foreground">
+              This is a note to the studio, not a booking. Nobody is contacted automatically.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {hasPlan &&
+        (booking.capabilities.canAdvanceStage ? (
+          <ActionButton
+            busy={busy}
+            onClick={() =>
+              action.run(booking.id, [() => markCompleted({ data: { bookingId: booking.id } })])
+            }
+          >
+            Close this booking
+          </ActionButton>
+        ) : (
+          <Blocked reason="Closing a booking needs the booking.stage.advance permission." />
+        ))}
+    </div>
   );
 }

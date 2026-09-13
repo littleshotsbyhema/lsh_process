@@ -1,306 +1,339 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { AppShell, Card, PageHeader, StatusPill } from "@/components/AppShell";
-import { useStore } from "@/store/useStore";
-import { handle } from "@/lib/handle";
+import { createFileRoute } from "@tanstack/react-router";
+import { ExternalLink } from "lucide-react";
+
+import { AppShell, PageHeader, StatusPill } from "@/components/AppShell";
 import {
-  pixiesetGalleryStatuses,
-  pixiesetOrderStatuses,
-  pixiesetPriceSheets,
-  type PixiesetGalleryStatus,
-  type PixiesetOrderStatus,
-  type PixiesetPriceSheet,
-} from "@/lib/mock-data";
-import type { PixiesetRecord } from "@/store/useStore";
-import { Camera, Save, ExternalLink } from "lucide-react";
+  ActionButton,
+  Blocked,
+  BoardState,
+  BookingCard,
+  Checkbox,
+  ErrorNote,
+  EvidenceLine,
+  Field,
+  TextInput,
+  formatDate,
+  formatInr,
+  latestBy,
+  rowsFor,
+  useBookingsAtStages,
+  useChainedAction,
+  useDeliveryWorkspace,
+  type BookingView,
+} from "@/components/DeliveryBoard";
+import {
+  markAlbumFrameProduction,
+  markDelivered,
+  recordDeliveryConfirmation,
+  recordGallery,
+  type DeliveryWorkspaceData,
+} from "@/lib/delivery.functions";
 
 export const Route = createFileRoute("/_authenticated/pixieset")({
   head: () => ({
     meta: [
-      { title: "Pixieset Control · LittleShots by Hema OS" },
+      { title: "Gallery & Delivery · LittleShots by Hema OS" },
       {
         name: "description",
         content:
-          "Track galleries, favourites, orders and invoices for every family's Pixieset collection.",
+          "Record the client gallery and confirm delivery to the family, with the outstanding balance checked first.",
       },
-      { property: "og:title", content: "Pixieset Control · LittleShots by Hema OS" },
-      {
-        property: "og:description",
-        content:
-          "Track galleries, favourites, orders and invoices for every family's Pixieset collection.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: "og:title", content: "Gallery & Delivery · LittleShots by Hema OS" },
     ],
   }),
-  component: PixiesetPage,
+  component: DeliveryPage,
 });
 
-function PixiesetPage() {
-  const bookings = useStore((s) => s.bookings);
-  const pixieset = useStore((s) => s.pixieset);
+const DELIVERY_STAGES = [16, 17];
+
+function DeliveryPage() {
+  const { query, refresh } = useDeliveryWorkspace();
+  const action = useChainedAction(refresh);
+  const bookings = useBookingsAtStages(query.data, DELIVERY_STAGES);
 
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Gallery & store"
-        title="Pixieset Control Center"
-        subtitle="Manual + semi-automated tracker for every Pixieset gallery, favourite, and order."
-        quote="A gallery is the first place the family sees what we protected for them."
+        eyebrow="Studio operations"
+        title="Gallery & Delivery"
+        subtitle="The gallery address and its access settings are recorded here. Passwords are not — those go to the family directly and never sit in the system."
+        quote="Delivery waits on the balance being settled, unless you decide otherwise and say why."
       />
 
-      <div className="space-y-5">
-        {bookings.length === 0 && (
-          <Card className="p-10 text-center">
-            <p className="font-serif text-xl text-primary">No bookings yet.</p>
-          </Card>
-        )}
-        {bookings.map((b) => {
-          const rec = pixieset.find((p) => p.bookingId === b.id);
-          return (
-            <PixiesetForm
-              key={b.id}
-              bookingId={b.id}
-              client={b.client}
-              category={b.category}
-              rec={rec}
+      <ErrorNote message={action.error} />
+
+      <BoardState
+        query={query}
+        count={bookings.length}
+        emptyTitle="No galleries waiting"
+        emptyBody="Once a batch clears quality control, the booking arrives here ready for its gallery."
+      />
+
+      <div className="mt-6 space-y-4">
+        {query.data &&
+          bookings.map((booking) => (
+            <DeliveryBookingCard
+              key={booking.id}
+              booking={booking}
+              data={query.data}
+              action={action}
             />
-          );
-        })}
+          ))}
       </div>
     </AppShell>
   );
 }
 
-function PixiesetForm({
-  bookingId,
-  client,
-  category,
-  rec,
+type ChainedAction = ReturnType<typeof useChainedAction>;
+
+function DeliveryBookingCard({
+  booking,
+  data,
+  action,
 }: {
-  bookingId: string;
-  client: string;
-  category: string;
-  rec?: PixiesetRecord;
+  booking: BookingView;
+  data: DeliveryWorkspaceData;
+  action: ChainedAction;
 }) {
-  const upsert = useStore((s) => s.upsertPixieset);
-  const [d, setD] = useState({
-    pixiesetClientName: rec?.pixiesetClientName ?? client,
-    collectionName: rec?.collectionName ?? `${client} — ${category}`,
-    galleryLink: rec?.galleryLink ?? "",
-    password: rec?.password ?? "",
-    galleryStatus: rec?.galleryStatus ?? ("Not Created" as PixiesetGalleryStatus),
-    watermark: rec?.watermark ?? ("Not Needed" as const),
-    favoritesEnabled: rec?.favoritesEnabled ?? true,
-    favoritesStatus: rec?.favoritesStatus ?? ("Pending" as const),
-    downloadEnabled: rec?.downloadEnabled ?? false,
-    downloadExpiry: rec?.downloadExpiry ?? "",
-    storeEnabled: rec?.storeEnabled ?? false,
-    priceSheet: rec?.priceSheet ?? ("None" as PixiesetPriceSheet),
-    invoiceLink: rec?.invoiceLink ?? "",
-    contractLink: rec?.contractLink ?? "",
-    orderStatus: rec?.orderStatus ?? ("No Order" as PixiesetOrderStatus),
-    syncNotes: rec?.syncNotes ?? "",
-  });
-  const set = <K extends keyof typeof d>(k: K, v: (typeof d)[K]) => setD((s) => ({ ...s, [k]: v }));
+  const gallery = latestBy(rowsFor(data.galleries, booking.id), (row) => row.round);
+  const confirmation = rowsFor(data.deliveryConfirmations, booking.id)[0];
+  const balance = data.balances[booking.id];
+  const busy = action.isBusy(booking.id);
+
+  const outstanding = balance?.outstandingInr ?? 0;
 
   return (
-    <Card className="p-6">
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-            {bookingId} · {category}
-          </div>
-          <h3 className="font-serif text-xl text-primary mt-1 flex items-center gap-2">
-            <Camera className="h-4 w-4 text-gold" /> {client}
-          </h3>
+    <BookingCard
+      booking={booking}
+      aside={
+        balance ? (
+          <StatusPill tone={outstanding > 0 ? "warn" : "good"}>
+            {outstanding > 0 ? `${formatInr(outstanding)} outstanding` : "Paid in full"}
+          </StatusPill>
+        ) : undefined
+      }
+    >
+      {gallery && (
+        <div className="grid gap-1">
+          <a
+            href={gallery.gallery_url}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="inline-flex items-center gap-1.5 text-sm text-primary underline underline-offset-4"
+          >
+            {gallery.gallery_url}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+          <EvidenceLine>
+            {gallery.password_protected ? "Password protected" : "No password"} ·{" "}
+            {gallery.downloads_enabled ? "Downloads on" : "Downloads off"} ·{" "}
+            {gallery.expires_at ? `Expires ${formatDate(gallery.expires_at)}` : "No expiry"}
+          </EvidenceLine>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          <StatusPill
-            tone={
-              d.galleryStatus === "Delivered"
-                ? "good"
-                : d.galleryStatus === "Not Created"
-                  ? "bad"
-                  : "warn"
-            }
-          >
-            Gallery: {d.galleryStatus}
-          </StatusPill>
-          <StatusPill
-            tone={d.orderStatus === "Fulfilled" || d.orderStatus === "Paid" ? "good" : "neutral"}
-          >
-            Order: {d.orderStatus}
-          </StatusPill>
-          {d.galleryLink && (
-            <a
-              href={d.galleryLink}
-              target="_blank"
-              rel="noreferrer"
-              className="text-[11px] inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-card border border-gold text-primary"
+      )}
+
+      {confirmation && (
+        <EvidenceLine>
+          Delivered with {formatInr(confirmation.outstanding_inr)} outstanding
+          {confirmation.balance_override_reason ? ` — ${confirmation.balance_override_reason}` : ""}
+        </EvidenceLine>
+      )}
+
+      {booking.stageOrder === 16 && !gallery && (
+        <GalleryForm booking={booking} action={action} busy={busy} />
+      )}
+
+      {booking.stageOrder === 16 && gallery && (
+        <ConfirmPanel booking={booking} action={action} busy={busy} outstanding={outstanding} />
+      )}
+
+      {booking.stageOrder === 17 && (
+        <div>
+          {booking.capabilities.canAdvanceStage ? (
+            <ActionButton
+              busy={busy}
+              onClick={() =>
+                action.run(booking.id, [
+                  () => markAlbumFrameProduction({ data: { bookingId: booking.id } }),
+                ])
+              }
             >
-              Open <ExternalLink className="h-3 w-3" />
-            </a>
+              Start album & frame production
+            </ActionButton>
+          ) : (
+            <Blocked reason="Moving this booking on needs the booking.stage.advance permission." />
           )}
         </div>
+      )}
+    </BookingCard>
+  );
+}
+
+function GalleryForm({
+  booking,
+  action,
+  busy,
+}: {
+  booking: BookingView;
+  action: ChainedAction;
+  busy: boolean;
+}) {
+  const [url, setUrl] = useState("");
+  const [passwordProtected, setPasswordProtected] = useState(true);
+  const [downloadsEnabled, setDownloadsEnabled] = useState(true);
+  const [expiresOn, setExpiresOn] = useState("");
+  const [note, setNote] = useState("");
+
+  if (!booking.capabilities.canConfirmDelivery) {
+    return <Blocked reason="Recording a gallery needs the delivery.confirm permission." />;
+  }
+
+  const valid = url.trim().startsWith("https://") && url.trim().length > 10;
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <div className="sm:col-span-2">
+        <Field label="Gallery address">
+          <TextInput
+            id={`url-${booking.id}`}
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            placeholder="https://littleshots.pixieset.com/family/"
+            maxLength={500}
+          />
+        </Field>
       </div>
 
-      <div className="mt-4 grid sm:grid-cols-2 gap-3">
-        <L label="Pixieset client name">
-          <I v={d.pixiesetClientName} on={(v) => set("pixiesetClientName", v)} />
-        </L>
-        <L label="Collection name">
-          <I v={d.collectionName} on={(v) => set("collectionName", v)} />
-        </L>
-        <L label="Gallery link">
-          <I
-            v={d.galleryLink}
-            on={(v) => set("galleryLink", v)}
-            placeholder="https://littleshots.pixieset.com/..."
-          />
-        </L>
-        <L label="Password / PIN">
-          <I v={d.password} on={(v) => set("password", v)} />
-        </L>
-        <L label="Gallery status">
-          <Sel
-            v={d.galleryStatus}
-            on={(v) => set("galleryStatus", v as PixiesetGalleryStatus)}
-            opts={[...pixiesetGalleryStatuses]}
-          />
-        </L>
-        <L label="Watermark">
-          <Sel
-            v={d.watermark}
-            on={(v) => set("watermark", v as "Applied" | "Not Needed")}
-            opts={["Applied", "Not Needed"]}
-          />
-        </L>
-        <L label="Favorites enabled">
-          <Sel
-            v={d.favoritesEnabled ? "Yes" : "No"}
-            on={(v) => set("favoritesEnabled", v === "Yes")}
-            opts={["Yes", "No"]}
-          />
-        </L>
-        <L label="Client favorites status">
-          <Sel
-            v={d.favoritesStatus}
-            on={(v) => set("favoritesStatus", v as "Pending" | "Received")}
-            opts={["Pending", "Received"]}
-          />
-        </L>
-        <L label="Download enabled">
-          <Sel
-            v={d.downloadEnabled ? "Yes" : "No"}
-            on={(v) => set("downloadEnabled", v === "Yes")}
-            opts={["Yes", "No"]}
-          />
-        </L>
-        <L label="Download expiry">
-          <I type="date" v={d.downloadExpiry} on={(v) => set("downloadExpiry", v)} />
-        </L>
-        <L label="Store enabled">
-          <Sel
-            v={d.storeEnabled ? "Yes" : "No"}
-            on={(v) => set("storeEnabled", v === "Yes")}
-            opts={["Yes", "No"]}
-          />
-        </L>
-        <L label="Price sheet applied">
-          <Sel
-            v={d.priceSheet}
-            on={(v) => set("priceSheet", v as PixiesetPriceSheet)}
-            opts={[...pixiesetPriceSheets]}
-          />
-        </L>
-        <L label="Invoice link">
-          <I v={d.invoiceLink} on={(v) => set("invoiceLink", v)} />
-        </L>
-        <L label="Contract link">
-          <I v={d.contractLink} on={(v) => set("contractLink", v)} />
-        </L>
-        <L label="Order status">
-          <Sel
-            v={d.orderStatus}
-            on={(v) => set("orderStatus", v as PixiesetOrderStatus)}
-            opts={[...pixiesetOrderStatuses]}
-          />
-        </L>
-      </div>
-
-      <L label="Manual sync notes" className="mt-3">
-        <textarea
-          value={d.syncNotes}
-          onChange={(e) => set("syncNotes", e.target.value)}
-          rows={2}
-          maxLength={500}
-          className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
+      <Field label="Expires on (optional)">
+        <TextInput
+          id={`expiry-${booking.id}`}
+          type="date"
+          value={expiresOn}
+          onChange={(event) => setExpiresOn(event.target.value)}
         />
-      </L>
+      </Field>
 
-      <div className="mt-4 flex justify-end">
-        <button
-          onClick={() => handle(upsert(bookingId, d))}
-          className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground"
-        >
-          <Save className="h-3 w-3" /> Save Pixieset record
-        </button>
+      <Field label="Note (optional)">
+        <TextInput
+          id={`gallery-note-${booking.id}`}
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          maxLength={500}
+        />
+      </Field>
+
+      <div className="flex flex-wrap items-center gap-4 sm:col-span-2">
+        <Checkbox
+          id={`pw-${booking.id}`}
+          label="Password protected"
+          checked={passwordProtected}
+          onChange={setPasswordProtected}
+        />
+        <Checkbox
+          id={`dl-${booking.id}`}
+          label="Downloads enabled"
+          checked={downloadsEnabled}
+          onChange={setDownloadsEnabled}
+        />
       </div>
-    </Card>
+
+      <div className="sm:col-span-2">
+        <ActionButton
+          busy={busy}
+          disabled={!valid}
+          onClick={() =>
+            action.run(booking.id, [
+              () =>
+                recordGallery({
+                  data: {
+                    bookingId: booking.id,
+                    galleryUrl: url.trim(),
+                    passwordProtected,
+                    downloadsEnabled,
+                    expiresAt: expiresOn ? new Date(`${expiresOn}T23:59:00`).toISOString() : null,
+                    note: note.trim() || undefined,
+                  },
+                }),
+            ])
+          }
+        >
+          Save gallery
+        </ActionButton>
+        <p className="mt-2 text-xs text-muted-foreground">
+          The password itself is never stored. Send it to the family the way you always have.
+        </p>
+      </div>
+    </div>
   );
 }
 
-function L({
-  label,
-  children,
-  className = "",
+function ConfirmPanel({
+  booking,
+  action,
+  busy,
+  outstanding,
 }: {
-  label: string;
-  children: React.ReactNode;
-  className?: string;
+  booking: BookingView;
+  action: ChainedAction;
+  busy: boolean;
+  outstanding: number;
 }) {
+  const [reason, setReason] = useState("");
+
+  if (!booking.capabilities.canConfirmDelivery) {
+    return <Blocked reason="Confirming delivery needs the delivery.confirm permission." />;
+  }
+
+  const needsOverride = outstanding > 0;
+  const canOverride = booking.capabilities.canOverrideBalance;
+
+  if (needsOverride && !canOverride) {
+    return (
+      <Blocked
+        reason={`${formatInr(outstanding)} is still outstanding. Delivering anyway needs the delivery.balance_override permission, which only the Founder holds.`}
+      />
+    );
+  }
+
   return (
-    <label className={`block ${className}`}>
-      <span className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-        {label}
-      </span>
-      {children}
-    </label>
-  );
-}
-function I({
-  v,
-  on,
-  type = "text",
-  placeholder,
-}: {
-  v: string;
-  on: (v: string) => void;
-  type?: string;
-  placeholder?: string;
-}) {
-  return (
-    <input
-      type={type}
-      value={v}
-      placeholder={placeholder}
-      maxLength={300}
-      onChange={(e) => on(e.target.value)}
-      className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
-    />
-  );
-}
-function Sel({ v, on, opts }: { v: string; on: (v: string) => void; opts: string[] }) {
-  return (
-    <select
-      value={v}
-      onChange={(e) => on(e.target.value)}
-      className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
-    >
-      {opts.map((o) => (
-        <option key={o}>{o}</option>
-      ))}
-    </select>
+    <div className="space-y-3">
+      {needsOverride && (
+        <Field label={`Why deliver with ${formatInr(outstanding)} outstanding?`}>
+          <TextInput
+            id={`override-${booking.id}`}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            maxLength={500}
+            placeholder="e.g. balance being settled at album handover, agreed with the family"
+          />
+        </Field>
+      )}
+
+      <ActionButton
+        busy={busy}
+        disabled={needsOverride && reason.trim().length === 0}
+        onClick={() =>
+          action.run(booking.id, [
+            () =>
+              recordDeliveryConfirmation({
+                data: {
+                  bookingId: booking.id,
+                  balanceOverrideReason: needsOverride ? reason.trim() : undefined,
+                },
+              }),
+            () => markDelivered({ data: { bookingId: booking.id } }),
+          ])
+        }
+      >
+        {needsOverride ? "Deliver with balance outstanding" : "Confirm delivery"}
+      </ActionButton>
+
+      {needsOverride && (
+        <p className="text-xs text-muted-foreground">
+          Your reason and the {formatInr(outstanding)} owed are both recorded against this booking.
+        </p>
+      )}
+    </div>
   );
 }
