@@ -6,12 +6,12 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_authenticated/marketing")({
   head: () => ({
     meta: [
-      { title: "Marketing Approvals · Little Moments OS" },
+      { title: "Marketing Approvals · LittleShots by Hema OS" },
       {
         name: "description",
         content: "Approve marketing use of images only where written family consent is recorded.",
       },
-      { property: "og:title", content: "Marketing Approvals · Little Moments OS" },
+      { property: "og:title", content: "Marketing Approvals · LittleShots by Hema OS" },
       {
         property: "og:description",
         content: "Approve marketing use of images only where written family consent is recorded.",

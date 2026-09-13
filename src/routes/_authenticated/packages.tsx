@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/packages")({
   head: () => ({
     meta: [
       {
-        title: "Package Catalogue · Little Moments OS",
+        title: "Package Catalogue · LittleShots by Hema OS",
       },
       {
         name: "description",
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/packages")({
       },
       {
         property: "og:title",
-        content: "Package Catalogue · Little Moments OS",
+        content: "Package Catalogue · LittleShots by Hema OS",
       },
       {
         property: "og:description",

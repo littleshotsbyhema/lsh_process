@@ -17,13 +17,13 @@ import { Camera, Save, ExternalLink } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/pixieset")({
   head: () => ({
     meta: [
-      { title: "Pixieset Control · Little Moments OS" },
+      { title: "Pixieset Control · LittleShots by Hema OS" },
       {
         name: "description",
         content:
           "Track galleries, favourites, orders and invoices for every family's Pixieset collection.",
       },
-      { property: "og:title", content: "Pixieset Control · Little Moments OS" },
+      { property: "og:title", content: "Pixieset Control · LittleShots by Hema OS" },
       {
         property: "og:description",
         content:

@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_authenticated/pipeline")({
   head: () => ({
     meta: [
       {
-        title: "Pipeline · Little Moments OS",
+        title: "Pipeline · LittleShots by Hema OS",
       },
       {
         name: "description",
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/pipeline")({
       },
       {
         property: "og:title",
-        content: "Pipeline · Little Moments OS",
+        content: "Pipeline · LittleShots by Hema OS",
       },
       {
         property: "og:description",
@@ -71,7 +71,7 @@ function PipelinePage() {
         <>
           <Card className="mb-5 p-4">
             <p className="text-xs leading-5 text-muted-foreground">
-              Pipeline state is read-only. Little Moments OS does not currently expose a general
+              Pipeline state is read-only. LittleShots by Hema OS does not currently expose a general
               authoritative booking-stage transition RPC, so this screen does not provide arbitrary
               stage movement.
             </p>

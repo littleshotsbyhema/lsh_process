@@ -9,12 +9,12 @@ import { useState } from "react";
 export const Route = createFileRoute("/_authenticated/privacy")({
   head: () => ({
     meta: [
-      { title: "Privacy & Consent · Little Moments OS" },
+      { title: "Privacy & Consent · LittleShots by Hema OS" },
       {
         name: "description",
         content: "Written consent tracking so no family image is ever shared without permission.",
       },
-      { property: "og:title", content: "Privacy & Consent · Little Moments OS" },
+      { property: "og:title", content: "Privacy & Consent · LittleShots by Hema OS" },
       {
         property: "og:description",
         content: "Written consent tracking so no family image is ever shared without permission.",

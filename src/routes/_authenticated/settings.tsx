@@ -7,12 +7,12 @@ import { can, permissions, visibleNav, type Action } from "@/lib/access";
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
-      { title: "Settings · Little Moments OS" },
+      { title: "Settings · LittleShots by Hema OS" },
       {
         name: "description",
         content: "Studio preferences, philosophy statements and workspace configuration.",
       },
-      { property: "og:title", content: "Settings · Little Moments OS" },
+      { property: "og:title", content: "Settings · LittleShots by Hema OS" },
       {
         property: "og:description",
         content: "Studio preferences, philosophy statements and workspace configuration.",
