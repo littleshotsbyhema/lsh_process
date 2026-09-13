@@ -7,13 +7,13 @@ export const Route = createFileRoute("/change-password")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Set a New Password · Little Moments OS" },
+      { title: "Set a New Password · LittleShots by Hema OS" },
       {
         name: "description",
         content:
-          "Replace your temporary studio password with a private one before entering Little Moments OS.",
+          "Replace your temporary studio password with a private one before entering LittleShots by Hema OS.",
       },
-      { property: "og:title", content: "Set a New Password · Little Moments OS" },
+      { property: "og:title", content: "Set a New Password · LittleShots by Hema OS" },
       {
         property: "og:description",
         content: "Secure your Little Shots by Hema studio account with a new password.",
@@ -113,7 +113,7 @@ function ChangePasswordPage() {
         </form>
 
         <p className="mt-8 text-xs text-muted-foreground">
-          Little Moments OS — Built to protect the memories that become everything.
+          LittleShots by Hema OS — Built to protect the memories that become everything.
         </p>
       </div>
     </div>

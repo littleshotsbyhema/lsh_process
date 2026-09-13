@@ -163,7 +163,7 @@ function AuthenticatedTrainingBoundary({
       {decision.action === "soft-reminder" && (
         <div className="border-b border-border bg-accent/50 px-5 py-2.5 text-sm text-primary">
           <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-2">
-            <span>Your Little Moments OS training is ready to continue.</span>
+            <span>Your LittleShots by Hema OS training is ready to continue.</span>
 
             <Link to="/training" className="font-medium underline underline-offset-4">
               Open training

@@ -15,7 +15,7 @@ export const guidedInterfaceTourSteps: readonly GuidedInterfaceTourStep[] = [
     target: "main-navigation",
     eyebrow: "Your operating rooms",
     title: "Use the navigation that belongs to your role",
-    body: "These are the Little Moments OS rooms currently available to your live role. A room that is absent or restricted should never be worked around manually.",
+    body: "These are the LittleShots by Hema OS rooms currently available to your live role. A room that is absent or restricted should never be worked around manually.",
     openNavigation: true,
   },
   {
