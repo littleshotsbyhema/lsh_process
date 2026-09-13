@@ -112,21 +112,21 @@ export const nav: NavItem[] = [
   },
   {
     to: "/editing",
-    label: "Editing & Delivery",
+    label: "Editing & QC",
     icon: ImageIcon,
-    roles: ["editor", "client_coordinator"],
+    roles: ["studio_manager", "editor", "client_coordinator"],
   },
   {
     to: "/pixieset",
-    label: "Pixieset Control",
+    label: "Gallery & Delivery",
     icon: Camera,
-    roles: ["editor", "client_coordinator"],
+    roles: ["studio_manager", "editor", "client_coordinator"],
   },
   {
     to: "/heirloom",
     label: "Heirloom Production",
     icon: Frame,
-    roles: ["album_coordinator", "client_coordinator"],
+    roles: ["studio_manager", "album_coordinator", "client_coordinator"],
   },
   { to: "/tasks", label: "Team Tasks", icon: ListChecks, roles: null },
   { to: "/sops", label: "SOP Center", icon: BookOpen, roles: null },
@@ -135,7 +135,7 @@ export const nav: NavItem[] = [
     to: "/reviews",
     label: "Reviews & Aftercare",
     icon: Star,
-    roles: ["client_coordinator", "marketing"],
+    roles: ["studio_manager", "client_coordinator", "marketing"],
   },
   { to: "/governance", label: "Governance", icon: Gauge, roles: [] },
   { to: "/reports", label: "Reports / KPIs", icon: LineChart, roles: ["accounts"] },
@@ -155,21 +155,20 @@ function normalise(pathname: string) {
 }
 
 /**
- * Later-sprint rooms that still depend on the legacy seeded booking store.
+ * Rooms that still depend on the legacy seeded booking store.
  *
  * Keep their source available for deliberate migration, but do not expose
  * them as operational studio systems until they are connected to canonical
  * booking and journey records.
+ *
+ * Editing, Gallery & Delivery, Heirloom Production and Reviews & Aftercare
+ * were migrated onto the canonical Stage 13-21 journey and are live.
  */
 export const temporarilyUnavailablePaths = new Set([
   "/prep",
   "/safety",
   "/privacy",
-  "/editing",
-  "/pixieset",
-  "/heirloom",
   "/marketing",
-  "/reviews",
   "/governance",
   "/reports",
   "/kpi",
