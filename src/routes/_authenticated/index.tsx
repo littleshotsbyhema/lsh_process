@@ -10,14 +10,14 @@ import { useSession } from "@/lib/session";
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "Studio Control Room · Little Moments OS" },
+      { title: "Studio Control Room · LittleShots by Hema OS" },
       {
         name: "description",
         content: "Canonical operating rooms for Little Shots by Hema.",
       },
       {
         property: "og:title",
-        content: "Studio Control Room · Little Moments OS",
+        content: "Studio Control Room · LittleShots by Hema OS",
       },
       {
         property: "og:description",
