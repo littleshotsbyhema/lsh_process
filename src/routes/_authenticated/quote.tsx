@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_authenticated/quote")({
   head: () => ({
     meta: [
       {
-        title: "Quotation Workspace · Little Moments OS",
+        title: "Quotation Workspace · LittleShots by Hema OS",
       },
       {
         name: "description",
@@ -34,7 +34,7 @@ export const Route = createFileRoute("/_authenticated/quote")({
       },
       {
         property: "og:title",
-        content: "Quotation Workspace · Little Moments OS",
+        content: "Quotation Workspace · LittleShots by Hema OS",
       },
       {
         property: "og:description",
