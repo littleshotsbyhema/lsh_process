@@ -4,6 +4,14 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { ORGANIZATION_ID } from "@/lib/session";
+import {
+  extendedFrom,
+  extendedRpc,
+  videoStates,
+  type BookingStageSlaStatusRow,
+  type BookingVideoWorkRow,
+  type VideoState,
+} from "@/integrations/supabase/extended";
 
 type Tables = Database["public"]["Tables"];
 
@@ -69,6 +77,8 @@ export type DeliveryWorkspaceData = {
   productionMilestones: ProductionMilestoneRow[];
   reviewRequests: ReviewRequestRow[];
   milestonePlans: MilestonePlanRow[];
+  videoWork: BookingVideoWorkRow[];
+  slaStatus: Record<string, BookingStageSlaStatusRow>;
   balances: Record<string, BookingBalance>;
   capabilities: Record<string, DeliveryCapabilities>;
 };
@@ -127,6 +137,8 @@ function emptyWorkspace(journeyStages: JourneyStageRow[]): DeliveryWorkspaceData
     productionMilestones: [],
     reviewRequests: [],
     milestonePlans: [],
+    videoWork: [],
+    slaStatus: {},
     balances: {},
     capabilities: {},
   };
@@ -178,6 +190,21 @@ export const listDeliveryWorkspace = createServerFn({ method: "GET" })
     throwIfError(bookingsResult.error);
 
     const bookings = bookingsResult.data ?? [];
+
+    const [videoWorkResult, slaStatusResult] = await Promise.all([
+      extendedFrom(context.supabase, "booking_video_work")
+        .select("*")
+        .eq("organization_id", ORGANIZATION_ID)
+        .in("booking_id", bookingIds)
+        .order("round", { ascending: true }),
+      extendedFrom(context.supabase, "booking_stage_sla_status")
+        .select("*")
+        .eq("organization_id", ORGANIZATION_ID)
+        .in("booking_id", bookingIds),
+    ]);
+
+    throwIfError(videoWorkResult.error);
+    throwIfError(slaStatusResult.error);
 
     const [
       assignmentsResult,
@@ -392,6 +419,13 @@ export const listDeliveryWorkspace = createServerFn({ method: "GET" })
       productionMilestones: milestonesResult.data ?? [],
       reviewRequests: reviewsResult.data ?? [],
       milestonePlans: plansResult.data ?? [],
+      videoWork: (videoWorkResult.data ?? []) as BookingVideoWorkRow[],
+      slaStatus: Object.fromEntries(
+        ((slaStatusResult.data ?? []) as BookingStageSlaStatusRow[]).map((row) => [
+          row.booking_id,
+          row,
+        ]),
+      ),
       balances,
       capabilities,
     };
@@ -769,6 +803,144 @@ export const markCompleted = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.rpc("mark_booking_completed", {
       p_booking_id: data.bookingId,
+    });
+
+    throwIfError(error);
+    return { ok: true };
+  });
+
+/* ─────────────── Parallel video track (stages 13–15) ─────────────── */
+
+export { videoStates } from "@/integrations/supabase/extended";
+export type { VideoState, BookingVideoWorkRow } from "@/integrations/supabase/extended";
+
+export const recordVideoState = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        bookingId: z.string().uuid(),
+        state: z.enum(videoStates),
+        note: z.string().trim().max(500).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await extendedRpc(context.supabase, "record_booking_video_state", {
+      p_booking_id: data.bookingId,
+      p_state: data.state satisfies VideoState,
+      p_note: data.note || undefined,
+    });
+
+    throwIfError(error);
+    return { ok: true };
+  });
+
+/* ─────────────── No album or frame on this booking ─────────────── */
+
+/**
+ * Records that a booking sells no physical product, which is what lets it
+ * leave the production stage without a studio handover. The database
+ * refuses this once any item or other milestone exists, so it can never be
+ * used to skip past real production work.
+ */
+export const recordProductionNotApplicable = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        bookingId: z.string().uuid(),
+        note: z.string().trim().max(500).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await extendedRpc(
+      context.supabase,
+      "record_booking_production_milestone",
+      {
+        p_booking_id: data.bookingId,
+        p_milestone_type: "not_applicable",
+        p_detail_note: data.note || undefined,
+      },
+    );
+
+    throwIfError(error);
+    return { ok: true };
+  });
+
+/* ─────────────── Stage SLAs ─────────────── */
+
+export type StageSlaSummary = {
+  stageKey: string;
+  stageOrder: number;
+  stageLabel: string;
+  targetHours: number | null;
+};
+
+export const listStageSlas = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<StageSlaSummary[]> => {
+    const [stagesResult, slasResult] = await Promise.all([
+      context.supabase
+        .from("booking_journey_stages")
+        .select("*")
+        .eq("organization_id", ORGANIZATION_ID)
+        .eq("is_active", true)
+        .order("stage_order", { ascending: true }),
+      extendedFrom(context.supabase, "stage_slas")
+        .select("*")
+        .eq("organization_id", ORGANIZATION_ID),
+    ]);
+
+    throwIfError(stagesResult.error);
+    throwIfError(slasResult.error);
+
+    const targets = new Map<string, number>(
+      ((slasResult.data ?? []) as Array<{ stage_key: string; target_hours: number }>).map((row) => [
+        row.stage_key,
+        row.target_hours,
+      ]),
+    );
+
+    return (stagesResult.data ?? []).map((stage) => ({
+      stageKey: stage.stage_key,
+      stageOrder: stage.stage_order,
+      stageLabel: stage.label ?? stage.stage_key,
+      targetHours: targets.get(stage.stage_key) ?? null,
+    }));
+  });
+
+export const setStageSla = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        stageKey: z.string().trim().min(1).max(80),
+        targetHours: z.number().int().min(1).max(8760),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await extendedRpc(context.supabase, "set_stage_sla", {
+      p_organization_id: ORGANIZATION_ID,
+      p_stage_key: data.stageKey,
+      p_target_hours: data.targetHours,
+    });
+
+    throwIfError(error);
+    return { ok: true };
+  });
+
+export const clearStageSla = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({ stageKey: z.string().trim().min(1).max(80) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await extendedRpc(context.supabase, "clear_stage_sla", {
+      p_organization_id: ORGANIZATION_ID,
+      p_stage_key: data.stageKey,
     });
 
     throwIfError(error);
